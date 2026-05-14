@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const Admin = require('./models/Admin');
+const Session = require('./models/Session');
 
 const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
 
@@ -18,33 +19,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/** Admin session tokens (memory); restart server invalidates all sessions. */
-/** Note: In Vercel (Serverless), memory is transient and may be cleared. */
-const adminSessions = new Map();
+/** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
-let lastAdminHeartbeat = 0;
 
-function cleanupAdminSessions() {
-    const now = Date.now();
-    for (const [token, expiresAt] of adminSessions) {
-        if (expiresAt < now) adminSessions.delete(token);
-    }
-}
-// Vercel serverless doesn't support long-lived setInterval. 
-// Sessions will rely on the 8hr expiry logic within the requests.
-
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
     const h = req.headers.authorization;
     if (!h || !h.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     const token = h.slice(7);
-    const expiresAt = adminSessions.get(token);
-    if (!expiresAt || expiresAt < Date.now()) {
-        adminSessions.delete(token);
-        return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        const session = await Session.findOne({ token });
+        if (!session || session.expiresAt < new Date()) {
+            if (session) await Session.deleteOne({ token });
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        next();
+    } catch (err) {
+        res.status(500).json({ error: 'Auth check failed' });
     }
-    next();
 }
 
 // Global Mongoose connection management for Serverless
@@ -236,7 +229,10 @@ app.post('/api/admin/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         const token = crypto.randomBytes(32).toString('hex');
-        adminSessions.set(token, Date.now() + ADMIN_SESSION_MS);
+        const expiresAt = new Date(Date.now() + ADMIN_SESSION_MS);
+        
+        await Session.create({ token, expiresAt });
+        
         res.json({ token, expiresIn: ADMIN_SESSION_MS });
     } catch (err) {
         res.status(500).json({ error: 'Login failed' });
@@ -245,9 +241,12 @@ app.post('/api/admin/login', async (req, res) => {
 
 app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true }));
 
-app.post('/api/admin/logout', requireAdmin, (req, res) => {
+app.post('/api/admin/logout', requireAdmin, async (req, res) => {
     const h = req.headers.authorization;
-    adminSessions.delete(h.slice(7));
+    if (h && h.startsWith('Bearer ')) {
+        const token = h.slice(7);
+        await Session.deleteOne({ token });
+    }
     res.json({ ok: true });
 });
 
