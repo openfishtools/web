@@ -101,6 +101,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') loginBtn.click();
     });
 
+    document.getElementById('admin-logout-btn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (!confirm('Are you sure you want to logout?')) return;
+        try {
+            await fetch(`${API_URL}/admin/logout`, {
+                method: 'POST',
+                headers: adminAuthHeaders()
+            });
+        } catch (err) {}
+        persistToken(null);
+        showLoginUI();
+    });
+
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             closeModal(btn.getAttribute('data-modal'));
