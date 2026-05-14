@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CHROS Admin Panel</title>
+    <link rel="stylesheet" href="assets/fonts/outfit.css">
+    <link rel="stylesheet" href="assets/fonts/material-symbols.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <link rel="stylesheet" href="styles/admin.css">
+</head>
+<body>
+    <div id="admin-login" class="admin-login-overlay">
+        <div class="card login-card">
+            <span class="material-symbols-rounded login-icon">admin_panel_settings</span>
+            <h2 class="card-title">Admin Login</h2>
+            <p class="login-desc">Access the CHROS management system.</p>
+            
+            <div class="input-field">
+                <label>Username</label>
+                <input type="text" id="admin-user" placeholder="Admin username">
+            </div>
+            
+            <div class="input-field">
+                <label>Password</label>
+                <input type="password" id="admin-pass" placeholder="Enter password">
+            </div>
+
+            <button class="btn-primary w-full" id="admin-login-btn">Login to Dashboard</button>
+        </div>
+    </div>
+
+    <div class="app-container d-none" id="admin-app">
+        <nav class="nav-bar">
+            <a href="#social" class="nav-item active" data-tab="social">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">share</span>
+                </div>
+                <span class="nav-label">Social</span>
+            </a>
+            <a href="#presets" class="nav-item" data-tab="presets">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">auto_awesome_motion</span>
+                </div>
+                <span class="nav-label">Presets</span>
+            </a>
+            <a href="#resources" class="nav-item" data-tab="resources">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">folder_open</span>
+                </div>
+                <span class="nav-label">Resources</span>
+            </a>
+            <a href="#chat" class="nav-item" data-tab="chat">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">support_agent</span>
+                </div>
+                <span class="nav-label">Support</span>
+            </a>
+        </nav>
+
+        <main class="main-content">
+            <section id="social" class="section active">
+                <div class="section-header">
+                    <h1 class="page-title">Social Links</h1>
+                    <button class="fab" id="open-social-modal">
+                        <span class="material-symbols-rounded">add</span>
+                    </button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Platform</th>
+                                <th>URL</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="social-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="presets" class="section">
+                <div class="section-header">
+                    <h1 class="page-title">Presets</h1>
+                    <button class="fab" id="open-preset-modal">
+                        <span class="material-symbols-rounded">add</span>
+                    </button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Software</th>
+                                <th>Version</th>
+                                <th>Size</th>
+                                <th>Plugin</th>
+                                <th>Link</th>
+                                <th>Likes</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preset-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="resources" class="section">
+                <div class="section-header">
+                    <h1 class="page-title">Resources</h1>
+                    <button class="fab" id="open-resource-modal">
+                        <span class="material-symbols-rounded">add</span>
+                    </button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Dev</th>
+                                <th>OS</th>
+                                <th>Version</th>
+                                <th>Size</th>
+                                <th>Link</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resource-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="chat" class="section">
+                <div class="chat-container">
+                    <div id="admin-chat-list-view" class="chat-view-container">
+                        <header class="chat-header">
+                            <div class="avatar">
+                                <span class="material-symbols-rounded">support_agent</span>
+                            </div>
+                            <div class="chat-info">
+                                <h3>Messages</h3>
+                                <p>Active Conversations</p>
+                            </div>
+                        </header>
+                        <div class="chat-list" id="active-chats">
+                        </div>
+                    </div>
+
+                    <div id="admin-chat-detail-view" class="chat-view-container hidden">
+                        <header class="chat-header">
+                            <button class="icon-btn" id="back-to-chat-list">
+                                <span class="material-symbols-rounded">arrow_back</span>
+                            </button>
+                            <div class="avatar" id="current-chat-avatar">
+                                <span class="material-symbols-rounded">person</span>
+                            </div>
+                            <div class="chat-info">
+                                <h3 id="current-chat-name">Customer Name</h3>
+                                <p id="current-chat-status">Online</p>
+                            </div>
+                            <div class="chat-header-actions"></div>
+                        </header>
+                        <div class="messages" id="admin-message-container">
+                        </div>
+                        <div class="chat-input-area">
+                            <button class="icon-btn" id="open-chat-upload-modal">
+                                <span class="material-symbols-rounded">add</span>
+                            </button>
+                            <div class="input-pill">
+                                <input type="text" id="admin-chat-input" placeholder="Reply to customer...">
+                            </div>
+                            <button class="send-fab" id="admin-send-btn">
+                                <span class="material-symbols-rounded">send</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="social-modal" class="modal-overlay">
+        <div class="admin-modal">
+            <h2 class="modal-title">
+                <span class="material-symbols-rounded">share</span>
+                Manage Social Link
+            </h2>
+            <div class="admin-form">
+                <div class="drag-drop-area" id="social-icon-drop">
+                    <button type="button" class="remove-upload-btn" id="remove-social-icon-btn" title="Remove icon">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                    <img class="drag-drop-preview" id="social-icon-img-preview">
+                    <span class="material-symbols-rounded">image</span>
+                    <span class="label">Drag & drop platform icon or click to select</span>
+                    <input type="file" id="social-icon-file-input" hidden accept="image/*">
+                    <div class="file-preview" id="social-icon-preview"></div>
+                    <input type="hidden" id="modal-social-icon">
+                </div>
+                <div class="input-field">
+                    <label>Platform Name</label>
+                    <input type="text" id="modal-social-name" placeholder="e.g. TikTok">
+                </div>
+                <div class="input-field">
+                    <label>URL</label>
+                    <input type="text" id="modal-social-url" placeholder="https://...">
+                </div>
+                <div id="social-upload-progress" class="hidden" style="margin-top: 16px;">
+                    <div class="progress-bar-bg">
+                        <div id="social-progress-fill"></div>
+                    </div>
+                    <p id="social-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text modal-close-btn" data-modal="social-modal">Cancel</button>
+                <button class="btn-primary" id="save-social-btn">Save Link</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="preset-modal" class="modal-overlay">
+        <div class="admin-modal">
+            <h2 class="modal-title">
+                <span class="material-symbols-rounded">auto_awesome_motion</span>
+                Manage Preset
+            </h2>
+            <div class="admin-form">
+                <div class="input-field">
+                    <label>Preset Name</label>
+                    <input type="text" id="modal-preset-name" placeholder="e.g. Cinematic Pack">
+                </div>
+
+                <div class="input-field">
+                    <label>Software</label>
+                    <select id="modal-preset-software">
+                        <option value="AE">After Effects</option>
+                        <option value="AM">Alight Motion</option>
+                        <option value="Blurr">Blurr</option>
+                        <option value="CC">CapCut</option>
+                        <option value="FM">Funimate</option>
+                        <option value="Node">Node Video</option>
+                    </select>
+                </div>
+                <div class="input-field">
+                    <label>Min. Version</label>
+                    <input type="text" id="modal-preset-version" placeholder="e.g. v4.0+">
+                </div>
+                <div class="input-field">
+                    <label>Video Link (TikTok Embed)</label>
+                    <input type="text" id="modal-preset-video" placeholder="TikTok video URL">
+                </div>
+                <div class="input-field">
+                    <label>File Size</label>
+                    <input type="text" id="modal-preset-size" placeholder="e.g. 15.5 MB">
+                </div>
+                <div class="input-field">
+                    <label>Require Plugin</label>
+                    <input type="text" id="modal-preset-plugin" placeholder="e.g. Sapphire, BCC">
+                </div>
+                <div class="input-field" id="preset-url-container">
+                    <label>Download Link</label>
+                    <div class="integrated-drop-zone" id="preset-url-drop">
+                        <input type="text" id="modal-preset-url" placeholder="https://... or drag file here">
+                        <button class="icon-btn delete hidden" id="delete-uploaded-preset-btn" title="Delete uploaded file">
+                            <span class="material-symbols-rounded">delete</span>
+                        </button>
+                    </div>
+                    <input type="file" id="preset-file-input" hidden>
+                    <div class="file-preview" id="preset-file-preview"></div>
+                </div>
+                <div id="preset-upload-progress" class="hidden" style="margin-top: 16px;">
+                    <div class="progress-bar-bg">
+                        <div id="preset-progress-fill"></div>
+                    </div>
+                    <p id="preset-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text modal-close-btn" data-modal="preset-modal">Cancel</button>
+                <button class="btn-primary" id="save-preset-btn">Publish Preset</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resource-modal" class="modal-overlay">
+        <div class="admin-modal">
+            <h2 class="modal-title">
+                <span class="material-symbols-rounded">folder_open</span>
+                Manage Resource
+            </h2>
+            <div class="admin-form">
+                <div class="drag-drop-area" id="resource-icon-drop">
+                    <button type="button" class="remove-upload-btn" id="remove-resource-icon-btn" title="Remove icon">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                    <img class="drag-drop-preview" id="resource-icon-img-preview">
+                    <span class="material-symbols-rounded">image</span>
+                    <span class="label">Drag & drop app icon or click to select</span>
+                    <input type="file" id="resource-icon-file-input" hidden accept="image/*">
+                    <div class="file-preview" id="resource-icon-preview"></div>
+                    <input type="hidden" id="modal-resource-icon">
+                </div>
+                <div class="input-field">
+                    <label>Resource Title</label>
+                    <input type="text" id="modal-resource-title" placeholder="e.g. Alight Motion Pro">
+                </div>
+
+                <div class="input-field">
+                    <label>Category</label>
+                    <select id="modal-resource-category">
+                        <option value="Software">Software</option>
+                        <option value="Plugin">Plugin</option>
+                    </select>
+                </div>
+                <div class="input-field">
+                    <label>Developer</label>
+                    <input type="text" id="modal-resource-dev" placeholder="e.g. CHROS Team">
+                </div>
+                <div class="input-field">
+                    <label>OS Support</label>
+                    <select id="modal-resource-os">
+                        <option value="WIN">Windows</option>
+                        <option value="MAC">MacOS</option>
+                        <option value="ANDROID">Android</option>
+                    </select>
+                </div>
+                <div class="input-field">
+                    <label>Version</label>
+                    <input type="text" id="modal-resource-version" placeholder="e.g. v5.0.0">
+                </div>
+                <div class="input-field">
+                    <label>Size</label>
+                    <input type="text" id="modal-resource-info" placeholder="e.g. 150MB • APK">
+                </div>
+                <div class="input-field" id="resource-url-container">
+                    <label>Download URL</label>
+                    <div class="integrated-drop-zone" id="resource-url-drop">
+                        <input type="text" id="modal-resource-url" placeholder="https://... or drag file here">
+                        <button class="icon-btn delete hidden" id="delete-uploaded-resource-btn" title="Delete uploaded file">
+                            <span class="material-symbols-rounded">delete</span>
+                        </button>
+                    </div>
+                    <input type="file" id="resource-file-input" hidden>
+                    <div class="file-preview" id="resource-file-preview"></div>
+                </div>
+                <div id="resource-upload-progress" class="hidden" style="margin-top: 16px;">
+                    <div class="progress-bar-bg">
+                        <div id="resource-progress-fill"></div>
+                    </div>
+                    <p id="resource-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text modal-close-btn" data-modal="resource-modal">Cancel</button>
+                <button class="btn-primary" id="save-resource-btn">Save Resource</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-upload-modal" class="modal-overlay">
+        <div class="admin-modal" style="max-width: 400px;">
+            <h2 class="modal-title">
+                <span class="material-symbols-rounded">cloud_upload</span>
+                Upload File
+            </h2>
+            <p class="login-desc">Share files with customer (Max 50MB)</p>
+            
+            <div class="drag-drop-area" id="admin-chat-upload-drop">
+                <span class="material-symbols-rounded">upload</span>
+                <span class="label">Drag & drop or click to upload</span>
+                <input type="file" id="admin-chat-file-input" hidden>
+            </div>
+            
+            <div id="admin-upload-progress-container" class="hidden">
+                <div class="progress-bar-bg">
+                    <div id="admin-upload-progress-fill"></div>
+                </div>
+                <p id="admin-upload-status-text" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant);">Uploading...</p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-text" id="close-chat-upload-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/admin.js"></script>
+</body>
+</html>

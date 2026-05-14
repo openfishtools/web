@@ -1,254 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Installer Setup</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #FF6B6B, #556270);
-            /* Fallback */
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-color: #ffffff;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: black;
-            overflow: hidden;
-            color: var(--text-color);
-        }
-
-        /* Fluid Background */
-        .background-mesh {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background:
-                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.8), transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(219, 39, 119, 0.6), transparent 50%),
-                radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.6), transparent 50%);
-            filter: blur(80px);
-            animation: breathe 10s ease-in-out infinite alternate;
-        }
-
-        @keyframes breathe {
-            0% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: scale(1.1);
-                opacity: 1;
-            }
-        }
-
-        .container {
-            background: rgba(25, 25, 25, 0.4);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            padding: 50px;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-            text-align: center;
-            max-width: 480px;
-            width: 90%;
-            transform: translateY(20px);
-            opacity: 0;
-            animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-
-        @keyframes fadeUp {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .hero-icon {
-            font-size: 48px;
-            margin-bottom: 24px;
-            background: linear-gradient(135deg, #fff, #aaa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        h1 {
-            font-size: 32px;
-            font-weight: 600;
-            margin: 0 0 12px 0;
-            letter-spacing: -0.5px;
-        }
-
-        p {
-            font-size: 17px;
-            font-weight: 400;
-            margin: 0 0 32px 0;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.5;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 14px 28px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-
-        .btn-mac {
-            background: white;
-            color: black;
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-mac:hover {
-            transform: scale(1.02);
-            box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-win {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .btn-win:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.02);
-        }
-
-        .detecting {
-            margin-top: 30px;
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.4);
-            height: 20px;
-        }
-
-        .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 30px 20px;
-                width: 95%;
-            }
-
-            h1 {
-                font-size: 26px;
-            }
-
-            p {
-                font-size: 15px;
-                margin-bottom: 24px;
-            }
-
-            .buttons {
-                flex-direction: column;
-                align-items: stretch;
-                width: 100%;
-            }
-
-            .btn {
-                padding: 16px;
-                font-size: 16px;
-                /* Larger touch target */
-                justify-content: center;
-            }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CHROS - Material You</title>
+    <meta name="description" content="CHROS: A fully responsive Android 15 Material You inspired web experience.">
+    <link rel="stylesheet" href="assets/fonts/outfit.css">
+    <link rel="stylesheet" href="assets/fonts/material-symbols.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
-
 <body>
+    <div class="app-container">
+        <nav class="nav-bar">
 
-    <div class="background-mesh"></div>
+            <a href="#social" class="nav-item active" data-tab="social">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">public</span>
+                </div>
+                <span class="nav-label">Social</span>
+            </a>
+            <a href="#preset" class="nav-item" data-tab="preset">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">auto_awesome_motion</span>
+                </div>
+                <span class="nav-label">Preset</span>
+            </a>
+            <a href="#resource" class="nav-item" data-tab="resource">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">folder_open</span>
+                </div>
+                <span class="nav-label">Resource</span>
+            </a>
+            <a href="#chat" class="nav-item" data-tab="chat">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">chat_bubble</span>
+                </div>
+                <span class="nav-label">Chat</span>
+            </a>
+        </nav>
 
-    <div class="container">
-        <i class="fa-solid fa-screwdriver-wrench hero-icon"></i>
-        <h1>Setup Wizard</h1>
-        <p>Welcome. We'll optimize your environment based on your operating system.</p>
+        <main class="main-content">
 
-        <div class="buttons">
-            <a href="mac.html" class="btn btn-mac"><i class="fa-brands fa-apple"></i> macOS</a>
-            <a href="win.html" class="btn btn-win"><i class="fa-brands fa-windows"></i> Windows</a>
-        </div>
+            <section id="social" class="section active">
+                <h1 class="page-title">Connect with me</h1>
+                <div class="grid" id="social-grid">
+                </div>
+            </section>
 
-        <div class="detecting" id="status">
-            <div class="spinner"></div> Checking system...
+            <section id="preset" class="section">
+                <div id="preset-explore-view">
+                    <h1 class="page-title">Explore</h1>
+                    <div class="chip-group" id="preset-categories">
+                        <div class="chip active" data-software="All">All</div>
+                        <div class="chip" data-software="AE">
+                            <img src="assets/icon/Ae.png" alt="AE" class="chip-icon">
+                            After Effects
+                        </div>
+                        <div class="chip" data-software="AM">
+                            <img src="assets/icon/Am.png" alt="AM" class="chip-icon">
+                            Alight Motion
+                        </div>
+                        <div class="chip" data-software="Blurr">
+                            <img src="assets/icon/Blurr.png" alt="Blurr" class="chip-icon">
+                            Blurr
+                        </div>
+                        <div class="chip" data-software="CC">
+                            <img src="assets/icon/CC.png" alt="CC" class="chip-icon">
+                            CapCut
+                        </div>
+                        <div class="chip" data-software="FM">
+                            <img src="assets/icon/Fm.png" alt="FM" class="chip-icon">
+                            Funimate
+                        </div>
+                        <div class="chip" data-software="Node">
+                            <img src="assets/icon/Node.png" alt="Node" class="chip-icon">
+                            Node Video
+                        </div>
+                    </div>
+                    <div class="preset-explore-grid" id="preset-explore-grid">
+                    </div>
+                </div>
+
+                <div id="preset-feed-view" class="preset-feed-view hidden">
+                    <div class="phone-mockup">
+                        <div class="phone-bezel">
+                            <div class="phone-notch">
+                                <div class="phone-speaker"></div>
+                            </div>
+                            <div class="phone-screen">
+                                <button type="button" class="tiktok-back-btn" id="back-to-explore" aria-label="Back to presets">
+                                    <span class="material-symbols-rounded">arrow_back</span>
+                                </button>
+                                <div class="preset-feed tiktok-feed" id="preset-feed"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="resource" class="section">
+                <h1 class="page-title">Resources</h1>
+                <div class="search-bar">
+                    <span class="material-symbols-rounded">search</span>
+                    <input type="text" id="resource-search" placeholder="Search resources...">
+                </div>
+                <div class="chip-group" id="resource-categories">
+                </div>
+                <div class="grid" id="resource-grid">
+                </div>
+            </section>
+
+            <section id="chat" class="section">
+                <div class="chat-container">
+                    <div id="chat-login" class="chat-login-overlay">
+                        <div class="card login-card">
+                            <span class="material-symbols-rounded login-icon">account_circle</span>
+                            <h2 class="card-title">Welcome</h2>
+                            <p class="login-desc">Please enter your details to start chatting.</p>
+                            
+                            <div class="input-field">
+                                <label>Name</label>
+                                <input type="text" id="user-name" placeholder="Enter your name">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Username</label>
+                                <input type="text" id="user-handle" placeholder="@username">
+                            </div>
+
+                            <div class="ip-info">
+                                <span class="material-symbols-rounded">language</span>
+                                <span id="user-ip">Fetching IP...</span>
+                            </div>
+
+                            <button class="btn-primary w-full" id="start-chat-btn">Start Chatting</button>
+                        </div>
+                    </div>
+
+                    <div id="chat-active" class="chat-active-view hidden">
+                        <header class="chat-header">
+                            <div class="avatar">
+                                <span class="material-symbols-rounded">person</span>
+                            </div>
+                            <div class="chat-info">
+                                <h3 id="active-chat-name">cutefishrbx</h3>
+                                <p id="admin-status-text">Offline</p>
+                            </div>
+                            <div class="chat-actions">
+                            </div>
+                        </header>
+                        <div class="messages" id="message-container">
+                        </div>
+                        <div class="chat-input-area">
+                            <div class="input-pill">
+                                <span class="material-symbols-rounded pointer" id="open-upload-modal">add_circle</span>
+                                <input type="text" id="chat-input" placeholder="Text message">
+                            </div>
+                            <button class="send-fab" id="send-btn">
+                                <span class="material-symbols-rounded">send</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="upload-modal" class="modal-overlay">
+        <div class="card upload-card">
+            <h2 class="card-title">Upload File</h2>
+            <p class="login-desc">Share documents, images or videos (Max 50MB)</p>
+            
+            <div class="drag-drop-area" id="chat-upload-drop">
+                <span class="material-symbols-rounded">cloud_upload</span>
+                <span>Drag & drop or click to upload</span>
+                <input type="file" id="chat-file-input" hidden>
+            </div>
+            
+            <div id="upload-progress-container" class="hidden">
+                <div class="progress-bar-bg">
+                    <div id="upload-progress-fill"></div>
+                </div>
+                <p id="upload-status-text" class="upload-status-caption">Uploading...</p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-text" id="close-upload-modal">Cancel</button>
+            </div>
         </div>
     </div>
 
-    <footer
-        style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 12px; color: rgba(255,255,255,0.3);">
-        <a href="manager.html" style="color: inherit; text-decoration: none; transition: 0.2s;"
-            onmouseover="this.style.color='rgba(255,255,255,0.6)'"
-            onmouseout="this.style.color='rgba(255,255,255,0.3)'">
-            <i class="fa-solid fa-gear"></i> Manage Lists
-        </a>
-    </footer>
-
-    <script>
-        const statusDiv = document.getElementById('status');
-        const platform = navigator.platform.toLowerCase();
-
-        setTimeout(() => {
-            if (platform.includes('mac')) {
-                statusDiv.innerHTML = "macOS detected. Redirecting...";
-                window.location.href = 'mac.html';
-            } else if (platform.includes('win')) {
-                statusDiv.innerHTML = "Windows detected. Redirecting...";
-                window.location.href = 'win.html';
-            } else {
-                statusDiv.innerHTML = "Please choose your OS.";
-            }
-        }, 1200);
-    </script>
+    <script src="scripts/app.js"></script>
 </body>
-
 </html>
