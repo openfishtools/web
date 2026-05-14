@@ -5,9 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
 
-    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5000/api'
-        : 'https://chros-backend.onrender.com/api'; // Replace with your actual Render URL later
+    const API_URL = '/api';
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) return url;

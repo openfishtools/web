@@ -11,9 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userHandleInput = document.getElementById('user-handle');
     const userIpDisplay = document.getElementById('user-ip');
 
-    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5000/api'
-        : 'https://chros-backend.onrender.com/api'; // Replace with your actual Render URL later
+    const API_URL = '/api';
 
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
