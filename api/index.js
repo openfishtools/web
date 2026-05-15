@@ -269,7 +269,19 @@ app.post('/api/admin/heartbeat', requireAdmin, (req, res) => {
 
 app.get('/api/admin/status', (req, res) => res.json({ online: (Date.now() - lastAdminHeartbeat) < 15000 }));
 
-app.get('/api/presets', async (req, res) => res.json(await Preset.find()));
+app.get('/api/presets', async (req, res) => {
+    const ip = getClientIp(req);
+    const presets = await Preset.find().lean();
+    const userLikes = await Like.find({ ip });
+    const likedIds = new Set(userLikes.map(l => l.presetId.toString()));
+    
+    const results = presets.map(p => ({
+        ...p,
+        liked: likedIds.has(p._id.toString())
+    }));
+    
+    res.json(results);
+});
 app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Preset(req.body).save()));
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/presets/:id', requireAdmin, async (req, res) => {

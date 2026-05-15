@@ -1023,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="${badgeIcons[p.software] || ''}" alt="${p.software}">
                     </div>
                     <div class="explore-info">
-                        <span class="material-symbols-rounded">favorite</span>
+                        <span class="material-symbols-rounded" style="${p.liked ? 'color: #ff3b5c; font-variation-settings: \'FILL\' 1;' : ''}">favorite</span>
                         <span>${p.likes || 0}</span>
                     </div>
                 </div>
@@ -1049,8 +1049,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="tiktok-slide-ui">
                         <div class="tiktok-rail">
-                            <button type="button" class="tiktok-rail-btn action-btn" data-action="like">
-                                <span class="material-symbols-rounded">favorite_border</span>
+                            <button type="button" class="tiktok-rail-btn action-btn ${p.liked ? 'liked' : ''}" data-action="like">
+                                <span class="material-symbols-rounded">${p.liked ? 'favorite' : 'favorite_border'}</span>
                                 <span class="action-label">${p.likes || 0}</span>
                             </button>
                             <button type="button" class="tiktok-rail-btn action-btn" data-action="source">
