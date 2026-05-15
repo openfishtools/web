@@ -277,6 +277,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleDoubleTap = (container, e) => {
+        const slide = container.closest('.tiktok-slide');
+        const id = slide?.dataset.id;
+        const likeBtn = slide?.querySelector('[data-action="like"]');
+        
         // Show heart animation
         const heart = document.createElement('span');
         heart.className = 'material-symbols-rounded overlay-heart animate-heart';
@@ -288,13 +292,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         heart.style.left = `${x - 40}px`;
         heart.style.top = `${y - 40}px`;
+
+        if (likeBtn) {
+            const btnRect = likeBtn.getBoundingClientRect();
+            const targetX = btnRect.left - rect.left + btnRect.width / 2;
+            const targetY = btnRect.top - rect.top + btnRect.height / 2;
+            
+            const flyX = targetX - x;
+            const flyY = targetY - y;
+            
+            heart.style.setProperty('--fly-x', `${flyX}px`);
+            heart.style.setProperty('--fly-y', `${flyY}px`);
+        }
         
         container.appendChild(heart);
         setTimeout(() => heart.remove(), 800);
         
-        const slide = container.closest('.tiktok-slide');
-        const id = slide?.dataset.id;
-        const likeBtn = slide?.querySelector('[data-action="like"]');
         if (id && likeBtn) {
             handleLike(id, likeBtn, true); // true = onlyLike
         }

@@ -1129,7 +1129,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 10;
+    z-index: 7;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1145,6 +1145,7 @@ body {
     pointer-events: none;
     z-index: 20;
     text-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    font-variation-settings: 'FILL' 1;
 }
 
 .overlay-pause {
@@ -1160,7 +1161,6 @@ body {
     opacity: 0;
     pointer-events: none;
     z-index: 20;
-    backdrop-filter: blur(4px);
 }
 
 .animate-heart {
@@ -1173,9 +1173,9 @@ body {
 
 @keyframes heartBeatPop {
     0% { transform: scale(0) rotate(-15deg); opacity: 0; }
-    20% { transform: scale(1.2) rotate(10deg); opacity: 0.9; }
-    80% { transform: scale(1) rotate(0deg); opacity: 0.9; }
-    100% { transform: scale(1.5) rotate(5deg); opacity: 0; }
+    15% { transform: scale(1.2) rotate(10deg); opacity: 0.9; }
+    30% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+    100% { transform: translate(var(--fly-x, 0), var(--fly-y, 0)) scale(0.3) rotate(15deg); opacity: 0; }
 }
 
 @keyframes pauseFade {
@@ -1355,12 +1355,14 @@ body {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 8;
+    z-index: 20;
 }
 
 .tiktok-slide-ui .tiktok-rail,
 .tiktok-slide-ui .tiktok-bottom {
     pointer-events: auto;
+    position: relative;
+    z-index: 30;
 }
 
 .tiktok-rail {
