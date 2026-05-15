@@ -21,6 +21,7 @@ app.use(express.json());
 
 /** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
+let lastAdminHeartbeat = 0;
 
 async function requireAdmin(req, res, next) {
     const h = req.headers.authorization;
