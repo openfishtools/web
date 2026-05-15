@@ -283,14 +283,27 @@ app.get('/api/presets/:id', async (req, res) => res.json(await Preset.findById(r
 
 app.post('/api/presets/:id/like', async (req, res) => {
     const ip = getClientIp(req);
-    const existingLike = await Like.findOne({ presetId: req.params.id, ip });
-    if (existingLike) return res.status(400).json({ error: 'Already liked' });
-    const p = await Preset.findById(req.params.id);
-    if (!p) return res.status(404).json({ error: 'Not found' });
-    p.likes = (p.likes || 0) + 1;
-    await p.save();
-    await new Like({ presetId: req.params.id, ip }).save();
-    res.json({ success: true, likes: p.likes });
+    try {
+        const existingLike = await Like.findOne({ presetId: req.params.id, ip });
+        const p = await Preset.findById(req.params.id);
+        if (!p) return res.status(404).json({ error: 'Not found' });
+
+        if (existingLike) {
+            // Unlike
+            await Like.deleteOne({ _id: existingLike._id });
+            p.likes = Math.max(0, (p.likes || 1) - 1);
+            await p.save();
+            return res.json({ success: true, likes: p.likes, liked: false });
+        } else {
+            // Like
+            await new Like({ presetId: req.params.id, ip }).save();
+            p.likes = (p.likes || 0) + 1;
+            await p.save();
+            return res.json({ success: true, likes: p.likes, liked: true });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Like operation failed' });
+    }
 });
 
 app.get('/api/resources', async (req, res) => res.json(await Resource.find()));

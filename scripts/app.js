@@ -203,6 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (feedContainer) {
             hydrateTikTokHosts(feedContainer, 'video');
+            setupTikTokInteractions(feedContainer);
+            updateScrollingTitles(feedContainer);
         }
 
         const targetPost = document.querySelector(`.preset-post[data-id="${targetId}"]`);
@@ -218,6 +220,118 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
+    };
+    
+    const setupTikTokInteractions = (root) => {
+        const containers = root.querySelectorAll('.post-media-container');
+        containers.forEach(container => {
+            if (container.dataset.interactionsSet) return;
+            container.dataset.interactionsSet = 'true';
+            
+            let lastTap = 0;
+            let tapTimeout;
+            
+            container.addEventListener('click', (e) => {
+                const now = Date.now();
+                const DOUBLE_TAP_DELAY = 300;
+                
+                if (now - lastTap < DOUBLE_TAP_DELAY) {
+                    // Double Tap
+                    clearTimeout(tapTimeout);
+                    handleDoubleTap(container, e);
+                    lastTap = 0;
+                } else {
+                    // Single Tap potential
+                    lastTap = now;
+                    tapTimeout = setTimeout(() => {
+                        handleSingleTap(container);
+                    }, DOUBLE_TAP_DELAY);
+                }
+            });
+        });
+    };
+
+    const handleSingleTap = (container) => {
+        const video = container.querySelector('video') || container.querySelector('.tiktok-media-host video');
+        const pauseIcon = container.querySelector('.overlay-pause');
+        
+        if (!video) return;
+        
+        if (video.paused) {
+            video.play();
+            if (pauseIcon) {
+                pauseIcon.textContent = 'play_arrow';
+                pauseIcon.classList.remove('animate-pause');
+                void pauseIcon.offsetWidth; // trigger reflow
+                pauseIcon.classList.add('animate-pause');
+            }
+        } else {
+            video.pause();
+            if (pauseIcon) {
+                pauseIcon.textContent = 'pause';
+                pauseIcon.classList.remove('animate-pause');
+                void pauseIcon.offsetWidth; // trigger reflow
+                pauseIcon.classList.add('animate-pause');
+            }
+        }
+    };
+
+    const handleDoubleTap = (container, e) => {
+        // Show heart animation
+        const heart = document.createElement('span');
+        heart.className = 'material-symbols-rounded overlay-heart animate-heart';
+        heart.textContent = 'favorite';
+        
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        heart.style.left = `${x - 40}px`;
+        heart.style.top = `${y - 40}px`;
+        
+        container.appendChild(heart);
+        setTimeout(() => heart.remove(), 800);
+        
+        const slide = container.closest('.tiktok-slide');
+        const id = slide?.dataset.id;
+        const likeBtn = slide?.querySelector('[data-action="like"]');
+        if (id && likeBtn) {
+            handleLike(id, likeBtn, true); // true = onlyLike
+        }
+    };
+
+    const updateScrollingTitles = (root) => {
+        if (!root) return;
+        // Wait a bit for layout to settle
+        setTimeout(() => {
+            root.querySelectorAll('.tiktok-title').forEach(title => {
+                const wrapper = title.parentElement;
+                if (!wrapper) return;
+                
+                title.classList.remove('scroll');
+                void title.offsetWidth; // reflow
+                
+                if (title.scrollWidth > wrapper.clientWidth + 1) {
+                    const dist = (title.scrollWidth - wrapper.clientWidth) + 30;
+                    title.style.setProperty('--scroll-dist', `${dist}px`);
+                    title.classList.add('scroll');
+                }
+            });
+            
+            root.querySelectorAll('.plugin-tag-v2').forEach(tag => {
+                const wrapper = tag.parentElement;
+                if (!wrapper) return;
+                
+                tag.classList.remove('scroll');
+                void tag.offsetWidth;
+                
+                if (tag.scrollWidth > wrapper.clientWidth + 1) {
+                    const dist = (tag.scrollWidth - wrapper.clientWidth) + 30;
+                    tag.style.setProperty('--scroll-dist', `${dist}px`);
+                    tag.classList.add('scroll');
+                }
+            });
+        }, 500);
     };
 
     const escapeHtmlAttr = (s) => String(s)
@@ -242,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return '<div class="media-placeholder" aria-hidden="true"></div>';
         }
         if (isDirectVideoUrl(m)) {
+            // Remove controls, keep autoplay and loop
             return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous"></video>`;
         }
         if (isTikTokLikeUrl(m)) {
@@ -718,9 +833,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const handleLike = async (id, btn) => {
-        if (btn.classList.contains('liked')) return;
-        
+    const handleLike = async (id, btn, onlyLike = false) => {
+        const isLiked = btn.classList.contains('liked');
+        if (onlyLike && isLiked) return; // For double tap, only allow liking
+
         try {
             const res = await fetch(`${API_URL}/presets/${id}/like`, {
                 method: 'POST'
@@ -729,25 +845,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             if (res.ok) {
-                btn.classList.add('liked');
-                const icon = btn.querySelector('.material-symbols-rounded');
-                const label = btn.querySelector('.action-label');
-                
-                if (icon) icon.textContent = 'favorite';
-                if (label) label.textContent = data.likes;
-                
-                // Pop animation
-                btn.classList.add('like-pop');
-                setTimeout(() => btn.classList.remove('like-pop'), 400);
-            } else {
-                if (data.error === 'Already liked from this IP') {
+                if (data.liked) {
                     btn.classList.add('liked');
                     const icon = btn.querySelector('.material-symbols-rounded');
                     if (icon) icon.textContent = 'favorite';
-                    alert('You have already liked this preset.');
+                    btn.classList.add('like-pop');
+                    setTimeout(() => btn.classList.remove('like-pop'), 400);
                 } else {
-                    alert('Failed to like: ' + data.error);
+                    btn.classList.remove('liked');
+                    const icon = btn.querySelector('.material-symbols-rounded');
+                    if (icon) icon.textContent = 'favorite_border';
                 }
+                
+                const label = btn.querySelector('.action-label');
+                if (label) label.textContent = data.likes;
+            } else {
+                alert('Failed to like: ' + data.error);
             }
         } catch (err) {
             console.error('Like error:', err);
@@ -917,6 +1030,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="tiktok-slide-media post-media-container">
                         ${presetMediaInnerHtml(p.media, p.name)}
                         <div class="tiktok-slide-gradient" aria-hidden="true"></div>
+                        <div class="video-interaction-overlay">
+                            <span class="material-symbols-rounded overlay-pause">pause</span>
+                        </div>
                     </div>
                     <div class="tiktok-slide-ui">
                         <div class="tiktok-rail">
