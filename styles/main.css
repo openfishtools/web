@@ -1111,7 +1111,7 @@ body {
 .post-media-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 9/16;
+    height: 100%;
     background-color: #000;
 }
 
@@ -1360,8 +1360,7 @@ body {
 
 .tiktok-slide-ui .tiktok-rail,
 .tiktok-slide-ui .tiktok-bottom {
-    pointer-events: auto;
-    position: relative;
+    pointer-events: auto !important;
     z-index: 30;
 }
 

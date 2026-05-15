@@ -1096,24 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await hydrateTikTokHosts(feedContainer, 'video');
         if (feedContainer) {
             setupScrollLinkedVideoPlayback(feedContainer, '.tiktok-slide', feedContainer);
-            setTimeout(() => {
-                feedContainer.querySelectorAll('.tiktok-title').forEach(title => {
-                    const wrapper = title.parentElement;
-                    if (wrapper && title.scrollWidth > wrapper.clientWidth + 1) {
-                        const dist = (title.scrollWidth - wrapper.clientWidth) + 30; // Extra offset for fade
-                        title.style.setProperty('--scroll-dist', `${dist}px`);
-                        title.classList.add('scroll');
-                    }
-                });
-                feedContainer.querySelectorAll('.plugin-tag-v2').forEach(tag => {
-                    const wrapper = tag.parentElement;
-                    if (wrapper && tag.scrollWidth > wrapper.clientWidth + 1) {
-                        const dist = (tag.scrollWidth - wrapper.clientWidth) + 30; // Extra offset for fade
-                        tag.style.setProperty('--scroll-dist', `${dist}px`);
-                        tag.classList.add('scroll');
-                    }
-                });
-            }, 800); 
+            setupTikTokInteractions(feedContainer);
+            updateScrollingTitles(feedContainer);
         }
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
