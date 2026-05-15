@@ -211,7 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const video = targetPost.querySelector('video');
             if (video) {
                 video.muted = globalMuted;
-                video.play().catch(() => {});
+                video.play().catch((err) => {
+                    console.warn('Autoplay blocked in showFeed, retrying muted:', err);
+                    video.muted = true;
+                    video.play().catch(e => console.error('Final play attempt failed:', e));
+                });
             }
         }
     };
@@ -299,6 +303,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 v.setAttribute('crossorigin', 'anonymous');
                                 if (!globalMuted) v.volume = 1;
                                 el.appendChild(v);
+                                
+                                // Explicitly trigger play with fallback for blocked autoplay
+                                v.play().catch((err) => {
+                                    console.warn('Autoplay blocked in resolver, retrying muted:', err);
+                                    v.muted = true;
+                                    v.play().catch(e => console.error('Final resolve play attempt failed:', e));
+                                });
                             }
                             el.dataset.tiktokState = 'ready';
                         }
