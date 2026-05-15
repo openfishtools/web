@@ -92,11 +92,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 presetExploreView.style.transition = 'none';
             }
 
-            // Double RAF to ensure initial styles are painted before transition starts (fixes Firefox)
+            // Double RAF to ensure initial styles are painted before transition starts
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    morph.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
-                    morph.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`;
+                    morph.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+                    morph.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`;
                     morph.style.borderRadius = '12px';
                 });
             });
@@ -165,8 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 borderRadius: '12px',
                 overflow: 'hidden',
                 transformOrigin: 'top left',
-                transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
+                transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`,
                 willChange: 'transform, opacity',
+                backfaceVisibility: 'hidden',
                 pointerEvents: 'none',
                 boxShadow: 'var(--md-sys-elevation-4)',
                 transition: 'none'
@@ -175,11 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(morph);
 
             requestAnimationFrame(() => {
-                morph.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
-                morph.style.transform = 'translate(0, 0) scale(1)';
-                morph.style.borderRadius = isMockup ? '16px' : '0';
-                feedView.style.opacity = '1';
-                feedView.style.transition = 'opacity 0.2s ease';
+                requestAnimationFrame(() => {
+                    morph.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+                    morph.style.transform = 'translate3d(0, 0, 0) scale(1)';
+                    morph.style.borderRadius = isMockup ? '16px' : '0';
+                    feedView.style.opacity = '1';
+                    feedView.style.transition = 'opacity 0.2s ease';
+                });
             });
 
             if (exploreView) {

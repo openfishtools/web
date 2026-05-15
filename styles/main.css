@@ -2057,6 +2057,9 @@ body {
 .morph-element {
     background: #000;
     box-shadow: var(--md-sys-elevation-4);
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    contain: paint;
 }
 
 .morph-element>* {
