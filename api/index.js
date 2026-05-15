@@ -270,17 +270,36 @@ app.post('/api/admin/heartbeat', requireAdmin, (req, res) => {
 app.get('/api/admin/status', (req, res) => res.json({ online: (Date.now() - lastAdminHeartbeat) < 15000 }));
 
 app.get('/api/presets', async (req, res) => {
-    const ip = getClientIp(req);
-    const presets = await Preset.find().lean();
-    const userLikes = await Like.find({ ip });
-    const likedIds = new Set(userLikes.map(l => l.presetId.toString()));
-    
-    const results = presets.map(p => ({
-        ...p,
-        liked: likedIds.has(p._id.toString())
-    }));
-    
-    res.json(results);
+    try {
+        const ip = getClientIp(req);
+        const presets = await Preset.find().lean();
+        
+        // Fetch all likes to calculate counts and user status dynamically
+        const allLikes = await Like.find().lean();
+        const userLikedSet = new Set(
+            allLikes.filter(l => l.ip === ip).map(l => l.presetId.toString())
+        );
+
+        // Count occurrences per presetId
+        const counts = allLikes.reduce((acc, curr) => {
+            const pid = curr.presetId.toString();
+            acc[pid] = (acc[pid] || 0) + 1;
+            return acc;
+        }, {});
+
+        const results = presets.map(p => {
+            const id = p._id.toString();
+            return {
+                ...p,
+                likes: counts[id] || 0,
+                liked: userLikedSet.has(id)
+            };
+        });
+
+        res.json(results);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch presets' });
+    }
 });
 app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Preset(req.body).save()));
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
@@ -295,24 +314,23 @@ app.get('/api/presets/:id', async (req, res) => res.json(await Preset.findById(r
 
 app.post('/api/presets/:id/like', async (req, res) => {
     const ip = getClientIp(req);
+    const presetId = req.params.id;
     try {
-        const existingLike = await Like.findOne({ presetId: req.params.id, ip });
-        const p = await Preset.findById(req.params.id);
-        if (!p) return res.status(404).json({ error: 'Not found' });
-
+        const existingLike = await Like.findOne({ presetId, ip });
+        
         if (existingLike) {
-            // Unlike
             await Like.deleteOne({ _id: existingLike._id });
-            p.likes = Math.max(0, (p.likes || 1) - 1);
-            await p.save();
-            return res.json({ success: true, likes: p.likes, liked: false });
         } else {
-            // Like
-            await new Like({ presetId: req.params.id, ip }).save();
-            p.likes = (p.likes || 0) + 1;
-            await p.save();
-            return res.json({ success: true, likes: p.likes, liked: true });
+            await new Like({ presetId, ip }).save();
         }
+
+        // Get actual count from the Like collection (Source of Truth)
+        const totalLikes = await Like.countDocuments({ presetId });
+        
+        // Sync the Preset model's counter
+        await Preset.findByIdAndUpdate(presetId, { likes: totalLikes });
+
+        res.json({ success: true, likes: totalLikes, liked: !existingLike });
     } catch (err) {
         res.status(500).json({ error: 'Like operation failed' });
     }
