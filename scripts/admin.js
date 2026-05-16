@@ -752,12 +752,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         chats.forEach(c => {
             const prev = knownChats.get(c._id);
             if (!prev) {
-                knownChats.set(c._id, { lastMsg: c.lastMsg, lastUpdate: c.lastUpdate });
+                knownChats.set(c._id, { lastMsg: c.lastMsg, time: c.time });
                 if (!isFirstLoad) {
                     sendNotification(`New chat from ${c.name}`, c.lastMsg || 'Started a new conversation');
                 }
-            } else if (prev.lastMsg !== c.lastMsg || prev.lastUpdate !== c.lastUpdate) {
-                knownChats.set(c._id, { lastMsg: c.lastMsg, lastUpdate: c.lastUpdate });
+            } else if (prev.lastMsg !== c.lastMsg || prev.time !== c.time) {
+                knownChats.set(c._id, { lastMsg: c.lastMsg, time: c.time });
                 if (!isFirstLoad && activeSupportChatId !== c._id) {
                     sendNotification(`Message from ${c.name}`, c.lastMsg || 'Sent a message');
                 }
