@@ -749,16 +749,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const chats = await res.json();
 
         const isFirstLoad = knownChats.size === 0;
+        const detailVisible = detailView && !detailView.classList.contains('hidden');
         chats.forEach(c => {
             const prev = knownChats.get(c._id);
             if (!prev) {
-                knownChats.set(c._id, { lastMsg: c.lastMsg, time: c.time });
+                knownChats.set(c._id, c.lastMsg);
                 if (!isFirstLoad) {
                     sendNotification(`New chat from ${c.name}`, c.lastMsg || 'Started a new conversation');
                 }
-            } else if (prev.lastMsg !== c.lastMsg || prev.time !== c.time) {
-                knownChats.set(c._id, { lastMsg: c.lastMsg, time: c.time });
-                if (!isFirstLoad && activeSupportChatId !== c._id) {
+            } else if (prev !== c.lastMsg) {
+                knownChats.set(c._id, c.lastMsg);
+                const isViewingThisChat = detailVisible && activeSupportChatId === c._id;
+                if (!isFirstLoad && !isViewingThisChat) {
                     sendNotification(`Message from ${c.name}`, c.lastMsg || 'Sent a message');
                 }
             }
