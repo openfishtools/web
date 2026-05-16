@@ -40,6 +40,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isUnauthorizedAlertShowing = false;
     let chatListInterval = null;
     let heartbeatInterval = null;
+    let knownChats = new Map();
+
+    const requestNotificationPermission = () => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    };
+
+    const sendNotification = (title, body) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, {
+                body,
+                icon: '/favicon.ico'
+            });
+        }
+    };
 
     const onUnauthorized = () => {
         if (isUnauthorizedAlertShowing) return;
@@ -154,6 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         initModalTriggers();
         initDragAndDrop();
         handleHashNavigation();
+        requestNotificationPermission();
         const adminUploadModal = document.getElementById('chat-upload-modal');
         const openAdminUploadBtn = document.getElementById('open-chat-upload-modal');
         const closeAdminUploadBtn = document.getElementById('close-chat-upload-modal');
@@ -730,6 +747,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${API_URL}/chats`, { headers: adminAuthHeaders() });
         if (check401(res)) return;
         const chats = await res.json();
+
+        const isFirstLoad = knownChats.size === 0;
+        chats.forEach(c => {
+            const prev = knownChats.get(c._id);
+            if (!prev) {
+                knownChats.set(c._id, { lastMsg: c.lastMsg, lastUpdate: c.lastUpdate });
+                if (!isFirstLoad) {
+                    sendNotification(`New chat from ${c.name}`, c.lastMsg || 'Started a new conversation');
+                }
+            } else if (prev.lastMsg !== c.lastMsg || prev.lastUpdate !== c.lastUpdate) {
+                knownChats.set(c._id, { lastMsg: c.lastMsg, lastUpdate: c.lastUpdate });
+                if (!isFirstLoad && activeSupportChatId !== c._id) {
+                    sendNotification(`Message from ${c.name}`, c.lastMsg || 'Sent a message');
+                }
+            }
+        });
+
         const list = document.getElementById('active-chats');
         if (!list) return;
         if (activeSupportChatId) {
@@ -872,6 +906,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (confirm('Permanently delete this chat and all messages?')) {
             const delRes = await fetch(`${API_URL}/chats/${id}`, { method: 'DELETE', headers: adminAuthHeaders() });
             if (check401(delRes)) return;
+            knownChats.delete(id);
             activeSupportChatId = null;
             if (detailView) detailView.classList.add('hidden');
             if (listView) listView.classList.remove('hidden');
