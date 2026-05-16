@@ -10,6 +10,13 @@ const cors = require('cors');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
+const webpush = require('web-push');
+
+webpush.setVapidDetails(
+    'mailto:admin@cutefish.my.id',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
 
@@ -126,6 +133,29 @@ const LikeSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 const Like = mongoose.models.Like || mongoose.model('Like', LikeSchema);
+
+const PushSubscriptionSchema = new mongoose.Schema({
+    endpoint: { type: String, unique: true },
+    keys: { p256dh: String, auth: String },
+    createdAt: { type: Date, default: Date.now }
+});
+const PushSubscription = mongoose.models.PushSubscription || mongoose.model('PushSubscription', PushSubscriptionSchema);
+
+async function sendPushToAdmins(title, body, tag) {
+    const subs = await PushSubscription.find({});
+    const payload = JSON.stringify({ title, body, tag, url: '/admin.html#chat' });
+    await Promise.allSettled(
+        subs.map(async (sub) => {
+            try {
+                await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
+            } catch (err) {
+                if (err.statusCode === 404 || err.statusCode === 410) {
+                    await PushSubscription.deleteOne({ endpoint: sub.endpoint });
+                }
+            }
+        })
+    );
+}
 
 function normalizeClientIp(raw) {
     if (raw == null) return '';
@@ -437,6 +467,13 @@ app.post('/api/messages', async (req, res) => {
     if (!chat || chat.blocked) return res.status(403).json({ error: 'Blocked or unavailable' });
     const msg = await new Message({ ...req.body, timestamp: Date.now() }).save();
     await Chat.findByIdAndUpdate(req.body.chatId, { lastMsg: req.body.text, time: req.body.time, lastUpdate: Date.now() });
+    if (req.body.type !== 'received') {
+        sendPushToAdmins(
+            `Message from ${chat.name}`,
+            req.body.text && req.body.text.startsWith('📁') ? 'Shared a file' : req.body.text,
+            chat._id.toString()
+        ).catch(() => {});
+    }
     res.json(msg);
 });
 
@@ -474,6 +511,27 @@ async function deleteFileFromSupabase(url) {
         });
     } catch (e) { /* ignore */ }
 }
+
+app.get('/api/push/vapid-key', (req, res) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', requireAdmin, async (req, res) => {
+    const { endpoint, keys } = req.body;
+    if (!endpoint || !keys) return res.status(400).json({ error: 'Invalid subscription' });
+    await PushSubscription.findOneAndUpdate(
+        { endpoint },
+        { endpoint, keys },
+        { upsert: true, new: true }
+    );
+    res.json({ success: true });
+});
+
+app.delete('/api/push/subscribe', requireAdmin, async (req, res) => {
+    const { endpoint } = req.body;
+    if (endpoint) await PushSubscription.deleteOne({ endpoint });
+    res.json({ success: true });
+});
 
 app.delete('/api/upload', requireAdmin, async (req, res) => {
     const { url } = req.body;

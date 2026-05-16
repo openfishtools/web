@@ -42,20 +42,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     let heartbeatInterval = null;
     let knownChats = new Map();
 
-    const requestNotificationPermission = () => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
+    let swRegistration = null;
+
+    const urlBase64ToUint8Array = (base64String) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    };
+
+    const registerPush = async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        try {
+            swRegistration = await navigator.serviceWorker.register('/sw.js');
+            await navigator.serviceWorker.ready;
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+            const existing = await swRegistration.pushManager.getSubscription();
+            if (existing) {
+                await fetch(`${API_URL}/push/subscribe`, {
+                    method: 'POST',
+                    headers: jsonHeaders(),
+                    body: JSON.stringify(existing.toJSON())
+                });
+                return;
+            }
+            const keyRes = await fetch(`${API_URL}/push/vapid-key`);
+            const { publicKey } = await keyRes.json();
+            const subscription = await swRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+            await fetch(`${API_URL}/push/subscribe`, {
+                method: 'POST',
+                headers: jsonHeaders(),
+                body: JSON.stringify(subscription.toJSON())
+            });
+        } catch (err) {}
     };
 
     const sendNotification = (title, body) => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, {
-                body,
-                icon: '/favicon.ico'
-            });
+        if (swRegistration && Notification.permission === 'granted') {
+            swRegistration.showNotification(title, { body, icon: '/favicon.ico', badge: '/favicon.ico' });
         }
     };
+
 
     const onUnauthorized = () => {
         if (isUnauthorizedAlertShowing) return;
@@ -170,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         initModalTriggers();
         initDragAndDrop();
         handleHashNavigation();
-        requestNotificationPermission();
+        registerPush();
         const adminUploadModal = document.getElementById('chat-upload-modal');
         const openAdminUploadBtn = document.getElementById('open-chat-upload-modal');
         const closeAdminUploadBtn = document.getElementById('close-chat-upload-modal');
