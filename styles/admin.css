@@ -566,3 +566,31 @@ tr:last-child td {
 .admin-form[data-method="upload"] #preset-url-field {
     display: none !important;
 }
+
+@media (max-width: 599.98px) {
+    .section#chat.active {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 80px;
+        height: auto;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-container {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .chat-view-container {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+}
