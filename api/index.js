@@ -402,6 +402,30 @@ app.delete('/api/chats/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/api/chats/:id', requireAdmin, async (req, res) => {
+    const chat = await Chat.findById(req.params.id);
+    if (!chat) return res.status(404).json({ error: 'Chat deleted' });
+    res.json(chat);
+});
+
+app.post('/api/chats/:id/heartbeat', async (req, res) => {
+    await Chat.findByIdAndUpdate(req.params.id, { lastUpdate: Date.now() });
+    res.json({ success: true });
+});
+
+app.patch('/api/chats/:id/block', requireAdmin, async (req, res) => {
+    const chat = await Chat.findById(req.params.id);
+    if (chat) {
+        chat.blocked = !chat.blocked;
+        await chat.save();
+        res.json(chat);
+    } else {
+        res.status(404).json({ error: 'Chat not found' });
+    }
+});
+
+
+
 app.get('/api/messages/:chatId', async (req, res) => {
     const chat = await Chat.findById(req.params.chatId);
     if (!chat) return res.status(404).json({ error: 'Chat deleted' });
@@ -450,5 +474,12 @@ async function deleteFileFromSupabase(url) {
         });
     } catch (e) { /* ignore */ }
 }
+
+app.delete('/api/upload', requireAdmin, async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'Missing URL' });
+    await deleteFileFromSupabase(url);
+    res.json({ success: true });
+});
 
 module.exports = app;

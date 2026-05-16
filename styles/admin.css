@@ -568,6 +568,9 @@ tr:last-child td {
 }
 
 @media (max-width: 599.98px) {
+    body, .app-container {
+        height: 100dvh;
+    }
     .section#chat.active {
         position: absolute;
         top: 0;
@@ -592,5 +595,16 @@ tr:last-child td {
         display: flex;
         flex-direction: column;
         overflow: hidden;
+    }
+    .chat-info {
+        min-width: 0;
+    }
+    .chat-info h3 {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .chat-header-actions {
+        flex-shrink: 0;
     }
 }
