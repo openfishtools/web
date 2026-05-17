@@ -381,7 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const hydrateTikTokHosts = async (root, mode = 'video') => {
         if (!root || !('IntersectionObserver' in window)) return;
         const hosts = root.querySelectorAll('.tiktok-media-host:not([data-tiktok-state])');
-        
+        if (!hosts.length) return;
+
+        if (root._hydrateIo) {
+            root._hydrateIo.disconnect();
+            root._hydrateIo = null;
+        }
+
         const io = new IntersectionObserver((entries) => {
             entries.forEach(async (en) => {
                 const el = en.target;
@@ -474,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { threshold: 0.1 });
 
         hosts.forEach(h => io.observe(h));
+        root._hydrateIo = io;
     };
 
     const disconnectScrollVideoIo = (attachEl) => {
@@ -869,6 +876,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const SOFTWARE_FULL_NAMES = {
+        'AE': 'After Effects',
+        'AM': 'Alight Motion',
+        'Blurr': 'Blurr',
+        'CC': 'Capcut',
+        'FM': 'Funimate',
+        'Node': 'Node Video'
+    };
+
     const openSwDownloadPicker = (urls, presetName) => {
         const picker = document.getElementById('sw-download-picker');
         const optionsContainer = document.getElementById('sw-download-options');
@@ -883,10 +899,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         optionsContainer.innerHTML = urls.map(entry => {
             const icon = badgeIcons[entry.sw];
+            const label = SOFTWARE_FULL_NAMES[entry.sw] || entry.sw;
             return `
                 <button class="sw-download-option-btn" data-url="${escapeHtmlAttr(entry.url || '')}">
-                    ${icon ? `<img src="${icon}" alt="${entry.sw}">` : `<span class="material-symbols-rounded">apps</span>`}
-                    <span>${entry.sw}</span>
+                    ${icon ? `<img src="${icon}" alt="${label}">` : `<span class="material-symbols-rounded">apps</span>`}
+                    <span>${label}</span>
                     <span class="material-symbols-rounded">download</span>
                 </button>`;
         }).join('');
