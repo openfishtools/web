@@ -232,9 +232,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('open-resource-modal').onclick = () => openModal('resource-modal');
     };
 
+    const STATIC_SW_KEYS = ['AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
+    const STATIC_PLUGIN_NAMES = ['After Codecs', 'Animation Composer', 'BCC', 'Element 3D', 'Flow', 'FX Console', 'Red Giant Universe', 'Sapphire', 'Omino', 'Twixtor & RSMB', 'Signal', 'Trapcode', 'Twitch', 'Magic Bullet Suite'];
+
     const resetPresetModal = () => {
-        document.querySelectorAll('#sw-badge-picker .sw-badge-preset').forEach(b => b.classList.remove('selected'));
-        document.querySelectorAll('#plugin-badge-picker .sw-badge-preset').forEach(b => b.classList.remove('selected'));
+        const swPicker = document.getElementById('sw-badge-picker');
+        const pluginPicker = document.getElementById('plugin-badge-picker');
+
+        swPicker?.querySelectorAll('.sw-badge-preset').forEach(b => {
+            if (!STATIC_SW_KEYS.includes(b.dataset.sw)) {
+                b.remove();
+            } else {
+                b.classList.remove('selected');
+            }
+        });
+
+        pluginPicker?.querySelectorAll('.sw-badge-preset').forEach(b => {
+            if (!STATIC_PLUGIN_NAMES.includes(b.dataset.plugin)) {
+                b.remove();
+            } else {
+                b.classList.remove('selected');
+            }
+        });
+
         const dlContainer = document.getElementById('preset-download-links-container');
         if (dlContainer) dlContainer.innerHTML = '<p class="no-sw-selected-hint">Select software above to add download links.</p>';
         ['modal-preset-name', 'modal-preset-version', 'modal-preset-video', 'modal-preset-size'].forEach(id => {
@@ -255,6 +275,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         removeBtn.onclick = (e) => {
             e.stopPropagation();
+            const isStaticSw = STATIC_SW_KEYS.includes(badge.dataset.sw);
+            const isStaticPlugin = STATIC_PLUGIN_NAMES.includes(badge.dataset.plugin);
+            if (isStaticSw || isStaticPlugin) {
+                badge.classList.remove('selected');
+                if (isSoftware) syncDownloadLinkRows();
+                return;
+            }
             const icon = badge.dataset.icon;
             if (icon && icon.includes('supabase.co/storage/v1/object/public')) {
                 fetch(`${API_URL}/upload`, {
