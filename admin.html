@@ -244,15 +244,37 @@
 
                 <div class="input-field">
                     <label>Software</label>
-                    <select id="modal-preset-software">
-                        <option value="AE">After Effects</option>
-                        <option value="AM">Alight Motion</option>
-                        <option value="Blurr">Blurr</option>
-                        <option value="CC">CapCut</option>
-                        <option value="FM">Funimate</option>
-                        <option value="Node">Node Video</option>
-                    </select>
+                    <div class="sw-badge-picker" id="sw-badge-picker">
+                        <div class="sw-badge-preset" data-sw="AE" data-icon="assets/icon/Ae.png" data-label="After Effects">
+                            <img src="assets/icon/Ae.png" alt="AE">
+                            <span>After Effects</span>
+                        </div>
+                        <div class="sw-badge-preset" data-sw="AM" data-icon="assets/icon/Am.png" data-label="Alight Motion">
+                            <img src="assets/icon/Am.png" alt="AM">
+                            <span>Alight Motion</span>
+                        </div>
+                        <div class="sw-badge-preset" data-sw="Blurr" data-icon="assets/icon/Blurr.png" data-label="Blurr">
+                            <img src="assets/icon/Blurr.png" alt="Blurr">
+                            <span>Blurr</span>
+                        </div>
+                        <div class="sw-badge-preset" data-sw="CC" data-icon="assets/icon/CC.png" data-label="CapCut">
+                            <img src="assets/icon/CC.png" alt="CC">
+                            <span>CapCut</span>
+                        </div>
+                        <div class="sw-badge-preset" data-sw="FM" data-icon="assets/icon/Fm.png" data-label="Funimate">
+                            <img src="assets/icon/Fm.png" alt="FM">
+                            <span>Funimate</span>
+                        </div>
+                        <div class="sw-badge-preset" data-sw="Node" data-icon="assets/icon/Node.png" data-label="Node Video">
+                            <img src="assets/icon/Node.png" alt="Node">
+                            <span>Node Video</span>
+                        </div>
+                        <button type="button" class="sw-badge-add-btn" id="open-custom-badge-popup" title="Add custom software">
+                            <span class="material-symbols-rounded">add</span>
+                        </button>
+                    </div>
                 </div>
+
                 <div class="input-field">
                     <label>Min. Version</label>
                     <input type="text" id="modal-preset-version" placeholder="e.g. v4.0+">
@@ -266,19 +288,32 @@
                     <input type="text" id="modal-preset-size" placeholder="e.g. 15.5 MB">
                 </div>
                 <div class="input-field">
-                    <label>Require Plugin</label>
-                    <input type="text" id="modal-preset-plugin" placeholder="e.g. Sapphire, BCC">
-                </div>
-                <div class="input-field" id="preset-url-container">
-                    <label>Download Link</label>
-                    <div class="integrated-drop-zone" id="preset-url-drop">
-                        <input type="text" id="modal-preset-url" placeholder="https://... or drag file here">
-                        <button class="icon-btn delete hidden" id="delete-uploaded-preset-btn" title="Delete uploaded file">
-                            <span class="material-symbols-rounded">delete</span>
+                    <label>Plugin</label>
+                    <div class="sw-badge-picker plugin-badge-picker" id="plugin-badge-picker">
+                        <div class="sw-badge-preset plugin-badge" data-plugin="Sapphire">
+                            <span class="material-symbols-rounded">extension</span>
+                            <span>Sapphire</span>
+                        </div>
+                        <div class="sw-badge-preset plugin-badge" data-plugin="BCC">
+                            <span class="material-symbols-rounded">extension</span>
+                            <span>BCC</span>
+                        </div>
+                        <div class="sw-badge-preset plugin-badge" data-plugin="Motion Bro">
+                            <span class="material-symbols-rounded">extension</span>
+                            <span>Motion Bro</span>
+                        </div>
+                        <button type="button" class="sw-badge-add-btn" id="open-custom-plugin-popup" title="Add custom plugin">
+                            <span class="material-symbols-rounded">add</span>
                         </button>
                     </div>
+                </div>
+
+                <div class="input-field" id="preset-url-container">
+                    <label>Download Links</label>
+                    <div id="preset-download-links-container">
+                        <p class="no-sw-selected-hint">Select software above to add download links.</p>
+                    </div>
                     <input type="file" id="preset-file-input" hidden>
-                    <div class="file-preview" id="preset-file-preview"></div>
                 </div>
                 <div id="preset-upload-progress" class="hidden" style="margin-top: 16px;">
                     <div class="progress-bar-bg">
@@ -392,6 +427,61 @@
 
             <div class="modal-footer">
                 <button class="btn-text" id="close-chat-upload-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-badge-popup" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <h3 class="mini-popup-title">
+                <span class="material-symbols-rounded">add_circle</span>
+                Add Software
+            </h3>
+            <div class="mini-popup-body">
+                <div class="input-field">
+                    <label>Icon (Upload or URL)</label>
+                    <div class="drag-drop-area mini-drag-drop" id="custom-badge-icon-drop">
+                        <button type="button" class="remove-upload-btn" id="remove-custom-badge-icon-btn" title="Remove icon">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                        <img class="drag-drop-preview" id="custom-badge-icon-img-preview">
+                        <span class="material-symbols-rounded">image</span>
+                        <span class="label">Drag &amp; drop or click to upload</span>
+                        <input type="file" id="custom-badge-icon-file-input" hidden accept="image/*">
+                    </div>
+                    <input type="text" id="custom-badge-icon-url" placeholder="or paste URL here">
+                </div>
+                <div class="input-field">
+                    <label>Software Name</label>
+                    <input type="text" id="custom-badge-label" placeholder="e.g. Premiere Pro">
+                </div>
+                <div class="input-field">
+                    <label>Software Key (short)</label>
+                    <input type="text" id="custom-badge-key" placeholder="e.g. PR">
+                </div>
+            </div>
+            <div class="mini-popup-footer">
+                <button class="btn-text" id="cancel-custom-badge">Cancel</button>
+                <button class="btn-primary" id="confirm-custom-badge">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-plugin-popup" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <h3 class="mini-popup-title">
+                <span class="material-symbols-rounded">extension</span>
+                Add Plugin
+            </h3>
+            <div class="mini-popup-body">
+                <div class="input-field">
+                    <label>Plugin Name</label>
+                    <input type="text" id="custom-plugin-label" placeholder="e.g. VideoCopilot">
+                </div>
+            </div>
+            <div class="mini-popup-footer">
+                <button class="btn-text" id="cancel-custom-plugin">Cancel</button>
+                <button class="btn-primary" id="confirm-custom-plugin">Add</button>
             </div>
         </div>
     </div>

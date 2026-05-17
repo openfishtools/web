@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userHandleInput = document.getElementById('user-handle');
     const userIpDisplay = document.getElementById('user-ip');
 
-    const API_URL = '/api';
+    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
 
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
@@ -830,8 +830,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const res = await fetch(`${API_URL}/presets/${id}`);
                     const data = await res.json();
-                    if (data.url) {
-                        window.open(data.url, '_blank');
+                    const urls = Array.isArray(data.urls) ? data.urls.filter(u => u.url) : [];
+                    if (urls.length > 1) {
+                        openSwDownloadPicker(urls, data.name);
+                    } else if (urls.length === 1) {
+                        window.open(ensureProtocol(urls[0].url), '_blank');
+                    } else if (data.url) {
+                        window.open(ensureProtocol(data.url), '_blank');
                     }
                 } catch (err) {
                     console.error('Download error:', err);
@@ -845,6 +850,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    const openSwDownloadPicker = (urls, presetName) => {
+        const picker = document.getElementById('sw-download-picker');
+        const optionsContainer = document.getElementById('sw-download-options');
+        if (!picker || !optionsContainer) return;
+        const badgeIcons = {
+            'AE': 'assets/icon/Ae.png',
+            'AM': 'assets/icon/Am.png',
+            'Blurr': 'assets/icon/Blurr.png',
+            'CC': 'assets/icon/CC.png',
+            'FM': 'assets/icon/Fm.png',
+            'Node': 'assets/icon/Node.png'
+        };
+        optionsContainer.innerHTML = urls.map(entry => {
+            const icon = badgeIcons[entry.sw];
+            return `
+                <button class="sw-download-option-btn" data-url="${escapeHtmlAttr(entry.url || '')}">
+                    ${icon ? `<img src="${icon}" alt="${entry.sw}">` : `<span class="material-symbols-rounded">apps</span>`}
+                    <span>${entry.sw}</span>
+                    <span class="material-symbols-rounded">download</span>
+                </button>`;
+        }).join('');
+        optionsContainer.querySelectorAll('.sw-download-option-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const url = btn.dataset.url;
+                if (url) window.open(ensureProtocol(url), '_blank');
+                picker.classList.remove('show');
+            });
+        });
+        picker.classList.add('show');
+    };
+
+    const cancelSwDownloadBtn = document.getElementById('cancel-sw-download');
+    if (cancelSwDownloadBtn) {
+        cancelSwDownloadBtn.addEventListener('click', () => {
+            document.getElementById('sw-download-picker')?.classList.remove('show');
+        });
+    }
+
+    document.getElementById('sw-download-picker')?.addEventListener('click', (e) => {
+        if (e.target.id === 'sw-download-picker') {
+            e.target.classList.remove('show');
+        }
+    });
 
     const handleLike = async (id, btn, onlyLike = false) => {
         const isLiked = btn.classList.contains('liked');
@@ -980,12 +1029,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!categoryContainer) return;
         
         const activeCategory = categoryContainer.querySelector('.chip.active')?.dataset.software || 'All';
-        const categories = ['All', ...new Set(presets.map(p => p.software))];
+        const allSw = new Set();
+        presets.forEach(p => {
+            const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+            swArr.forEach(sw => allSw.add(sw));
+        });
+        const categories = ['All', ...allSw];
         
         categoryContainer.innerHTML = categories.map(cat => {
             if (cat === 'All') return `<div class="chip ${activeCategory === 'All' ? 'active' : ''}" data-software="All">All</div>`;
             
-            const badgeIcons = {
+            const localBadgeIcons = {
                 'AE': 'assets/icon/Ae.png',
                 'AM': 'assets/icon/Am.png',
                 'Blurr': 'assets/icon/Blurr.png',
@@ -993,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'FM': 'assets/icon/Fm.png',
                 'Node': 'assets/icon/Node.png'
             };
-            const icon = badgeIcons[cat];
+            const icon = localBadgeIcons[cat];
             const iconHtml = icon ? `<img src="${icon}" alt="${cat}" class="chip-icon">` : '';
             return `<div class="chip ${activeCategory === cat ? 'active' : ''}" data-software="${cat}">${iconHtml}${cat}</div>`;
         }).join('');
@@ -1008,7 +1062,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderPresetCategories(allPresets);
         
-        const presets = filterSoftware === 'All' ? allPresets : allPresets.filter(p => p.software === filterSoftware);
+        const presets = filterSoftware === 'All'
+            ? allPresets
+            : allPresets.filter(p => {
+                const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+                return swArr.includes(filterSoftware);
+            });
         const feedContainer = document.getElementById('preset-feed');
         if (exploreGrid) disconnectScrollVideoIo(exploreGrid);
         if (feedContainer) disconnectScrollVideoIo(feedContainer);
@@ -1016,30 +1075,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (presets.length === 0) {
             exploreGrid.innerHTML = `<div class="empty-state">No presets found for ${filterSoftware}</div>`;
         } else {
-            exploreGrid.innerHTML = presets.map(p => `
+            exploreGrid.innerHTML = presets.map(p => {
+                const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+                const badgesHtml = swArr.map(sw => {
+                    const icon = badgeIcons[sw];
+                    return icon ? `<div class="explore-badge-multi"><img src="${icon}" alt="${sw}"></div>` : '';
+                }).join('');
+                return `
                 <div class="explore-item" data-id="${p._id}">
                     ${presetMediaInnerHtml(p.media, p.name)}
-                    <div class="explore-badge">
-                        <img src="${badgeIcons[p.software] || ''}" alt="${p.software}">
-                    </div>
+                    <div class="explore-badges">${badgesHtml}</div>
                     <div class="explore-info">
                         <span class="material-symbols-rounded" style="${p.liked ? 'color: #ff3b5c; font-variation-settings: \'FILL\' 1;' : ''}">favorite</span>
                         <span>${p.likes || 0}</span>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             exploreGrid.setAttribute('data-loaded', 'true');
         }
         if (feedContainer) {
             const dsa = escapeHtmlAttr;
-            feedContainer.innerHTML = presets.map((p) => `
+            feedContainer.innerHTML = presets.map((p) => {
+                const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+                const swIconsHtml = swArr.map(sw => {
+                    const icon = badgeIcons[sw];
+                    return icon ? `<img src="${icon}" class="tiktok-title-icon" alt="${sw}">` : '';
+                }).join('');
+                return `
                 <article class="tiktok-slide preset-post"
                     data-id="${p._id}"
                     data-name="${dsa(p.name)}"
                     data-size="${dsa(p.size)}"
                     data-type="${dsa(p.type)}"
                     data-version="${dsa(p.version)}"
-                    data-software="${dsa(p.software)}">
+                    data-software="${dsa(Array.isArray(p.software) ? p.software.join(',') : (p.software || ''))}">
                     <div class="tiktok-slide-media post-media-container">
                         ${presetMediaInnerHtml(p.media, p.name)}
                         <div class="tiktok-slide-gradient" aria-hidden="true"></div>
@@ -1061,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="tiktok-bottom">
                             <div class="tiktok-info">
                                 <div class="tiktok-title-row">
-                                    <img src="${badgeIcons[p.software] || ''}" class="tiktok-title-icon" alt="">
+                                    <div class="tiktok-title-icons">${swIconsHtml}</div>
                                     <div class="tiktok-title-wrapper">
                                         <h3 class="tiktok-title">${dsa(p.name)}</h3>
                                     </div>
@@ -1090,7 +1160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 </article>
-            `).join('');
+            `;
+            }).join('');
         }
         await hydrateTikTokHosts(exploreGrid, 'image');
         await hydrateTikTokHosts(feedContainer, 'video');

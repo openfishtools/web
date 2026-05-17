@@ -10,6 +10,9 @@
  * Only MONGODB_URI is read from .env — not ADMIN_USERNAME / ADMIN_PASSWORD.
  */
 require('dotenv').config();
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+if (dns.setDefaultResultOrder) dns.setDefaultResultOrder('ipv4first');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Admin = require('./models/Admin');

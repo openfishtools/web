@@ -55,13 +55,14 @@ const Social = mongoose.model('Social', SocialSchema);
 
 const PresetSchema = new mongoose.Schema({
     name: String,
-    software: String,
+    software: [String],
     type: String,
     version: String,
     media: String,
     plugin: String,
     size: String,
     url: String,
+    urls: [{ sw: String, url: String }],
     likes: { type: Number, default: 0 }
 });
 const Preset = mongoose.model('Preset', PresetSchema);

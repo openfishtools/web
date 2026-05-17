@@ -2288,4 +2288,153 @@ body {
     text-align: right !important;
 }
 
+.mini-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.mini-popup-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mini-popup {
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 28px;
+    padding: 28px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--elevation-5);
+    transform: translateY(24px) scale(0.96);
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.mini-popup-overlay.show .mini-popup {
+    transform: translateY(0) scale(1);
+}
+
+.mini-popup-title {
+    font-size: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 8px;
+}
+
+.mini-popup-title .material-symbols-rounded {
+    font-size: 24px;
+    color: var(--md-sys-color-primary);
+}
+
+.mini-popup-desc {
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-bottom: 16px;
+}
+
+.mini-popup-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mini-popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.sw-download-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    border: 1.5px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container);
+    cursor: pointer;
+    width: 100%;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.sw-download-option-btn:hover {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.sw-download-option-btn img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.sw-download-option-btn .material-symbols-rounded {
+    font-size: 22px;
+    color: var(--md-sys-color-primary);
+    margin-left: auto;
+}
+
+.explore-badges {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 2;
+}
+
+.explore-badge-multi {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 0, 0.45);
+    border-radius: 5px;
+    padding: 3px;
+}
+
+.explore-badge-multi img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.tiktok-title-icons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.tiktok-title-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
 /* --- End of File --- */

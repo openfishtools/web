@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
 
-    const API_URL = '/api';
+    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) return url;
@@ -200,6 +200,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadChats();
         initModalTriggers();
         initDragAndDrop();
+        initBadgePickers();
+        initCustomBadgePopups();
         handleHashNavigation();
         registerPush();
         const adminUploadModal = document.getElementById('chat-upload-modal');
@@ -223,8 +225,281 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const initModalTriggers = () => {
         document.getElementById('open-social-modal').onclick = () => openModal('social-modal');
-        document.getElementById('open-preset-modal').onclick = () => openModal('preset-modal');
+        document.getElementById('open-preset-modal').onclick = () => {
+            resetPresetModal();
+            openModal('preset-modal');
+        };
         document.getElementById('open-resource-modal').onclick = () => openModal('resource-modal');
+    };
+
+    const resetPresetModal = () => {
+        document.querySelectorAll('#sw-badge-picker .sw-badge-preset').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('#plugin-badge-picker .sw-badge-preset').forEach(b => b.classList.remove('selected'));
+        const dlContainer = document.getElementById('preset-download-links-container');
+        if (dlContainer) dlContainer.innerHTML = '<p class="no-sw-selected-hint">Select software above to add download links.</p>';
+        ['modal-preset-name', 'modal-preset-version', 'modal-preset-video', 'modal-preset-size'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    };
+
+    const attachBadgeRemoveBtn = (badge, isSoftware = true) => {
+        let removeBtn = badge.querySelector('.remove-badge-btn');
+        if (!removeBtn) {
+            removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-badge-btn';
+            removeBtn.title = 'Remove';
+            removeBtn.innerHTML = '×';
+            badge.appendChild(removeBtn);
+        }
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            const icon = badge.dataset.icon;
+            if (icon && icon.includes('supabase.co/storage/v1/object/public')) {
+                fetch(`${API_URL}/upload`, {
+                    method: 'DELETE',
+                    headers: jsonHeaders(),
+                    body: JSON.stringify({ url: icon })
+                }).catch(() => {});
+            }
+            badge.remove();
+            if (isSoftware) syncDownloadLinkRows();
+        };
+    };
+
+    const initBadgePickers = () => {
+        document.querySelectorAll('#sw-badge-picker .sw-badge-preset').forEach(badge => {
+            attachBadgeRemoveBtn(badge, true);
+            badge.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-badge-btn') || e.target.closest('.remove-badge-btn')) return;
+                badge.classList.toggle('selected');
+                syncDownloadLinkRows();
+            });
+        });
+        document.querySelectorAll('#plugin-badge-picker .sw-badge-preset').forEach(badge => {
+            attachBadgeRemoveBtn(badge, false);
+            badge.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-badge-btn') || e.target.closest('.remove-badge-btn')) return;
+                badge.classList.toggle('selected');
+            });
+        });
+    };
+
+    const syncDownloadLinkRows = () => {
+        const dlContainer = document.getElementById('preset-download-links-container');
+        if (!dlContainer) return;
+        const selected = document.querySelectorAll('#sw-badge-picker .sw-badge-preset.selected');
+        if (selected.length === 0) {
+            dlContainer.innerHTML = '<p class="no-sw-selected-hint">Select software above to add download links.</p>';
+            return;
+        }
+        const existingUrls = {};
+        dlContainer.querySelectorAll('.preset-dl-link-row').forEach(row => {
+            const key = row.dataset.sw;
+            const val = row.querySelector('input')?.value || '';
+            if (key) existingUrls[key] = val;
+        });
+        dlContainer.innerHTML = '';
+        selected.forEach(badge => {
+            const sw = badge.dataset.sw;
+            const icon = badge.dataset.icon || '';
+            const label = badge.dataset.label || sw;
+            const row = document.createElement('div');
+            row.className = 'preset-dl-link-row';
+            row.dataset.sw = sw;
+            row.innerHTML = `
+                <div class="sw-link-badge">
+                    ${icon ? `<img src="${icon}" alt="${sw}">` : `<span class="material-symbols-rounded" style="font-size:14px;">apps</span>`}
+                    <span>${label}</span>
+                </div>
+                <input type="text" placeholder="https://... or drag file here" value="${existingUrls[sw] || ''}">
+            `;
+            dlContainer.appendChild(row);
+        });
+    };
+
+    const getSelectedSoftware = () => {
+        const selected = [];
+        document.querySelectorAll('#sw-badge-picker .sw-badge-preset.selected').forEach(b => {
+            selected.push(b.dataset.sw);
+        });
+        return selected;
+    };
+
+    const getSelectedPlugins = () => {
+        const selected = [];
+        document.querySelectorAll('#plugin-badge-picker .sw-badge-preset.selected').forEach(b => {
+            selected.push(b.dataset.plugin);
+        });
+        return selected.join(', ');
+    };
+
+    const getDownloadLinks = () => {
+        const links = [];
+        document.querySelectorAll('#preset-download-links-container .preset-dl-link-row').forEach(row => {
+            const sw = row.dataset.sw;
+            const url = row.querySelector('input')?.value?.trim() || '';
+            if (sw) links.push({ sw, url });
+        });
+        return links;
+    };
+
+    const initCustomBadgePopups = () => {
+        const badgePopup = document.getElementById('custom-badge-popup');
+        const pluginPopup = document.getElementById('custom-plugin-popup');
+        let customBadgeIconUrl = '';
+
+        const resetCustomBadgeIcon = () => {
+            customBadgeIconUrl = '';
+            const drop = document.getElementById('custom-badge-icon-drop');
+            const img = document.getElementById('custom-badge-icon-img-preview');
+            if (drop) drop.classList.remove('has-file');
+            if (img) { img.src = ''; img.removeAttribute('src'); }
+            const urlInput = document.getElementById('custom-badge-icon-url');
+            if (urlInput) urlInput.value = '';
+            const fileInput = document.getElementById('custom-badge-icon-file-input');
+            if (fileInput) fileInput.value = '';
+        };
+
+        const iconDrop = document.getElementById('custom-badge-icon-drop');
+        const iconFileInput = document.getElementById('custom-badge-icon-file-input');
+        const iconRemoveBtn = document.getElementById('remove-custom-badge-icon-btn');
+
+        if (iconDrop && iconFileInput) {
+            iconDrop.onclick = (e) => {
+                if (e.target === iconRemoveBtn || iconRemoveBtn?.contains(e.target)) return;
+                iconFileInput.click();
+            };
+            iconDrop.ondragover = (e) => { e.preventDefault(); iconDrop.classList.add('active'); };
+            iconDrop.ondragleave = () => iconDrop.classList.remove('active');
+            iconDrop.ondrop = (e) => {
+                e.preventDefault();
+                iconDrop.classList.remove('active');
+                if (e.dataTransfer.files.length) handleCustomBadgeIconUpload(e.dataTransfer.files[0]);
+            };
+            iconFileInput.onchange = () => {
+                if (iconFileInput.files.length) handleCustomBadgeIconUpload(iconFileInput.files[0]);
+            };
+        }
+
+        if (iconRemoveBtn) {
+            iconRemoveBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (customBadgeIconUrl && customBadgeIconUrl.includes('supabase.co/storage/v1/object/public')) {
+                    fetch(`${API_URL}/upload`, {
+                        method: 'DELETE',
+                        headers: jsonHeaders(),
+                        body: JSON.stringify({ url: customBadgeIconUrl })
+                    }).catch(() => {});
+                }
+                resetCustomBadgeIcon();
+            };
+        }
+
+        const handleCustomBadgeIconUpload = async (file) => {
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) { alert('File too large (Max 10MB)'); return; }
+            const drop = document.getElementById('custom-badge-icon-drop');
+            const img = document.getElementById('custom-badge-icon-img-preview');
+            if (drop) drop.classList.add('active');
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: adminAuthHeaders(),
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Upload failed');
+                const data = await res.json();
+                customBadgeIconUrl = data.url;
+                if (drop) { drop.classList.remove('active'); drop.classList.add('has-file'); }
+                if (img) { img.src = data.url; }
+                const urlInput = document.getElementById('custom-badge-icon-url');
+                if (urlInput) urlInput.value = data.url;
+            } catch (err) {
+                alert('Icon upload failed: ' + err.message);
+                if (drop) drop.classList.remove('active');
+            }
+        };
+
+        document.getElementById('custom-badge-icon-url')?.addEventListener('input', (e) => {
+            customBadgeIconUrl = e.target.value.trim();
+            const img = document.getElementById('custom-badge-icon-img-preview');
+            const drop = document.getElementById('custom-badge-icon-drop');
+            if (customBadgeIconUrl) {
+                if (img) img.src = customBadgeIconUrl;
+                if (drop) drop.classList.add('has-file');
+            } else {
+                if (img) { img.src = ''; img.removeAttribute('src'); }
+                if (drop) drop.classList.remove('has-file');
+            }
+        });
+
+        document.getElementById('open-custom-badge-popup')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            badgePopup.classList.add('show');
+        });
+        document.getElementById('cancel-custom-badge')?.addEventListener('click', () => {
+            badgePopup.classList.remove('show');
+            resetCustomBadgeIcon();
+        });
+        document.getElementById('confirm-custom-badge')?.addEventListener('click', () => {
+            const icon = customBadgeIconUrl || document.getElementById('custom-badge-icon-url')?.value?.trim() || '';
+            const label = document.getElementById('custom-badge-label')?.value?.trim();
+            const key = document.getElementById('custom-badge-key')?.value?.trim();
+            if (!label || !key) { alert('Please fill in the software name and key.'); return; }
+            const picker = document.getElementById('sw-badge-picker');
+            const addBtn = picker.querySelector('.sw-badge-add-btn');
+            const newBadge = document.createElement('div');
+            newBadge.className = 'sw-badge-preset';
+            newBadge.dataset.sw = key;
+            newBadge.dataset.icon = icon;
+            newBadge.dataset.label = label;
+            newBadge.innerHTML = `
+                ${icon ? `<img src="${icon}" alt="${key}">` : `<span class="material-symbols-rounded" style="font-size:16px">apps</span>`}
+                <span>${label}</span>
+            `;
+            attachBadgeRemoveBtn(newBadge, true);
+            newBadge.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-badge-btn') || e.target.closest('.remove-badge-btn')) return;
+                newBadge.classList.toggle('selected');
+                syncDownloadLinkRows();
+            });
+            picker.insertBefore(newBadge, addBtn);
+            resetCustomBadgeIcon();
+            document.getElementById('custom-badge-label').value = '';
+            document.getElementById('custom-badge-key').value = '';
+            badgePopup.classList.remove('show');
+        });
+
+        document.getElementById('open-custom-plugin-popup')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pluginPopup.classList.add('show');
+        });
+        document.getElementById('cancel-custom-plugin')?.addEventListener('click', () => {
+            pluginPopup.classList.remove('show');
+        });
+        document.getElementById('confirm-custom-plugin')?.addEventListener('click', () => {
+            const label = document.getElementById('custom-plugin-label')?.value?.trim();
+            if (!label) { alert('Please enter a plugin name.'); return; }
+            const picker = document.getElementById('plugin-badge-picker');
+            const addBtn = picker.querySelector('.sw-badge-add-btn');
+            const newBadge = document.createElement('div');
+            newBadge.className = 'sw-badge-preset plugin-badge';
+            newBadge.dataset.plugin = label;
+            newBadge.innerHTML = `<span class="material-symbols-rounded">extension</span><span>${label}</span>`;
+            attachBadgeRemoveBtn(newBadge, false);
+            newBadge.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-badge-btn') || e.target.closest('.remove-badge-btn')) return;
+                newBadge.classList.toggle('selected');
+            });
+            picker.insertBefore(newBadge, addBtn);
+            document.getElementById('custom-plugin-label').value = '';
+            pluginPopup.classList.remove('show');
+        });
     };
 
     window.openModal = (id, editData = null) => {
@@ -252,18 +527,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (preview) preview.innerHTML = '';
                 }
 
-                document.getElementById('modal-resource-os').value = editData.os || 'WIN';
+
             } else if (id === 'preset-modal') {
                 document.getElementById('modal-preset-name').value = editData.name;
-                const urlInput = document.getElementById('modal-preset-url');
-                urlInput.value = editData.url || '';
-                
-                checkSupabaseFile(editData.url);
-                
-                if (document.getElementById('modal-preset-software')) document.getElementById('modal-preset-software').value = editData.software || 'AE';
+
+                const softwareArr = Array.isArray(editData.software) ? editData.software : (editData.software ? [editData.software] : []);
+                document.querySelectorAll('#sw-badge-picker .sw-badge-preset').forEach(b => {
+                    b.classList.toggle('selected', softwareArr.includes(b.dataset.sw));
+                });
+
+                const pluginStr = editData.plugin || '';
+                const pluginArr = pluginStr.split(',').map(s => s.trim()).filter(Boolean);
+                document.querySelectorAll('#plugin-badge-picker .sw-badge-preset').forEach(b => {
+                    b.classList.toggle('selected', pluginArr.includes(b.dataset.plugin));
+                });
+
+                syncDownloadLinkRows();
+
+                if (Array.isArray(editData.urls)) {
+                    editData.urls.forEach(entry => {
+                        const row = document.querySelector(`#preset-download-links-container .preset-dl-link-row[data-sw="${entry.sw}"]`);
+                        if (row) { const inp = row.querySelector('input'); if (inp) inp.value = entry.url || ''; }
+                    });
+                } else if (editData.url) {
+                    const firstRow = document.querySelector('#preset-download-links-container .preset-dl-link-row input');
+                    if (firstRow) firstRow.value = editData.url;
+                }
+
                 if (document.getElementById('modal-preset-version')) document.getElementById('modal-preset-version').value = editData.version || '';
                 if (document.getElementById('modal-preset-video')) document.getElementById('modal-preset-video').value = editData.media || '';
-                if (document.getElementById('modal-preset-plugin')) document.getElementById('modal-preset-plugin').value = editData.plugin || '';
                 if (document.getElementById('modal-preset-size')) document.getElementById('modal-preset-size').value = editData.size || '';
             } else if (id === 'resource-modal') {
                 document.getElementById('modal-resource-title').value = editData.title;
@@ -294,19 +586,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 urlInput.value = editData.url || '';
                 checkSupabaseFile(editData.url, 'resource');
                 
-                document.getElementById('modal-resource-desc').value = editData.desc || '';
+                const descEl = document.getElementById('modal-resource-desc');
+                if (descEl) descEl.value = editData.desc || '';
+
             }
         } else {
             delete modal.dataset.editIndex;
-            modal.querySelectorAll('input, select, textarea').forEach(i => i.value = '');
-            modal.querySelectorAll('.file-preview').forEach(p => p.textContent = '');
             if (id === 'preset-modal') {
-                document.getElementById('delete-uploaded-preset-btn')?.classList.add('hidden');
-            } else if (id === 'resource-modal') {
+                resetPresetModal();
+            } else {
+                modal.querySelectorAll('input:not([type="file"]):not([type="hidden"]), select, textarea').forEach(i => i.value = '');
+                modal.querySelectorAll('.file-preview').forEach(p => p.textContent = '');
+            }
+            if (id === 'resource-modal') {
                 document.getElementById('delete-uploaded-resource-btn')?.classList.add('hidden');
                 document.getElementById('delete-uploaded-resource-icon-btn')?.classList.add('hidden');
+                const rDrop = document.getElementById('resource-icon-drop');
+                const rImg = document.getElementById('resource-icon-img-preview');
+                if (rDrop) rDrop.classList.remove('has-file');
+                if (rImg) { rImg.src = ''; rImg.removeAttribute('src'); }
+                document.getElementById('modal-resource-icon').value = '';
             } else if (id === 'social-modal') {
                 document.getElementById('delete-uploaded-social-icon-btn')?.classList.add('hidden');
+                const sDrop = document.getElementById('social-icon-drop');
+                const sImg = document.getElementById('social-icon-img-preview');
+                if (sDrop) sDrop.classList.remove('has-file');
+                if (sImg) { sImg.src = ''; sImg.removeAttribute('src'); }
+                document.getElementById('modal-social-icon').value = '';
             }
         }
     };
@@ -323,9 +629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         else deleteBtn.classList.add('hidden');
     };
 
-    document.getElementById('modal-preset-url')?.addEventListener('input', (e) => {
-        checkSupabaseFile(e.target.value, 'preset');
-    });
     document.getElementById('modal-resource-url')?.addEventListener('input', (e) => {
         checkSupabaseFile(e.target.value, 'resource');
     });
@@ -337,7 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const initDeleteHandlers = () => {
-        ['preset', 'resource', 'resource-icon', 'social-icon'].forEach(type => {
+        ['resource', 'resource-icon', 'social-icon'].forEach(type => {
             let btnId = `delete-uploaded-${type}-btn`;
             if (type === 'resource-icon') btnId = 'delete-uploaded-resource-icon-btn';
             if (type === 'social-icon') btnId = 'delete-uploaded-social-icon-btn';
@@ -381,10 +684,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const areas = document.querySelectorAll('.modal-overlay:not(#chat-upload-modal) .drag-drop-area, .integrated-drop-zone');
         areas.forEach(area => {
             const isIntegrated = area.classList.contains('integrated-drop-zone') || area.classList.contains('drag-drop-area');
-            const type = area.id === 'preset-url-drop' ? 'preset' : 
-                         (area.id === 'resource-url-drop' ? 'resource' : 
-                         (area.id === 'resource-icon-drop' ? 'resource-icon' : 
-                         (area.id === 'social-icon-drop' ? 'social-icon' : null)));
+            const type = area.id === 'resource-url-drop' ? 'resource' :
+                         (area.id === 'resource-icon-drop' ? 'resource-icon' :
+                         (area.id === 'social-icon-drop' ? 'social-icon' : null));
             
             const input = document.getElementById(`${type}-file-input`) || area.querySelector('input');
             const preview = document.getElementById(`${type}-file-preview`) || document.getElementById(`${type}-preview`) || area.querySelector('.file-preview');
@@ -637,23 +939,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${API_URL}/presets`);
         const presets = await res.json();
         const body = document.getElementById('preset-table-body');
-        body.innerHTML = presets.map((p) => `
+        body.innerHTML = presets.map((p) => {
+            const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+            const swDisplay = swArr.join(', ');
+            const urlsArr = Array.isArray(p.urls) ? p.urls : (p.url ? [{ sw: swArr[0] || 'N/A', url: p.url }] : []);
+            const urlDisplay = urlsArr.map(u => `<a href="${ensureProtocol(u.url)}" target="_blank" class="table-link">${u.sw}</a>`).join(' ');
+            return `
             <tr data-id="${p._id}">
                 <td>${p.name}</td>
-                <td>${p.software}</td>
+                <td>${swDisplay}</td>
                 <td>${p.version}</td>
                 <td>${p.size || 'N/A'}</td>
                 <td>${p.plugin || 'None'}</td>
-                <td>
-                    <a href="${ensureProtocol(p.url)}" target="_blank" class="table-link">${p.url}</a>
-                </td>
+                <td>${urlDisplay || 'N/A'}</td>
                 <td>${p.likes || 0}</td>
                 <td class="table-actions">
                     <span class="material-symbols-rounded action-icon edit-preset">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-preset">delete</span>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
         body.querySelectorAll('.edit-preset').forEach(btn => { btn.onclick = () => editPreset(btn.closest('tr').dataset.id); });
         body.querySelectorAll('.delete-preset').forEach(btn => { btn.onclick = () => deleteItem('presets', btn.closest('tr').dataset.id, loadPresets); });
     };
@@ -667,41 +973,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('save-preset-btn').onclick = async () => {
         const btn = document.getElementById('save-preset-btn');
-        const name = document.getElementById('modal-preset-name').value;
-        const url = document.getElementById('modal-preset-url').value;
+        const name = document.getElementById('modal-preset-name').value.trim();
+        const softwareArr = getSelectedSoftware();
+        const dlLinks = getDownloadLinks();
+        const firstUrl = dlLinks.length > 0 ? (dlLinks[0].url || '') : '';
         
-        if (name && url) {
-            btn.disabled = true;
-            const modal = document.getElementById('preset-modal');
-            const data = { 
-                name, 
-                url,
-                software: document.getElementById('modal-preset-software')?.value || 'AE',
-                version: document.getElementById('modal-preset-version')?.value || 'v1.0',
-                media: document.getElementById('modal-preset-video')?.value || '',
-                plugin: document.getElementById('modal-preset-plugin')?.value || '',
-                size: document.getElementById('modal-preset-size')?.value || 'N/A' 
-            };
-            const id = modal.dataset.editIndex;
-            try {
-                const res = id 
-                    ? await fetch(`${API_URL}/presets/${id}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
-                    : await fetch(`${API_URL}/presets`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
-                
-                if (res.ok) {
-                    loadPresets();
-                    closeModal('preset-modal');
-                } else {
-                    const err = await res.json();
-                    alert('Error: ' + (err.error || 'Failed to save preset'));
-                }
-            } catch (err) {
-                alert('Connection error');
-            } finally {
-                btn.disabled = false;
+        if (!name) { alert('Please provide a preset name'); return; }
+        if (softwareArr.length === 0) { alert('Please select at least one software'); return; }
+
+        btn.disabled = true;
+        const modal = document.getElementById('preset-modal');
+        const data = { 
+            name,
+            software: softwareArr,
+            urls: dlLinks,
+            url: firstUrl,
+            version: document.getElementById('modal-preset-version')?.value || 'v1.0',
+            media: document.getElementById('modal-preset-video')?.value || '',
+            plugin: getSelectedPlugins(),
+            size: document.getElementById('modal-preset-size')?.value || 'N/A'
+        };
+        const editId = modal.dataset.editIndex;
+        try {
+            const res = editId
+                ? await fetch(`${API_URL}/presets/${editId}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
+                : await fetch(`${API_URL}/presets`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
+            if (res.ok) {
+                loadPresets();
+                closeModal('preset-modal');
+            } else {
+                const err = await res.json();
+                alert('Error: ' + (err.error || 'Failed to save preset'));
             }
-        } else {
-            alert('Please provide name and download link');
+        } catch (err) {
+            alert('Connection error');
+        } finally {
+            btn.disabled = false;
         }
     };
 
