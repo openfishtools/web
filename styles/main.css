@@ -1609,7 +1609,7 @@ body {
 .preset-explore-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 2px;
+    gap: 8px;
     margin-top: 16px;
 }
 

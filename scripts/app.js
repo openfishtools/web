@@ -491,35 +491,51 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const setupScrollLinkedVideoPlayback = (scrollRoot, slideSelector, attachEl) => {
-        if (!scrollRoot || !('IntersectionObserver' in window)) return;
+        if (!scrollRoot) return;
         const tag = attachEl || scrollRoot;
         disconnectScrollVideoIo(tag);
-        const io = new IntersectionObserver((entries) => {
-            entries.forEach((en) => {
-                const slide = en.target;
-                const host = slide.querySelector(':scope .tiktok-media-host');
-                const video = slide.querySelector(':scope video');
-                const el = (host && host.querySelector('video')) || video;
-                if (!el || el.tagName !== 'VIDEO') return;
-                if (en.isIntersecting && en.intersectionRatio >= 0.2) {
-                    el.muted = globalMuted;
-                    if (!globalMuted) el.volume = 1;
-                    el.play().catch((err) => {
-                        console.log('Autoplay blocked:', err);
-                        el.muted = true;
-                        el.play();
-                    });
-                } else {
-                    el.pause();
-                }
+
+        const getAllVideos = () => [...scrollRoot.querySelectorAll(`${slideSelector} video`)];
+
+        const playVisible = () => {
+            const slides = [...scrollRoot.querySelectorAll(slideSelector)];
+            const rootRect = scrollRoot.getBoundingClientRect();
+            const rootCenter = rootRect.top + rootRect.height / 2;
+
+            let bestSlide = null, bestDist = Infinity;
+            slides.forEach(slide => {
+                const r = slide.getBoundingClientRect();
+                const dist = Math.abs((r.top + r.height / 2) - rootCenter);
+                if (dist < bestDist) { bestDist = dist; bestSlide = slide; }
             });
-        }, {
-            root: scrollRoot === document.documentElement ? null : scrollRoot,
-            threshold: [0, 0.25, 0.4, 0.55, 1],
-            rootMargin: '0px'
-        });
-        scrollRoot.querySelectorAll(slideSelector).forEach((el) => io.observe(el));
-        tag._scrollVideoIo = io;
+
+            getAllVideos().forEach(v => v.pause());
+
+            if (bestSlide) {
+                const host = bestSlide.querySelector('.tiktok-media-host');
+                const v = (host && host.querySelector('video')) || bestSlide.querySelector('video');
+                if (v) {
+                    v.muted = globalMuted;
+                    if (!globalMuted) v.volume = 1;
+                    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+                }
+            }
+        };
+
+        let scrollTimer = null;
+        const onScroll = () => {
+            clearTimeout(scrollTimer);
+            getAllVideos().forEach(v => v.pause());
+            scrollTimer = setTimeout(playVisible, 150);
+        };
+
+        scrollRoot.addEventListener('scroll', onScroll, { passive: true });
+        tag._scrollVideoIo = {
+            disconnect: () => {
+                scrollRoot.removeEventListener('scroll', onScroll);
+                clearTimeout(scrollTimer);
+            }
+        };
     };
 
     let globalMuted = false;
