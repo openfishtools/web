@@ -199,16 +199,18 @@ app.get('/api/tiktok-resolve', async (req, res) => {
 
     try {
         const pageUrl = raw.trim();
+        const bypassCache = req.query.nocache === '1';
 
-        // Check cache first
-        const cached = await TikTokCache.findOne({ url: pageUrl });
-        if (cached && (Date.now() - cached.updatedAt.getTime() < 24 * 60 * 60 * 1000)) {
-            return res.json({
-                play: cached.play,
-                cover: cached.cover,
-                title: cached.title,
-                cached: true
-            });
+        if (!bypassCache) {
+            const cached = await TikTokCache.findOne({ url: pageUrl });
+            if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
+                return res.json({
+                    play: cached.play,
+                    cover: cached.cover,
+                    title: cached.title,
+                    cached: true
+                });
+            }
         }
 
         const mirrors = [

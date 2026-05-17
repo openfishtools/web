@@ -392,9 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 el.dataset.tiktokState = 'loading';
                 
-                const resolveWithRetry = async (retryCount = 0) => {
+                const resolveWithRetry = async (retryCount = 0, bypassCache = false) => {
                     try {
-                        const r = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(src)}`);
+                        const url = `${API_URL}/tiktok-resolve?url=${encodeURIComponent(src)}${bypassCache ? '&nocache=1' : ''}`;
+                        const r = await fetch(url);
                         if (r.status === 404 && retryCount < 3) {
                             await new Promise(res => setTimeout(res, 1000));
                             return resolveWithRetry(retryCount + 1);
@@ -431,8 +432,25 @@ document.addEventListener('DOMContentLoaded', () => {
                                 v.setAttribute('crossorigin', 'anonymous');
                                 if (!globalMuted) v.volume = 1;
                                 el.appendChild(v);
-                                
-                                // Explicitly trigger play with fallback for blocked autoplay
+
+                                v.onerror = () => {
+                                    if (retryCount < 1) {
+                                        el.innerHTML = '';
+                                        el.dataset.tiktokState = 'loading';
+                                        resolveWithRetry(retryCount + 1, true);
+                                    } else if (j.cover) {
+                                        el.innerHTML = '';
+                                        const img = document.createElement('img');
+                                        img.src = j.cover;
+                                        img.alt = j.title || 'Preset';
+                                        el.appendChild(img);
+                                        el.dataset.tiktokState = 'ready';
+                                    } else {
+                                        el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
+                                        el.dataset.tiktokState = 'error';
+                                    }
+                                };
+
                                 v.play().catch((err) => {
                                     console.warn('Autoplay blocked in resolver, retrying muted:', err);
                                     v.muted = true;

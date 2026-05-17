@@ -219,9 +219,12 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
-        const cached = await TikTokCache.findOne({ url: pageUrl });
-        if (cached && (Date.now() - cached.updatedAt.getTime() < 24 * 60 * 60 * 1000)) {
-            return res.json({ play: cached.play, cover: cached.cover, title: cached.title, cached: true });
+        const bypassCache = req.query.nocache === '1';
+        if (!bypassCache) {
+            const cached = await TikTokCache.findOne({ url: pageUrl });
+            if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
+                return res.json({ play: cached.play, cover: cached.cover, title: cached.title, cached: true });
+            }
         }
 
         const mirrors = [
