@@ -1054,6 +1054,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSocials = async () => {
         const container = document.getElementById('social-grid');
         if (!container || container.getAttribute('data-loaded') === 'true') return;
+
+        // Show skeleton loading state
+        container.innerHTML = Array(6).fill(0).map(() => `
+            <div class="skeleton-social-card">
+                <div class="skeleton-social-icon"></div>
+                <div class="skeleton-social-name"></div>
+            </div>
+        `).join('');
+
         const res = await fetch(`${API_URL}/socials`);
         const socials = await res.json();
         if (socials.length > 0) {

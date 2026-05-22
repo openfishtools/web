@@ -2842,3 +2842,31 @@ body {
         opacity: 0.6;
     }
 }
+
+.skeleton-social-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: var(--md-sys-color-surface-container-low);
+    border-radius: var(--radius-xl);
+    height: 64px;
+    position: relative;
+    overflow: hidden;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-social-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-container-highest);
+    flex-shrink: 0;
+}
+
+.skeleton-social-name {
+    height: 16px;
+    border-radius: 4px;
+    background-color: var(--md-sys-color-surface-container-highest);
+    width: 120px;
+}
