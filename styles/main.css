@@ -37,8 +37,33 @@
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
 }
 
+:root.dark-theme {
+    --primary-l: 80%;
+    --md-sys-color-primary: hsl(var(--primary-h), 45%, 75%);
+    --md-sys-color-on-primary: hsl(var(--primary-h), 50%, 15%);
+    --md-sys-color-primary-container: hsl(var(--primary-h), 40%, 25%);
+    --md-sys-color-on-primary-container: hsl(var(--primary-h), 50%, 90%);
+
+    --md-sys-color-secondary: hsl(var(--primary-h), 20%, 75%);
+    --md-sys-color-secondary-container: hsl(var(--primary-h), 20%, 25%);
+    --md-sys-color-on-secondary-container: hsl(var(--primary-h), 20%, 90%);
+
+    --md-sys-color-surface: hsl(var(--primary-h), 15%, 6%);
+    --md-sys-color-on-surface: hsl(var(--primary-h), 10%, 90%);
+    --md-sys-color-surface-variant: hsl(var(--primary-h), 10%, 25%);
+    --md-sys-color-on-surface-variant: hsl(var(--primary-h), 10%, 80%);
+
+    --md-sys-color-surface-container-low: hsl(var(--primary-h), 10%, 10%);
+    --md-sys-color-surface-container: hsl(var(--primary-h), 10%, 12%);
+    --md-sys-color-surface-container-high: hsl(var(--primary-h), 10%, 14%);
+    --md-sys-color-surface-container-highest: hsl(var(--primary-h), 10%, 17%);
+
+    --md-sys-color-outline: hsl(var(--primary-h), 5%, 60%);
+    --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not(.light-theme) {
         --primary-l: 80%;
         --md-sys-color-primary: hsl(var(--primary-h), 45%, 75%);
         --md-sys-color-on-primary: hsl(var(--primary-h), 50%, 15%);
@@ -948,6 +973,40 @@ body {
 
 .page-title {
     margin-bottom: 24px;
+}
+
+.page-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.page-header-row .page-title {
+    margin: 0;
+}
+
+.theme-toggle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-standard);
+}
+
+.theme-toggle-btn:hover {
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
+.theme-toggle-btn .material-symbols-rounded {
+    font-size: 22px;
 }
 
 .card-profile {
