@@ -2775,3 +2775,70 @@ body {
 .res-card-detail-btn {
     border: none;
 }
+
+/* ── Lazy Loading Skeleton Placeholders ────────────── */
+.skeleton-card {
+    border-radius: var(--radius-xl);
+    height: 180px;
+    background-color: var(--md-sys-color-surface-container-high);
+    position: relative;
+    overflow: hidden;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-resource-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: var(--md-sys-color-surface-container-low);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 20px;
+    height: 106px;
+    position: relative;
+    overflow: hidden;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-resource-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background-color: var(--md-sys-color-surface-container-highest);
+    flex-shrink: 0;
+}
+
+.skeleton-resource-card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-resource-card-line {
+    height: 12px;
+    border-radius: 4px;
+    background-color: var(--md-sys-color-surface-container-highest);
+    width: 90%;
+}
+
+.skeleton-resource-card-line.short {
+    width: 60%;
+}
+
+.skeleton-resource-card-line.medium {
+    width: 40%;
+}
+
+@keyframes skeleton-pulse {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+        filter: brightness(0.95);
+    }
+    100% {
+        opacity: 0.6;
+    }
+}

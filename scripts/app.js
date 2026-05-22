@@ -1108,6 +1108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const exploreGrid = document.getElementById('preset-explore-grid');
         if (!exploreGrid) return;
         
+        exploreGrid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
+        
         const res = await fetch(`${API_URL}/presets`);
         const allPresets = await res.json();
         
@@ -1256,6 +1258,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderResources = async (query = '', filterCategory = 'All') => {
         const container = document.getElementById('resource-grid');
         if (!container) return;
+
+        container.innerHTML = Array(4).fill(0).map(() => `
+            <div class="skeleton-resource-card">
+                <div class="skeleton-resource-card-icon"></div>
+                <div class="skeleton-resource-card-info">
+                    <div class="skeleton-resource-card-line"></div>
+                    <div class="skeleton-resource-card-line short"></div>
+                    <div class="skeleton-resource-card-line medium"></div>
+                </div>
+            </div>
+        `).join('');
 
         const res = await fetch(`${API_URL}/resources`);
         allResources = await res.json();
