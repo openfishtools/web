@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const existingUrls = {};
         dlContainer.querySelectorAll('.preset-dl-link-row').forEach(row => {
             const key = row.dataset.sw;
-            const val = row.querySelector('input')?.value || '';
+            const val = row.querySelector('input[type="text"]')?.value || '';
             if (key) existingUrls[key] = val;
         });
         dlContainer.innerHTML = '';
@@ -332,6 +332,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sw = badge.dataset.sw;
             const icon = badge.dataset.icon || '';
             const label = badge.dataset.label || sw;
+            const inputId = `dl-input-${sw}`;
+            const fileInputId = `dl-file-${sw}`;
             const row = document.createElement('div');
             row.className = 'preset-dl-link-row';
             row.dataset.sw = sw;
@@ -340,11 +342,83 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${icon ? `<img src="${icon}" alt="${sw}">` : `<span class="material-symbols-rounded" style="font-size:14px;">apps</span>`}
                     <span>${label}</span>
                 </div>
-                <input type="text" placeholder="https://... or drag file here" value="${existingUrls[sw] || ''}">
+                <div class="dl-input-wrap">
+                    <input type="text" id="${inputId}" placeholder="https://... or upload file" value="${existingUrls[sw] || ''}">
+                    <button type="button" class="dl-upload-btn" title="Upload file" data-sw="${sw}">
+                        <span class="material-symbols-rounded">upload</span>
+                    </button>
+                    <input type="file" id="${fileInputId}" hidden>
+                </div>
             `;
             dlContainer.appendChild(row);
+
+            // Wire upload button
+            const uploadBtn = row.querySelector('.dl-upload-btn');
+            const fileInput = row.querySelector(`#${fileInputId}`);
+            const textInput = row.querySelector(`#${inputId}`);
+
+            uploadBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', async () => {
+                if (!fileInput.files.length) return;
+                await uploadDlFile(fileInput.files[0], textInput, sw);
+                fileInput.value = '';
+            });
+
+            // Drag-drop on the input wrapper
+            const wrap = row.querySelector('.dl-input-wrap');
+            wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
+            wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
+            wrap.addEventListener('drop', async e => {
+                e.preventDefault();
+                wrap.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) {
+                    await uploadDlFile(e.dataTransfer.files[0], textInput, sw);
+                }
+            });
         });
     };
+
+    const uploadDlFile = async (file, textInput, sw) => {
+        if (!file) return;
+        if (file.size > 50 * 1024 * 1024) { alert('File too large (Max 50MB)'); return; }
+        const progressContainer = document.getElementById('preset-upload-progress');
+        const progressFill = document.getElementById('preset-progress-fill');
+        const statusText = document.getElementById('preset-upload-status');
+        if (progressContainer) progressContainer.classList.remove('hidden');
+        if (progressFill) progressFill.style.width = '0%';
+        if (statusText) statusText.textContent = `Uploading ${file.name} for ${sw}...`;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            let progress = 0;
+            const progInterval = setInterval(() => {
+                progress += 5;
+                if (progress <= 90 && progressFill) progressFill.style.width = `${progress}%`;
+            }, 400);
+            const uploadRes = await fetch(`${API_URL}/upload`, {
+                method: 'POST',
+                headers: adminAuthHeaders(),
+                body: formData
+            });
+            clearInterval(progInterval);
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            const uploadData = await uploadRes.json();
+            if (progressFill) progressFill.style.width = '100%';
+            if (statusText) statusText.textContent = `Uploaded: ${file.name}`;
+            if (textInput) textInput.value = uploadData.url;
+            // Auto-fill size if first upload
+            if (uploadData.size) {
+                const sizeInput = document.getElementById('modal-preset-size');
+                if (sizeInput && !sizeInput.value) sizeInput.value = uploadData.size;
+            }
+            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 2000);
+        } catch (err) {
+            if (statusText) statusText.textContent = 'Upload failed!';
+            alert('Upload failed: ' + err.message);
+        }
+    };
+
 
     const getSelectedSoftware = () => {
         const selected = [];

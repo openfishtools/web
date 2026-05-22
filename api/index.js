@@ -339,7 +339,14 @@ app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Pr
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
     const p = await Preset.findById(req.params.id);
-    if (p && p.url) await deleteFileFromSupabase(p.url);
+    if (p) {
+        // Delete legacy single url
+        if (p.url) await deleteFileFromSupabase(p.url);
+        // Delete all urls in the urls array
+        if (Array.isArray(p.urls)) {
+            await Promise.all(p.urls.map(entry => deleteFileFromSupabase(entry.url)));
+        }
+    }
     await Preset.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });
