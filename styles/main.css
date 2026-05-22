@@ -2669,19 +2669,32 @@ body {
 /* Download button */
 .res-popup-download-btn {
     width: 100%;
-    height: 52px;
-    border-radius: 26px;
+    height: 60px;
+    border-radius: 30px;
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
     border: none;
-    font-size: 16px;
-    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
     transition: all 0.2s ease;
+}
+.download-text-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.25;
+}
+.download-main-text {
+    font-size: 16px;
+    font-weight: 600;
+}
+#res-popup-download-label {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.85;
 }
 .res-popup-download-btn:hover:not(:disabled) {
     filter: brightness(1.1);

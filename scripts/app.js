@@ -1439,13 +1439,15 @@ document.addEventListener('DOMContentLoaded', () => {
         instrSection.classList.add('hidden');
 
         const updateDownloadBtn = () => {
+            const mainTextEl = downloadBtn.querySelector('.download-main-text');
             if (selectedOs && selectedVer) {
                 const versions = osVersionMap[selectedOs] || [];
                 const entry = versions.find(v => v.label === selectedVer);
                 if (entry && entry.url) {
                     downloadBtn.disabled = false;
                     downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
-                    downloadLabel.textContent = `Download ${OS_LABEL[selectedOs] || selectedOs} – ${selectedVer}`;
+                    if (mainTextEl) mainTextEl.style.display = 'block';
+                    downloadLabel.textContent = `${OS_LABEL[selectedOs] || selectedOs} - ${selectedVer}`;
                     
                     // Show downstream sections once selected
                     downloadSection.classList.remove('hidden');
@@ -1455,11 +1457,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else {
                     downloadBtn.disabled = true;
+                    if (mainTextEl) mainTextEl.style.display = 'none';
                     downloadLabel.textContent = 'No link available';
                     downloadSection.classList.remove('hidden');
                 }
             } else {
                 downloadBtn.disabled = true;
+                if (mainTextEl) mainTextEl.style.display = 'none';
                 downloadLabel.textContent = 'Select OS & Version';
             }
         };
