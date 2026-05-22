@@ -344,6 +344,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="dl-input-wrap">
                     <input type="text" id="${inputId}" placeholder="https://... or upload file" value="${existingUrls[sw] || ''}">
+                    <button type="button" class="dl-delete-btn hidden" title="Hapus file yang diupload" data-sw="${sw}">
+                        <span class="material-symbols-rounded">delete</span>
+                    </button>
                     <button type="button" class="dl-upload-btn" title="Upload file" data-sw="${sw}">
                         <span class="material-symbols-rounded">upload</span>
                     </button>
@@ -352,10 +355,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             dlContainer.appendChild(row);
 
-            // Wire upload button
             const uploadBtn = row.querySelector('.dl-upload-btn');
+            const deleteBtn = row.querySelector('.dl-delete-btn');
             const fileInput = row.querySelector(`#${fileInputId}`);
             const textInput = row.querySelector(`#${inputId}`);
+
+            // Show/hide delete btn based on URL value
+            const updateDeleteBtn = () => {
+                const isSupabase = textInput.value.includes('supabase.co/storage/v1/object/public');
+                deleteBtn.classList.toggle('hidden', !isSupabase);
+            };
+            updateDeleteBtn();
+            textInput.addEventListener('input', updateDeleteBtn);
+
+            // Delete uploaded file
+            deleteBtn.addEventListener('click', async () => {
+                const url = textInput.value.trim();
+                if (!url) return;
+                if (!confirm('Hapus file ini dari server?')) return;
+                try {
+                    await fetch(`${API_URL}/upload`, {
+                        method: 'DELETE',
+                        headers: jsonHeaders(),
+                        body: JSON.stringify({ url })
+                    });
+                    textInput.value = '';
+                    updateDeleteBtn();
+                } catch (e) { alert('Gagal hapus file'); }
+            });
 
             uploadBtn.addEventListener('click', () => fileInput.click());
 
@@ -363,6 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!fileInput.files.length) return;
                 await uploadDlFile(fileInput.files[0], textInput, sw);
                 fileInput.value = '';
+                updateDeleteBtn();
             });
 
             // Drag-drop on the input wrapper
@@ -374,6 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wrap.classList.remove('drag-over');
                 if (e.dataTransfer.files.length) {
                     await uploadDlFile(e.dataTransfer.files[0], textInput, sw);
+                    updateDeleteBtn();
                 }
             });
         });
@@ -777,7 +806,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     initDeleteHandlers();
 
-    window.closeModal = (id) => {
+    window.closeModal = async (id, skipCleanup = false) => {
+        // Auto-delete orphan Supabase uploads in dl rows when cancelling a NEW preset
+        if (id === 'preset-modal' && !skipCleanup) {
+            const modal = document.getElementById('preset-modal');
+            const isEdit = !!modal.dataset.editIndex;
+            if (!isEdit) {
+                const rows = document.querySelectorAll('#preset-download-links-container .preset-dl-link-row');
+                const deletePromises = [];
+                rows.forEach(row => {
+                    const url = row.querySelector('input[type="text"]')?.value?.trim();
+                    if (url && url.includes('supabase.co/storage/v1/object/public')) {
+                        deletePromises.push(
+                            fetch(`${API_URL}/upload`, {
+                                method: 'DELETE',
+                                headers: jsonHeaders(),
+                                body: JSON.stringify({ url })
+                            }).catch(() => {})
+                        );
+                    }
+                });
+                await Promise.all(deletePromises);
+            }
+        }
         document.getElementById(id).classList.remove('show');
     };
 
@@ -1101,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : await fetch(`${API_URL}/presets`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
             if (res.ok) {
                 loadPresets();
-                closeModal('preset-modal');
+                closeModal('preset-modal', true);
             } else {
                 const err = await res.json();
                 alert('Error: ' + (err.error || 'Failed to save preset'));

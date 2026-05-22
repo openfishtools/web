@@ -821,6 +821,29 @@ tr:last-child td {
     font-size: 20px;
 }
 
+.dl-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-error);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dl-delete-btn:hover {
+    background: var(--md-sys-color-error-container);
+}
+
+.dl-delete-btn .material-symbols-rounded {
+    font-size: 20px;
+}
+
 .no-sw-selected-hint {
     font-size: 13px;
     color: var(--md-sys-color-on-surface-variant);
