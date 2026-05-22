@@ -1224,15 +1224,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
         }
-    };
+    const OS_SVG = { WIN: 'assets/svg/windows.svg', MAC: 'assets/svg/apple.svg', ANDROID: 'assets/svg/android.svg' };
+    const OS_LABEL = { WIN: 'Windows', MAC: 'macOS', ANDROID: 'Android' };
 
     const renderResourceCategories = (resources) => {
         const categoryContainer = document.getElementById('resource-categories');
         if (!categoryContainer) return;
-        
+
         const activeCategory = categoryContainer.querySelector('.chip.active')?.dataset.category || 'All';
-        const categories = ['All', ...new Set(resources.map(r => r.category))];
-        
+        const catSet = new Set();
+        resources.forEach(r => {
+            const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+            cats.forEach(c => catSet.add(c));
+        });
+
+        // Sort: "Made By Cutefish" first, then alphabetical
+        const sorted = [...catSet].sort((a, b) => {
+            if (a === 'Made By Cutefish') return -1;
+            if (b === 'Made By Cutefish') return 1;
+            return a.localeCompare(b);
+        });
+        const categories = ['All', ...sorted];
+
         categoryContainer.innerHTML = categories.map(cat => `
             <div class="chip ${activeCategory === cat ? 'active' : ''}" data-category="${cat}">${cat}</div>
         `).join('');
@@ -1242,56 +1255,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderResources = async (query = '', filterCategory = 'All') => {
         const container = document.getElementById('resource-grid');
         if (!container) return;
-        
+
         const res = await fetch(`${API_URL}/resources`);
         allResources = await res.json();
-        
+
         renderResourceCategories(allResources);
-        
+
         let filtered = allResources;
-        
+
         if (filterCategory !== 'All') {
-            filtered = filtered.filter(r => r.category === filterCategory);
+            filtered = filtered.filter(r => {
+                const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+                return cats.includes(filterCategory);
+            });
         }
-        
+
         if (query) {
-            filtered = filtered.filter(r => 
+            filtered = filtered.filter(r =>
                 r.title.toLowerCase().includes(query.toLowerCase()) ||
-                (r.category && r.category.toLowerCase().includes(query.toLowerCase())) ||
+                (Array.isArray(r.category) ? r.category.join(' ') : (r.category || '')).toLowerCase().includes(query.toLowerCase()) ||
                 (r.dev && r.dev.toLowerCase().includes(query.toLowerCase()))
             );
         }
 
+        // Sort: "Made By Cutefish" category resources first
+        filtered.sort((a, b) => {
+            const aIsCute = (Array.isArray(a.category) ? a.category : [a.category]).includes('Made By Cutefish');
+            const bIsCute = (Array.isArray(b.category) ? b.category : [b.category]).includes('Made By Cutefish');
+            if (aIsCute && !bIsCute) return -1;
+            if (!aIsCute && bIsCute) return 1;
+            return 0;
+        });
+
         if (filtered.length > 0) {
             container.innerHTML = filtered.map((r) => {
+                const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+                const osArr = Array.isArray(r.os) ? r.os : [];
+                const osIconsHtml = osArr.map(o => {
+                    const key = typeof o === 'string' ? o.toUpperCase() : (o.name || '').toUpperCase();
+                    const svg = OS_SVG[key];
+                    return svg ? `<img src="${svg}" class="os-icon-svg" alt="${key}" style="width:14px;height:14px">` : '';
+                }).join('');
+
+                const isCutefish = cats.includes('Made By Cutefish');
                 const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
                     ? `<img src="${r.icon}" class="resource-icon-img" alt="${r.title}">`
                     : `<span class="material-symbols-rounded resource-icon">${r.icon || 'shop'}</span>`;
-                
+
                 return `
-                <div class="card resource-card" data-id="${r._id}">
+                <div class="card resource-card ${isCutefish ? 'resource-card-cutefish' : ''}" data-id="${r._id}" style="cursor:pointer">
                     <div class="resource-icon-wrapper">
                         ${iconHtml}
                     </div>
                     <div class="resource-info-compact">
                         <h4 class="resource-title-compact">${r.title}</h4>
-                        <p class="resource-dev-compact">${r.dev || 'CHROS Team'} • ${r.category || 'App'}</p>
+                        <p class="resource-dev-compact">${r.dev || 'CHROS Team'}</p>
                         <div class="resource-meta-compact">
-                            <span class="chip-mini">${r.version || 'v1.0'}</span>
-                            ${r.os ? `
-                            <span class="chip-mini os-chip">
-                                <img src="assets/svg/${r.os.toLowerCase() === 'mac' ? 'apple' : (r.os.toLowerCase() === 'win' ? 'windows' : 'android')}.svg" class="os-icon-svg" alt="${r.os}">
-                            </span>` : ''}
+                            ${osIconsHtml ? `<span class="chip-mini os-chip">${osIconsHtml}</span>` : ''}
                             <span class="resource-info-text">${r.info || ''}</span>
                         </div>
+                        <div class="resource-cats-row">
+                            ${cats.map(c => `<span class="resource-cat-chip">${c}</span>`).join('')}
+                        </div>
                     </div>
-                    <a href="${ensureProtocol(r.url)}" target="_blank" class="download-direct-btn">
-                        <span class="btn-label">Download</span>
-                        <span class="material-symbols-rounded">download</span>
-                    </a>
+                    <button class="download-direct-btn res-card-detail-btn" data-id="${r._id}" aria-label="Details">
+                        <span class="material-symbols-rounded">info</span>
+                    </button>
                 </div>`;
             }).join('');
             container.setAttribute('data-loaded', 'true');
+
+            // Attach click handlers
+            container.querySelectorAll('.resource-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.res-card-detail-btn') || e.target.closest('.download-direct-btn')) return;
+                    const id = card.dataset.id;
+                    const item = allResources.find(r => r._id === id);
+                    if (item) openResourcePopup(item);
+                });
+            });
+            container.querySelectorAll('.res-card-detail-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    const item = allResources.find(r => r._id === id);
+                    if (item) openResourcePopup(item);
+                });
+            });
         } else {
             container.innerHTML = `
                 <div class="empty-state">
@@ -1302,49 +1352,151 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const openResourceDetails = (resource) => {
-        const modal = document.getElementById('resource-modal');
-        const sheet = document.getElementById('resource-sheet');
-        
-        // Populate modal
-        const iconImg = document.getElementById('res-modal-icon');
+
+    const RESOURCE_PASSWORD = 'EDITINGSTUFF';
+
+    const openResourcePopup = (resource) => {
+        const popup = document.getElementById('resource-detail-popup');
+        if (!popup) return;
+
+        // Icon
+        const iconEl = document.getElementById('res-popup-icon');
+        const fallbackEl = document.getElementById('res-popup-icon-fallback');
         if (resource.icon && (resource.icon.startsWith('http') || resource.icon.includes('/'))) {
-            iconImg.src = resource.icon;
-            iconImg.style.display = 'block';
+            iconEl.src = resource.icon;
+            iconEl.classList.remove('hidden');
+            if (fallbackEl) fallbackEl.classList.add('hidden');
         } else {
-            iconImg.style.display = 'none'; // Could add a fallback icon here
+            iconEl.classList.add('hidden');
+            if (fallbackEl) fallbackEl.classList.remove('hidden');
         }
-        
-        document.getElementById('res-modal-title').textContent = resource.title;
-        document.getElementById('res-modal-dev').textContent = resource.dev || 'CHROS Team';
-        document.getElementById('res-modal-category').textContent = resource.category || 'App';
-        document.getElementById('res-modal-version').textContent = resource.version || 'v1.0';
-        document.getElementById('res-modal-info').textContent = resource.info || 'N/A';
-        document.getElementById('res-modal-desc').textContent = resource.desc || 'No description provided.';
-        
-        // Setup Download Buttons
-        const downloadAction = () => {
-            if (resource.url) window.open(resource.url, '_blank');
+
+        document.getElementById('res-popup-title').textContent = resource.title;
+        document.getElementById('res-popup-dev').textContent = resource.dev || 'CHROS Team';
+        document.getElementById('res-popup-info').textContent = resource.info || '—';
+
+        // Categories
+        const cats = Array.isArray(resource.category) ? resource.category : (resource.category ? [resource.category] : []);
+        document.getElementById('res-popup-cats').innerHTML = cats.map(c =>
+            `<span class="res-popup-cat-chip">${c}</span>`
+        ).join('');
+
+        // OS data
+        const osArr = Array.isArray(resource.os) ? resource.os : [];
+        document.getElementById('res-popup-os-count').textContent = osArr.length || '—';
+        const totalVers = new Set();
+        osArr.forEach(o => { if (o.versions) o.versions.forEach(v => totalVers.add(v.label)); });
+        document.getElementById('res-popup-ver-count').textContent = totalVers.size || '—';
+
+        // State
+        let selectedOs = null;
+        let selectedVer = null;
+        let osVersionMap = {}; // { WIN: [{label, url}], MAC: [...] }
+
+        osArr.forEach(o => {
+            const key = typeof o === 'string' ? o.toUpperCase() : (o.name || '').toUpperCase();
+            osVersionMap[key] = o.versions || [];
+        });
+
+        const downloadBtn = document.getElementById('res-popup-download-btn');
+        const downloadLabel = document.getElementById('res-popup-download-label');
+        const verChipsEl = document.getElementById('res-popup-ver-chips');
+        const osChipsEl = document.getElementById('res-popup-os-chips');
+
+        const updateDownloadBtn = () => {
+            if (selectedOs && selectedVer) {
+                const versions = osVersionMap[selectedOs] || [];
+                const entry = versions.find(v => v.label === selectedVer);
+                if (entry && entry.url) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
+                    downloadLabel.textContent = `Download ${OS_LABEL[selectedOs] || selectedOs} – ${selectedVer}`;
+                } else {
+                    downloadBtn.disabled = true;
+                    downloadLabel.textContent = 'No link available';
+                }
+            } else {
+                downloadBtn.disabled = true;
+                downloadLabel.textContent = 'Select OS & Version';
+            }
         };
-        document.getElementById('res-modal-download-btn').onclick = downloadAction;
-        document.getElementById('res-modal-download-btn-large').onclick = downloadAction;
-        
-        modal.classList.add('show');
+
+        const renderVerChips = () => {
+            if (!selectedOs) { verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">Select a platform first</span>'; return; }
+            const versions = osVersionMap[selectedOs] || [];
+            if (!versions.length) { verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No versions available</span>'; return; }
+            verChipsEl.innerHTML = versions.map(v =>
+                `<button class="res-popup-chip ${selectedVer === v.label ? 'active' : ''}" data-ver="${v.label}">${v.label}</button>`
+            ).join('');
+            verChipsEl.querySelectorAll('.res-popup-chip').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedVer = btn.dataset.ver;
+                    verChipsEl.querySelectorAll('.res-popup-chip').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updateDownloadBtn();
+                });
+            });
+        };
+
+        // Render OS chips
+        const osKeys = Object.keys(osVersionMap);
+        if (osKeys.length > 0) {
+            osChipsEl.innerHTML = osKeys.map(key =>
+                `<button class="res-popup-chip os-chip-btn" data-os="${key}">
+                    ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" style="width:16px;height:16px" alt="${key}">` : ''}
+                    <span>${OS_LABEL[key] || key}</span>
+                </button>`
+            ).join('');
+            osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedOs = btn.dataset.os;
+                    selectedVer = null;
+                    osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderVerChips();
+                    updateDownloadBtn();
+                });
+            });
+        } else {
+            osChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No platforms configured</span>';
+        }
+        verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">Select a platform first</span>';
+        updateDownloadBtn();
+
+        // Password
+        document.getElementById('res-popup-password').textContent = RESOURCE_PASSWORD;
+        const copyBtn = document.getElementById('res-popup-copy-btn');
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(RESOURCE_PASSWORD).then(() => {
+                const icon = copyBtn.querySelector('.material-symbols-rounded');
+                icon.textContent = 'check';
+                setTimeout(() => { icon.textContent = 'content_copy'; }, 1500);
+            });
+        };
+
+        // Instruction
+        const instrSection = document.getElementById('res-popup-instruction-section');
+        const instrEl = document.getElementById('res-popup-instruction');
+        if (resource.instruction) {
+            instrEl.textContent = resource.instruction;
+            instrSection.classList.remove('hidden');
+        } else {
+            instrSection.classList.add('hidden');
+        }
+
+        popup.classList.add('show');
     };
 
-    const closeResourceBtn = document.getElementById('close-resource-modal');
-    if (closeResourceBtn) {
-        closeResourceBtn.onclick = () => {
-            document.getElementById('resource-modal').classList.remove('show');
-        };
-    }
-
-    // Close modal on overlay click
-    document.getElementById('resource-modal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'resource-modal') {
-            document.getElementById('resource-modal').classList.remove('show');
+    document.getElementById('close-resource-popup')?.addEventListener('click', () => {
+        document.getElementById('resource-detail-popup').classList.remove('show');
+    });
+    document.getElementById('resource-detail-popup')?.addEventListener('click', (e) => {
+        if (e.target.id === 'resource-detail-popup') {
+            e.target.classList.remove('show');
         }
     });
+
+
 
     const categoryContainer = document.getElementById('preset-categories');
     if (categoryContainer) {

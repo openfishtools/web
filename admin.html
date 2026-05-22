@@ -130,9 +130,8 @@
                                 <th>Category</th>
                                 <th>Dev</th>
                                 <th>OS</th>
-                                <th>Version</th>
                                 <th>Size</th>
-                                <th>Link</th>
+                                <th>Instruction</th>
                                 <th class="text-right">Actions</th>
                             </tr>
                         </thead>
@@ -380,6 +379,7 @@
                 Manage Resource
             </h2>
             <div class="admin-form">
+                <!-- Icon Upload -->
                 <div class="drag-drop-area" id="resource-icon-drop">
                     <button type="button" class="remove-upload-btn" id="remove-resource-icon-btn" title="Remove icon">
                         <span class="material-symbols-rounded">close</span>
@@ -391,49 +391,106 @@
                     <div class="file-preview" id="resource-icon-preview"></div>
                     <input type="hidden" id="modal-resource-icon">
                 </div>
+
+                <!-- Title -->
                 <div class="input-field">
                     <label>Resource Title</label>
                     <input type="text" id="modal-resource-title" placeholder="e.g. Alight Motion Pro">
                 </div>
 
+                <!-- Category (multi-select badge picker) -->
                 <div class="input-field">
                     <label>Category</label>
-                    <select id="modal-resource-category">
-                        <option value="Software">Software</option>
-                        <option value="Plugin">Plugin</option>
-                    </select>
+                    <div class="sw-badge-picker" id="resource-category-picker">
+                        <div class="sw-badge-preset res-cat-badge" data-cat="Made By Cutefish">
+                            <span class="material-symbols-rounded" style="font-size:14px">star</span>
+                            <span>Made By Cutefish</span>
+                        </div>
+                        <div class="sw-badge-preset res-cat-badge" data-cat="Software">
+                            <span class="material-symbols-rounded" style="font-size:14px">desktop_windows</span>
+                            <span>Software</span>
+                        </div>
+                        <div class="sw-badge-preset res-cat-badge" data-cat="Plugin">
+                            <span class="material-symbols-rounded" style="font-size:14px">extension</span>
+                            <span>Plugin</span>
+                        </div>
+                        <div class="sw-badge-preset res-cat-badge" data-cat="Extension">
+                            <span class="material-symbols-rounded" style="font-size:14px">add_box</span>
+                            <span>Extension</span>
+                        </div>
+                        <button type="button" class="sw-badge-add-btn" id="open-resource-cat-popup" title="Add category">
+                            <span class="material-symbols-rounded">add</span>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Developer -->
                 <div class="input-field">
                     <label>Developer</label>
                     <input type="text" id="modal-resource-dev" placeholder="e.g. CHROS Team">
                 </div>
+
+                <!-- Size/Info -->
                 <div class="input-field">
-                    <label>OS Support</label>
-                    <select id="modal-resource-os">
-                        <option value="WIN">Windows</option>
-                        <option value="MAC">MacOS</option>
-                        <option value="ANDROID">Android</option>
-                    </select>
-                </div>
-                <div class="input-field">
-                    <label>Version</label>
-                    <input type="text" id="modal-resource-version" placeholder="e.g. v5.0.0">
-                </div>
-                <div class="input-field">
-                    <label>Size</label>
+                    <label>Size / Info</label>
                     <input type="text" id="modal-resource-info" placeholder="e.g. 150MB • APK">
                 </div>
-                <div class="input-field" id="resource-url-container">
-                    <label>Download URL</label>
-                    <div class="integrated-drop-zone" id="resource-url-drop">
-                        <input type="text" id="modal-resource-url" placeholder="https://... or drag file here">
-                        <button class="icon-btn delete hidden" id="delete-uploaded-resource-btn" title="Delete uploaded file">
-                            <span class="material-symbols-rounded">delete</span>
+
+                <!-- OS Picker (multi-select, icon only) -->
+                <div class="input-field">
+                    <label>OS Support</label>
+                    <div class="sw-badge-picker" id="resource-os-picker">
+                        <div class="sw-badge-preset res-os-badge" data-os="WIN" title="Windows">
+                            <img src="assets/svg/windows.svg" alt="WIN" style="width:18px;height:18px">
+                            <span>Windows</span>
+                        </div>
+                        <div class="sw-badge-preset res-os-badge" data-os="MAC" title="macOS">
+                            <img src="assets/svg/apple.svg" alt="MAC" style="width:18px;height:18px">
+                            <span>macOS</span>
+                        </div>
+                        <div class="sw-badge-preset res-os-badge" data-os="ANDROID" title="Android">
+                            <img src="assets/svg/android.svg" alt="ANDROID" style="width:18px;height:18px">
+                            <span>Android</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OS Download Links (generated per selected OS) -->
+                <div class="input-field" id="resource-os-links-container-wrap">
+                    <label>Download Links by OS & Version</label>
+                    <div id="resource-os-links-container">
+                        <p class="no-sw-selected-hint">Select OS above to add download links.</p>
+                    </div>
+                </div>
+
+                <!-- Version badge picker (for labeling versions) -->
+                <div class="input-field">
+                    <label>Available Versions (badges)</label>
+                    <div class="sw-badge-picker" id="resource-version-picker">
+                        <div class="sw-badge-preset res-ver-badge" data-ver="Latest">
+                            <span class="material-symbols-rounded" style="font-size:14px">new_releases</span>
+                            <span>Latest</span>
+                        </div>
+                        <div class="sw-badge-preset res-ver-badge" data-ver="Stable">
+                            <span class="material-symbols-rounded" style="font-size:14px">verified</span>
+                            <span>Stable</span>
+                        </div>
+                        <div class="sw-badge-preset res-ver-badge" data-ver="Oldest">
+                            <span class="material-symbols-rounded" style="font-size:14px">history</span>
+                            <span>Oldest</span>
+                        </div>
+                        <button type="button" class="sw-badge-add-btn" id="open-resource-ver-popup" title="Add version">
+                            <span class="material-symbols-rounded">add</span>
                         </button>
                     </div>
-                    <input type="file" id="resource-file-input" hidden>
-                    <div class="file-preview" id="resource-file-preview"></div>
                 </div>
+
+                <!-- Instruction -->
+                <div class="input-field">
+                    <label>Instruction (optional)</label>
+                    <textarea class="modal-textarea" id="modal-resource-instruction" placeholder="Installation steps or notes..."></textarea>
+                </div>
+
                 <div id="resource-upload-progress" class="hidden" style="margin-top: 16px;">
                     <div class="progress-bar-bg">
                         <div id="resource-progress-fill"></div>
@@ -447,6 +504,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Resource Category custom popup -->
+    <div id="resource-cat-popup" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <h3 class="mini-popup-title">
+                <span class="material-symbols-rounded">category</span>
+                Add Category
+            </h3>
+            <div class="mini-popup-body">
+                <div class="input-field">
+                    <label>Category Name</label>
+                    <input type="text" id="resource-cat-label" placeholder="e.g. Font Pack">
+                </div>
+            </div>
+            <div class="mini-popup-footer">
+                <button class="btn-text" id="cancel-resource-cat">Cancel</button>
+                <button class="btn-primary" id="confirm-resource-cat">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Version custom popup -->
+    <div id="resource-ver-popup" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <h3 class="mini-popup-title">
+                <span class="material-symbols-rounded">new_releases</span>
+                Add Version
+            </h3>
+            <div class="mini-popup-body">
+                <div class="input-field">
+                    <label>Version Label</label>
+                    <input type="text" id="resource-ver-label" placeholder="e.g. v2.0.1">
+                </div>
+            </div>
+            <div class="mini-popup-footer">
+                <button class="btn-text" id="cancel-resource-ver">Cancel</button>
+                <button class="btn-primary" id="confirm-resource-ver">Add</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="chat-upload-modal" class="modal-overlay">
         <div class="admin-modal" style="max-width: 400px;">

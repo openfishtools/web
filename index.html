@@ -206,6 +206,92 @@
         </div>
     </div>
 
+
+    <!-- Resource Detail Popup (App Store style) -->
+    <div id="resource-detail-popup" class="modal-overlay">
+        <div class="res-popup-sheet">
+            <!-- Header -->
+            <div class="res-popup-header">
+                <button class="res-popup-close" id="close-resource-popup" aria-label="Close">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="res-popup-app-row">
+                    <div class="res-popup-icon-wrap" id="res-popup-icon-wrap">
+                        <img id="res-popup-icon" src="" alt="" class="res-popup-icon">
+                        <div class="res-popup-icon-fallback hidden" id="res-popup-icon-fallback">
+                            <span class="material-symbols-rounded">folder_open</span>
+                        </div>
+                    </div>
+                    <div class="res-popup-app-info">
+                        <h2 class="res-popup-title" id="res-popup-title">Resource Name</h2>
+                        <p class="res-popup-dev" id="res-popup-dev">Developer</p>
+                        <div class="res-popup-cats" id="res-popup-cats"></div>
+                    </div>
+                </div>
+                <!-- Rating-style metadata row -->
+                <div class="res-popup-meta-row">
+                    <div class="res-popup-meta-item">
+                        <span class="res-popup-meta-val" id="res-popup-info">—</span>
+                        <span class="res-popup-meta-label">Size</span>
+                    </div>
+                    <div class="res-popup-meta-divider"></div>
+                    <div class="res-popup-meta-item">
+                        <span class="res-popup-meta-val" id="res-popup-os-count">—</span>
+                        <span class="res-popup-meta-label">Platforms</span>
+                    </div>
+                    <div class="res-popup-meta-divider"></div>
+                    <div class="res-popup-meta-item">
+                        <span class="res-popup-meta-val" id="res-popup-ver-count">—</span>
+                        <span class="res-popup-meta-label">Versions</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OS Picker -->
+            <div class="res-popup-section" id="res-popup-os-section">
+                <h3 class="res-popup-section-title">Platform</h3>
+                <div class="res-popup-os-chips" id="res-popup-os-chips"></div>
+            </div>
+
+            <!-- Version Picker -->
+            <div class="res-popup-section" id="res-popup-ver-section">
+                <h3 class="res-popup-section-title">Version</h3>
+                <div class="res-popup-ver-chips" id="res-popup-ver-chips"></div>
+            </div>
+
+            <!-- Download Button -->
+            <div class="res-popup-section">
+                <button class="res-popup-download-btn" id="res-popup-download-btn" disabled>
+                    <span class="material-symbols-rounded">download</span>
+                    <span id="res-popup-download-label">Select OS & Version</span>
+                </button>
+            </div>
+
+            <!-- Password Section -->
+            <div class="res-popup-section res-popup-password-section">
+                <div class="res-popup-password-row">
+                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">lock</span>
+                    <div class="res-popup-password-info">
+                        <span class="res-popup-password-label">Password</span>
+                        <span class="res-popup-password-val" id="res-popup-password">••••••••••••</span>
+                    </div>
+                    <button class="res-popup-copy-btn" id="res-popup-copy-btn" title="Copy password">
+                        <span class="material-symbols-rounded">content_copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Instruction Section -->
+            <div class="res-popup-section hidden" id="res-popup-instruction-section">
+                <h3 class="res-popup-section-title">
+                    <span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle">info</span>
+                    Instructions
+                </h3>
+                <div class="res-popup-instruction" id="res-popup-instruction"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="scripts/app.js"></script>
 </body>
 </html>

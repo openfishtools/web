@@ -2439,3 +2439,323 @@ body {
 }
 
 /* --- End of File --- */
+
+/* ── Resource Card Updates ─────────────────────────── */
+.resource-card {
+    cursor: pointer !important;
+}
+.resource-cats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+.resource-cat-chip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+.resource-card-cutefish {
+    border: 1.5px solid var(--md-sys-color-primary) !important;
+    background: linear-gradient(135deg, 
+        var(--md-sys-color-primary-container) 0%, 
+        var(--md-sys-color-surface-container-low) 100%) !important;
+}
+.os-chip { width: auto; min-width: 22px; gap: 4px; padding: 0 6px !important; }
+
+/* ── Resource Detail Popup (App Store Style) ────────── */
+.res-popup-sheet {
+    background: var(--md-sys-color-surface-container);
+    border-radius: 28px;
+    width: 92%;
+    max-width: 480px;
+    max-height: 88vh;
+    overflow-y: auto;
+    transform: translateY(40px) scale(0.96);
+    transition: all 0.35s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.25);
+}
+.modal-overlay.show .res-popup-sheet {
+    transform: translateY(0) scale(1);
+}
+.res-popup-header {
+    padding: 24px 24px 0;
+    position: relative;
+}
+.res-popup-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    z-index: 10;
+}
+.res-popup-close:hover { background: var(--md-sys-color-outline-variant); }
+.res-popup-close .material-symbols-rounded { font-size: 18px; }
+.res-popup-app-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 40px;
+}
+.res-popup-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--md-sys-color-primary-container);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.res-popup-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.res-popup-icon-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--md-sys-color-on-primary-container);
+    font-size: 36px;
+}
+.res-popup-app-info {
+    flex: 1;
+    min-width: 0;
+    padding-top: 6px;
+}
+.res-popup-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--md-sys-color-on-surface);
+}
+.res-popup-dev {
+    font-size: 13px;
+    color: var(--md-sys-color-primary);
+    font-weight: 500;
+    margin: 0 0 8px;
+}
+.res-popup-cats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.res-popup-cat-chip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+/* Metadata row */
+.res-popup-meta-row {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    padding: 16px 0;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.res-popup-meta-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.res-popup-meta-val {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
+}
+.res-popup-meta-label {
+    font-size: 10px;
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.res-popup-meta-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--md-sys-color-outline-variant);
+}
+/* Sections */
+.res-popup-section {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.res-popup-section:last-child { border-bottom: none; }
+.res-popup-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+/* OS / Version chips */
+.res-popup-os-chips,
+.res-popup-ver-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.res-popup-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.res-popup-chip:hover {
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-surface-container-highest);
+}
+.res-popup-chip.active {
+    background: var(--md-sys-color-primary-container);
+    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary-container);
+}
+/* Download button */
+.res-popup-download-btn {
+    width: 100%;
+    height: 52px;
+    border-radius: 26px;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+.res-popup-download-btn:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+.res-popup-download-btn:disabled {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: not-allowed;
+}
+/* Password row */
+.res-popup-password-section {
+    background: var(--md-sys-color-surface-container-high);
+}
+.res-popup-password-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.res-popup-password-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.res-popup-password-label {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.res-popup-password-val {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
+    letter-spacing: 1px;
+}
+.res-popup-copy-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.res-popup-copy-btn:hover { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.res-popup-copy-btn .material-symbols-rounded { font-size: 20px; }
+/* Instruction */
+.res-popup-instruction {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--md-sys-color-on-surface-variant);
+    white-space: pre-wrap;
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+/* ── Admin Resource OS/Version Rows ─────────────────── */
+.res-os-group {
+    margin-bottom: 12px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.res-os-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--md-sys-color-surface-container-highest);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.res-os-ver-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+.res-os-ver-row:last-child { border-bottom: none; }
+.res-ver-badge-inline {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.res-card-detail-btn {
+    border: none;
+}

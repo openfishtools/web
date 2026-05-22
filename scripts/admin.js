@@ -202,6 +202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         initDragAndDrop();
         initBadgePickers();
         initCustomBadgePopups();
+        initResourceBadgePickers();
+
         handleHashNavigation();
         registerPush();
         const adminUploadModal = document.getElementById('chat-upload-modal');
@@ -1164,6 +1166,171 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // ── Resource Admin Logic ──────────────────────────────────────────────────
+
+    const STATIC_RES_CATS = ['Made By Cutefish', 'Software', 'Plugin', 'Extension'];
+    const STATIC_RES_VERS = ['Latest', 'Stable', 'Oldest'];
+    const OS_META = {
+        WIN:     { label: 'Windows', svg: 'assets/svg/windows.svg' },
+        MAC:     { label: 'macOS',   svg: 'assets/svg/apple.svg'   },
+        ANDROID: { label: 'Android', svg: 'assets/svg/android.svg' }
+    };
+
+    const resetResourceModal = () => {
+        // Clear badges
+        document.querySelectorAll('#resource-category-picker .res-cat-badge').forEach(b => {
+            if (!STATIC_RES_CATS.includes(b.dataset.cat)) b.remove();
+            else b.classList.remove('selected');
+        });
+        document.querySelectorAll('#resource-os-picker .res-os-badge').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('#resource-version-picker .res-ver-badge').forEach(b => {
+            if (!STATIC_RES_VERS.includes(b.dataset.ver)) b.remove();
+            else b.classList.remove('selected');
+        });
+        document.getElementById('resource-os-links-container').innerHTML = '<p class="no-sw-selected-hint">Select OS above to add download links.</p>';
+        ['modal-resource-title','modal-resource-dev','modal-resource-info','modal-resource-instruction'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        const drop = document.getElementById('resource-icon-drop');
+        const img = document.getElementById('resource-icon-img-preview');
+        if (drop) drop.classList.remove('has-file');
+        if (img) { img.src = ''; img.removeAttribute('src'); }
+        document.getElementById('modal-resource-icon').value = '';
+    };
+
+    // Badge pickers for resource category
+    const initResourceBadgePickers = () => {
+        document.querySelectorAll('#resource-category-picker .res-cat-badge').forEach(b => {
+            b.addEventListener('click', () => b.classList.toggle('selected'));
+        });
+        document.querySelectorAll('#resource-os-picker .res-os-badge').forEach(b => {
+            b.addEventListener('click', () => { b.classList.toggle('selected'); syncResourceOsRows(); });
+        });
+        document.querySelectorAll('#resource-version-picker .res-ver-badge').forEach(b => {
+            b.addEventListener('click', () => { b.classList.toggle('selected'); syncResourceOsRows(); });
+        });
+
+        // Custom category popup
+        document.getElementById('open-resource-cat-popup')?.addEventListener('click', e => {
+            e.stopPropagation();
+            document.getElementById('resource-cat-popup').classList.add('show');
+        });
+        document.getElementById('cancel-resource-cat')?.addEventListener('click', () => {
+            document.getElementById('resource-cat-popup').classList.remove('show');
+        });
+        document.getElementById('confirm-resource-cat')?.addEventListener('click', () => {
+            const label = document.getElementById('resource-cat-label').value.trim();
+            if (!label) return;
+            const picker = document.getElementById('resource-category-picker');
+            const addBtn = picker.querySelector('.sw-badge-add-btn');
+            const badge = document.createElement('div');
+            badge.className = 'sw-badge-preset res-cat-badge selected';
+            badge.dataset.cat = label;
+            badge.innerHTML = `<span class="material-symbols-rounded" style="font-size:14px">label</span><span>${label}</span>`;
+            badge.addEventListener('click', () => badge.classList.toggle('selected'));
+            picker.insertBefore(badge, addBtn);
+            document.getElementById('resource-cat-label').value = '';
+            document.getElementById('resource-cat-popup').classList.remove('show');
+        });
+
+        // Custom version popup
+        document.getElementById('open-resource-ver-popup')?.addEventListener('click', e => {
+            e.stopPropagation();
+            document.getElementById('resource-ver-popup').classList.add('show');
+        });
+        document.getElementById('cancel-resource-ver')?.addEventListener('click', () => {
+            document.getElementById('resource-ver-popup').classList.remove('show');
+        });
+        document.getElementById('confirm-resource-ver')?.addEventListener('click', () => {
+            const label = document.getElementById('resource-ver-label').value.trim();
+            if (!label) return;
+            const picker = document.getElementById('resource-version-picker');
+            const addBtn = picker.querySelector('.sw-badge-add-btn');
+            const badge = document.createElement('div');
+            badge.className = 'sw-badge-preset res-ver-badge selected';
+            badge.dataset.ver = label;
+            badge.innerHTML = `<span class="material-symbols-rounded" style="font-size:14px">new_releases</span><span>${label}</span>`;
+            badge.addEventListener('click', () => { badge.classList.toggle('selected'); syncResourceOsRows(); });
+            picker.insertBefore(badge, addBtn);
+            document.getElementById('resource-ver-label').value = '';
+            document.getElementById('resource-ver-popup').classList.remove('show');
+            syncResourceOsRows();
+        });
+    };
+
+    // Build per-OS version link rows
+    const syncResourceOsRows = () => {
+        const container = document.getElementById('resource-os-links-container');
+        if (!container) return;
+        const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
+        const selectedVers = [...document.querySelectorAll('#resource-version-picker .res-ver-badge.selected')].map(b => b.dataset.ver);
+
+        if (selectedOs.length === 0 || selectedVers.length === 0) {
+            container.innerHTML = '<p class="no-sw-selected-hint">Select OS and version above.</p>';
+            return;
+        }
+
+        // Preserve existing values
+        const existing = {};
+        container.querySelectorAll('.res-os-ver-row').forEach(row => {
+            existing[`${row.dataset.os}__${row.dataset.ver}`] = row.querySelector('input[type="text"]')?.value || '';
+        });
+        container.innerHTML = '';
+
+        selectedOs.forEach(os => {
+            const meta = OS_META[os] || { label: os, svg: '' };
+            const osGroup = document.createElement('div');
+            osGroup.className = 'res-os-group';
+            osGroup.innerHTML = `<div class="res-os-group-header">
+                ${meta.svg ? `<img src="${meta.svg}" alt="${os}" style="width:16px;height:16px">` : ''}
+                <span>${meta.label}</span>
+            </div>`;
+            selectedVers.forEach(ver => {
+                const key = `${os}__${ver}`;
+                const row = document.createElement('div');
+                row.className = 'res-os-ver-row';
+                row.dataset.os = os;
+                row.dataset.ver = ver;
+                row.innerHTML = `
+                    <span class="res-ver-badge-inline">${ver}</span>
+                    <div class="dl-input-wrap">
+                        <input type="text" placeholder="https://..." value="${existing[key] || ''}">
+                        <button type="button" class="dl-upload-btn" title="Upload">
+                            <span class="material-symbols-rounded">upload</span>
+                        </button>
+                        <input type="file" hidden>
+                    </div>`;
+                const uploadBtn = row.querySelector('.dl-upload-btn');
+                const fileHidden = row.querySelector('input[type="file"]');
+                const textIn = row.querySelector('input[type="text"]');
+                uploadBtn.addEventListener('click', () => fileHidden.click());
+                fileHidden.addEventListener('change', async () => {
+                    if (!fileHidden.files.length) return;
+                    await uploadDlFile(fileHidden.files[0], textIn, `${os}-${ver}`);
+                    fileHidden.value = '';
+                });
+                const wrap = row.querySelector('.dl-input-wrap');
+                wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
+                wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
+                wrap.addEventListener('drop', async e => {
+                    e.preventDefault(); wrap.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length) await uploadDlFile(e.dataTransfer.files[0], textIn, `${os}-${ver}`);
+                });
+                osGroup.appendChild(row);
+            });
+            container.appendChild(osGroup);
+        });
+    };
+
+    const getResourceOsLinks = () => {
+        const result = [];
+        document.querySelectorAll('.res-os-ver-row').forEach(row => {
+            const url = row.querySelector('input[type="text"]')?.value?.trim() || '';
+            if (url) result.push({ os: row.dataset.os, ver: row.dataset.ver, url });
+        });
+        return result;
+    };
+
     const loadResources = async () => {
         const res = await fetch(`${API_URL}/resources`);
         const resources = await res.json();
@@ -1172,19 +1339,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
                 ? `<img src="${r.icon}" class="admin-table-icon" alt="${r.title}">`
                 : `<span class="material-symbols-rounded">${r.icon || 'shop'}</span>`;
-            
+
+            const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+            const osArr = Array.isArray(r.os) ? r.os : [];
+            const osIcons = osArr.map(o => {
+                const key = typeof o === 'string' ? o.toUpperCase() : (o.name || '').toUpperCase();
+                const m = OS_META[key];
+                return m ? `<img src="${m.svg}" class="admin-os-icon" title="${m.label}">` : key;
+            }).join(' ');
+
+            const instruction = r.instruction ? `<span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px" title="${r.instruction.substring(0,50)}...">info</span>` : '—';
+
             return `
             <tr data-id="${r._id}">
                 <td>${iconHtml}</td>
                 <td>${r.title}</td>
-                <td>${r.category || 'App'}</td>
+                <td>${cats.join(', ') || '—'}</td>
                 <td>${r.dev || ''}</td>
-                <td>
-                    ${r.os ? `<img src="assets/svg/${r.os.toLowerCase() === 'mac' ? 'apple' : (r.os.toLowerCase() === 'win' ? 'windows' : 'android')}.svg" class="admin-os-icon" title="${r.os}">` : '-'}
-                </td>
-                <td>${r.version || ''}</td>
+                <td>${osIcons || '—'}</td>
                 <td>${r.info || ''}</td>
-                <td><a href="${ensureProtocol(r.url)}" target="_blank" class="table-link">${r.url}</a></td>
+                <td>${instruction}</td>
                 <td class="table-actions">
                     <span class="material-symbols-rounded action-icon edit-resource">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-resource">delete</span>
@@ -1199,31 +1373,131 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${API_URL}/resources`);
         const resources = await res.json();
         const item = resources.find(r => r._id === id);
-        openModal('resource-modal', { ...item, index: id });
+        resetResourceModal();
+
+        const modal = document.getElementById('resource-modal');
+        modal.dataset.editIndex = id;
+
+        document.getElementById('modal-resource-title').value = item.title || '';
+        document.getElementById('modal-resource-dev').value = item.dev || '';
+        document.getElementById('modal-resource-info').value = item.info || '';
+        document.getElementById('modal-resource-instruction').value = item.instruction || '';
+
+        const iconInput = document.getElementById('modal-resource-icon');
+        iconInput.value = item.icon || '';
+        if (item.icon && (item.icon.startsWith('http') || item.icon.includes('/'))) {
+            const drop = document.getElementById('resource-icon-drop');
+            const img = document.getElementById('resource-icon-img-preview');
+            if (drop) drop.classList.add('has-file');
+            if (img) img.src = item.icon;
+        }
+
+        // Restore categories
+        const cats = Array.isArray(item.category) ? item.category : (item.category ? [item.category] : []);
+        cats.forEach(cat => {
+            let badge = document.querySelector(`#resource-category-picker .res-cat-badge[data-cat="${cat}"]`);
+            if (!badge) {
+                const picker = document.getElementById('resource-category-picker');
+                const addBtn = picker.querySelector('.sw-badge-add-btn');
+                badge = document.createElement('div');
+                badge.className = 'sw-badge-preset res-cat-badge';
+                badge.dataset.cat = cat;
+                badge.innerHTML = `<span class="material-symbols-rounded" style="font-size:14px">label</span><span>${cat}</span>`;
+                badge.addEventListener('click', () => badge.classList.toggle('selected'));
+                picker.insertBefore(badge, addBtn);
+            }
+            badge.classList.add('selected');
+        });
+
+        // Restore OS selections
+        const osArr = Array.isArray(item.os) ? item.os : [];
+        osArr.forEach(entry => {
+            const osKey = typeof entry === 'string' ? entry.toUpperCase() : (entry.name || '').toUpperCase();
+            const badge = document.querySelector(`#resource-os-picker .res-os-badge[data-os="${osKey}"]`);
+            if (badge) badge.classList.add('selected');
+        });
+
+        // Collect all unique version labels from os entries
+        const allVers = new Set();
+        osArr.forEach(entry => {
+            if (entry.versions) entry.versions.forEach(v => allVers.add(v.label));
+        });
+        allVers.forEach(ver => {
+            let badge = document.querySelector(`#resource-version-picker .res-ver-badge[data-ver="${ver}"]`);
+            if (!badge) {
+                const picker = document.getElementById('resource-version-picker');
+                const addBtn = picker.querySelector('.sw-badge-add-btn');
+                badge = document.createElement('div');
+                badge.className = 'sw-badge-preset res-ver-badge';
+                badge.dataset.ver = ver;
+                badge.innerHTML = `<span class="material-symbols-rounded" style="font-size:14px">new_releases</span><span>${ver}</span>`;
+                badge.addEventListener('click', () => { badge.classList.toggle('selected'); syncResourceOsRows(); });
+                picker.insertBefore(badge, addBtn);
+            }
+            badge.classList.add('selected');
+        });
+
+        syncResourceOsRows();
+
+        // Restore url values
+        osArr.forEach(entry => {
+            const osKey = typeof entry === 'string' ? entry.toUpperCase() : (entry.name || '').toUpperCase();
+            if (entry.versions) {
+                entry.versions.forEach(v => {
+                    const row = document.querySelector(`.res-os-ver-row[data-os="${osKey}"][data-ver="${v.label}"]`);
+                    if (row) { const inp = row.querySelector('input[type="text"]'); if (inp) inp.value = v.url || ''; }
+                });
+            }
+        });
+
+        modal.classList.add('show');
     };
 
     document.getElementById('save-resource-btn').onclick = async () => {
-        const title = document.getElementById('modal-resource-title').value;
-        const category = document.getElementById('modal-resource-category').value;
-        const dev = document.getElementById('modal-resource-dev').value;
-        const version = document.getElementById('modal-resource-version').value;
-        const os = document.getElementById('modal-resource-os').value;
-        const info = document.getElementById('modal-resource-info').value;
-        const url = document.getElementById('modal-resource-url').value;
-        const icon = document.getElementById('modal-resource-icon').value || 'shop';
-        if (title) {
-            const modal = document.getElementById('resource-modal');
-            const data = { title, category, dev, version, os, info, url, icon };
-            const id = modal.dataset.editIndex;
-            if (id) {
-                await fetch(`${API_URL}/resources/${id}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) });
+        const title = document.getElementById('modal-resource-title').value.trim();
+        if (!title) { alert('Please provide a resource title'); return; }
+
+        const category = [...document.querySelectorAll('#resource-category-picker .res-cat-badge.selected')].map(b => b.dataset.cat);
+        const dev = document.getElementById('modal-resource-dev').value.trim();
+        const info = document.getElementById('modal-resource-info').value.trim();
+        const instruction = document.getElementById('modal-resource-instruction').value.trim();
+        const icon = document.getElementById('modal-resource-icon').value || '';
+
+        // Build OS structure
+        const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
+        const selectedVers = [...document.querySelectorAll('#resource-version-picker .res-ver-badge.selected')].map(b => b.dataset.ver);
+        const osData = selectedOs.map(osKey => {
+            const versions = selectedVers.map(ver => {
+                const row = document.querySelector(`.res-os-ver-row[data-os="${osKey}"][data-ver="${ver}"]`);
+                const url = row?.querySelector('input[type="text"]')?.value?.trim() || '';
+                return { label: ver, url };
+            }).filter(v => v.url);
+            return { name: osKey, versions };
+        });
+
+        const modal = document.getElementById('resource-modal');
+        const editId = modal.dataset.editIndex;
+        const data = { title, category, dev, info, instruction, icon, os: osData };
+
+        try {
+            const res = editId
+                ? await fetch(`${API_URL}/resources/${editId}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
+                : await fetch(`${API_URL}/resources`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
+            if (res.ok) {
+                loadResources();
+                closeModal('resource-modal');
+                resetResourceModal();
             } else {
-                await fetch(`${API_URL}/resources`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
+                const err = await res.json();
+                alert('Error: ' + (err.error || 'Failed to save resource'));
             }
-            loadResources();
-            closeModal('resource-modal');
+        } catch (err) {
+            alert('Connection error');
         }
     };
+
+
+
 
     window.deleteItem = async (type, id, callback) => {
         if (confirm('Are you sure you want to delete this item?')) {

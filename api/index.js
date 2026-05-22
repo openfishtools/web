@@ -99,15 +99,18 @@ const TikTokCache = mongoose.models.TikTokCache || mongoose.model('TikTokCache',
 
 const ResourceSchema = new mongoose.Schema({
     title: String,
-    category: String,
+    category: { type: mongoose.Schema.Types.Mixed, default: [] }, // String[] (multi-select)
     dev: String,
+    instruction: String,
+    icon: String,
+    info: String, // size/info text
+    os: { type: mongoose.Schema.Types.Mixed, default: [] }, // [{name: String, versions: [{label, url}]}]
+    // Legacy fallback fields
     version: String,
-    os: String,
-    info: String,
     url: String,
-    icon: String
 });
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
+
 
 const MessageSchema = new mongoose.Schema({
     chatId: String,
