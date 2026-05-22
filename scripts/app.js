@@ -1400,10 +1400,21 @@ document.addEventListener('DOMContentLoaded', () => {
             osVersionMap[key] = o.versions || [];
         });
 
+        const downloadSection = document.getElementById('res-popup-download-section');
+        const verSection = document.getElementById('res-popup-ver-section');
+        const passwordSection = document.getElementById('res-popup-password-section');
+        const instrSection = document.getElementById('res-popup-instruction-section');
+
         const downloadBtn = document.getElementById('res-popup-download-btn');
         const downloadLabel = document.getElementById('res-popup-download-label');
         const verChipsEl = document.getElementById('res-popup-ver-chips');
         const osChipsEl = document.getElementById('res-popup-os-chips');
+
+        // Hide downstream sections initially
+        verSection.classList.add('hidden');
+        downloadSection.classList.add('hidden');
+        passwordSection.classList.add('hidden');
+        instrSection.classList.add('hidden');
 
         const updateDownloadBtn = () => {
             if (selectedOs && selectedVer) {
@@ -1413,9 +1424,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadBtn.disabled = false;
                     downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
                     downloadLabel.textContent = `Download ${OS_LABEL[selectedOs] || selectedOs} – ${selectedVer}`;
+                    
+                    // Show downstream sections once selected
+                    downloadSection.classList.remove('hidden');
+                    passwordSection.classList.remove('hidden');
+                    if (resource.instruction) {
+                        instrSection.classList.remove('hidden');
+                    }
                 } else {
                     downloadBtn.disabled = true;
                     downloadLabel.textContent = 'No link available';
+                    downloadSection.classList.remove('hidden');
                 }
             } else {
                 downloadBtn.disabled = true;
@@ -1424,12 +1443,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderVerChips = () => {
-            if (!selectedOs) { verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">Select a platform first</span>'; return; }
+            if (!selectedOs) {
+                verSection.classList.add('hidden');
+                return;
+            }
             const versions = osVersionMap[selectedOs] || [];
-            if (!versions.length) { verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No versions available</span>'; return; }
+            if (!versions.length) {
+                verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No versions available</span>';
+                verSection.classList.remove('hidden');
+                return;
+            }
             verChipsEl.innerHTML = versions.map(v =>
                 `<button class="res-popup-chip ${selectedVer === v.label ? 'active' : ''}" data-ver="${v.label}">${v.label}</button>`
             ).join('');
+            verSection.classList.remove('hidden');
+
             verChipsEl.querySelectorAll('.res-popup-chip').forEach(btn => {
                 btn.addEventListener('click', () => {
                     selectedVer = btn.dataset.ver;
@@ -1455,15 +1483,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedVer = null;
                     osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+
+                    // Reset and hide downstream when switching platform
+                    downloadSection.classList.add('hidden');
+                    passwordSection.classList.add('hidden');
+                    instrSection.classList.add('hidden');
+
                     renderVerChips();
-                    updateDownloadBtn();
                 });
             });
         } else {
             osChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No platforms configured</span>';
         }
-        verChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">Select a platform first</span>';
-        updateDownloadBtn();
 
         // Password
         document.getElementById('res-popup-password').textContent = RESOURCE_PASSWORD;
@@ -1477,13 +1508,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // Instruction
-        const instrSection = document.getElementById('res-popup-instruction-section');
         const instrEl = document.getElementById('res-popup-instruction');
         if (resource.instruction) {
             instrEl.textContent = resource.instruction;
-            instrSection.classList.remove('hidden');
-        } else {
-            instrSection.classList.add('hidden');
         }
 
         popup.classList.add('show');

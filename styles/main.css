@@ -2603,8 +2603,20 @@ body {
 .res-popup-section {
     padding: 16px 24px;
     border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    animation: resSectionFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 .res-popup-section:last-child { border-bottom: none; }
+
+@keyframes resSectionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 .res-popup-section-title {
     font-size: 13px;
     font-weight: 600;
