@@ -1224,6 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
         }
+    };
     const OS_SVG = { WIN: 'assets/svg/windows.svg', MAC: 'assets/svg/apple.svg', ANDROID: 'assets/svg/android.svg' };
     const OS_LABEL = { WIN: 'Windows', MAC: 'macOS', ANDROID: 'Android' };
 
