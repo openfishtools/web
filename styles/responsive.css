@@ -164,6 +164,29 @@
     .phone-screen .tiktok-slide {
         height: 100% !important;
     }
+
+    /* Resource Popup Desktop Override */
+    #resource-detail-popup {
+        align-items: center;
+    }
+
+    #resource-detail-popup .res-popup-sheet {
+        border-radius: 28px;
+        width: 92%;
+        max-width: 480px;
+        max-height: 88vh;
+        transform: translateY(40px) scale(0.96);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+        transition: all 0.35s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    #resource-detail-popup.show .res-popup-sheet {
+        transform: translateY(0) scale(1);
+    }
+
+    #resource-detail-popup .res-popup-handle {
+        display: none;
+    }
 }
 
 ::-webkit-scrollbar {
