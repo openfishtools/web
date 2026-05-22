@@ -159,6 +159,11 @@
         background: #333;
         border-radius: 2px;
     }
+
+    .phone-screen .preset-feed.tiktok-feed,
+    .phone-screen .tiktok-slide {
+        height: 100% !important;
+    }
 }
 
 ::-webkit-scrollbar {
