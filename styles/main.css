@@ -2058,6 +2058,10 @@ body {
     font-size: 22px;
 }
 
+.download-direct-btn:hover .material-symbols-rounded {
+    display: none;
+}
+
 .resource-card {
     cursor: default !important;
 }

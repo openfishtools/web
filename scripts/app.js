@@ -1320,6 +1320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <button class="download-direct-btn res-card-detail-btn" data-id="${r._id}" aria-label="Details">
+                        <span class="btn-label">Download</span>
                         <span class="material-symbols-rounded">download</span>
                     </button>
                 </div>`;
