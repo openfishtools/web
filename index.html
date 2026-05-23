@@ -33,17 +33,17 @@
                 </div>
                 <span class="nav-label">Resource</span>
             </a>
-            <a href="#chat" class="nav-item" data-tab="chat">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">chat_bubble</span>
-                </div>
-                <span class="nav-label">Chat</span>
-            </a>
             <a href="#tools" class="nav-item" data-tab="tools">
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">build</span>
                 </div>
                 <span class="nav-label">Tools</span>
+            </a>
+            <a href="#chat" class="nav-item" data-tab="chat">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">chat_bubble</span>
+                </div>
+                <span class="nav-label">Chat</span>
             </a>
         </nav>
 
@@ -185,6 +185,61 @@
                 </div>
             </section>
 
+            <section id="tools" class="section">
+                <div class="page-header-row">
+                    <h1 class="page-title">Tools</h1>
+                </div>
+                <div class="grid">
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Quality Patcher</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Hex Edit Method</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-tiktok-patcher-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
+                        </div>
+                        <div id="tool-tiktok-patcher-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">upload_file</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Upload Tutorial</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">HQ Upload Method</div>
+                            </div>
+                        </div>
+                        <div class="upload-steps" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                            <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">1</div>
+                                <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Upscale video to 60 FPS. Use H264 format with 12 to 30 Mbps bitrate to avoid lag.</div>
+                            </div>
+                            <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">2</div>
+                                <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Go to <a href="https://tiktok.com/tiktokstudio" target="_blank" rel="noopener noreferrer" style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600;">tiktok.com/tiktokstudio</a> and upload the video.</div>
+                            </div>
+                            <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">3</div>
+                                <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Change visibility to <strong>Only me</strong>.</div>
+                            </div>
+                            <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">4</div>
+                                <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Upload and wait 1 minute until video review is finished.</div>
+                            </div>
+                            <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">5</div>
+                                <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Open TikTok on mobile and change visibility from <strong>Only me</strong> to <strong>Public</strong>.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="chat" class="section">
                 <div class="chat-container">
                     <div id="chat-login" class="chat-login-overlay">
@@ -235,31 +290,6 @@
                                 <span class="material-symbols-rounded">send</span>
                             </button>
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="tools" class="section">
-                <div class="page-header-row">
-                    <h1 class="page-title">Tools</h1>
-                </div>
-                <div class="grid">
-                    <div class="card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
-                            <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Quality Patcher</h3>
-                                <div class="sw-badge-preset" style="margin-top: 4px; display: inline-flex;">Hex Edit Method</div>
-                            </div>
-                        </div>
-                        <p class="login-desc" style="margin-bottom: 20px;">Prevents TikTok from compressing your video by patching the mvhd atom.</p>
-                        
-                        <div class="drag-drop-area" id="tool-tiktok-patcher-drop">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span>Drag & drop video here or click to select</span>
-                            <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
-                        </div>
-                        <div id="tool-tiktok-patcher-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
                     </div>
                 </div>
             </section>
