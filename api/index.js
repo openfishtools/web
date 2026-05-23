@@ -382,15 +382,31 @@ app.post('/api/presets/:id/like', async (req, res) => {
 
 app.get('/api/resources', async (req, res) => res.json(await Resource.find()));
 app.post('/api/resources', requireAdmin, async (req, res) => res.json(await new Resource(req.body).save()));
-app.put('/api/resources/:id', requireAdmin, async (req, res) => res.json(await Resource.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
-    const r = await Resource.findById(req.params.id);
-    if (r) {
-        if (r.url) await deleteFileFromSupabase(r.url);
-        if (r.icon) await deleteFileFromSupabase(r.icon);
+app.put('/api/resources/:id', requireAdmin, async (req, res) => {
+    try {
+        // Try ObjectId match first (admin-created), fallback to string _id (manually inserted)
+        let result = await Resource.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        if (!result) result = await Resource.findOneAndUpdate({ _id: req.params.id }, { $set: req.body }, { new: true });
+        if (!result) return res.status(404).json({ error: 'Resource not found' });
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    await Resource.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+});
+app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
+    try {
+        // Try ObjectId match first, fallback to string _id
+        let r = await Resource.findById(req.params.id).catch(() => null);
+        if (!r) r = await Resource.findOne({ _id: req.params.id });
+        if (r) {
+            if (r.url) await deleteFileFromSupabase(r.url);
+            if (r.icon) await deleteFileFromSupabase(r.icon);
+            await r.deleteOne();
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.get('/api/chats', requireAdmin, async (req, res) => {
