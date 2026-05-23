@@ -35,6 +35,8 @@
 
     --transition-standard: 250ms cubic-bezier(0.2, 0.0, 0, 1.0);
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+
+    --os-icon-filter: brightness(0) invert(0.2);
 }
 
 :root.dark-theme {
@@ -60,6 +62,8 @@
 
     --md-sys-color-outline: hsl(var(--primary-h), 5%, 60%);
     --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
+
+    --os-icon-filter: brightness(0) invert(1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,6 +90,8 @@
 
         --md-sys-color-outline: hsl(var(--primary-h), 5%, 60%);
         --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
+
+        --os-icon-filter: brightness(0) invert(1);
     }
 }
 
@@ -2056,7 +2062,7 @@ body {
     width: 14px;
     height: 14px;
     display: block;
-    filter: brightness(0) invert(1);
+    filter: var(--os-icon-filter);
     opacity: 0.9;
     object-fit: contain;
 }
@@ -2065,7 +2071,7 @@ body {
     width: 18px;
     height: 18px;
     display: block;
-    filter: brightness(0) invert(1);
+    filter: var(--os-icon-filter);
     opacity: 0.8;
     object-fit: contain;
 }
