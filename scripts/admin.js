@@ -952,6 +952,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (statusText) statusText.textContent = 'Upload successful!';
             
             if (urlInput) urlInput.value = uploadData.url;
+
+            // Backup: also store on drop zone data attribute for resilience
+            if (type.includes('icon')) {
+                const dropZone = document.getElementById(`${type}-drop`);
+                if (dropZone) dropZone.dataset.uploadedUrl = uploadData.url;
+            }
             
             if (type === 'preset' && uploadData.size) {
                 const sizeInput = document.getElementById('modal-preset-size');
@@ -1194,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         const drop = document.getElementById('resource-icon-drop');
         const img = document.getElementById('resource-icon-img-preview');
-        if (drop) drop.classList.remove('has-file');
+        if (drop) { drop.classList.remove('has-file'); delete drop.dataset.uploadedUrl; }
         if (img) { img.src = ''; img.removeAttribute('src'); }
         document.getElementById('modal-resource-icon').value = '';
     };
@@ -1389,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (item.icon && (item.icon.startsWith('http') || item.icon.includes('/'))) {
             const drop = document.getElementById('resource-icon-drop');
             const img = document.getElementById('resource-icon-img-preview');
-            if (drop) drop.classList.add('has-file');
+            if (drop) { drop.classList.add('has-file'); drop.dataset.uploadedUrl = item.icon; }
             if (img) img.src = item.icon;
         }
 
@@ -1462,7 +1468,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dev = document.getElementById('modal-resource-dev').value.trim();
         const info = document.getElementById('modal-resource-info').value.trim();
         const instruction = document.getElementById('modal-resource-instruction').value.trim();
-        const icon = document.getElementById('modal-resource-icon').value || '';
+        const iconHiddenVal = document.getElementById('modal-resource-icon').value || '';
+        const iconDropFallback = document.getElementById('resource-icon-drop')?.dataset.uploadedUrl || '';
+        const icon = iconHiddenVal || iconDropFallback;
 
         // Build OS structure
         const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
