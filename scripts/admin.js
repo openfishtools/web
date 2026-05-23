@@ -1470,7 +1470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const instruction = document.getElementById('modal-resource-instruction').value.trim();
         const iconHiddenVal = document.getElementById('modal-resource-icon').value || '';
         const iconDropFallback = document.getElementById('resource-icon-drop')?.dataset.uploadedUrl || '';
-        const icon = iconHiddenVal || iconDropFallback;
+        const icon = iconDropFallback || iconHiddenVal;
 
         // Build OS structure
         const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
