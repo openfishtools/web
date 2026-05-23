@@ -39,6 +39,12 @@
                 </div>
                 <span class="nav-label">Chat</span>
             </a>
+            <a href="#tools" class="nav-item" data-tab="tools">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-rounded">build</span>
+                </div>
+                <span class="nav-label">Tools</span>
+            </a>
         </nav>
 
         <main class="main-content">
@@ -229,6 +235,31 @@
                                 <span class="material-symbols-rounded">send</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tools" class="section">
+                <div class="page-header-row">
+                    <h1 class="page-title">Tools</h1>
+                </div>
+                <div class="grid">
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Quality Patcher</h3>
+                                <div class="sw-badge-preset" style="margin-top: 4px; display: inline-flex;">Hex Edit Method</div>
+                            </div>
+                        </div>
+                        <p class="login-desc" style="margin-bottom: 20px;">Prevents TikTok from compressing your video by patching the mvhd atom.</p>
+                        
+                        <div class="drag-drop-area" id="tool-tiktok-patcher-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
+                        </div>
+                        <div id="tool-tiktok-patcher-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
                     </div>
                 </div>
             </section>
