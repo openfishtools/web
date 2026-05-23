@@ -1686,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Advance 44 bytes from the END of "lmvhd" (foundIdx + 4)
-                const targetIdx = foundIdx + 49;
+                const targetIdx = foundIdx + 48;
                 
                 if (targetIdx < view.length) {
                     view[targetIdx] = 0x01; // Change 00 to 01
