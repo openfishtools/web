@@ -837,11 +837,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const initDragAndDrop = () => {
         const areas = document.querySelectorAll('.modal-overlay:not(#chat-upload-modal) .drag-drop-area, .integrated-drop-zone');
         areas.forEach(area => {
-            const isIntegrated = area.classList.contains('integrated-drop-zone') || area.classList.contains('drag-drop-area');
             const type = area.id === 'resource-url-drop' ? 'resource' :
                          (area.id === 'resource-icon-drop' ? 'resource-icon' :
-                         (area.id === 'social-icon-drop' ? 'social-icon' : null));
+                          (area.id === 'social-icon-drop' ? 'social-icon' : null));
+            if (!type) return;
             
+            const isIntegrated = area.classList.contains('integrated-drop-zone') || area.classList.contains('drag-drop-area');
             const input = document.getElementById(`${type}-file-input`) || area.querySelector('input');
             const preview = document.getElementById(`${type}-file-preview`) || document.getElementById(`${type}-preview`) || area.querySelector('.file-preview');
 
