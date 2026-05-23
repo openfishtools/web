@@ -2522,10 +2522,19 @@ body {
     color: var(--md-sys-color-on-secondary-container);
 }
 .resource-card-cutefish {
-    border: 1.5px solid var(--md-sys-color-primary) !important;
-    background: linear-gradient(135deg, 
-        var(--md-sys-color-primary-container) 0%, 
-        var(--md-sys-color-surface-container-low) 100%) !important;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--md-sys-color-outline-variant) !important;
+    background: var(--md-sys-color-surface-container-low) !important;
+}
+.resource-card-cutefish::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--md-sys-color-primary);
 }
 .os-chip { width: auto; min-width: 22px; gap: 4px; padding: 0 6px !important; }
 
