@@ -37,6 +37,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const jsonHeaders = () => adminAuthHeaders({ 'Content-Type': 'application/json' });
 
+    // Returns a resized Supabase image URL (admin thumbnails)
+    const thumbUrl = (url, width = 64) => {
+        if (!url) return url;
+        if (url.includes('supabase.co/storage/v1/object/public')) {
+            const sep = url.includes('?') ? '&' : '?';
+            return `${url}${sep}width=${width}&quality=75&resize=contain`;
+        }
+        return url;
+    };
+
     let isUnauthorizedAlertShowing = false;
     let chatListInterval = null;
     let heartbeatInterval = null;
@@ -1053,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const body = document.getElementById('social-table-body');
         body.innerHTML = socials.map((s) => {
             const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
-                ? `<img src="${s.icon}" class="admin-table-icon" alt="${s.name}">`
+                ? `<img src="${thumbUrl(s.icon, 64)}" class="admin-table-icon" alt="${s.name}" loading="lazy">`
                 : `<span class="material-symbols-rounded">${s.icon || 'public'}</span>`;
             
             return `
@@ -1344,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const body = document.getElementById('resource-table-body');
         body.innerHTML = resources.map((r) => {
             const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
-                ? `<img src="${r.icon}" class="admin-table-icon" alt="${r.title}">`
+                ? `<img src="${thumbUrl(r.icon, 64)}" class="admin-table-icon" alt="${r.title}" loading="lazy">`
                 : `<span class="material-symbols-rounded">${r.icon || 'shop'}</span>`;
 
             const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);

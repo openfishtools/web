@@ -19,6 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
+    // Returns a resized Supabase image URL, or original if not a Supabase storage URL
+    const thumbUrl = (url, width = 128) => {
+        if (!url) return url;
+        if (url.includes('supabase.co/storage/v1/object/public')) {
+            const sep = url.includes('?') ? '&' : '?';
+            return `${url}${sep}width=${width}&quality=80&resize=contain`;
+        }
+        return url;
+    };
+
     const isTikTokLikeUrl = (s) => {
         if (!s || typeof s !== 'string') return false;
         const u = s.toLowerCase();
@@ -1068,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (socials.length > 0) {
             container.innerHTML = socials.map(s => {
                 const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
-                    ? `<img src="${s.icon}" class="social-icon-img" alt="${s.name}">`
+                    ? `<img src="${thumbUrl(s.icon, 96)}" class="social-icon-img" alt="${s.name}" loading="lazy">`
                     : `<span class="material-symbols-rounded social-icon">${s.icon || 'public'}</span>`;
                 
                 return `
@@ -1322,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const isCutefish = cats.includes('Made By Cutefish');
                 const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
-                    ? `<img src="${r.icon}" class="resource-icon-img" alt="${r.title}">`
+                    ? `<img src="${thumbUrl(r.icon, 128)}" class="resource-icon-img" alt="${r.title}" loading="lazy">`
                     : `<span class="material-symbols-rounded resource-icon">${r.icon || 'shop'}</span>`;
 
                 return `
