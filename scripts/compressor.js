@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const { FFmpeg } = window.FFmpegWASM;
         ffmpeg = new FFmpeg();
         
+        ffmpeg.on('log', ({ message }) => {
+            console.log(`[FFmpeg Compressor] ${message}`);
+        });
+        
         ffmpeg.on('progress', ({ progress, time }) => {
             progressFill.style.width = `${progress * 100}%`;
             statusText.textContent = `Compressing... ${Math.round(progress * 100)}%`;
