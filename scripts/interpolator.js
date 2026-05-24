@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadFFmpeg = async () => {
         if (ffmpeg) return;
-        const { FFmpeg } = window.FFmpeg;
+        const { FFmpeg } = window.FFmpegWASM;
         ffmpeg = new FFmpeg();
         
         ffmpeg.on('progress', ({ progress, time }) => {
