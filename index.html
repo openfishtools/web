@@ -230,6 +230,50 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Video Compressor Card -->
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Compressor</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">h264 Slowest Preset</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-compressor-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-compressor-input" accept="video/mp4,video/quicktime,video/webm" hidden>
+                        </div>
+                        <div id="tool-compressor-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg">
+                                <div id="tool-compressor-progress-fill"></div>
+                            </div>
+                            <p id="tool-compressor-status" class="upload-status-caption" style="text-align: center; margin-top: 8px;">Loading FFmpeg...</p>
+                        </div>
+                    </div>
+                    <!-- Video Interpolator Card -->
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">animation</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Interpolation</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">60 FPS (WASM)</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-interpolator-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-interpolator-input" accept="video/mp4,video/quicktime,video/webm" hidden>
+                        </div>
+                        <div id="tool-interpolator-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg">
+                                <div id="tool-interpolator-progress-fill"></div>
+                            </div>
+                            <p id="tool-interpolator-status" class="upload-status-caption" style="text-align: center; margin-top: 8px;">Loading FFmpeg...</p>
+                            <p style="text-align: center; font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">Note: highly CPU intensive, may take a long time.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -416,6 +460,10 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+    <script src="scripts/compressor.js"></script>
+    <script src="scripts/interpolator.js"></script>
     <script src="scripts/app.js"></script>
 </body>
 </html>
