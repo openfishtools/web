@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const fileInput = document.getElementById('tool-tiktok-patcher-input');
-    const dropArea = document.getElementById('tool-tiktok-patcher-drop');
-    const statusText = document.getElementById('tool-tiktok-patcher-status');
+    const fileInput = document.getElementById('tool-ffmpeg-input');
+    const dropArea = document.getElementById('tool-ffmpeg-drop');
+    const statusText = document.getElementById('tool-ffmpeg-status');
     const btnStart = document.getElementById('btn-start-compression');
     const progressContainer = document.getElementById('ffmpeg-progress-container');
     const progressFill = document.getElementById('ffmpeg-progress-fill');

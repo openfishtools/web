@@ -203,28 +203,7 @@
                             <span>Drag & drop video here or click to select</span>
                             <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
                         </div>
-                        <div style="margin-top: 16px;">
-                            <label style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface); margin-bottom: 8px; display: block;">Compression Preset:</label>
-                            <div class="chip-group" id="ffmpeg-presets" style="justify-content: flex-start; margin-bottom: 16px;">
-                                <div class="chip" data-preset="slow">Slow (H.264 High Quality)</div>
-                                <div class="chip active" data-preset="medium">Medium (H.264 Balanced)</div>
-                                <div class="chip" data-preset="fast">Fast (H.265 Fast Encoding)</div>
-                            </div>
-                        </div>
-
                         <div id="tool-tiktok-patcher-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
-                        
-                        <div id="ffmpeg-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg" style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="ffmpeg-progress-fill" style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
-                                <span id="ffmpeg-progress-text">Compressing...</span>
-                                <span id="ffmpeg-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <button id="btn-start-compression" class="btn-primary w-full hidden" style="margin-top: 16px;">Start Compression</button>
 
                         <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant);">
                             <div class="upload-steps" style="display: flex; flex-direction: column; gap: 12px;">
@@ -250,6 +229,44 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 16px;">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Compressor</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FFmpeg WASM</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-ffmpeg-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm" hidden>
+                        </div>
+                        
+                        <div style="margin-top: 16px;">
+                            <label style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface); margin-bottom: 8px; display: block;">Compression Preset:</label>
+                            <div class="chip-group" id="ffmpeg-presets" style="justify-content: flex-start; margin-bottom: 16px;">
+                                <div class="chip" data-preset="slow">Slow (H.264 High Quality)</div>
+                                <div class="chip active" data-preset="medium">Medium (H.264 Balanced)</div>
+                                <div class="chip" data-preset="fast">Fast (H.265 Fast Encoding)</div>
+                            </div>
+                        </div>
+
+                        <div id="tool-ffmpeg-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+                        
+                        <div id="ffmpeg-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg" style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="ffmpeg-progress-fill" style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="ffmpeg-progress-text">Compressing...</span>
+                                <span id="ffmpeg-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <button id="btn-start-compression" class="btn-primary w-full hidden" style="margin-top: 16px;">Start Compression</button>
                     </div>
                 </div>
             </section>
