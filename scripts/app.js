@@ -1777,34 +1777,69 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const compressVideoFile = async (file) => {
+            const compProgressContainer = document.getElementById('tool-compressor-progress-container');
+            const compProgressFill = document.getElementById('tool-compressor-progress-fill');
+
             compStatus.textContent = 'Uploading video...';
             compStatus.style.color = 'var(--md-sys-color-primary)';
             setControlsDisabled(true);
+            
+            if (compProgressContainer && compProgressFill) {
+                compProgressContainer.classList.remove('hidden');
+                compProgressFill.style.width = '0%';
+            }
 
             const activeBtn = document.querySelector('.segmented-button-group .preset-btn.active');
             const preset = activeBtn ? activeBtn.dataset.preset : 'medium';
 
             try {
-                // Step 1: Upload to compressor API endpoint
+                // Step 1: Upload to compressor API endpoint using XMLHttpRequest to track progress
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('preset', preset);
 
-                const response = await fetch('/api/compress-video', {
-                    method: 'POST',
-                    body: formData
+                const result = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/compress-video');
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = Math.round((e.loaded / e.total) * 100);
+                            if (compProgressFill) {
+                                compProgressFill.style.width = `${percent * 0.4}%`; // Upload fills 0% - 40%
+                            }
+                            compStatus.textContent = `Uploading video... (${percent}%)`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            } catch (err) {
+                                reject(new Error('Invalid response from server'));
+                            }
+                        } else {
+                            try {
+                                const errorData = JSON.parse(xhr.responseText);
+                                reject(new Error(errorData.error || 'Upload failed'));
+                            } catch (err) {
+                                reject(new Error(`Server error (${xhr.status})`));
+                            }
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+                    xhr.send(formData);
                 });
 
-                if (!response.ok) {
-                    const errorData = await safeJsonParse(response);
-                    throw new Error(errorData.error || 'Upload failed');
-                }
-
-                const result = await safeJsonParse(response);
                 const transformedUrl = result.transformedUrl;
 
                 // Step 2: Poll check-ready endpoint
                 compStatus.textContent = 'Compressing video...';
+                if (compProgressFill) {
+                    compProgressFill.style.width = '40%';
+                }
                 
                 const pollInterval = 2000; // Check every 2 seconds
                 const maxAttempts = 150; // Wait up to 5 minutes total
@@ -1820,6 +1855,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 }
 
                                 compStatus.textContent = `Compressing video... (${attempts * 2}s)`;
+                                if (compProgressFill) {
+                                    // Progress goes from 40% to 90% during compression phase
+                                    const compPercent = Math.min(50, Math.round((attempts / maxAttempts) * 50));
+                                    compProgressFill.style.width = `${40 + compPercent}%`;
+                                }
 
                                 const checkRes = await fetch(`/api/check-ready?url=${encodeURIComponent(transformedUrl)}`);
                                 if (!checkRes.ok) {
@@ -1845,6 +1885,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Step 3: Download the file as blob to force browser download
                 compStatus.textContent = 'Downloading compressed video...';
+                if (compProgressFill) {
+                    compProgressFill.style.width = '100%'; // Complete the bar
+                }
                 
                 const fileRes = await fetch(transformedUrl);
                 if (!fileRes.ok) {
@@ -1877,6 +1920,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 setControlsDisabled(false);
                 compInput.value = '';
+                if (compProgressContainer) {
+                    setTimeout(() => {
+                        compProgressContainer.classList.add('hidden');
+                        if (compProgressFill) compProgressFill.style.width = '0%';
+                    }, 2000);
+                }
             }
         };
     }
