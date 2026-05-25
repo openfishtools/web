@@ -247,11 +247,20 @@
                         
                         <div id="tool-compressor-options" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
                             <label style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">Compression Preset</label>
-                            <select id="tool-compressor-preset" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1.5px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); font-size: 14px; outline: none; transition: border-color 0.2s ease; cursor: pointer; font-family: inherit;">
-                                <option value="medium">Medium Compression (720p - Recommended)</option>
-                                <option value="high">High Compression (480p - Smaller size)</option>
-                                <option value="low">Low Compression (1080p - Best quality)</option>
-                            </select>
+                            <div class="segmented-button-group">
+                                <button type="button" class="preset-btn" data-preset="slow">
+                                    <span class="material-symbols-rounded" style="font-size: 16px;">speed</span>
+                                    Slow
+                                </button>
+                                <button type="button" class="preset-btn active" data-preset="medium">
+                                    <span class="material-symbols-rounded" style="font-size: 16px;">balance</span>
+                                    Medium
+                                </button>
+                                <button type="button" class="preset-btn" data-preset="fast">
+                                    <span class="material-symbols-rounded" style="font-size: 16px;">bolt</span>
+                                    Fast
+                                </button>
+                            </div>
                         </div>
                         
                         <div id="tool-compressor-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); line-height: 1.5;"></div>

@@ -587,12 +587,14 @@ app.post('/api/compress-video', upload.single('file'), async (req, res) => {
             return res.status(500).json({ error: 'Video Compressor is not configured (missing key)' });
         }
         
-        // Determine transformations based on preset
-        let transformStr = 'q-60,h-720';
-        if (preset === 'low') {
-            transformStr = 'q-80';
-        } else if (preset === 'high') {
-            transformStr = 'q-40,h-480';
+        // Determine transformations based on preset (no resizing, original resolution)
+        let transformStr = 'f-mp4,vc-h264,q-50'; // medium default
+        if (preset === 'slow') {
+            // Slow: H.264, MP4, High Quality HD (Quality 75)
+            transformStr = 'f-mp4,vc-h264,q-75';
+        } else if (preset === 'fast') {
+            // Fast: AV1 (comparable to HEVC/H.265), MP4, Highest Compression (Quality 50)
+            transformStr = 'f-mp4,vc-av1,q-50';
         }
         
         // Eager generation of post-transformation

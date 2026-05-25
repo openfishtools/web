@@ -1722,10 +1722,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Tools: Video Compressor ---
     const compDrop = document.getElementById('tool-compressor-drop');
     const compInput = document.getElementById('tool-compressor-input');
-    const compPreset = document.getElementById('tool-compressor-preset');
     const compStatus = document.getElementById('tool-compressor-status');
+    const presetBtns = document.querySelectorAll('.segmented-button-group .preset-btn');
 
     if (compDrop && compInput) {
+        // Preset button toggle
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (compInput.disabled) return;
+                presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
         compDrop.addEventListener('click', () => {
             if (!compInput.disabled) compInput.click();
         });
@@ -1747,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const setControlsDisabled = (disabled) => {
             compInput.disabled = disabled;
-            compPreset.disabled = disabled;
+            presetBtns.forEach(btn => btn.disabled = disabled);
             if (disabled) {
                 compDrop.style.pointerEvents = 'none';
                 compDrop.style.opacity = '0.6';
@@ -1762,7 +1771,8 @@ document.addEventListener('DOMContentLoaded', () => {
             compStatus.style.color = 'var(--md-sys-color-primary)';
             setControlsDisabled(true);
 
-            const preset = compPreset.value;
+            const activeBtn = document.querySelector('.segmented-button-group .preset-btn.active');
+            const preset = activeBtn ? activeBtn.dataset.preset : 'medium';
 
             try {
                 // Step 1: Upload to compressor API endpoint
