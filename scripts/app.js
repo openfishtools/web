@@ -1793,14 +1793,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const preset = activeBtn ? activeBtn.dataset.preset : 'medium';
 
             try {
-                // Step 1: Upload to compressor API endpoint using XMLHttpRequest to track progress
+                // Step 0: Get direct upload authorization parameters
+                compStatus.textContent = 'Preparing upload...';
+                const authRes = await fetch('/api/compress-auth');
+                if (!authRes.ok) {
+                    const errorData = await safeJsonParse(authRes);
+                    throw new Error(errorData.error || 'Failed to get upload authorization');
+                }
+                const authData = await safeJsonParse(authRes);
+                const { token, expire, signature, publicKey, urlEndpoint } = authData;
+
+                // Step 1: Upload directly to ImageKit Upload API using XMLHttpRequest to track progress
+                compStatus.textContent = 'Uploading video...';
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('preset', preset);
+                const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                formData.append('fileName', fileName);
+                formData.append('publicKey', publicKey);
+                formData.append('token', token);
+                formData.append('signature', signature);
+                formData.append('expire', expire);
+                formData.append('folder', '/video-compressor');
+
+                // Determine transformations based on preset
+                let transformStr = 'f-mp4,vc-h264,q-50'; // medium default
+                if (preset === 'slow') {
+                    transformStr = 'f-mp4,vc-h264,q-75';
+                } else if (preset === 'fast') {
+                    transformStr = 'f-mp4,vc-av1,q-50';
+                }
+
+                const postTrans = [
+                    {
+                        type: 'transformation',
+                        value: transformStr
+                    }
+                ];
+                formData.append('transformation', JSON.stringify({ post: postTrans }));
 
                 const result = await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/api/compress-video');
+                    xhr.open('POST', 'https://upload.imagekit.io/api/v1/files/upload');
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
@@ -1824,7 +1857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const errorData = JSON.parse(xhr.responseText);
                                 reject(new Error(errorData.error || 'Upload failed'));
                             } catch (err) {
-                                reject(new Error(`Server error (${xhr.status})`));
+                                reject(new Error(`Upload failed (${xhr.status})`));
                             }
                         }
                     };
@@ -1833,7 +1866,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     xhr.send(formData);
                 });
 
-                const transformedUrl = result.transformedUrl;
+                // Construct the path-based transformed URL
+                let transformedUrl = result.url;
+                if (transformedUrl.startsWith(urlEndpoint)) {
+                    const path = transformedUrl.slice(urlEndpoint.length);
+                    transformedUrl = `${urlEndpoint}/tr:${transformStr}${path}`;
+                }
 
                 // Step 2: Poll check-ready endpoint
                 compStatus.textContent = 'Compressing video...';

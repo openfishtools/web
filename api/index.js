@@ -570,116 +570,35 @@ app.delete('/api/upload', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/compress-video', upload.single('file'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+app.get('/api/compress-auth', (req, res) => {
+    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+    const publicKey = process.env.IMAGEKIT_PUBLIC_KEY;
+    const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
+    
+    if (!privateKey || !publicKey || !urlEndpoint) {
+        console.error('Missing ImageKit environment variables');
+        return res.status(500).json({ error: 'Video Compressor environment variables are missing (require IMAGEKIT_PRIVATE_KEY, IMAGEKIT_PUBLIC_KEY, and IMAGEKIT_URL_ENDPOINT)' });
+    }
     
     try {
-        const file = req.file;
-        const preset = req.body.preset || 'medium';
-        const fileName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const token = crypto.randomBytes(16).toString('hex');
+        const expire = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
         
-        // Brand name: magekit.io, endpoint/credentials: ImageKit.io
-        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-        const uploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
-        
-        if (!privateKey) {
-            console.error('Missing IMAGEKIT_PRIVATE_KEY environment variable');
-            return res.status(500).json({ error: 'Video Compressor is not configured (missing key)' });
-        }
-        
-        // Determine transformations based on preset (no resizing, original resolution)
-        let transformStr = 'f-mp4,vc-h264,q-50'; // medium default
-        if (preset === 'slow') {
-            // Slow: H.264, MP4, High Quality HD (Quality 75)
-            transformStr = 'f-mp4,vc-h264,q-75';
-        } else if (preset === 'fast') {
-            // Fast: AV1 (comparable to HEVC/H.265), MP4, Highest Compression (Quality 50)
-            transformStr = 'f-mp4,vc-av1,q-50';
-        }
-        
-        // Eager generation of post-transformation
-        const postTrans = [
-            {
-                type: 'transformation',
-                value: transformStr
-            }
-        ];
-        
-        // Build multipart body manually to avoid form-data dependency issues
-        const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-        const parts = [];
-
-        parts.push(Buffer.from(
-            `--${boundary}\r\n` +
-            `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-            `Content-Type: ${file.mimetype}\r\n\r\n`
-        ));
-        parts.push(file.buffer);
-        parts.push(Buffer.from('\r\n'));
-
-        parts.push(Buffer.from(
-            `--${boundary}\r\n` +
-            `Content-Disposition: form-data; name="fileName"\r\n\r\n` +
-            `${fileName}\r\n`
-        ));
-
-        parts.push(Buffer.from(
-            `--${boundary}\r\n` +
-            `Content-Disposition: form-data; name="folder"\r\n\r\n` +
-            `/video-compressor\r\n`
-        ));
-
-        parts.push(Buffer.from(
-            `--${boundary}\r\n` +
-            `Content-Disposition: form-data; name="transformation"\r\n\r\n` +
-            `${JSON.stringify({ post: postTrans })}\r\n`
-        ));
-
-        parts.push(Buffer.from(`--${boundary}--\r\n`));
-
-        const body = Buffer.concat(parts);
-        const authHeader = 'Basic ' + Buffer.from(privateKey + ':').toString('base64');
-
-        const response = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': authHeader,
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': body.length
-            },
-            body: body
-        });
-        
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error('ImageKit upload error:', errText);
-            return res.status(500).json({ error: 'ImageKit upload failed' });
-        }
-        
-        const data = await response.json();
-        
-        // Construct the path-based transformed URL
-        const imageKitEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
-        if (!imageKitEndpoint) {
-            console.error('Missing IMAGEKIT_URL_ENDPOINT environment variable');
-            return res.status(500).json({ error: 'Video Compressor is not configured (missing endpoint)' });
-        }
-        let transformedUrl = data.url;
-        if (transformedUrl.startsWith(imageKitEndpoint)) {
-            const path = transformedUrl.slice(imageKitEndpoint.length);
-            transformedUrl = `${imageKitEndpoint}/tr:${transformStr}${path}`;
-        }
-        
+        const signature = crypto
+          .createHmac("sha1", privateKey)
+          .update(token + expire)
+          .digest("hex");
+          
         res.json({
-            success: true,
-            originalUrl: data.url,
-            transformedUrl: transformedUrl,
-            fileId: data.fileId,
-            name: file.originalname
+            token,
+            expire,
+            signature,
+            publicKey,
+            urlEndpoint
         });
     } catch (err) {
-        console.error('Video compression upload endpoint error:', err);
-        res.status(500).json({ error: 'Failed to process video compression upload' });
+        console.error('Error generating auth signature:', err);
+        res.status(500).json({ error: 'Failed to generate auth signature' });
     }
 });
 
