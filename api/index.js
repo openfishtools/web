@@ -570,4 +570,134 @@ app.delete('/api/upload', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/compress-video', upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    try {
+        const file = req.file;
+        const preset = req.body.preset || 'medium';
+        const fileName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        
+        // Brand name: magekit.io, endpoint/credentials: ImageKit.io
+        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+        const uploadUrl = 'https://upload.imagekit.io/api/v1/files/upload';
+        
+        if (!privateKey) {
+            console.error('Missing IMAGEKIT_PRIVATE_KEY environment variable');
+            return res.status(500).json({ error: 'Video Compressor is not configured (missing key)' });
+        }
+        
+        // Determine transformations based on preset
+        let transformStr = 'q-60,h-720';
+        if (preset === 'low') {
+            transformStr = 'q-80';
+        } else if (preset === 'high') {
+            transformStr = 'q-40,h-480';
+        }
+        
+        // Eager generation of post-transformation
+        const postTrans = [
+            {
+                type: 'transformation',
+                value: transformStr
+            }
+        ];
+        
+        // Build multipart body manually to avoid form-data dependency issues
+        const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+        const parts = [];
+
+        parts.push(Buffer.from(
+            `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+            `Content-Type: ${file.mimetype}\r\n\r\n`
+        ));
+        parts.push(file.buffer);
+        parts.push(Buffer.from('\r\n'));
+
+        parts.push(Buffer.from(
+            `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="fileName"\r\n\r\n` +
+            `${fileName}\r\n`
+        ));
+
+        parts.push(Buffer.from(
+            `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="folder"\r\n\r\n` +
+            `/video-compressor\r\n`
+        ));
+
+        parts.push(Buffer.from(
+            `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="transformation"\r\n\r\n` +
+            `${JSON.stringify({ post: postTrans })}\r\n`
+        ));
+
+        parts.push(Buffer.from(`--${boundary}--\r\n`));
+
+        const body = Buffer.concat(parts);
+        const authHeader = 'Basic ' + Buffer.from(privateKey + ':').toString('base64');
+
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': authHeader,
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                'Content-Length': body.length
+            },
+            body: body
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error('ImageKit upload error:', errText);
+            return res.status(500).json({ error: 'ImageKit upload failed' });
+        }
+        
+        const data = await response.json();
+        
+        // Construct the path-based transformed URL
+        const imageKitEndpoint = process.env.IMAGEKIT_URL_ENDPOINT;
+        if (!imageKitEndpoint) {
+            console.error('Missing IMAGEKIT_URL_ENDPOINT environment variable');
+            return res.status(500).json({ error: 'Video Compressor is not configured (missing endpoint)' });
+        }
+        let transformedUrl = data.url;
+        if (transformedUrl.startsWith(imageKitEndpoint)) {
+            const path = transformedUrl.slice(imageKitEndpoint.length);
+            transformedUrl = `${imageKitEndpoint}/tr:${transformStr}${path}`;
+        }
+        
+        res.json({
+            success: true,
+            originalUrl: data.url,
+            transformedUrl: transformedUrl,
+            fileId: data.fileId,
+            name: file.originalname
+        });
+    } catch (err) {
+        console.error('Video compression upload endpoint error:', err);
+        res.status(500).json({ error: 'Failed to process video compression upload' });
+    }
+});
+
+app.get('/api/check-ready', async (req, res) => {
+    const url = req.query.url;
+    if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'Missing url query parameter' });
+    }
+    
+    try {
+        const response = await fetch(url, { method: 'GET', redirect: 'manual' });
+        if (response.status === 200) {
+            return res.json({ ready: true });
+        } else {
+            return res.json({ ready: false, status: response.status });
+        }
+    } catch (err) {
+        console.error('Error in check-ready:', err);
+        return res.status(500).json({ error: 'Failed to verify URL status' });
+    }
+});
+
 module.exports = app;

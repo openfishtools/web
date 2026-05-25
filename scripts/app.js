@@ -1719,6 +1719,147 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // --- Tools: Video Compressor ---
+    const compDrop = document.getElementById('tool-compressor-drop');
+    const compInput = document.getElementById('tool-compressor-input');
+    const compPreset = document.getElementById('tool-compressor-preset');
+    const compStatus = document.getElementById('tool-compressor-status');
+
+    if (compDrop && compInput) {
+        compDrop.addEventListener('click', () => {
+            if (!compInput.disabled) compInput.click();
+        });
+        compDrop.addEventListener('dragover', e => { 
+            e.preventDefault(); 
+            if (!compInput.disabled) compDrop.classList.add('active'); 
+        });
+        compDrop.addEventListener('dragleave', () => compDrop.classList.remove('active'));
+        compDrop.addEventListener('drop', e => {
+            e.preventDefault();
+            compDrop.classList.remove('active');
+            if (compInput.disabled) return;
+            if (e.dataTransfer.files.length) compressVideoFile(e.dataTransfer.files[0]);
+        });
+        compInput.addEventListener('change', () => {
+            if (compInput.disabled) return;
+            if (compInput.files.length) compressVideoFile(compInput.files[0]);
+        });
+
+        const setControlsDisabled = (disabled) => {
+            compInput.disabled = disabled;
+            compPreset.disabled = disabled;
+            if (disabled) {
+                compDrop.style.pointerEvents = 'none';
+                compDrop.style.opacity = '0.6';
+            } else {
+                compDrop.style.pointerEvents = 'auto';
+                compDrop.style.opacity = '1';
+            }
+        };
+
+        const compressVideoFile = async (file) => {
+            compStatus.textContent = 'Uploading video...';
+            compStatus.style.color = 'var(--md-sys-color-primary)';
+            setControlsDisabled(true);
+
+            const preset = compPreset.value;
+
+            try {
+                // Step 1: Upload to compressor API endpoint
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('preset', preset);
+
+                const response = await fetch('/api/compress-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Upload failed');
+                }
+
+                const result = await response.json();
+                const transformedUrl = result.transformedUrl;
+
+                // Step 2: Poll check-ready endpoint
+                compStatus.textContent = 'Compressing video...';
+                
+                const pollInterval = 2000; // Check every 2 seconds
+                const maxAttempts = 150; // Wait up to 5 minutes total
+                let attempts = 0;
+
+                const checkReadiness = () => {
+                    return new Promise((resolve, reject) => {
+                        const check = async () => {
+                            try {
+                                attempts++;
+                                if (attempts > maxAttempts) {
+                                    return reject(new Error('Compression timed out. Please try again.'));
+                                }
+
+                                compStatus.textContent = `Compressing video... (${attempts * 2}s)`;
+
+                                const checkRes = await fetch(`/api/check-ready?url=${encodeURIComponent(transformedUrl)}`);
+                                if (!checkRes.ok) {
+                                    return reject(new Error('Failed to verify status'));
+                                }
+
+                                const checkData = await checkRes.json();
+                                if (checkData.ready) {
+                                    resolve();
+                                } else {
+                                    setTimeout(check, pollInterval);
+                                }
+                            } catch (err) {
+                                reject(err);
+                            }
+                        };
+                        setTimeout(check, pollInterval);
+                    });
+                };
+
+                await checkReadiness();
+
+                // Step 3: Download the file as blob to force browser download
+                compStatus.textContent = 'Downloading compressed video...';
+                
+                const fileRes = await fetch(transformedUrl);
+                if (!fileRes.ok) {
+                    throw new Error('Download request failed');
+                }
+                
+                const blob = await fileRes.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                
+                const originalName = file.name;
+                const dotIdx = originalName.lastIndexOf('.');
+                const baseName = dotIdx !== -1 ? originalName.slice(0, dotIdx) : originalName;
+                const ext = dotIdx !== -1 ? originalName.slice(dotIdx) : '.mp4';
+                a.download = `${baseName}_compressed${ext}`;
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+
+                compStatus.textContent = 'Success! Compressed video downloaded.';
+                compStatus.style.color = 'var(--md-sys-color-primary)';
+            } catch (err) {
+                console.error(err);
+                compStatus.textContent = `Error: ${err.message || 'Processing failed'}`;
+                compStatus.style.color = '#ef4444';
+            } finally {
+                setControlsDisabled(false);
+                compInput.value = '';
+            }
+        };
+    }
+
     const initialTab = hash || 'social';
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
