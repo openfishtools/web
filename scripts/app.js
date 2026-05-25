@@ -1766,6 +1766,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
+        const safeJsonParse = async (res) => {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                // If it is not JSON, return a clean error with status and snippet
+                throw new Error(`Server error (${res.status}): ${text.slice(0, 100).replace(/<[^>]*>/g, '') || 'Empty response'}`);
+            }
+        };
+
         const compressVideoFile = async (file) => {
             compStatus.textContent = 'Uploading video...';
             compStatus.style.color = 'var(--md-sys-color-primary)';
@@ -1786,11 +1796,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await safeJsonParse(response);
                     throw new Error(errorData.error || 'Upload failed');
                 }
 
-                const result = await response.json();
+                const result = await safeJsonParse(response);
                 const transformedUrl = result.transformedUrl;
 
                 // Step 2: Poll check-ready endpoint
@@ -1813,10 +1823,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                                 const checkRes = await fetch(`/api/check-ready?url=${encodeURIComponent(transformedUrl)}`);
                                 if (!checkRes.ok) {
-                                    return reject(new Error('Failed to verify status'));
+                                    const errorData = await safeJsonParse(checkRes);
+                                    return reject(new Error(errorData.error || 'Failed to verify status'));
                                 }
 
-                                const checkData = await checkRes.json();
+                                const checkData = await safeJsonParse(checkRes);
                                 if (checkData.ready) {
                                     resolve();
                                 } else {
