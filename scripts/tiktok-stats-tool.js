@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus("Fetching video details...");
 
         try {
-            const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}`);
+            const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
             if (!response.ok) {
                 throw new Error("Unable to resolve TikTok video URL. Please check the URL.");
             }

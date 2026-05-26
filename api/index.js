@@ -351,7 +351,11 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                             duration: d.duration || 0,
                             fps: fpsVal
                         };
-                        await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
+                        // Only persist to cache when this is a normal (non-bypass) request.
+                        // Stats tool always passes nocache=1 so results are never stored.
+                        if (!bypassCache) {
+                            await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
+                        }
                         return res.json(result);
                     }
                 }
