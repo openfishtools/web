@@ -366,6 +366,52 @@
                         <button id="btn-analyse-tiktok" class="btn-primary w-full" style="margin-top: 16px;">Analyse</button>
                     </div>
 
+                    <div class="card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">download</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Downloader HD</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">No Watermark</div>
+                            </div>
+                        </div>
+                        <div class="input-field" style="margin-bottom: 0;">
+                            <label for="tool-tiktok-dl-input">TikTok Video URL</label>
+                            <input type="text" id="tool-tiktok-dl-input" placeholder="https://www.tiktok.com/@username/video/..." style="width: 100%; box-sizing: border-box;">
+                        </div>
+
+                        <div id="tiktok-dl-results" class="hidden" style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
+                            <div class="stats-preview-container" style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
+                                <div class="stats-video-cover-wrapper" style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <img id="dl-video-cover" src="" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <div style="flex-grow: 1; min-width: 0;">
+                                    <div id="dl-creator-name" style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Creator</div>
+                                    <div id="dl-creator-handle" style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@username</div>
+                                    <div id="dl-caption" style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">Caption goes here...</div>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">aspect_ratio</span>Resolution</span>
+                                    <strong id="dl-resolution" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">schedule</span>Duration</span>
+                                    <strong id="dl-duration" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">save</span>Size</span>
+                                    <strong id="dl-size" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tool-tiktok-dl-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+
+                        <button id="btn-download-tiktok" class="btn-primary w-full" style="margin-top: 16px;">Download HD</button>
+                    </div>
+
                 </div>
             </section>
 
@@ -558,5 +604,6 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-stats-tool.js"></script>
+    <script src="scripts/tiktok-downloader.js"></script>
 </body>
 </html>
