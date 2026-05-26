@@ -23,8 +23,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Trigger analysis on button click
     btnAnalyse.addEventListener('click', () => {
-        const url = inputUrl.value.trim();
+        let url = inputUrl.value.trim();
         if (url) {
+            // Helper to clean and prepend protocol if it's a partial URL
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                if (url.includes('tiktok.com')) {
+                    url = 'https://' + url;
+                } else if (url.startsWith('efishaep/') || url.includes('/video/')) {
+                    url = 'https://www.tiktok.com/@' + url;
+                } else {
+                    url = 'https://www.tiktok.com/' + url;
+                }
+            }
             analyseTikTokVideo(url);
         } else {
             showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
@@ -76,6 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
             statsDuration.textContent = duration ? `${duration}s` : '—';
             statsSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
 
+            // Set FPS (resolved by backend proxy)
+            if (metadata.fps && !isNaN(metadata.fps)) {
+                statsFps.textContent = `${metadata.fps} fps`;
+            } else {
+                statsFps.textContent = '—';
+            }
+
             // Calculate average Bitrate
             if (size && duration) {
                 const bitrateKbps = (size * 8) / (duration * 1000);
@@ -88,16 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 statsBitrate.textContent = '—';
             }
 
-            showStatus("Analysing video stream...");
+            showStatus("Analysing resolution...");
 
-            // Run stream analysis (Resolution and FPS) in parallel
-            const [resolution, fps] = await Promise.all([
-                extractResolution(metadata.play),
-                extractFps(metadata.play)
-            ]);
-
+            // Run resolution stream analysis (HTML5 metadata load)
+            const resolution = await extractResolution(metadata.play);
             statsResolution.textContent = resolution;
-            statsFps.textContent = fps;
 
             // Success: show the results container
             showStatus("");
@@ -142,107 +154,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 resolve('—');
             }, 6000);
         });
-    }
-
-    // Extract FPS using range request and custom MP4 binary box demuxing
-    async function extractFps(videoUrl) {
-        try {
-            let arrayBuffer = null;
-            
-            // Attempt a range request to only fetch first 512KB (very fast)
-            try {
-                const res = await fetch(videoUrl, { headers: { 'Range': 'bytes=0-524287' } });
-                if (res.ok || res.status === 206) {
-                    arrayBuffer = await res.arrayBuffer();
-                }
-            } catch (rangeErr) {
-                console.warn("Range request failed, falling back to full stream fetch...", rangeErr);
-            }
-
-            // Fallback: fetch without range headers (will likely hit browser cache or load standard stream)
-            if (!arrayBuffer) {
-                const res = await fetch(videoUrl);
-                if (res.ok) {
-                    arrayBuffer = await res.arrayBuffer();
-                }
-            }
-
-            if (!arrayBuffer) return '—';
-
-            // Parse FPS from binary MP4 metadata
-            const fps = parseFpsFromBuffer(arrayBuffer);
-            if (fps && !isNaN(fps)) {
-                // Round to clean values e.g. 23.976, 24, 25, 29.97, 30, 50, 60
-                const roundedFps = Math.round(fps * 1000) / 1000;
-                return `${roundedFps} fps`;
-            }
-            return '—';
-
-        } catch (err) {
-            console.error("FPS extraction error:", err);
-            return '—';
-        }
-    }
-
-    // Binary box search within MP4 structure
-    function findBox(arrayBuffer, targetType, startOffset = 0, endOffset = null) {
-        const view = new DataView(arrayBuffer);
-        let offset = startOffset;
-        const maxOffset = endOffset !== null ? endOffset : arrayBuffer.byteLength;
-        
-        while (offset < maxOffset - 8) {
-            const size = view.getUint32(offset);
-            if (size <= 0 || offset + size > maxOffset) break;
-            
-            const type = String.fromCharCode(
-                view.getUint8(offset + 4),
-                view.getUint8(offset + 5),
-                view.getUint8(offset + 6),
-                view.getUint8(offset + 7)
-            );
-            
-            if (type === targetType) {
-                return { offset, size };
-            }
-            
-            if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
-                const result = findBox(arrayBuffer, targetType, offset + 8, offset + size);
-                if (result) return result;
-            }
-            
-            offset += size;
-        }
-        return null;
-    }
-
-    // Parse FPS from array buffer
-    function parseFpsFromBuffer(arrayBuffer) {
-        const mdhd = findBox(arrayBuffer, 'mdhd');
-        const stts = findBox(arrayBuffer, 'stts');
-        
-        if (!mdhd || !stts) {
-            return null;
-        }
-        
-        const view = new DataView(arrayBuffer);
-        
-        // Parse mdhd (Media Header Box)
-        const mdhdVersion = view.getUint8(mdhd.offset + 8);
-        let timescale = 0;
-        if (mdhdVersion === 1) {
-            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 8 + 8);
-        } else {
-            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 4 + 4);
-        }
-        
-        // Parse stts (Time-to-Sample Box)
-        const entryCount = view.getUint32(stts.offset + 12);
-        if (entryCount === 0) return null;
-        
-        // Extract delta of first sample block (represents frame duration)
-        const sampleDelta = view.getUint32(stts.offset + 16 + 4);
-        if (sampleDelta === 0) return null;
-        
-        return timescale / sampleDelta;
     }
 });

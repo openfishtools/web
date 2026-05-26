@@ -97,6 +97,7 @@ const TikTokCacheSchema = new mongoose.Schema({
     author_nickname: String,
     size: Number,
     duration: Number,
+    fps: Number,
     updatedAt: { type: Date, default: Date.now }
 });
 const TikTokCache = mongoose.models.TikTokCache || mongoose.model('TikTokCache', TikTokCacheSchema);
@@ -196,6 +197,83 @@ function ipLookupVariants(raw) {
     return [...set];
 }
 
+function findBox(buffer, targetType, startOffset = 0, endOffset = null) {
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    let offset = startOffset;
+    const maxOffset = endOffset !== null ? endOffset : buffer.byteLength;
+    
+    while (offset < maxOffset - 8) {
+        const size = view.getUint32(offset);
+        if (size <= 0 || offset + size > maxOffset) break;
+        
+        const type = String.fromCharCode(
+            view.getUint8(offset + 4),
+            view.getUint8(offset + 5),
+            view.getUint8(offset + 6),
+            view.getUint8(offset + 7)
+        );
+        
+        if (type === targetType) {
+            return { offset, size };
+        }
+        
+        if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
+            const result = findBox(buffer, targetType, offset + 8, offset + size);
+            if (result) return result;
+        }
+        
+        offset += size;
+    }
+    return null;
+}
+
+function parseFpsFromBuffer(buffer) {
+    try {
+        const mdhd = findBox(buffer, 'mdhd');
+        const stts = findBox(buffer, 'stts');
+        
+        if (!mdhd || !stts) return null;
+        
+        const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        
+        const mdhdVersion = view.getUint8(mdhd.offset + 8);
+        let timescale = 0;
+        if (mdhdVersion === 1) {
+            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 8 + 8);
+        } else {
+            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 4 + 4);
+        }
+        
+        const entryCount = view.getUint32(stts.offset + 12);
+        if (entryCount === 0) return null;
+        
+        const sampleDelta = view.getUint32(stts.offset + 16 + 4);
+        if (sampleDelta === 0) return null;
+        
+        const fps = timescale / sampleDelta;
+        return isNaN(fps) ? null : Math.round(fps * 1000) / 1000;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function parseFpsFromUrl(playUrl) {
+    if (!playUrl) return null;
+    try {
+        const res = await fetch(playUrl, {
+            headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
+            signal: AbortSignal.timeout(5000)
+        });
+        if (!res.ok && res.status !== 206) return null;
+        const ab = await res.arrayBuffer();
+        const buffer = Buffer.from(ab);
+        return parseFpsFromBuffer(buffer);
+    } catch (e) {
+        console.error("FPS parser background fetch failed:", e);
+        return null;
+    }
+}
+
 app.get('/api/get-ip', (req, res) => {
     res.json({ ip: getClientIp(req) });
 });
@@ -238,6 +316,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     author_nickname: cached.author_nickname || '',
                     size: cached.size || 0,
                     duration: cached.duration || 0,
+                    fps: cached.fps || null,
                     cached: true
                 });
             }
@@ -258,6 +337,10 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     const json = await r.json();
                     if (json.code === 0 && json.data && json.data.play) {
                         const d = json.data;
+                        let fpsVal = null;
+                        if (d.play) {
+                            fpsVal = await parseFpsFromUrl(d.play);
+                        }
                         const result = {
                             play: d.play,
                             cover: d.cover || d.origin_cover || '',
@@ -265,7 +348,8 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                             author_unique_id: d.author?.unique_id || '',
                             author_nickname: d.author?.nickname || '',
                             size: d.size || 0,
-                            duration: d.duration || 0
+                            duration: d.duration || 0,
+                            fps: fpsVal
                         };
                         await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
                         return res.json(result);
