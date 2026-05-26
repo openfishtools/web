@@ -307,7 +307,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         const bypassCache = req.query.nocache === '1';
         if (!bypassCache) {
             const cached = await TikTokCache.findOne({ url: pageUrl });
-            if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
+            if (cached && (Date.now() - cached.updatedAt.getTime() < 1 * 60 * 60 * 1000)) {
                 return res.json({
                     play: cached.play,
                     cover: cached.cover,
