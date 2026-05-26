@@ -15,28 +15,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const presetDescriptions = {
         'slow': `
-            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
-                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.264 (libx264)</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Slow</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 18 (Visually Lossless)</li>
-                <li style="margin-top: 6px;"><em>Prioritizes maximum quality and smallest file size at the cost of significantly longer encoding time.</em></li>
-            </ul>
+            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
+                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
+                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 18 (Visually Lossless)</li>
+                </ul>
+                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
+                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
+                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
+                    <span>Prioritizes maximum quality and smallest file size at the cost of significantly longer encoding time.</span>
+                </div>
+            </div>
         `,
         'medium': `
-            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
-                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.264 (libx264)</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Medium</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 20 (High Quality)</li>
-                <li style="margin-top: 6px;"><em>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</em></li>
-            </ul>
+            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
+                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
+                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Medium</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
+                </ul>
+                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
+                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
+                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
+                    <span>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</span>
+                </div>
+            </div>
         `,
         'fast': `
-            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
-                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.265 / HEVC (libx265)</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Fast</li>
-                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 24 (Good Quality)</li>
-                <li style="margin-top: 6px;"><em>Utilizes modern HEVC encoding to compress files quickly while maintaining a small size. Note: May not be supported on older devices.</em></li>
-            </ul>
+            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
+                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
+                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.265 / HEVC (libx265)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Fast</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 24 (Good Quality)</li>
+                </ul>
+                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
+                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
+                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
+                    <span>Utilizes modern HEVC encoding to compress files quickly while maintaining a small size. Note: May not be supported on older devices.</span>
+                </div>
+            </div>
         `
     };
 
