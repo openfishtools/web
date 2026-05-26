@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus("Analysing resolution...");
 
             let resolution = '—';
-            if (metadata.play && metadata.play.includes('tiktokcdn')) {
+            if (metadata.play) {
                 try {
                     resolution = await extractResolution(metadata.play);
                 } catch (e) {

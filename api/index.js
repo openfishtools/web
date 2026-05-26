@@ -326,19 +326,24 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
             `https://api.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
         ];
+        const apiKey = process.env.TIKWM_API_KEY;
 
         for (const upstream of mirrors) {
             try {
-                const r = await fetch(upstream, {
+                const fetchOptions = {
                     headers: { 'User-Agent': 'Mozilla/5.0' },
                     signal: AbortSignal.timeout(8000)
-                });
+                };
+                if (apiKey) {
+                    fetchOptions.headers['x-api-key'] = apiKey;
+                }
+                const r = await fetch(upstream, fetchOptions);
                 if (r.ok) {
                     const json = await r.json();
                     if (json.code === 0 && json.data && json.data.play) {
                         const d = json.data;
                         let fpsVal = null;
-                        if (d.play && d.play.includes('tiktokcdn')) {
+                        if (d.play) {
                             fpsVal = await parseFpsFromUrl(d.play);
                         }
                         const result = {
