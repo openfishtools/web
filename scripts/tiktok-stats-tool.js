@@ -95,9 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 statsBitrate.textContent = '—';
             }
 
-            showStatus("Analysing FPS...");
+            showStatus("Analysing FPS with FFmpeg...");
 
-            const fps = await analyseFpsFromUrl(metadata.play);
+            const fps = await analyseFpsWithFFmpeg(metadata.play);
             if (fps && !isNaN(fps)) {
                 statsFps.textContent = `${fps} fps`;
             } else {
@@ -116,15 +116,102 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function analyseFpsFromUrl(videoUrl) {
-        if (!videoUrl || !videoUrl.startsWith('http')) return null;
+    /**
+     * Uses ffmpeg WASM (already loaded globally as window.FFmpegWASM / window.FFmpegUtil)
+     * to probe the first 2MB chunk of the TikTok video and extract the FPS.
+     *
+     * Flow:
+     *   1. Fetch 2MB chunk via /api/tiktok-chunk proxy (bypasses CORS)
+     *   2. Write chunk to ffmpeg WASM virtual filesystem as "probe.mp4"
+     *   3. Run: ffmpeg -i probe.mp4 (no output → exits with error but logs stream info)
+     *   4. Parse the log for patterns like "30 fps", "30.00 fps", "29.97 tbr"
+     */
+    async function analyseFpsWithFFmpeg(playUrl) {
+        if (!playUrl || !playUrl.startsWith('http')) return null;
+
         try {
-            const response = await fetch(`${API_URL}/tiktok-fps?url=${encodeURIComponent(videoUrl)}`);
-            if (!response.ok) return null;
-            const data = await response.json();
-            return data.fps;
+            // --- Step 1: Fetch raw video chunk via backend proxy ---
+            showStatus("Downloading video chunk...");
+            const chunkRes = await fetch(`${API_URL}/tiktok-chunk?url=${encodeURIComponent(playUrl)}`);
+            if (!chunkRes.ok) {
+                console.warn('tiktok-chunk fetch failed:', chunkRes.status);
+                return null;
+            }
+            const chunkBuffer = await chunkRes.arrayBuffer();
+            if (!chunkBuffer || chunkBuffer.byteLength < 1024) {
+                console.warn('tiktok-chunk: received too little data');
+                return null;
+            }
+
+            // --- Step 2: Load ffmpeg WASM ---
+            showStatus("Loading FFmpeg WASM...");
+            const { FFmpeg } = window.FFmpegWASM;
+            const { toBlobURL } = window.FFmpegUtil;
+            const ffmpeg = new FFmpeg();
+
+            // Collect all log lines for parsing
+            const logLines = [];
+            ffmpeg.on('log', ({ message }) => {
+                logLines.push(message);
+            });
+
+            const baseURL = window.location.origin + '/assets/ffmpeg';
+            await ffmpeg.load({
+                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+            });
+
+            // --- Step 3: Write chunk to WASM FS and probe ---
+            showStatus("Probing stream with FFmpeg...");
+            await ffmpeg.writeFile('probe.mp4', new Uint8Array(chunkBuffer));
+
+            // Run ffmpeg -i probe.mp4 — it will fail (no output specified) but
+            // it logs stream info including fps before exiting.
+            try {
+                await ffmpeg.exec(['-i', 'probe.mp4', '-hide_banner', '-f', 'null', '-']);
+            } catch (_) {
+                // Expected: ffmpeg exits non-zero when no valid output given.
+                // The log is still populated with stream info.
+            }
+
+            // Cleanup WASM FS
+            try { await ffmpeg.deleteFile('probe.mp4'); } catch (_) {}
+
+            // --- Step 4: Parse fps from log ---
+            return parseFpsFromLogs(logLines);
+
         } catch (e) {
+            console.error('analyseFpsWithFFmpeg error:', e);
             return null;
         }
+    }
+
+    /**
+     * Parses fps/tbr value from ffmpeg log lines.
+     * Looks for patterns like:
+     *   "Video: h264, ..., 1080x1920, 8374 kb/s, 30 fps, 30 tbr, ..."
+     *   "Stream #0:0: Video: ..., 29.97 fps"
+     */
+    function parseFpsFromLogs(lines) {
+        for (const line of lines) {
+            // Primary: match explicit " fps" token in stream info line
+            const fpsMatch = line.match(/(\d+(?:\.\d+)?)\s+fps/i);
+            if (fpsMatch) {
+                const fps = parseFloat(fpsMatch[1]);
+                if (!isNaN(fps) && fps > 0 && fps <= 240) {
+                    return Math.round(fps * 100) / 100;
+                }
+            }
+            // Fallback: tbr (time base rate) — often equals fps
+            const tbrMatch = line.match(/(\d+(?:\.\d+)?)\s+tbr/i);
+            if (tbrMatch) {
+                const fps = parseFloat(tbrMatch[1]);
+                if (!isNaN(fps) && fps > 0 && fps <= 240) {
+                    return Math.round(fps * 100) / 100;
+                }
+            }
+        }
+        return null;
     }
 });

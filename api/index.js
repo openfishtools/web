@@ -278,33 +278,35 @@ app.get('/api/get-ip', (req, res) => {
     res.json({ ip: getClientIp(req) });
 });
 
-app.get('/api/tiktok-fps', async (req, res) => {
+// Proxy endpoint: fetches the first 2MB of a TikTok video stream and returns it as raw binary.
+// The client uses this chunk with ffmpeg WASM to accurately detect FPS.
+app.get('/api/tiktok-chunk', async (req, res) => {
     const url = req.query.url;
     if (!url || typeof url !== 'string') {
         return res.status(400).json({ error: 'Missing url' });
     }
 
-    if (!url.includes('tiktokcdn')) {
-        return res.json({ fps: null });
-    }
-
     try {
         const response = await fetch(url, {
-            headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(5000)
+            headers: {
+                'Range': 'bytes=0-2097151', // First 2 MB
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://www.tiktok.com/'
+            },
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok && response.status !== 206) {
-            return res.json({ fps: null });
+            return res.status(502).json({ error: 'Upstream fetch failed', status: response.status });
         }
 
         const buffer = await response.arrayBuffer();
-        const buf = Buffer.from(buffer);
-        const fps = parseFpsFromBuffer(buf);
-
-        res.json({ fps });
+        res.set('Content-Type', 'application/octet-stream');
+        res.set('Cache-Control', 'no-store');
+        res.send(Buffer.from(buffer));
     } catch (e) {
-        res.json({ fps: null });
+        console.error('tiktok-chunk error:', e.message);
+        res.status(500).json({ error: 'Chunk fetch failed' });
     }
 });
 
@@ -399,27 +401,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     }
 });
 
-app.get('/api/tiktok-fps', async (req, res) => {
-    const { url } = req.query;
-    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Missing url' });
 
-    try {
-        const response = await fetch(url, {
-            headers: { 'Range': 'bytes=0-524287' },
-            signal: AbortSignal.timeout(8000)
-        });
-
-        if (!response.ok && response.status !== 206) {
-            return res.status(502).json({ error: 'Fetch failed' });
-        }
-
-        const buffer = await response.arrayBuffer();
-        const fps = parseFpsFromBuffer(Buffer.from(buffer));
-        res.json({ fps });
-    } catch (err) {
-        res.status(500).json({ error: 'FPS analysis failed' });
-    }
-});
 
 app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body || {};
