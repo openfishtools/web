@@ -116,80 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function findBox(buffer, targetType, startOffset = 0, endOffset = null) {
-        const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-        let offset = startOffset;
-        const maxOffset = endOffset !== null ? endOffset : buffer.byteLength;
-
-        while (offset < maxOffset - 8) {
-            const size = view.getUint32(offset);
-            if (size <= 0 || offset + size > maxOffset) break;
-
-            const type = String.fromCharCode(
-                view.getUint8(offset + 4),
-                view.getUint8(offset + 5),
-                view.getUint8(offset + 6),
-                view.getUint8(offset + 7)
-            );
-
-            if (type === targetType) {
-                return { offset, size };
-            }
-
-            if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
-                const result = findBox(buffer, targetType, offset + 8, offset + size);
-                if (result) return result;
-            }
-
-            offset += size;
-        }
-        return null;
-    }
-
-    function parseFpsFromBuffer(buffer) {
-        try {
-            const mdhd = findBox(buffer, 'mdhd');
-            const stts = findBox(buffer, 'stts');
-
-            if (!mdhd || !stts) return null;
-
-            const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-
-            const mdhdVersion = view.getUint8(mdhd.offset + 8);
-            let timescale = 0;
-            if (mdhdVersion === 1) {
-                timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 8 + 8);
-            } else {
-                timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 4 + 4);
-            }
-
-            const entryCount = view.getUint32(stts.offset + 12);
-            if (entryCount === 0) return null;
-
-            const sampleDelta = view.getUint32(stts.offset + 16);
-            if (sampleDelta === 0) return null;
-
-            const fps = timescale / sampleDelta;
-            return isNaN(fps) ? null : Math.round(fps * 1000) / 1000;
-        } catch (e) {
-            return null;
-        }
-    }
-
     async function analyseFpsFromUrl(videoUrl) {
         if (!videoUrl || !videoUrl.startsWith('http')) return null;
-
         try {
-            const response = await fetch(videoUrl, {
-                headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' }
-            });
-
-            if (!response.ok && response.status !== 206) return null;
-
-            const buffer = await response.arrayBuffer();
-            return parseFpsFromBuffer(buffer);
+            const response = await fetch(`${API_URL}/tiktok-fps?url=${encodeURIComponent(videoUrl)}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data.fps;
         } catch (e) {
-            console.error("FPS analysis failed:", e);
             return null;
         }
     }

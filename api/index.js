@@ -278,6 +278,36 @@ app.get('/api/get-ip', (req, res) => {
     res.json({ ip: getClientIp(req) });
 });
 
+app.get('/api/tiktok-fps', async (req, res) => {
+    const url = req.query.url;
+    if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'Missing url' });
+    }
+
+    if (!url.includes('tiktokcdn')) {
+        return res.json({ fps: null });
+    }
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!response.ok && response.status !== 206) {
+            return res.json({ fps: null });
+        }
+
+        const buffer = await response.arrayBuffer();
+        const buf = Buffer.from(buffer);
+        const fps = parseFpsFromBuffer(buf);
+
+        res.json({ fps });
+    } catch (e) {
+        res.json({ fps: null });
+    }
+});
+
 function isAllowedTikTokResolveHost(hostname) {
     const h = String(hostname).toLowerCase();
     return (
@@ -366,6 +396,28 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         res.status(404).json({ error: 'Video unavailable' });
     } catch (err) {
         res.status(500).json({ error: 'Resolve failed' });
+    }
+});
+
+app.get('/api/tiktok-fps', async (req, res) => {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Missing url' });
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'Range': 'bytes=0-524287' },
+            signal: AbortSignal.timeout(8000)
+        });
+
+        if (!response.ok && response.status !== 206) {
+            return res.status(502).json({ error: 'Fetch failed' });
+        }
+
+        const buffer = await response.arrayBuffer();
+        const fps = parseFpsFromBuffer(Buffer.from(buffer));
+        res.json({ fps });
+    } catch (err) {
+        res.status(500).json({ error: 'FPS analysis failed' });
     }
 });
 
