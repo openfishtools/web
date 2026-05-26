@@ -281,6 +281,14 @@
                                 <div class="preset-switch" data-preset="fast">Fast</div>
                             </div>
                         </div>
+                        <div id="ffmpeg-preset-desc" style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; margin-bottom: 16px; text-align: center;">
+                            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
+                                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.264 (libx264)</li>
+                                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Medium</li>
+                                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 20 (High Quality)</li>
+                                <li style="margin-top: 6px;"><em>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</em></li>
+                            </ul>
+                        </div>
 
                         <div id="tool-ffmpeg-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
                         
@@ -482,9 +490,9 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd/ffmpeg-core.js"></script>
+    <script src="assets/ffmpeg/ffmpeg.js"></script>
+    <script src="assets/ffmpeg/index.js"></script>
+    <script src="assets/ffmpeg/ffmpeg-core.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
 </body>

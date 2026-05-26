@@ -7,14 +7,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressFill = document.getElementById('ffmpeg-progress-fill');
     const progressPercent = document.getElementById('ffmpeg-progress-percent');
     const presetChips = document.querySelectorAll('#ffmpeg-presets .preset-switch');
+    const presetDesc = document.getElementById('ffmpeg-preset-desc');
 
     let selectedFile = null;
     let selectedPreset = 'medium';
+    let isCompressing = false;
+
+    const presetDescriptions = {
+        'slow': `
+            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
+                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.264 (libx264)</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Slow</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 18 (Visually Lossless)</li>
+                <li style="margin-top: 6px;"><em>Prioritizes maximum quality and smallest file size at the cost of significantly longer encoding time.</em></li>
+            </ul>
+        `,
+        'medium': `
+            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
+                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.264 (libx264)</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Medium</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 20 (High Quality)</li>
+                <li style="margin-top: 6px;"><em>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</em></li>
+            </ul>
+        `,
+        'fast': `
+            <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6; text-align: left; display: inline-block;">
+                <li><strong style="color: var(--md-sys-color-on-surface);">Codec:</strong> H.265 / HEVC (libx265)</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">Preset:</strong> Fast</li>
+                <li><strong style="color: var(--md-sys-color-on-surface);">CRF:</strong> 24 (Good Quality)</li>
+                <li style="margin-top: 6px;"><em>Utilizes modern HEVC encoding to compress files quickly while maintaining a small size. Note: May not be supported on older devices.</em></li>
+            </ul>
+        `
+    };
 
     // Preset selection logic
     presetChips.forEach(chip => {
         chip.addEventListener('click', () => {
+            if (isCompressing) return; // Prevent changing preset while compressing
+            
             presetChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            selectedPreset = chip.getAttribute('data-preset');
+            presetDesc.innerHTML = presetDescriptions[selectedPreset];
+        });
+    });
             chip.classList.add('active');
             selectedPreset = chip.getAttribute('data-preset');
         });
@@ -67,6 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function compressVideo(file, preset) {
+        if (isCompressing) return;
+        isCompressing = true;
+
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         statusText.textContent = "Loading FFmpeg...";
@@ -92,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Load ffmpeg.wasm
-            const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd';
+            const baseURL = window.location.origin + '/assets/ffmpeg';
             await ffmpeg.load({
                 coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
                 wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
@@ -146,6 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.style.color = "var(--md-sys-color-error)";
             progressContainer.classList.add('hidden');
             btnStart.classList.remove('hidden');
+        } finally {
+            isCompressing = false;
         }
     }
 });
