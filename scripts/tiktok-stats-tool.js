@@ -78,7 +78,19 @@ document.addEventListener('DOMContentLoaded', () => {
             statsDuration.textContent = duration ? `${duration}s` : '—';
             statsSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
 
-            if (metadata.w && metadata.h) {
+            showStatus("Analysing Video Metadata (FPS & Resolution)...");
+
+            const videoMeta = await analyseVideoMetadataFromUrl(metadata.play);
+            
+            if (videoMeta && videoMeta.fps && !isNaN(videoMeta.fps)) {
+                statsFps.textContent = `${videoMeta.fps} fps`;
+            } else {
+                statsFps.textContent = '—';
+            }
+
+            if (videoMeta && videoMeta.width && videoMeta.height) {
+                statsResolution.textContent = `${videoMeta.width} x ${videoMeta.height}`;
+            } else if (metadata.w && metadata.h) {
                 statsResolution.textContent = `${metadata.w} x ${metadata.h}`;
             } else {
                 statsResolution.textContent = '—';
@@ -95,15 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 statsBitrate.textContent = '—';
             }
 
-            showStatus("Analysing FPS...");
-
-            const fps = await analyseFpsFromUrl(metadata.play);
-            if (fps && !isNaN(fps)) {
-                statsFps.textContent = `${fps} fps`;
-            } else {
-                statsFps.textContent = '—';
-            }
-
             showStatus("");
             resultsContainer.classList.remove('hidden');
 
@@ -116,13 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function analyseFpsFromUrl(videoUrl) {
+    async function analyseVideoMetadataFromUrl(videoUrl) {
         if (!videoUrl || !videoUrl.startsWith('http')) return null;
         try {
             const response = await fetch(`${API_URL}/tiktok-fps?url=${encodeURIComponent(videoUrl)}`);
             if (!response.ok) return null;
-            const data = await response.json();
-            return data.fps;
+            return await response.json();
         } catch (e) {
             return null;
         }

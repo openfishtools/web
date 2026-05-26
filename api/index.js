@@ -197,81 +197,82 @@ function ipLookupVariants(raw) {
     return [...set];
 }
 
-function findBox(buffer, targetType, startOffset = 0, endOffset = null) {
-    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    let offset = startOffset;
-    const maxOffset = endOffset !== null ? endOffset : buffer.byteLength;
+function parseVideoMetadataFromBuffer(buffer) {
+    let moovOffset = -1;
+    for (let i = 0; i < buffer.byteLength - 8; i++) {
+        if (buffer[i+4] === 0x6D && buffer[i+5] === 0x6F && buffer[i+6] === 0x6F && buffer[i+7] === 0x76) {
+            moovOffset = i;
+            break;
+        }
+    }
     
-    while (offset < maxOffset - 8) {
+    if (moovOffset === -1) return null;
+    
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    const moovSize = view.getUint32(moovOffset);
+    
+    function findBox(start, max, target) {
+        let offset = start;
+        while (offset < max - 8) {
+            const size = view.getUint32(offset);
+            if (size <= 0 || offset + size > max) break;
+            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+            if (type === target) return { offset, size };
+            if (['trak', 'mdia', 'minf', 'stbl'].includes(type)) {
+                const res = findBox(offset + 8, offset + size, target);
+                if (res) return res;
+            }
+            offset += size;
+        }
+        return null;
+    }
+    
+    let fps = null;
+    let width = 0;
+    let height = 0;
+    
+    let offset = moovOffset + 8;
+    while (offset < moovOffset + moovSize - 8) {
         const size = view.getUint32(offset);
-        if (size <= 0 || offset + size > maxOffset) break;
+        if (size <= 0 || offset + size > moovOffset + moovSize) break;
+        const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
         
-        const type = String.fromCharCode(
-            view.getUint8(offset + 4),
-            view.getUint8(offset + 5),
-            view.getUint8(offset + 6),
-            view.getUint8(offset + 7)
-        );
-        
-        if (type === targetType) {
-            return { offset, size };
+        if (type === 'trak') {
+            const hdlr = findBox(offset + 8, offset + size, 'hdlr');
+            if (hdlr) {
+                const hdlrType = String.fromCharCode(view.getUint8(hdlr.offset + 16), view.getUint8(hdlr.offset + 17), view.getUint8(hdlr.offset + 18), view.getUint8(hdlr.offset + 19));
+                if (hdlrType === 'vide') {
+                    const tkhd = findBox(offset + 8, offset + size, 'tkhd');
+                    if (tkhd) {
+                        const version = view.getUint8(tkhd.offset + 8);
+                        let wOffset = tkhd.offset + 8 + (version === 1 ? 84 : 76);
+                        width = view.getUint16(wOffset);
+                        height = view.getUint16(wOffset + 4);
+                    }
+                    
+                    const mdhd = findBox(offset + 8, offset + size, 'mdhd');
+                    const stsz = findBox(offset + 8, offset + size, 'stsz');
+                    
+                    if (mdhd && stsz) {
+                        const mdhdVersion = view.getUint8(mdhd.offset + 8);
+                        let timescale = mdhdVersion === 1 ? view.getUint32(mdhd.offset + 28) : view.getUint32(mdhd.offset + 20);
+                        let duration = mdhdVersion === 1 ? Number(view.getBigUint64(mdhd.offset + 32)) : view.getUint32(mdhd.offset + 24);
+                        const sampleCount = view.getUint32(stsz.offset + 16);
+                        
+                        if (duration > 0 && sampleCount > 0 && timescale > 0) {
+                            const durationInSeconds = duration / timescale;
+                            const rawFps = sampleCount / durationInSeconds;
+                            fps = Math.round(rawFps * 1000) / 1000;
+                        }
+                    }
+                    break;
+                }
+            }
         }
-        
-        if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
-            const result = findBox(buffer, targetType, offset + 8, offset + size);
-            if (result) return result;
-        }
-        
         offset += size;
     }
-    return null;
-}
-
-function parseFpsFromBuffer(buffer) {
-    try {
-        const mdhd = findBox(buffer, 'mdhd');
-        const stts = findBox(buffer, 'stts');
-        
-        if (!mdhd || !stts) return null;
-        
-        const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-        
-        const mdhdVersion = view.getUint8(mdhd.offset + 8);
-        let timescale = 0;
-        if (mdhdVersion === 1) {
-            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 8 + 8);
-        } else {
-            timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 4 + 4);
-        }
-        
-        const entryCount = view.getUint32(stts.offset + 12);
-        if (entryCount === 0) return null;
-        
-        const sampleDelta = view.getUint32(stts.offset + 16);
-        if (sampleDelta === 0) return null;
-        
-        const fps = timescale / sampleDelta;
-        return isNaN(fps) ? null : Math.round(fps * 1000) / 1000;
-    } catch (e) {
-        return null;
-    }
-}
-
-async function parseFpsFromUrl(playUrl) {
-    if (!playUrl) return null;
-    try {
-        const res = await fetch(playUrl, {
-            headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(5000)
-        });
-        if (!res.ok && res.status !== 206) return null;
-        const ab = await res.arrayBuffer();
-        const buffer = Buffer.from(ab);
-        return parseFpsFromBuffer(buffer);
-    } catch (e) {
-        console.error("FPS parser background fetch failed:", e);
-        return null;
-    }
+    
+    return { fps, width, height };
 }
 
 app.get('/api/get-ip', (req, res) => {
@@ -285,26 +286,36 @@ app.get('/api/tiktok-fps', async (req, res) => {
     }
 
     if (!url.includes('tiktokcdn')) {
-        return res.json({ fps: null });
+        return res.json({ fps: null, width: 0, height: 0 });
     }
 
     try {
-        const response = await fetch(url, {
+        let response = await fetch(url, {
             headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
             signal: AbortSignal.timeout(5000)
         });
 
         if (!response.ok && response.status !== 206) {
-            return res.json({ fps: null });
+            return res.json({ fps: null, width: 0, height: 0 });
         }
 
-        const buffer = await response.arrayBuffer();
-        const buf = Buffer.from(buffer);
-        const fps = parseFpsFromBuffer(buf);
+        let buffer = Buffer.from(await response.arrayBuffer());
+        let meta = parseVideoMetadataFromBuffer(buffer);
 
-        res.json({ fps });
+        if (!meta) {
+            response = await fetch(url, {
+                headers: { 'Range': 'bytes=-524288', 'User-Agent': 'Mozilla/5.0' },
+                signal: AbortSignal.timeout(5000)
+            });
+            if (response.ok || response.status === 206) {
+                buffer = Buffer.from(await response.arrayBuffer());
+                meta = parseVideoMetadataFromBuffer(buffer);
+            }
+        }
+
+        res.json(meta || { fps: null, width: 0, height: 0 });
     } catch (e) {
-        res.json({ fps: null });
+        res.json({ fps: null, width: 0, height: 0 });
     }
 });
 
@@ -399,27 +410,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     }
 });
 
-app.get('/api/tiktok-fps', async (req, res) => {
-    const { url } = req.query;
-    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Missing url' });
 
-    try {
-        const response = await fetch(url, {
-            headers: { 'Range': 'bytes=0-524287' },
-            signal: AbortSignal.timeout(8000)
-        });
-
-        if (!response.ok && response.status !== 206) {
-            return res.status(502).json({ error: 'Fetch failed' });
-        }
-
-        const buffer = await response.arrayBuffer();
-        const fps = parseFpsFromBuffer(Buffer.from(buffer));
-        res.json({ fps });
-    } catch (err) {
-        res.status(500).json({ error: 'FPS analysis failed' });
-    }
-});
 
 app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body || {};
