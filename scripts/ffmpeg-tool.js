@@ -51,10 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
             presetDesc.innerHTML = presetDescriptions[selectedPreset];
         });
     });
-            chip.classList.add('active');
-            selectedPreset = chip.getAttribute('data-preset');
-        });
-    });
 
     // File input change
     fileInput.addEventListener('change', (e) => {
