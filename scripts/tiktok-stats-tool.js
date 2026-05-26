@@ -17,9 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const statsSize = document.getElementById('stats-size');
 
     let isRunning = false;
-    // Reuse a single ffmpeg instance across analyses to avoid reloading WASM each time
-    let ffmpegInstance = null;
-    let ffmpegLoaded = false;
 
     btnAnalyse.addEventListener('click', () => {
         let url = inputUrl.value.trim();
@@ -81,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statsDuration.textContent = duration ? `${duration}s` : '—';
             statsSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
 
-            // Show API resolution first as placeholder, will be overwritten by ffmpeg result
             if (metadata.w && metadata.h) {
                 statsResolution.textContent = `${metadata.w} x ${metadata.h}`;
             } else {
@@ -99,25 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 statsBitrate.textContent = '—';
             }
 
-            // Show results early so user sees partial data while ffmpeg runs
-            resultsContainer.classList.remove('hidden');
-            statsFps.textContent = '—';
+            showStatus("Analysing FPS...");
 
-            showStatus("Analysing stream with FFmpeg...");
-
-            // Run ffmpeg WASM probe — extracts both FPS and resolution from the stream
-            const probeResult = await probeWithFFmpeg(metadata.play);
-
-            if (probeResult) {
-                if (probeResult.fps) {
-                    statsFps.textContent = `${probeResult.fps} fps`;
-                }
-                if (probeResult.width && probeResult.height) {
-                    statsResolution.textContent = `${probeResult.width} x ${probeResult.height}`;
-                }
+            const fps = await analyseFpsFromUrl(metadata.play);
+            if (fps && !isNaN(fps)) {
+                statsFps.textContent = `${fps} fps`;
+            } else {
+                statsFps.textContent = '—';
             }
 
             showStatus("");
+            resultsContainer.classList.remove('hidden');
 
         } catch (err) {
             console.error(err);
@@ -128,142 +116,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Probes the video stream using ffmpeg WASM.
-     * Returns { fps, width, height } parsed from the ffmpeg log output.
-     *
-     * Reuses the same ffmpeg instance across calls to avoid reloading the 32MB WASM core.
-     */
-    async function probeWithFFmpeg(playUrl) {
-        if (!playUrl || !playUrl.startsWith('http')) return null;
-
+    async function analyseFpsFromUrl(videoUrl) {
+        if (!videoUrl || !videoUrl.startsWith('http')) return null;
         try {
-            // --- Step 1: Fetch raw video chunk via backend proxy ---
-            showStatus("Downloading video chunk...");
-            const chunkRes = await fetch(`${API_URL}/tiktok-chunk?url=${encodeURIComponent(playUrl)}`);
-            if (!chunkRes.ok) {
-                console.warn('tiktok-chunk fetch failed:', chunkRes.status);
-                return null;
-            }
-            const chunkBuffer = await chunkRes.arrayBuffer();
-            if (!chunkBuffer || chunkBuffer.byteLength < 4096) {
-                console.warn('tiktok-chunk: received too little data:', chunkBuffer?.byteLength);
-                return null;
-            }
-            console.log(`Chunk received: ${(chunkBuffer.byteLength / 1024).toFixed(0)} KB`);
-
-            // --- Step 2: Load ffmpeg WASM (reuse instance if already loaded) ---
-            const { FFmpeg } = window.FFmpegWASM;
-            const { toBlobURL } = window.FFmpegUtil;
-
-            if (!ffmpegInstance || !ffmpegLoaded) {
-                showStatus("Loading FFmpeg WASM...");
-                ffmpegInstance = new FFmpeg();
-                const baseURL = window.location.origin + '/assets/ffmpeg';
-                try {
-                    await ffmpegInstance.load({
-                        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                        workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
-                    });
-                    ffmpegLoaded = true;
-                } catch (loadErr) {
-                    console.error('FFmpeg WASM load failed:', loadErr);
-                    ffmpegInstance = null;
-                    ffmpegLoaded = false;
-                    return null;
-                }
-            }
-
-            // --- Step 3: Write chunk and probe ---
-            showStatus("Probing stream with FFmpeg...");
-            const logLines = [];
-
-            // Register listener BEFORE exec
-            const logHandler = ({ message }) => {
-                logLines.push(message);
-                console.log('[ffmpeg]', message);
-            };
-            ffmpegInstance.on('log', logHandler);
-
-            await ffmpegInstance.writeFile('probe.mp4', new Uint8Array(chunkBuffer));
-
-            try {
-                // -f null -  means no output file — ffmpeg still reads & logs input stream info
-                await ffmpegInstance.exec(['-hide_banner', '-i', 'probe.mp4', '-f', 'null', '-']);
-            } catch (_) {
-                // Non-zero exit is expected when probing without encoding output
-            }
-
-            // Cleanup
-            ffmpegInstance.off('log', logHandler);
-            try { await ffmpegInstance.deleteFile('probe.mp4'); } catch (_) {}
-
-            // --- Step 4: Parse fps + resolution from logs ---
-            return parseStreamInfoFromLogs(logLines);
-
+            const response = await fetch(`${API_URL}/tiktok-fps?url=${encodeURIComponent(videoUrl)}`);
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data.fps;
         } catch (e) {
-            console.error('probeWithFFmpeg error:', e);
-            // Reset the instance so next call tries fresh
-            ffmpegInstance = null;
-            ffmpegLoaded = false;
             return null;
         }
-    }
-
-    /**
-     * Parses FPS and resolution from ffmpeg log lines.
-     *
-     * ffmpeg log format (Stream line):
-     *   Stream #0:0(und): Video: h264 (High), yuv420p(tv, bt709), 1080x1920, 8374 kb/s, 30 fps, 30 tbr, 90k tbn (default)
-     *
-     * We extract:
-     *   - Resolution: "1080x1920" → { width: 1080, height: 1920 }
-     *   - FPS:        "30 fps"    → 30
-     *   - Fallback:   "30 tbr"    → 30 (if fps not found)
-     */
-    function parseStreamInfoFromLogs(lines) {
-        let fps = null;
-        let width = null;
-        let height = null;
-
-        for (const line of lines) {
-            // Only look at Video stream lines
-            if (!line.includes('Video:')) continue;
-
-            // Resolution: e.g. "1080x1920" or "720x1280"
-            const resMatch = line.match(/(\d{3,5})x(\d{3,5})/);
-            if (resMatch) {
-                const w = parseInt(resMatch[1], 10);
-                const h = parseInt(resMatch[2], 10);
-                // Sanity check: must be plausible video dimensions
-                if (w >= 100 && w <= 7680 && h >= 100 && h <= 7680) {
-                    width = w;
-                    height = h;
-                }
-            }
-
-            // FPS: "30 fps" or "29.97 fps"
-            const fpsMatch = line.match(/(\d+(?:\.\d+)?)\s+fps/i);
-            if (fpsMatch) {
-                const f = parseFloat(fpsMatch[1]);
-                if (!isNaN(f) && f > 0 && f <= 240) fps = Math.round(f * 100) / 100;
-            }
-
-            // Fallback: tbr (used when fps token absent)
-            if (!fps) {
-                const tbrMatch = line.match(/(\d+(?:\.\d+)?)\s+tbr/i);
-                if (tbrMatch) {
-                    const f = parseFloat(tbrMatch[1]);
-                    if (!isNaN(f) && f > 0 && f <= 240) fps = Math.round(f * 100) / 100;
-                }
-            }
-
-            // Found what we need, stop scanning
-            if (fps !== null && width !== null) break;
-        }
-
-        if (fps === null && width === null) return null;
-        return { fps, width, height };
     }
 });
