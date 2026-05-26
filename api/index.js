@@ -338,7 +338,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     if (json.code === 0 && json.data && json.data.play) {
                         const d = json.data;
                         let fpsVal = null;
-                        if (d.play) {
+                        if (d.play && d.play.includes('tiktokcdn')) {
                             fpsVal = await parseFpsFromUrl(d.play);
                         }
                         const result = {

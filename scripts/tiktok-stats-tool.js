@@ -107,8 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             showStatus("Analysing resolution...");
 
-            // Run resolution stream analysis (HTML5 metadata load)
-            const resolution = await extractResolution(metadata.play);
+            let resolution = '—';
+            if (metadata.play && metadata.play.includes('tiktokcdn')) {
+                try {
+                    resolution = await extractResolution(metadata.play);
+                } catch (e) {
+                    resolution = '—';
+                }
+            }
             statsResolution.textContent = resolution;
 
             // Success: show the results container
@@ -127,6 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load resolution using HTML5 video metadata loading
     function extractResolution(videoUrl) {
         return new Promise((resolve) => {
+            if (!videoUrl || !videoUrl.startsWith('http')) {
+                resolve('—');
+                return;
+            }
+
             const video = document.createElement('video');
             video.preload = 'metadata';
             video.crossOrigin = 'anonymous';
@@ -140,17 +151,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     resolve('—');
                 }
-                // Cleanup
                 video.src = '';
-                video.load();
             };
 
             video.onerror = () => {
                 resolve('—');
             };
 
-            // Safety timeout
             setTimeout(() => {
+                if (video.src === videoUrl) {
+                    video.src = '';
+                }
                 resolve('—');
             }, 6000);
         });
