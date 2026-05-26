@@ -132,11 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const ffmpeg = new FFmpeg();
 
             // Setup Progress Listener
-            ffmpeg.on('progress', ({ progress, time }) => {
+            ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                statusText.textContent = `Compressing... (Time: ${time}s)`;
+                statusText.textContent = `Compressing...`;
             });
 
             // Setup Log Listener for debugging
@@ -157,17 +157,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             statusText.textContent = "Starting compression...";
             
+            // Determine optimal thread count
+            const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
+            console.log(`Using ${threads} threads for compression.`);
+
             // Determine command based on preset
             let command = [];
             if (preset === 'slow') {
                 // H.264 High Quality
-                command = ['-i', 'input.mp4', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-c:a', 'copy', 'output.mp4'];
             } else if (preset === 'fast') {
                 // H.265 Fast Encoding
-                command = ['-i', 'input.mp4', '-c:v', 'libx265', '-preset', 'fast', '-crf', '24', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx265', '-preset', 'fast', '-crf', '24', '-c:a', 'copy', 'output.mp4'];
             } else {
                 // Medium H.264
-                command = ['-i', 'input.mp4', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             }
 
             await ffmpeg.exec(command);
