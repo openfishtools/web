@@ -247,7 +247,7 @@ function parseFpsFromBuffer(buffer) {
         const entryCount = view.getUint32(stts.offset + 12);
         if (entryCount === 0) return null;
         
-        const sampleDelta = view.getUint32(stts.offset + 16 + 4);
+        const sampleDelta = view.getUint32(stts.offset + 16);
         if (sampleDelta === 0) return null;
         
         const fps = timescale / sampleDelta;
