@@ -310,6 +310,62 @@
 
                         <button id="btn-start-compression" class="btn-primary w-full hidden" style="margin-top: 16px;">Start Compression</button>
                     </div>
+
+                    <div class="card" style="margin-top: 16px;">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">monitoring</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Statistics</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Metadata & Stream Analyser</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="input-field" style="margin-bottom: 0;">
+                                <label for="tool-tiktok-stats-input">TikTok Video URL</label>
+                                <input type="text" id="tool-tiktok-stats-input" placeholder="https://www.tiktok.com/@username/video/..." style="width: 100%; box-sizing: border-box;">
+                            </div>
+                            <button id="btn-analyse-tiktok" class="btn-primary w-full">Analyse</button>
+                        </div>
+                        
+                        <div id="tool-tiktok-stats-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+                        
+                        <!-- Analysis Results Container -->
+                        <div id="tiktok-stats-results" class="hidden" style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
+                            <div class="stats-preview-container" style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
+                                <div class="stats-video-cover-wrapper" style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <img id="stats-video-cover" src="" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <div style="flex-grow: 1; min-width: 0;">
+                                    <div id="stats-creator-name" style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Creator</div>
+                                    <div id="stats-creator-handle" style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@username</div>
+                                    <div id="stats-caption" style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">Caption goes here...</div>
+                                </div>
+                            </div>
+                            
+                            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">aspect_ratio</span>Resolution</span>
+                                    <strong id="stats-resolution" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">speed</span>Frame Rate (FPS)</span>
+                                    <strong id="stats-fps" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">equalizer</span>Bitrate</span>
+                                    <strong id="stats-bitrate" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">schedule</span>Duration</span>
+                                    <strong id="stats-duration" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">save</span>File Size</span>
+                                    <strong id="stats-size" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -501,5 +557,6 @@
     <script src="assets/ffmpeg/ffmpeg-core.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
+    <script src="scripts/tiktok-stats-tool.js"></script>
 </body>
 </html>

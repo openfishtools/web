@@ -93,6 +93,10 @@ const TikTokCacheSchema = new mongoose.Schema({
     play: String,
     cover: String,
     title: String,
+    author_unique_id: String,
+    author_nickname: String,
+    size: Number,
+    duration: Number,
     updatedAt: { type: Date, default: Date.now }
 });
 const TikTokCache = mongoose.models.TikTokCache || mongoose.model('TikTokCache', TikTokCacheSchema);
@@ -226,7 +230,16 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         if (!bypassCache) {
             const cached = await TikTokCache.findOne({ url: pageUrl });
             if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
-                return res.json({ play: cached.play, cover: cached.cover, title: cached.title, cached: true });
+                return res.json({
+                    play: cached.play,
+                    cover: cached.cover,
+                    title: cached.title,
+                    author_unique_id: cached.author_unique_id || '',
+                    author_nickname: cached.author_nickname || '',
+                    size: cached.size || 0,
+                    duration: cached.duration || 0,
+                    cached: true
+                });
             }
         }
 
@@ -245,7 +258,15 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     const json = await r.json();
                     if (json.code === 0 && json.data && json.data.play) {
                         const d = json.data;
-                        const result = { play: d.play, cover: d.cover || d.origin_cover || '', title: d.title || '' };
+                        const result = {
+                            play: d.play,
+                            cover: d.cover || d.origin_cover || '',
+                            title: d.title || '',
+                            author_unique_id: d.author?.unique_id || '',
+                            author_nickname: d.author?.nickname || '',
+                            size: d.size || 0,
+                            duration: d.duration || 0
+                        };
                         await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
                         return res.json(result);
                     }
