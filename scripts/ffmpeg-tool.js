@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPreset = 'medium';
     let isCompressing = false;
 
+    // --- Limits ---
+    // FFmpeg WASM has a strict WebAssembly memory cap (~1.8 GB).
+    // Encoding ProRes / large RAW files far exceeds that budget.
+    const MAX_FILE_MB = 800;        // Soft-warn if file > 800 MB
+    const MAX_FILE_MB_HARD = 1500;  // Hard-block if file > 1.5 GB
+    const MAX_DIMENSION = 3840;     // Auto-downscale if width or height > 4K (3840)
+
     const presetDescriptions = {
         'slow': `
             <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
@@ -61,8 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Preset selection logic
     presetChips.forEach(chip => {
         chip.addEventListener('click', () => {
-            if (isCompressing) return; // Prevent changing preset while compressing
-            
+            if (isCompressing) return;
             presetChips.forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             selectedPreset = chip.getAttribute('data-preset');
@@ -98,16 +104,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function showStatusError(msg) {
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-error);">${msg}</span>`;
+    }
+
+    function showOomWarning(fileMB, isHard) {
+        const sizeStr = fileMB ? `${fileMB.toFixed(0)} MB` : 'too large';
+        statusText.innerHTML = `
+            <div style="background: hsl(0,60%,12%); border: 1px solid hsl(0,70%,40%); color: hsl(0,80%,80%); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.7; text-align: left; margin-top: 12px;">
+                <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:8px;">
+                    <span class="material-symbols-rounded" style="font-size:20px;">memory_alt</span>
+                    ${isHard ? 'File too large — cannot process' : 'Out of Memory (OOM)'}
+                </div>
+                <strong>Why this happened:</strong> FFmpeg runs inside WebAssembly which is capped at about <strong>1.8 GB</strong> of RAM. Your file (<strong>${sizeStr}</strong>) uses a high-bitrate codec like <strong>ProRes HQ</strong> or RAW — loading it into WASM exhausts all available memory before encoding can even begin.
+                <br><br>
+                <strong>How to fix it:</strong>
+                <ul style="margin: 6px 0 0 0; padding-left: 18px; list-style: disc;">
+                    <li>Export from your editor at a lower resolution (e.g. <strong>1080p H.264</strong>) first, then compress here.</li>
+                    <li>Use <strong>HandBrake</strong> (free desktop app) to batch-compress ProRes files.</li>
+                    <li>Use <strong>FFmpeg CLI</strong> on your computer: <code>ffmpeg -i input.mov -c:v libx264 -crf 20 output.mp4</code></li>
+                </ul>
+            </div>`;
+    }
+
     function handleFileSelection(file) {
         if (!file.type.startsWith('video/')) {
-            statusText.textContent = "Please select a valid video file.";
-            statusText.style.color = "var(--md-sys-color-error)";
+            showStatusError("Please select a valid video file.");
             btnStart.classList.add('hidden');
             return;
         }
+
+        const fileMB = file.size / (1024 * 1024);
+
+        // Hard block — will always OOM
+        if (fileMB > MAX_FILE_MB_HARD) {
+            showOomWarning(fileMB, true);
+            btnStart.classList.add('hidden');
+            selectedFile = null;
+            return;
+        }
+
         selectedFile = file;
-        statusText.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-        statusText.style.color = "var(--md-sys-color-primary)";
+        const infoLine = `Selected: ${file.name} (${fileMB.toFixed(2)} MB)`;
+
+        // Soft warning
+        if (fileMB > MAX_FILE_MB) {
+            statusText.innerHTML = `
+                <div style="background: hsl(40,80%,10%); border: 1px solid hsl(40,70%,35%); color: hsl(40,80%,75%); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.6; text-align: left; margin-bottom: 8px;">
+                    <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:6px;">
+                        <span class="material-symbols-rounded" style="font-size:20px;">warning</span>
+                        Large file warning &mdash; ${fileMB.toFixed(0)} MB
+                    </div>
+                    This file may cause an <strong>Out of Memory</strong> crash. High-bitrate sources like ProRes 4K frequently exceed FFmpeg WASM's memory limit. Compression will still be attempted &mdash; downscaling to 1920px will be applied automatically.
+                </div>
+                <span style="color: var(--md-sys-color-on-surface-variant); font-size: 13px;">${infoLine}</span>`;
+            btnStart.classList.remove('hidden');
+            return;
+        }
+
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${infoLine}</span>`;
         btnStart.classList.remove('hidden');
     }
 
@@ -116,17 +171,43 @@ document.addEventListener('DOMContentLoaded', () => {
         await compressVideo(selectedFile, selectedPreset);
     });
 
+    // Get video dimensions using an offscreen video element
+    function getVideoDimensions(file) {
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            const url = URL.createObjectURL(file);
+            video.onloadedmetadata = () => {
+                URL.revokeObjectURL(url);
+                resolve({ width: video.videoWidth, height: video.videoHeight });
+            };
+            video.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve({ width: 0, height: 0 });
+            };
+            video.src = url;
+            setTimeout(() => resolve({ width: 0, height: 0 }), 3000);
+        });
+    }
+
     async function compressVideo(file, preset) {
         if (isCompressing) return;
         isCompressing = true;
 
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
-        statusText.textContent = "Loading FFmpeg...";
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Checking video properties...</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
 
         try {
+            // --- Pre-flight: detect resolution for auto-scaling ---
+            const { width, height } = await getVideoDimensions(file);
+            const needsScale = width > MAX_DIMENSION || height > MAX_DIMENSION;
+            if (needsScale) {
+                console.log(`Video is ${width}x${height} — will auto-scale to max ${MAX_DIMENSION}px.`);
+            }
+
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             const ffmpeg = new FFmpeg();
@@ -136,15 +217,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                statusText.textContent = `Compressing...`;
+                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Compressing${needsScale ? ' (auto-scaled to 4K)' : ''}...</span>`;
             });
 
-            // Setup Log Listener for debugging
+            // Watch logs for OOM signals
             ffmpeg.on('log', ({ message }) => {
                 console.log(message);
+                if (message.includes('OOM') || message.includes('Aborted')) {
+                    showOomWarning(file.size / (1024 * 1024), false);
+                }
             });
 
             // Load ffmpeg.wasm
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Loading FFmpeg...</span>`;
             const baseURL = window.location.origin + '/assets/ffmpeg';
             await ffmpeg.load({
                 coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -152,31 +237,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
             });
 
-            statusText.textContent = "Reading file...";
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
 
-            statusText.textContent = "Starting compression...";
-            
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Starting compression${needsScale ? ' (downscaling to 4K max)' : ''}...</span>`;
+
             // Determine optimal thread count
             const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
             console.log(`Using ${threads} threads for compression.`);
 
+            // Scale filter — limits the longest edge to MAX_DIMENSION, preserves aspect ratio,
+            // forces even pixel dimensions (required by libx264/libx265).
+            // Scale filter — limits the longest edge to MAX_DIMENSION (4K), preserves aspect ratio,
+            // forces even pixel dimensions (required by libx264/libx265).
+            const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
+
             // Determine command based on preset
             let command = [];
             if (preset === 'slow') {
-                // H.264 High Quality
-                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads,
+                    ...(needsScale ? ['-vf', scaleFilter] : []),
+                    '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else if (preset === 'fast') {
-                // H.265 Slow Encoding for max compression
-                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx265', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads,
+                    ...(needsScale ? ['-vf', scaleFilter] : []),
+                    '-c:v', 'libx265', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else {
-                // Medium H.264
-                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads,
+                    ...(needsScale ? ['-vf', scaleFilter] : []),
+                    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             }
 
             await ffmpeg.exec(command);
 
-            statusText.textContent = "Saving output...";
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
             const data = await ffmpeg.readFile('output.mp4');
             const blob = new Blob([data.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
@@ -184,14 +278,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Trigger Download
             const a = document.createElement('a');
             a.href = url;
-            a.download = `compressed_${preset}_${file.name}`;
+            a.download = `compressed_${preset}_${file.name.replace(/\.[^.]+$/, '')}.mp4`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            statusText.textContent = "Compression finished! Download started.";
-            statusText.style.color = "var(--md-sys-color-primary)";
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Compression finished! Download started.</span>`;
 
             // Cleanup
             progressContainer.classList.add('hidden');
@@ -199,8 +292,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            statusText.textContent = `Error: ${error.message}`;
-            statusText.style.color = "var(--md-sys-color-error)";
+            const msg = (error.message || '').toLowerCase();
+            if (msg.includes('oom') || msg.includes('aborted') || msg.includes('memory') || msg.includes('abort')) {
+                showOomWarning(file.size / (1024 * 1024), false);
+            } else {
+                showStatusError(`Error: ${error.message}`);
+            }
             progressContainer.classList.add('hidden');
             btnStart.classList.remove('hidden');
         } finally {
