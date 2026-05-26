@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,6 +12,7 @@
     <link rel="stylesheet" href="styles/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
+
 <body>
     <div class="app-container">
         <nav class="nav-bar">
@@ -131,7 +133,8 @@
                                 <div class="phone-speaker"></div>
                             </div>
                             <div class="phone-screen">
-                                <button type="button" class="tiktok-back-btn" id="back-to-explore" aria-label="Back to presets">
+                                <button type="button" class="tiktok-back-btn" id="back-to-explore"
+                                    aria-label="Back to presets">
                                     <span class="material-symbols-rounded">arrow_back</span>
                                 </button>
                                 <div class="preset-feed tiktok-feed" id="preset-feed"></div>
@@ -192,10 +195,12 @@
                 <div class="grid">
                     <div class="card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
                             <div>
                                 <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Quality Patcher</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Hex Edit Method</div>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Hex
+                                    Edit Method</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-tiktok-patcher-drop">
@@ -203,29 +208,56 @@
                             <span>Drag & drop video here or click to select</span>
                             <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
                         </div>
-                        <div id="tool-tiktok-patcher-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+                        <div id="tool-tiktok-patcher-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
 
-                        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant);">
+                        <div
+                            style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant);">
                             <div class="upload-steps" style="display: flex; flex-direction: column; gap: 12px;">
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">1</div>
-                                    <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Upload an upscaled and compressed video at up to 60 FPS here.</div>
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        1</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Upload an upscaled and compressed video at up to 60 FPS here.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">2</div>
-                                    <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Go to <a href="https://tiktok.com/tiktokstudio" target="_blank" rel="noopener noreferrer" style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600;">tiktok.com/tiktokstudio</a> and upload the video.</div>
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        2</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Go to <a href="https://tiktok.com/tiktokstudio" target="_blank"
+                                            rel="noopener noreferrer"
+                                            style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600;">tiktok.com/tiktokstudio</a>
+                                        and upload the video.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">3</div>
-                                    <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Change visibility to <strong>Only me</strong>.</div>
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        3</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Change visibility to <strong>Only me</strong>.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">4</div>
-                                    <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Upload and wait 1 minute until video review is finished.</div>
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        4</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Upload and wait 1 minute until video review is finished.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
-                                    <div class="step-number" style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">5</div>
-                                    <div class="step-text" style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">Open TikTok on mobile and change visibility from <strong>Only me</strong> to <strong>Public</strong>.</div>
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        5</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Open TikTok on mobile and change visibility from <strong>Only me</strong> to
+                                        <strong>Public</strong>.</div>
                                 </div>
                             </div>
                         </div>
@@ -233,45 +265,51 @@
 
                     <div class="card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
                             <div>
                                 <h3 style="font-size: 1.25rem; font-weight: 600;">Video Compressor</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FFmpeg WASM</div>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FFmpeg
+                                    WASM</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-ffmpeg-drop">
                             <span class="material-symbols-rounded">video_file</span>
                             <span>Drag & drop video here or click to select</span>
-                            <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm" hidden>
+                            <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm"
+                                hidden>
                         </div>
-                        
+
                         <style>
                             .ffmpeg-preset-container {
-                                display: flex; 
-                                justify-content: center; 
-                                margin-top: 16px; 
+                                display: flex;
+                                justify-content: center;
+                                margin-top: 16px;
                                 margin-bottom: 16px;
                             }
+
                             .preset-switch-group {
-                                display: inline-flex; 
-                                background: var(--md-sys-color-surface-container-highest); 
-                                padding: 4px; 
-                                border-radius: 24px; 
+                                display: inline-flex;
+                                background: var(--md-sys-color-surface-container-highest);
+                                padding: 4px;
+                                border-radius: 24px;
                                 gap: 4px;
                             }
+
                             .preset-switch {
-                                padding: 8px 24px; 
-                                border-radius: 20px; 
-                                font-size: 14px; 
-                                font-weight: 600; 
-                                cursor: pointer; 
+                                padding: 8px 24px;
+                                border-radius: 20px;
+                                font-size: 14px;
+                                font-weight: 600;
+                                cursor: pointer;
                                 color: var(--md-sys-color-on-surface-variant);
                                 transition: all 0.2s ease;
                             }
+
                             .preset-switch.active {
-                                background: var(--md-sys-color-primary); 
-                                color: var(--md-sys-color-on-primary); 
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                background: var(--md-sys-color-primary);
+                                color: var(--md-sys-color-on-primary);
+                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                             }
                         </style>
                         <div class="ffmpeg-preset-container">
@@ -282,134 +320,191 @@
                             </div>
                         </div>
                         <div id="ffmpeg-preset-desc">
-                            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
+                            <div
+                                style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
                                 <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Medium</li>
-                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
+                                    <li style="display: flex; align-items: center;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong
+                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong>
+                                        H.264 (libx264)</li>
+                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong
+                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong>
+                                        Medium</li>
+                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong
+                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong>
+                                        20 (High Quality)</li>
                                 </ul>
-                                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                                    <span>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</span>
+                                <hr
+                                    style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
+                                <div
+                                    style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
+                                    <span class="material-symbols-rounded"
+                                        style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
+                                    <span>Offers a balanced trade-off between encoding speed, file size, and visual
+                                        quality. Recommended for general use.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="tool-ffmpeg-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
-                        
+                        <div id="tool-ffmpeg-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
+
                         <div id="ffmpeg-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg" style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="ffmpeg-progress-fill" style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="ffmpeg-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
                                 <span id="ffmpeg-progress-text">Compressing...</span>
                                 <span id="ffmpeg-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button id="btn-start-compression" class="btn-primary w-full hidden" style="margin-top: 16px;">Start Compression</button>
+                        <button id="btn-start-compression" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;">Start Compression</button>
                     </div>
 
                     <div class="card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">monitoring</span>
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">monitoring</span>
                             <div>
                                 <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Statistics</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Metadata &amp; Stream Analyser</div>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
+                                    Metadata &amp; Stream Analyser</div>
                             </div>
                         </div>
                         <div class="input-field" style="margin-bottom: 0;">
                             <label for="tool-tiktok-stats-input">TikTok Video URL</label>
-                            <input type="text" id="tool-tiktok-stats-input" placeholder="https://www.tiktok.com/@username/video/..." style="width: 100%; box-sizing: border-box;">
+                            <input type="text" id="tool-tiktok-stats-input"
+                                placeholder="https://www.tiktok.com/@username/video/..."
+                                style="width: 100%; box-sizing: border-box;">
                         </div>
-                        
+
                         <!-- Analysis Results Container -->
-                        <div id="tiktok-stats-results" class="hidden" style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
-                            <div class="stats-preview-container" style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
-                                <div class="stats-video-cover-wrapper" style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
-                                    <img id="stats-video-cover" src="" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div id="tiktok-stats-results" class="hidden"
+                            style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
+                            <div class="stats-preview-container"
+                                style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
+                                <div class="stats-video-cover-wrapper"
+                                    style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <img id="stats-video-cover" src="" alt="Cover"
+                                        style="width: 100%; height: 100%; object-fit: cover;">
                                 </div>
                                 <div style="flex-grow: 1; min-width: 0;">
-                                    <div id="stats-creator-name" style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Creator</div>
-                                    <div id="stats-creator-handle" style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@username</div>
-                                    <div id="stats-caption" style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">Caption goes here...</div>
+                                    <div id="stats-creator-name"
+                                        style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        Creator</div>
+                                    <div id="stats-creator-handle"
+                                        style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @username</div>
+                                    <div id="stats-caption"
+                                        style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                        Caption goes here...</div>
                                 </div>
                             </div>
-                            
-                            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">aspect_ratio</span>Resolution</span>
-                                    <strong id="stats-resolution" style="color: var(--md-sys-color-on-surface);">—</strong>
+
+                            <div
+                                style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px;">aspect_ratio</span>Resolution</span>
+                                    <strong id="stats-resolution"
+                                        style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">speed</span>Frame Rate (FPS)</span>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded" style="font-size: 18px;">speed</span>Frame
+                                        Rate (FPS)</span>
                                     <strong id="stats-fps" style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">equalizer</span>Bitrate</span>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px;">equalizer</span>Bitrate</span>
                                     <strong id="stats-bitrate" style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">schedule</span>Duration</span>
-                                    <strong id="stats-duration" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px;">schedule</span>Duration</span>
+                                    <strong id="stats-duration"
+                                        style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">save</span>File Size</span>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded" style="font-size: 18px;">save</span>File
+                                        Size</span>
                                     <strong id="stats-size" style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="tool-tiktok-stats-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
-                        
-                        <button id="btn-analyse-tiktok" class="btn-primary w-full" style="margin-top: 16px;">Analyse</button>
+                        <div id="tool-tiktok-stats-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
+
+                        <button id="btn-analyse-tiktok" class="btn-primary w-full"
+                            style="margin-top: 16px;">Analyse</button>
                     </div>
 
                     <div class="card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded" style="font-size: 32px; color: var(--md-sys-color-primary);">download</span>
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">download</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Downloader HD</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">No Watermark</div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Downloader</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
+                                    Powered By TikWm</div>
                             </div>
                         </div>
                         <div class="input-field" style="margin-bottom: 0;">
                             <label for="tool-tiktok-dl-input">TikTok Video URL</label>
-                            <input type="text" id="tool-tiktok-dl-input" placeholder="https://www.tiktok.com/@username/video/..." style="width: 100%; box-sizing: border-box;">
+                            <input type="text" id="tool-tiktok-dl-input"
+                                placeholder="https://www.tiktok.com/@username/video/..."
+                                style="width: 100%; box-sizing: border-box;">
                         </div>
 
-                        <div id="tiktok-dl-results" class="hidden" style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
-                            <div class="stats-preview-container" style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
-                                <div class="stats-video-cover-wrapper" style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
-                                    <img id="dl-video-cover" src="" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-                                <div style="flex-grow: 1; min-width: 0;">
-                                    <div id="dl-creator-name" style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Creator</div>
-                                    <div id="dl-creator-handle" style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@username</div>
-                                    <div id="dl-caption" style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">Caption goes here...</div>
+                        <div id="tiktok-dl-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="tiktok-dl-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
                                 </div>
                             </div>
-
-                            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">aspect_ratio</span>Resolution</span>
-                                    <strong id="dl-resolution" style="color: var(--md-sys-color-on-surface);">—</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">schedule</span>Duration</span>
-                                    <strong id="dl-duration" style="color: var(--md-sys-color-on-surface);">—</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span class="material-symbols-rounded" style="font-size: 18px;">save</span>Size</span>
-                                    <strong id="dl-size" style="color: var(--md-sys-color-on-surface);">—</strong>
-                                </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="tiktok-dl-progress-text">Downloading...</span>
+                                <span id="tiktok-dl-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <div id="tool-tiktok-dl-status" style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);"></div>
+                        <div id="tool-tiktok-dl-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
 
-                        <button id="btn-download-tiktok" class="btn-primary w-full" style="margin-top: 16px;">Download HD</button>
+                        <button id="btn-download-tiktok" class="btn-primary w-full"
+                            style="margin-top: 16px;">Download</button>
                     </div>
 
                 </div>
@@ -422,12 +517,12 @@
                             <span class="material-symbols-rounded login-icon">account_circle</span>
                             <h2 class="card-title">Welcome</h2>
                             <p class="login-desc">Please enter your details to start chatting.</p>
-                            
+
                             <div class="input-field">
                                 <label>Name</label>
                                 <input type="text" id="user-name" placeholder="Enter your name">
                             </div>
-                            
+
                             <div class="input-field">
                                 <label>Username</label>
                                 <input type="text" id="user-handle" placeholder="@username">
@@ -475,13 +570,13 @@
         <div class="card upload-card">
             <h2 class="card-title">Upload File</h2>
             <p class="login-desc">Share documents, images or videos (Max 50MB)</p>
-            
+
             <div class="drag-drop-area" id="chat-upload-drop">
                 <span class="material-symbols-rounded">cloud_upload</span>
                 <span>Drag & drop or click to upload</span>
                 <input type="file" id="chat-file-input" hidden>
             </div>
-            
+
             <div id="upload-progress-container" class="hidden">
                 <div class="progress-bar-bg">
                     <div id="upload-progress-fill"></div>
@@ -575,7 +670,8 @@
             <!-- Password Section -->
             <div class="res-popup-section res-popup-password-section hidden" id="res-popup-password-section">
                 <div class="res-popup-password-row">
-                    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:20px">lock</span>
+                    <span class="material-symbols-rounded"
+                        style="color:var(--md-sys-color-primary);font-size:20px">lock</span>
                     <div class="res-popup-password-info">
                         <span class="res-popup-password-label">Password</span>
                         <span class="res-popup-password-val" id="res-popup-password">••••••••••••</span>
@@ -586,7 +682,7 @@
                 </div>
             </div>
 
-             <!-- Download Button -->
+            <!-- Download Button -->
             <div class="res-popup-section hidden" id="res-popup-download-section">
                 <button class="res-popup-download-btn" id="res-popup-download-btn" disabled>
                     <div class="download-text-group">
@@ -606,4 +702,5 @@
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
 </body>
+
 </html>

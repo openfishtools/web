@@ -4,15 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputUrl = document.getElementById('tool-tiktok-dl-input');
     const btnDownload = document.getElementById('btn-download-tiktok');
     const statusText = document.getElementById('tool-tiktok-dl-status');
-    const resultsContainer = document.getElementById('tiktok-dl-results');
-
-    const dlCover = document.getElementById('dl-video-cover');
-    const dlCreatorName = document.getElementById('dl-creator-name');
-    const dlCreatorHandle = document.getElementById('dl-creator-handle');
-    const dlCaption = document.getElementById('dl-caption');
-    const dlResolution = document.getElementById('dl-resolution');
-    const dlDuration = document.getElementById('dl-duration');
-    const dlSize = document.getElementById('dl-size');
+    const progressContainer = document.getElementById('tiktok-dl-progress-container');
+    const progressFill = document.getElementById('tiktok-dl-progress-fill');
+    const progressText = document.getElementById('tiktok-dl-progress-text');
+    const progressPercent = document.getElementById('tiktok-dl-progress-percent');
 
     let currentMeta = null;
 
@@ -50,10 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.style.color = color;
     }
 
+    function setProgress(percent, text) {
+        progressFill.style.width = percent + '%';
+        progressPercent.textContent = percent + '%';
+        if (text) progressText.textContent = text;
+    }
+
     async function resolveAndDownload(pageUrl) {
         btnDownload.disabled = true;
-        btnDownload.textContent = "Resolving...";
-        showStatus("Fetching video details...");
+        btnDownload.textContent = "Loading...";
+        showStatus("");
+        progressContainer.classList.add('hidden');
+        setProgress(0);
 
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
@@ -66,24 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("Could not extract video stream.");
             }
 
-            dlCover.src = currentMeta.cover || '';
-            dlCreatorName.textContent = currentMeta.author_nickname || 'Creator';
-            dlCreatorHandle.textContent = currentMeta.author_unique_id ? `@${currentMeta.author_unique_id}` : '@username';
-            dlCaption.textContent = currentMeta.title || 'No caption';
-
-            const duration = currentMeta.duration || 0;
-            const size = currentMeta.size || 0;
-            const w = currentMeta.w || 0;
-            const h = currentMeta.h || 0;
-
-            dlDuration.textContent = duration ? `${duration}s` : '—';
-            dlSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
-            dlResolution.textContent = (w && h) ? `${w} x ${h}` : '—';
-
-            resultsContainer.classList.remove('hidden');
             btnDownload.disabled = false;
             btnDownload.textContent = "Download HD";
-            showStatus("");
+            downloadVideo();
 
         } catch (err) {
             console.error(err);
@@ -97,8 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentMeta) return;
 
         btnDownload.disabled = true;
-        btnDownload.textContent = "Preparing...";
-        showStatus("Preparing download...");
+        btnDownload.textContent = "Downloading...";
+        showStatus("");
+        progressContainer.classList.remove('hidden');
+        setProgress(0, "Preparing...");
 
         try {
             const isHD = currentMeta.hdplay && currentMeta.hdplay.includes('tiktokcdn');
@@ -108,19 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("No video URL available.");
             }
 
-            showStatus("Starting download...");
-
-            const response = await fetch(videoUrl, {
-                signal: AbortSignal.timeout(120000)
-            });
+            const response = await fetch(videoUrl);
 
             if (!response.ok) {
                 throw new Error("Download failed: " + response.status);
             }
 
-            showStatus("Downloading...");
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : 0;
+            let loaded = 0;
 
-            const blob = await response.blob();
+            const reader = response.body.getReader();
+            const chunks = [];
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                loaded += value.length;
+                if (total > 0) {
+                    const percent = Math.round((loaded / total) * 100);
+                    setProgress(percent);
+                }
+            }
+
+            setProgress(100, "Finalizing...");
+            const blob = new Blob(chunks, { type: 'video/mp4' });
             const blobUrl = URL.createObjectURL(blob);
 
             const a = document.createElement('a');
@@ -131,15 +134,20 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(blobUrl);
 
+            setProgress(100, "Done!");
             showStatus("Download complete!", "var(--md-sys-color-primary)");
+            currentMeta = null;
+            inputUrl.value = '';
 
             setTimeout(() => {
+                progressContainer.classList.add('hidden');
                 showStatus("");
             }, 3000);
 
         } catch (err) {
             console.error(err);
             showStatus(err.message || "Download failed.", "var(--md-sys-color-error)");
+            progressContainer.classList.add('hidden');
         } finally {
             btnDownload.disabled = false;
             btnDownload.textContent = "Download HD";
