@@ -340,24 +340,21 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                 const r = await fetch(upstream, fetchOptions);
                 if (r.ok) {
                     const json = await r.json();
-                    if (json.code === 0 && json.data && json.data.play) {
+                    if (json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                         const d = json.data;
-                        let fpsVal = null;
-                        if (d.play) {
-                            fpsVal = await parseFpsFromUrl(d.play);
-                        }
                         const result = {
-                            play: d.play,
+                            play: d.play || d.hdplay || '',
+                            hdplay: d.hdplay || '',
+                            wmplay: d.wmplay || '',
                             cover: d.cover || d.origin_cover || '',
                             title: d.title || '',
                             author_unique_id: d.author?.unique_id || '',
                             author_nickname: d.author?.nickname || '',
                             size: d.size || 0,
                             duration: d.duration || 0,
-                            fps: fpsVal
+                            w: d.w || 0,
+                            h: d.h || 0
                         };
-                        // Only persist to cache when this is a normal (non-bypass) request.
-                        // Stats tool always passes nocache=1 so results are never stored.
                         if (!bypassCache) {
                             await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
                         }

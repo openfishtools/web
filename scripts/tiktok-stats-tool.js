@@ -1,31 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
-    
+
     const inputUrl = document.getElementById('tool-tiktok-stats-input');
     const btnAnalyse = document.getElementById('btn-analyse-tiktok');
     const statusText = document.getElementById('tool-tiktok-stats-status');
     const resultsContainer = document.getElementById('tiktok-stats-results');
-    
-    // Preview fields
+
     const statsCover = document.getElementById('stats-video-cover');
     const statsCreatorName = document.getElementById('stats-creator-name');
     const statsCreatorHandle = document.getElementById('stats-creator-handle');
     const statsCaption = document.getElementById('stats-caption');
-    
-    // Details fields
     const statsResolution = document.getElementById('stats-resolution');
     const statsFps = document.getElementById('stats-fps');
     const statsBitrate = document.getElementById('stats-bitrate');
     const statsDuration = document.getElementById('stats-duration');
     const statsSize = document.getElementById('stats-size');
-    
+
     let isRunning = false;
 
-    // Trigger analysis on button click
     btnAnalyse.addEventListener('click', () => {
         let url = inputUrl.value.trim();
         if (url) {
-            // Helper to clean and prepend protocol if it's a partial URL
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 if (url.includes('tiktok.com')) {
                     url = 'https://' + url;
@@ -41,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Trigger analysis on Enter key press in the input field
     inputUrl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -57,8 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function analyseTikTokVideo(pageUrl) {
         if (isRunning) return;
         isRunning = true;
-        
-        // Reset UI state
+
         btnAnalyse.disabled = true;
         resultsContainer.classList.add('hidden');
         showStatus("Fetching video details...");
@@ -66,34 +59,31 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
             if (!response.ok) {
-                throw new Error("Unable to resolve TikTok video URL. Please check the URL.");
+                throw new Error("Unable to resolve TikTok video URL.");
             }
-            
+
             const metadata = await response.json();
             if (!metadata || !metadata.play) {
                 throw new Error("Could not extract stream URL for this video.");
             }
 
-            // Fill basic stats immediately
             statsCover.src = metadata.cover || '';
             statsCreatorName.textContent = metadata.author_nickname || 'Creator';
             statsCreatorHandle.textContent = metadata.author_unique_id ? `@${metadata.author_unique_id}` : '@username';
             statsCaption.textContent = metadata.title || 'No caption';
-            
+
             const duration = metadata.duration || 0;
             const size = metadata.size || 0;
-            
+
             statsDuration.textContent = duration ? `${duration}s` : '—';
             statsSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
 
-            // Set FPS (resolved by backend proxy)
-            if (metadata.fps && !isNaN(metadata.fps)) {
-                statsFps.textContent = `${metadata.fps} fps`;
+            if (metadata.w && metadata.h) {
+                statsResolution.textContent = `${metadata.w} x ${metadata.h}`;
             } else {
-                statsFps.textContent = '—';
+                statsResolution.textContent = '—';
             }
 
-            // Calculate average Bitrate
             if (size && duration) {
                 const bitrateKbps = (size * 8) / (duration * 1000);
                 if (bitrateKbps >= 1000) {
@@ -105,65 +95,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 statsBitrate.textContent = '—';
             }
 
-            showStatus("Analysing resolution...");
+            showStatus("Analysing FPS...");
 
-            let resolution = '—';
-            if (metadata.play) {
-                try {
-                    resolution = await extractResolution(metadata.play);
-                } catch (e) {
-                    resolution = '—';
-                }
+            const fps = await analyseFpsFromUrl(metadata.play);
+            if (fps && !isNaN(fps)) {
+                statsFps.textContent = `${fps} fps`;
+            } else {
+                statsFps.textContent = '—';
             }
-            statsResolution.textContent = resolution;
 
-            // Success: show the results container
             showStatus("");
             resultsContainer.classList.remove('hidden');
 
         } catch (err) {
             console.error(err);
-            showStatus(err.message || "An error occurred during analysis.", "var(--md-sys-color-error)");
+            showStatus(err.message || "Analysis failed.", "var(--md-sys-color-error)");
         } finally {
             isRunning = false;
             btnAnalyse.disabled = false;
         }
     }
 
-    // Load resolution using HTML5 video metadata loading
-    function extractResolution(videoUrl) {
-        return new Promise((resolve) => {
-            if (!videoUrl || !videoUrl.startsWith('http')) {
-                resolve('—');
-                return;
+    function findBox(buffer, targetType, startOffset = 0, endOffset = null) {
+        const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        let offset = startOffset;
+        const maxOffset = endOffset !== null ? endOffset : buffer.byteLength;
+
+        while (offset < maxOffset - 8) {
+            const size = view.getUint32(offset);
+            if (size <= 0 || offset + size > maxOffset) break;
+
+            const type = String.fromCharCode(
+                view.getUint8(offset + 4),
+                view.getUint8(offset + 5),
+                view.getUint8(offset + 6),
+                view.getUint8(offset + 7)
+            );
+
+            if (type === targetType) {
+                return { offset, size };
             }
 
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.crossOrigin = 'anonymous';
-            video.src = videoUrl;
+            if (['moov', 'trak', 'mdia', 'minf', 'stbl'].includes(type)) {
+                const result = findBox(buffer, targetType, offset + 8, offset + size);
+                if (result) return result;
+            }
 
-            video.onloadedmetadata = () => {
-                const width = video.videoWidth;
-                const height = video.videoHeight;
-                if (width && height) {
-                    resolve(`${width} x ${height}`);
-                } else {
-                    resolve('—');
-                }
-                video.src = '';
-            };
+            offset += size;
+        }
+        return null;
+    }
 
-            video.onerror = () => {
-                resolve('—');
-            };
+    function parseFpsFromBuffer(buffer) {
+        try {
+            const mdhd = findBox(buffer, 'mdhd');
+            const stts = findBox(buffer, 'stts');
 
-            setTimeout(() => {
-                if (video.src === videoUrl) {
-                    video.src = '';
-                }
-                resolve('—');
-            }, 6000);
-        });
+            if (!mdhd || !stts) return null;
+
+            const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+            const mdhdVersion = view.getUint8(mdhd.offset + 8);
+            let timescale = 0;
+            if (mdhdVersion === 1) {
+                timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 8 + 8);
+            } else {
+                timescale = view.getUint32(mdhd.offset + 8 + 1 + 3 + 4 + 4);
+            }
+
+            const entryCount = view.getUint32(stts.offset + 12);
+            if (entryCount === 0) return null;
+
+            const sampleDelta = view.getUint32(stts.offset + 16);
+            if (sampleDelta === 0) return null;
+
+            const fps = timescale / sampleDelta;
+            return isNaN(fps) ? null : Math.round(fps * 1000) / 1000;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function analyseFpsFromUrl(videoUrl) {
+        if (!videoUrl || !videoUrl.startsWith('http')) return null;
+
+        try {
+            const response = await fetch(videoUrl, {
+                headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' }
+            });
+
+            if (!response.ok && response.status !== 206) return null;
+
+            const buffer = await response.arrayBuffer();
+            return parseFpsFromBuffer(buffer);
+        } catch (e) {
+            console.error("FPS analysis failed:", e);
+            return null;
+        }
     }
 });
