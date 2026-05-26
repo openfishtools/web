@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressPercent.textContent = '0%';
 
         try {
-            const { FFmpeg } = window.FFmpeg;
+            const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             const ffmpeg = new FFmpeg();
 
