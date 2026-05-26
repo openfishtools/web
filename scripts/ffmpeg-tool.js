@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
                     <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
                     <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 18 (Visually Lossless)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
                 </ul>
                 <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
                 <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
@@ -46,13 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
                 <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
                     <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.265 / HEVC (libx265)</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Fast</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 24 (Good Quality)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow (Maximum Compression)</li>
+                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
                 </ul>
                 <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
                 <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
                     <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                    <span>Utilizes modern HEVC encoding to compress files quickly while maintaining a small size. Note: May not be supported on older devices.</span>
+                    <span>Utilizes HEVC with a slow encoding preset to achieve incredibly small file sizes while maintaining good quality. Note: May not be supported on older devices.</span>
                 </div>
             </div>
         `
@@ -165,10 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let command = [];
             if (preset === 'slow') {
                 // H.264 High Quality
-                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-c:a', 'copy', 'output.mp4'];
+                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else if (preset === 'fast') {
-                // H.265 Fast Encoding
-                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx265', '-preset', 'fast', '-crf', '24', '-c:a', 'copy', 'output.mp4'];
+                // H.265 Slow Encoding for max compression
+                command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx265', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else {
                 // Medium H.264
                 command = ['-i', 'input.mp4', '-threads', threads, '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
