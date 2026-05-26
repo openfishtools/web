@@ -212,6 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             const ffmpeg = new FFmpeg();
 
+            // Flag set by the log listener when WASM signals OOM.
+            // Used to show the right error even when exec() doesn't throw.
+            let oomDetected = false;
+
             // Setup Progress Listener
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
@@ -221,11 +225,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${statusMsg}...</span>`;
             });
 
-            // Watch logs for OOM signals
+            // Watch logs for OOM / abort signals from the WASM worker
             ffmpeg.on('log', ({ message }) => {
                 console.log(message);
-                if (message.includes('OOM') || message.includes('Aborted')) {
-                    showOomWarning(file.size / (1024 * 1024), false);
+                const lc = message.toLowerCase();
+                if (lc.includes('oom') || lc.includes('aborted') || lc.includes('out of memory')) {
+                    oomDetected = true;
                 }
             });
 
@@ -248,8 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
             console.log(`Using ${threads} threads for compression.`);
 
-            // Scale filter — limits the longest edge to MAX_DIMENSION, preserves aspect ratio,
-            // forces even pixel dimensions (required by libx264/libx265).
             // Scale filter — limits the longest edge to MAX_DIMENSION (4K), preserves aspect ratio,
             // forces even pixel dimensions (required by libx264/libx265).
             const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
@@ -272,8 +275,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await ffmpeg.exec(command);
 
+            // OOM check 1: log listener flagged it
+            if (oomDetected) {
+                throw Object.assign(new Error('OOM'), { _oom: true });
+            }
+
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
             const data = await ffmpeg.readFile('output.mp4');
+
+            // OOM check 2: output file is suspiciously small (< 1 KB = definitely failed)
+            if (!data || data.byteLength < 1024) {
+                throw Object.assign(new Error('OOM'), { _oom: true });
+            }
+
             const blob = new Blob([data.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
 
@@ -295,7 +309,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(error);
             const msg = (error.message || '').toLowerCase();
-            if (msg.includes('oom') || msg.includes('aborted') || msg.includes('memory') || msg.includes('abort')) {
+            const isOom = error._oom
+                || oomDetected
+                || msg.includes('oom')
+                || msg.includes('aborted')
+                || msg.includes('out of memory')
+                || msg.includes('abort');
+            if (isOom) {
                 showOomWarning(file.size / (1024 * 1024), false);
             } else {
                 showStatusError(`Error: ${error.message}`);
