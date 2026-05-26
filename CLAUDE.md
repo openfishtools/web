@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with code here.
 
 ## Project Overview
 
-CHROS is a Material You (MD3) web application providing social links, video presets, downloadable resources, tools, and admin chat functionality.
+CHROS — Material You (MD3) app: social links, video presets, downloads, tools, admin chat.
 
 ## Commands
 
@@ -17,34 +17,34 @@ npm run dev     # Run with nodemon for development
 
 ### Backend (Node.js/Express)
 
-- **API Server**: [api/index.js](api/index.js) - Express app with MongoDB integration
-- **Database Models**: [api/models/](api/models/) - Mongoose schemas (Admin, Session)
-- **Serverless-First**: Uses cached DB connection pattern for Vercel/serverless environments
+- **API Server**: [api/index.js](api/index.js) — Express + MongoDB
+- **Database Models**: [api/models/](api/models/) — Mongoose schemas (Admin, Session)
+- **Serverless-First**: Cached DB connection for Vercel/serverless
 
-**Key API patterns:**
-- Admin routes protected by `requireAdmin` middleware (JWT Bearer token)
-- Sessions stored in MongoDB (not memory) for serverless compatibility
-- File uploads via Supabase Storage (`/api/upload`)
-- TikTok resolution uses upstream APIs with local caching (1hr TTL)
+**Key patterns:**
+- Admin routes use `requireAdmin` middleware (JWT Bearer)
+- Sessions in MongoDB (not memory) for serverless
+- Uploads via Supabase Storage (`/api/upload`)
+- TikTok resolution via upstream APIs, 1hr local cache
 
 ### Frontend
 
-- **Main App**: [index.html](index.html) - Single-page with tabbed sections (Social, Preset, Resource, Tools, Chat)
-- **Admin Panel**: [admin.html](admin.html) - Separate admin dashboard
-- **Scripts**: [scripts/app.js](scripts/app.js) - Main UI logic, chat functionality
-- **FFmpeg Tool**: [scripts/ffmpeg-tool.js](scripts/ffmpeg-tool.js) - Client-side video compression using WASM
-- **TikTok Stats**: [scripts/tiktok-stats-tool.js](scripts/tiktok-stats-tool.js) - Video metadata extraction
+- **Main App**: [index.html](index.html) — SPA, tabs (Social, Preset, Resource, Tools, Chat)
+- **Admin Panel**: [admin.html](admin.html) — separate dashboard
+- **Scripts**: [scripts/app.js](scripts/app.js) — UI logic, chat
+- **FFmpeg Tool**: [scripts/ffmpeg-tool.js](scripts/ffmpeg-tool.js) — WASM video compression
+- **TikTok Stats**: [scripts/tiktok-stats-tool.js](scripts/tiktok-stats-tool.js) — metadata extraction
 
 ### Design System
 
-- **Greentea Theme**: Green-based tonal palettes defined in [styles/main.css](styles/main.css)
-- **Responsive Layouts**: Mobile-first with breakpoints at 600px (Rail) and 1024px (Drawer) in [styles/responsive.css](styles/responsive.css)
-- **Admin Styles**: [styles/admin.css](styles/admin.css) - Separate admin panel styling
+- **Greentea Theme**: Green tonal palettes in [styles/main.css](styles/main.css)
+- **Responsive**: Mobile-first, breakpoints at 600px (Rail), 1024px (Drawer) — [styles/responsive.css](styles/responsive.css)
+- **Admin Styles**: [styles/admin.css](styles/admin.css)
 
 ### Storage & Services
 
-- **MongoDB**: Primary database (Mongoose models for Chat, Messages, Presets, Resources, Socials)
-- **Supabase**: File storage via bucket, configured via environment variables
+- **MongoDB**: Primary DB (Mongoose: Chat, Messages, Presets, Resources, Socials, Likes)
+- **Supabase**: File storage via bucket
 - **Web Push**: Admin notifications via VAPID keys
 
 ## Environment Variables
@@ -58,24 +58,24 @@ VAPID_PUBLIC_KEY     # Web push public key
 VAPID_PRIVATE_KEY   # Web push private key
 ```
 
-## Key Data Models
+## Data Models
 
 | Model | Purpose |
 |-------|---------|
-| `Admin` | Admin credentials (username + bcrypt hash) |
-| `Session` | Auth tokens with expiry for admin sessions |
-| `Chat` | User chat sessions (linked by IP) |
-| `Message` | Chat messages within a chat |
+| `Admin` | Credentials (username + bcrypt hash) |
+| `Session` | Auth tokens with expiry |
+| `Chat` | User chat sessions (IP-linked) |
+| `Message` | Chat messages |
 | `Preset` | Video presets (AE, CapCut, etc.) with download URLs |
-| `Resource` | Downloadable software resources with version info |
-| `Social` | Social media link items |
-| `Like` | Preset like tracking by IP |
+| `Resource` | Downloads with version info |
+| `Social` | Socials media links |
+| `Like` | Preset likes by IP |
 
 ## Design Rules
 
-- Material You (MD3) design language
-- Greentea theme: Green-based tonal palettes
-- 8dp grid system, 12px/16px/28px corner radius
-- No inline CSS or JS in HTML files
-- No comments in code files
+- Material You (MD3)
+- Greentea theme: Green tonal palettes
+- 8dp grid, 12px/16px/28px corner radius
+- No inline CSS/JS in HTML
+- No comments in code
 - CSS/JS in separate files from HTML
