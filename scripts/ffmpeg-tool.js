@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-rounded" style="font-size:20px;">warning</span>
                         Large file warning &mdash; ${fileMB.toFixed(0)} MB
                     </div>
-                    This file may cause an <strong>Out of Memory</strong> crash. High-bitrate sources like ProRes 4K frequently exceed FFmpeg WASM's memory limit. Compression will still be attempted &mdash; downscaling to 1920px will be applied automatically.
+                    This file may cause an <strong>Out of Memory</strong> crash or extremely slow encoding. High-bitrate sources like ProRes 4K frequently exceed FFmpeg WASM's memory limit. Compression will still be attempted &mdash; downscaling to 4K and ultrafast preset will be applied automatically.
                 </div>
                 <span style="color: var(--md-sys-color-on-surface-variant); font-size: 13px;">${infoLine}</span>`;
             btnStart.classList.remove('hidden');
@@ -201,11 +201,21 @@ document.addEventListener('DOMContentLoaded', () => {
         progressPercent.textContent = '0%';
 
         try {
-            // --- Pre-flight: detect resolution for auto-scaling ---
+            // --- Pre-flight: detect resolution for auto-scaling and preset selection ---
             const { width, height } = await getVideoDimensions(file);
             const needsScale = width > MAX_DIMENSION || height > MAX_DIMENSION;
             if (needsScale) {
                 console.log(`Video is ${width}x${height} — will auto-scale to max ${MAX_DIMENSION}px.`);
+            }
+
+            // WASM has no CPU acceleration (libx264 logs "cpu capabilities: none!").
+            // For resolutions above 1080p, override to 'ultrafast' preset to avoid
+            // encoding times of 20-40+ minutes in the browser.
+            const WASM_FAST_THRESHOLD = 1080;
+            const isLargeRes = Math.max(width, height) > WASM_FAST_THRESHOLD;
+            const effectivePreset = isLargeRes ? 'ultrafast' : preset;
+            if (isLargeRes) {
+                console.log(`Resolution ${width}x${height} > ${WASM_FAST_THRESHOLD}px — overriding to ultrafast preset for WASM speed.`);
             }
 
             const { FFmpeg } = window.FFmpegWASM;
@@ -217,7 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Compressing${needsScale ? ' (auto-scaled to 4K)' : ''}...</span>`;
+                let statusMsg = 'Compressing';
+                if (needsScale) statusMsg += ' (auto-scaled)';
+                if (isLargeRes && preset !== 'ultrafast') statusMsg += ' (ultrafast mode — large res)';
+                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${statusMsg}...</span>`;
             });
 
             // Watch logs for OOM signals
@@ -240,7 +253,12 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Starting compression${needsScale ? ' (downscaling to 4K max)' : ''}...</span>`;
+            let startMsg = 'Starting compression';
+            if (needsScale) startMsg += ' (downscaling to 4K max)';
+            if (isLargeRes && preset !== 'ultrafast') {
+                startMsg += ' — resolution > 1080p detected, using ultrafast preset for speed';
+            }
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${startMsg}...</span>`;
 
             // Determine optimal thread count
             const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
@@ -252,20 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // forces even pixel dimensions (required by libx264/libx265).
             const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
 
-            // Determine command based on preset
+            // Determine command based on preset.
+            // effectivePreset may be 'ultrafast' regardless of user choice for large resolutions,
+            // because WASM has no CPU acceleration — slow/medium presets at 4K take 20-40+ minutes.
             let command = [];
-            if (preset === 'slow') {
+            if (preset === 'fast') {
+                // H.265 — ultrafast is not available in libx265, use fast instead
+                const x265Preset = isLargeRes ? 'fast' : 'slow';
                 command = ['-i', 'input.mp4', '-threads', threads,
                     ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
-            } else if (preset === 'fast') {
-                command = ['-i', 'input.mp4', '-threads', threads,
-                    ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx265', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                    '-c:v', 'libx265', '-preset', x265Preset, '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else {
+                // H.264 (slow or medium user choice, but overridden to ultrafast if large res)
                 command = ['-i', 'input.mp4', '-threads', threads,
                     ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                    '-c:v', 'libx264', '-preset', effectivePreset, '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             }
 
             await ffmpeg.exec(command);
