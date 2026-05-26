@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressContainer = document.getElementById('ffmpeg-progress-container');
     const progressFill = document.getElementById('ffmpeg-progress-fill');
     const progressPercent = document.getElementById('ffmpeg-progress-percent');
-    const presetChips = document.querySelectorAll('#ffmpeg-presets .chip');
+    const presetChips = document.querySelectorAll('#ffmpeg-presets .preset-switch');
 
     let selectedFile = null;
     let selectedPreset = 'medium';

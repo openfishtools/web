@@ -245,12 +245,40 @@
                             <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm" hidden>
                         </div>
                         
-                        <div style="margin-top: 16px;">
-                            <label style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface); margin-bottom: 8px; display: block;">Compression Preset:</label>
-                            <div class="chip-group" id="ffmpeg-presets" style="justify-content: flex-start; margin-bottom: 16px;">
-                                <div class="chip" data-preset="slow">Slow (H.264 High Quality)</div>
-                                <div class="chip active" data-preset="medium">Medium (H.264 Balanced)</div>
-                                <div class="chip" data-preset="fast">Fast (H.265 Fast Encoding)</div>
+                        <style>
+                            .ffmpeg-preset-container {
+                                display: flex; 
+                                justify-content: center; 
+                                margin-top: 16px; 
+                                margin-bottom: 16px;
+                            }
+                            .preset-switch-group {
+                                display: inline-flex; 
+                                background: var(--md-sys-color-surface-container-highest); 
+                                padding: 4px; 
+                                border-radius: 24px; 
+                                gap: 4px;
+                            }
+                            .preset-switch {
+                                padding: 8px 24px; 
+                                border-radius: 20px; 
+                                font-size: 14px; 
+                                font-weight: 600; 
+                                cursor: pointer; 
+                                color: var(--md-sys-color-on-surface-variant);
+                                transition: all 0.2s ease;
+                            }
+                            .preset-switch.active {
+                                background: var(--md-sys-color-primary); 
+                                color: var(--md-sys-color-on-primary); 
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            }
+                        </style>
+                        <div class="ffmpeg-preset-container">
+                            <div class="preset-switch-group" id="ffmpeg-presets">
+                                <div class="preset-switch" data-preset="slow">Slow</div>
+                                <div class="preset-switch active" data-preset="medium">Medium</div>
+                                <div class="preset-switch" data-preset="fast">Fast</div>
                             </div>
                         </div>
 
