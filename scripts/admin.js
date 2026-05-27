@@ -37,12 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const jsonHeaders = () => adminAuthHeaders({ 'Content-Type': 'application/json' });
 
-    // Returns a resized Supabase image URL (admin thumbnails)
+    // Returns a proxied + resized Supabase image URL (admin thumbnails)
     const thumbUrl = (url, width = 64) => {
         if (!url) return url;
         if (url.includes('supabase.co/storage/v1/object/public')) {
             const sep = url.includes('?') ? '&' : '?';
-            return `${url}${sep}width=${width}&quality=75&resize=contain`;
+            const supaUrl = `${url}${sep}width=${width}&quality=75&resize=contain`;
+            return `${API_URL}/image-proxy?url=${encodeURIComponent(supaUrl)}`;
         }
         return url;
     };

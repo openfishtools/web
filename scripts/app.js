@@ -19,12 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
-    // Returns a resized Supabase image URL, or original if not a Supabase storage URL
+    // Returns a proxied + resized Supabase image URL, or original if not a Supabase storage URL
     const thumbUrl = (url, width = 128) => {
         if (!url) return url;
         if (url.includes('supabase.co/storage/v1/object/public')) {
             const sep = url.includes('?') ? '&' : '?';
-            return `${url}${sep}width=${width}&quality=80&resize=contain`;
+            const supaUrl = `${url}${sep}width=${width}&quality=80&resize=contain`;
+            return `${API_URL}/image-proxy?url=${encodeURIComponent(supaUrl)}`;
         }
         return url;
     };
@@ -1397,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const iconEl = document.getElementById('res-popup-icon');
         const fallbackEl = document.getElementById('res-popup-icon-fallback');
         if (resource.icon && (resource.icon.startsWith('http') || resource.icon.includes('/'))) {
-            iconEl.src = resource.icon;
+            iconEl.src = thumbUrl(resource.icon, 128);
             iconEl.classList.remove('hidden');
             if (fallbackEl) fallbackEl.classList.add('hidden');
         } else {

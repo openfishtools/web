@@ -724,4 +724,31 @@ app.delete('/api/upload', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
+// Image proxy to bypass Supabase CORP headers
+app.get('/api/image-proxy', async (req, res) => {
+    const url = req.query.url;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Missing url' });
+    // Only allow proxying from our own Supabase storage
+    if (!url.includes('supabase.co/storage/v1/object/public')) {
+        return res.status(403).json({ error: 'URL not allowed' });
+    }
+    try {
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!response.ok) return res.status(response.status).end();
+        const contentType = response.headers.get('content-type') || 'image/png';
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.set({
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=86400',
+            'Cross-Origin-Resource-Policy': 'same-origin'
+        });
+        res.send(buffer);
+    } catch (e) {
+        res.status(502).json({ error: 'Proxy fetch failed' });
+    }
+});
+
 module.exports = app;
