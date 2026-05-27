@@ -2959,3 +2959,57 @@ body {
     background-color: var(--md-sys-color-surface-container-highest);
     width: 120px;
 }
+
+/* Maintenance Mode */
+.card.maintenance {
+    position: relative;
+    overflow: hidden;
+}
+
+.card.maintenance > *:not(.maintenance-overlay) {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(80%);
+}
+
+.maintenance-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--md-sys-color-surface-rgb), 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    text-align: center;
+    padding: 24px;
+}
+
+.card.maintenance .maintenance-overlay {
+    display: flex;
+}
+
+.maintenance-icon {
+    font-size: 48px !important;
+    color: var(--md-sys-color-error, #ba1a1a);
+    margin-bottom: 12px;
+}
+
+.maintenance-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
+    margin: 0 0 8px 0;
+}
+
+.maintenance-desc {
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 0;
+    line-height: 1.5;
+}

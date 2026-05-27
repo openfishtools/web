@@ -1645,11 +1645,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Tools: TikTok Quality Patcher ---
+    const TIKTOK_PATCHER_MAINTENANCE = true; // TOGGLE THIS FLAG TO TURN MAINTENANCE MODE ON/OFF
+    const tkCard = document.getElementById('tiktok-patcher-card');
     const tkDrop = document.getElementById('tool-tiktok-patcher-drop');
     const tkInput = document.getElementById('tool-tiktok-patcher-input');
     const tkStatus = document.getElementById('tool-tiktok-patcher-status');
 
-    if (tkDrop && tkInput) {
+    if (TIKTOK_PATCHER_MAINTENANCE && tkCard) {
+        tkCard.classList.add('maintenance');
+    }
+
+    if (tkDrop && tkInput && !TIKTOK_PATCHER_MAINTENANCE) {
         tkDrop.addEventListener('click', () => tkInput.click());
         tkDrop.addEventListener('dragover', e => { e.preventDefault(); tkDrop.classList.add('active'); });
         tkDrop.addEventListener('dragleave', () => tkDrop.classList.remove('active'));
