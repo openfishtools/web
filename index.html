@@ -194,31 +194,59 @@
                 </div>
                 <div class="grid">
                     <div class="card" id="tiktok-patcher-card">
-                        <div class="maintenance-overlay">
-                            <span class="material-symbols-rounded maintenance-icon">construction</span>
-                            <h4 class="maintenance-title">Under Maintenance</h4>
-                            <p class="maintenance-desc">Tiktok Quality Patcher is currently under maintenance. We are working on a fix.</p>
-                        </div>
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                        <div class="flex align-center gap-16" style="margin-bottom: 20px;">
                             <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">movie_edit</span>
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">high_quality</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Quality Patcher</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Hex
-                                    Edit Method</div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Quality Method</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">TikTok HQ Upload</div>
                             </div>
                         </div>
-                        <div class="drag-drop-area" id="tool-tiktok-patcher-drop">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span>Drag & drop video here or click to select</span>
-                            <input type="file" id="tool-tiktok-patcher-input" accept="video/mp4,video/quicktime" hidden>
-                        </div>
-                        <div id="tool-tiktok-patcher-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+
+                        <!-- Method Source Panel -->
+                        <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="material-symbols-rounded" style="color: var(--md-sys-color-primary); font-size: 20px;">info</span>
+                                <span style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface);">JV 60FPS Method</span>
+                            </div>
+                            <p style="font-size: 13px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant); margin: 0;">
+                                This guide is based on the quality optimization workflow by 
+                                <a href="https://www.tiktok.com/@jv_60fps?lang=en" target="_blank" rel="noopener noreferrer" style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600; border-bottom: 1.5px dashed var(--md-sys-color-primary);">JV 60FPS</a>. 
+                                By pre-compressing and uploading via TikTok Studio Web, you bypass the heavy mobile compression algorithms.
+                            </p>
                         </div>
 
-                        <div
-                            style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant);">
+                        <!-- Recommended Tools Section -->
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="font-size: 11px; font-weight: 700; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Recommended Tools</h4>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <span class="material-symbols-rounded" style="font-size: 24px; color: var(--md-sys-color-primary);">movie_filter</span>
+                                    <div>
+                                        <div style="font-size: 13.5px; font-weight: 600; color: var(--md-sys-color-on-surface);">Alight Motion or After Effects</div>
+                                        <div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">Best editors for rendering high-fidelity 1080p, 60 FPS videos.</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <span class="material-symbols-rounded" style="font-size: 24px; color: var(--md-sys-color-primary);">compress</span>
+                                    <div>
+                                        <div style="font-size: 13.5px; font-weight: 600; color: var(--md-sys-color-on-surface);">Video Compressor (FFmpeg)</div>
+                                        <div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">Use the compressor tool next to this to optimize video bitrate.</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant);">
+                                    <span class="material-symbols-rounded" style="font-size: 24px; color: var(--md-sys-color-primary);">desktop_windows</span>
+                                    <div>
+                                        <div style="font-size: 13.5px; font-weight: 600; color: var(--md-sys-color-on-surface);">TikTok Studio (Web Upload)</div>
+                                        <div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">Bypasses the mobile app's video downscaling/compression.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Workflow Steps -->
+                        <div style="padding-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant);">
+                            <h4 style="font-size: 11px; font-weight: 700; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Step-by-Step Workflow</h4>
                             <div class="upload-steps" style="display: flex; flex-direction: column; gap: 12px;">
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
                                     <div class="step-number"
@@ -226,7 +254,7 @@
                                         1</div>
                                     <div class="step-text"
                                         style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
-                                        Upload an upscaled and compressed video at up to 60 FPS here.</div>
+                                        Export your video at <strong>1080p, 60 FPS</strong> using your editor.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
                                     <div class="step-number"
@@ -234,10 +262,7 @@
                                         2</div>
                                     <div class="step-text"
                                         style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
-                                        Go to <a href="https://tiktok.com/tiktokstudio" target="_blank"
-                                            rel="noopener noreferrer"
-                                            style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600;">tiktok.com/tiktokstudio</a>
-                                        and upload the video.</div>
+                                        Compress the exported video using the <strong>Video Compressor</strong> tool (Medium / Slow Preset).</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
                                     <div class="step-number"
@@ -245,7 +270,10 @@
                                         3</div>
                                     <div class="step-text"
                                         style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
-                                        Change visibility to <strong>Only me</strong>.</div>
+                                        Go to <a href="https://tiktok.com/tiktokstudio" target="_blank"
+                                            rel="noopener noreferrer"
+                                            style="color: var(--md-sys-color-primary); text-decoration: none; font-weight: 600;">tiktok.com/tiktokstudio</a>
+                                        on your desktop browser and upload the compressed video.</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
                                     <div class="step-number"
@@ -253,7 +281,7 @@
                                         4</div>
                                     <div class="step-text"
                                         style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
-                                        Upload and wait 1 minute until video review is finished.</div>
+                                        Set the video privacy / visibility to <strong>Only me</strong> (Private).</div>
                                 </div>
                                 <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
                                     <div class="step-number"
@@ -261,8 +289,15 @@
                                         5</div>
                                     <div class="step-text"
                                         style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
-                                        Open TikTok on mobile and change visibility from <strong>Only me</strong> to
-                                        <strong>Public</strong>.</div>
+                                        Publish the private video and wait <strong>1-2 minutes</strong> for high-definition processing.</div>
+                                </div>
+                                <div class="step-item" style="display: flex; gap: 12px; align-items: flex-start;">
+                                    <div class="step-number"
+                                        style="background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;">
+                                        6</div>
+                                    <div class="step-text"
+                                        style="font-size: 13.5px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant);">
+                                        Open the TikTok app on mobile, locate the uploaded private video, and change visibility to <strong>Everyone</strong> (Public).</div>
                                 </div>
                             </div>
                         </div>
