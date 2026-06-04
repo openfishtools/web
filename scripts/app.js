@@ -1502,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (osKeys.length > 0) {
             osChipsEl.innerHTML = osKeys.map(key =>
                 `<button class="res-popup-chip os-chip-btn" data-os="${key}">
-                    ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" style="width:16px;height:16px" alt="${key}">` : ''}
+                    ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" style="width:16px;height:16px" alt="${key}">` : ''}
                     <span>${OS_LABEL[key] || key}</span>
                 </button>`
             ).join('');
