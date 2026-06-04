@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sendMessage();
         }
     });
-
+    let autoOpenFishTools = true;
     const hash = window.location.hash.substring(1);
     const downloadModal = document.getElementById('download-modal');
     const closeModalBtn = document.getElementById('close-modal');
@@ -1377,13 +1377,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (item) openResourcePopup(item);
                 });
             });
-        } else {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <span class="material-symbols-rounded">search_off</span>
-                    <p>No resources found</p>
-                </div>
-            `;
+        }
+
+        if (autoOpenFishTools && window.location.hash === '#fishtoolupdate') {
+            autoOpenFishTools = false;
+            const fishTools = allResources.find(r => r.title && r.title.toLowerCase() === 'fishtools');
+            if (fishTools) {
+                openResourcePopup(fishTools);
+            }
         }
     };
 
@@ -1644,7 +1645,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const initialTab = hash || 'social';
+    const initialTab = (hash === 'fishtoolupdate') ? 'resource' : (hash || 'social');
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
 });
