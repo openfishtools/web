@@ -5,38 +5,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewCanvas = document.getElementById('photo-preview-canvas');
     const btnDownload = document.getElementById('btn-download-photo');
 
-    // Sliders
-    const slideSharpen = document.getElementById('slide-sharpen');
-    const slideUnsharpAmount = document.getElementById('slide-unsharp-amount');
-    const slideUnsharpRadius = document.getElementById('slide-unsharp-radius');
-    const slideBrightness = document.getElementById('slide-brightness');
-    const slideContrast = document.getElementById('slide-contrast');
-    const slideShadows = document.getElementById('slide-shadows');
-    const slideHue = document.getElementById('slide-hue');
-    const slideSaturation = document.getElementById('slide-saturation');
+    // Preset Buttons
+    const btnPresetCf1 = document.getElementById('btn-preset-cf1');
+    const btnPresetCf2 = document.getElementById('btn-preset-cf2');
 
-    // Slider value labels
-    const valSharpen = document.getElementById('val-sharpen');
-    const valUnsharpAmount = document.getElementById('val-unsharp-amount');
-    const valUnsharpRadius = document.getElementById('val-unsharp-radius');
-    const valBrightness = document.getElementById('val-brightness');
-    const valContrast = document.getElementById('val-contrast');
-    const valShadows = document.getElementById('val-shadows');
-    const valHue = document.getElementById('val-hue');
-    const valSaturation = document.getElementById('val-saturation');
+    // Preset configurations
+    const PRESETS = {
+        'cf1': {
+            sharpen: 36,
+            unsharpAmount: 143,
+            unsharpRadius: 6.9,
+            brightness: 0,
+            contrast: -1,
+            shadows: 29,
+            hue: 0,
+            saturation: 12
+        },
+        'cf2': {
+            sharpen: 48,
+            unsharpAmount: 164,
+            unsharpRadius: 4.3,
+            brightness: 0,
+            contrast: 0,
+            shadows: 17,
+            hue: 0,
+            saturation: 7
+        }
+    };
 
+    let selectedPreset = 'cf1';
+    let fileType = 'image'; // 'image' or 'video'
     let originalImage = null;
+    let originalVideo = null;
     let previewWidth = 0;
     let previewHeight = 0;
-    let originalFilename = 'edited_image';
-
-    // Throttling flag for real-time rendering
-    let renderPending = false;
+    let originalFilename = 'edited_media';
+    let videoAnimFrameId = null;
+    let isRecording = false;
 
     // File input changes
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            loadImage(e.target.files[0]);
+            handleMediaUpload(e.target.files[0]);
         }
     });
 
@@ -56,92 +66,125 @@ document.addEventListener('DOMContentLoaded', () => {
         dropArea.style.borderColor = '';
         dropArea.style.background = '';
         if (e.dataTransfer.files.length > 0) {
-            loadImage(e.dataTransfer.files[0]);
+            handleMediaUpload(e.dataTransfer.files[0]);
         }
     });
 
-    function loadImage(file) {
-        if (!file.type.startsWith('image/')) {
-            alert('Please upload a valid image.');
-            return;
+    function stopVideoPlayback() {
+        if (videoAnimFrameId) {
+            cancelAnimationFrame(videoAnimFrameId);
+            videoAnimFrameId = null;
         }
+        if (originalVideo) {
+            originalVideo.pause();
+            originalVideo.src = "";
+            originalVideo.load();
+            originalVideo = null;
+        }
+    }
 
-        originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || 'edited_image';
+    function handleMediaUpload(file) {
+        stopVideoPlayback();
+        originalImage = null;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                originalImage = img;
+        originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || 'edited_media';
 
-                // Determine downscaled size for real-time preview to avoid lag
-                const maxDim = 800;
-                let w = img.width;
-                let h = img.height;
-                if (w > maxDim || h > maxDim) {
-                    if (w > h) {
-                        h = Math.round((h * maxDim) / w);
-                        w = maxDim;
-                    } else {
-                        w = Math.round((w * maxDim) / h);
-                        h = maxDim;
-                    }
-                }
-                previewWidth = w;
-                previewHeight = h;
-
-                previewCanvas.width = previewWidth;
-                previewCanvas.height = previewHeight;
-
-                // Reset sliders to default
-                slideSharpen.value = 0;
-                slideUnsharpAmount.value = 0;
-                slideUnsharpRadius.value = 1.0;
-                slideBrightness.value = 0;
-                slideContrast.value = 0;
-                slideShadows.value = 0;
-                slideHue.value = 0;
-                slideSaturation.value = 0;
-
-                updateSliderLabels();
-
-                // Show controls, hide drop area or keep both
-                controls.classList.remove('hidden');
-                
-                requestRender();
+        if (file.type.startsWith('image/')) {
+            fileType = 'image';
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    setupDimensions(img.width, img.height);
+                    selectPreset(selectedPreset);
+                    controls.classList.remove('hidden');
+                };
+                img.src = e.target.result;
             };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+            fileType = 'video';
+            const videoUrl = URL.createObjectURL(file);
+            const video = document.createElement('video');
+            video.src = videoUrl;
+            video.muted = true;
+            video.loop = true;
+            video.autoplay = true;
+            video.playsInline = true;
+
+            video.onloadedmetadata = () => {
+                originalVideo = video;
+                setupDimensions(video.videoWidth, video.videoHeight);
+                selectPreset(selectedPreset);
+                controls.classList.remove('hidden');
+                video.play();
+                startVideoRenderLoop();
+            };
+        } else {
+            alert('Please upload a valid image or video file.');
+        }
     }
 
-    function updateSliderLabels() {
-        valSharpen.textContent = `${slideSharpen.value}%`;
-        valUnsharpAmount.textContent = `${slideUnsharpAmount.value}%`;
-        valUnsharpRadius.textContent = `${parseFloat(slideUnsharpRadius.value).toFixed(1)}px`;
-        valBrightness.textContent = (slideBrightness.value > 0 ? '+' : '') + slideBrightness.value;
-        valContrast.textContent = (slideContrast.value > 0 ? '+' : '') + slideContrast.value;
-        valShadows.textContent = (slideShadows.value > 0 ? '+' : '') + slideShadows.value;
-        valHue.textContent = `${slideHue.value}°`;
-        valSaturation.textContent = (slideSaturation.value > 0 ? '+' : '') + slideSaturation.value + '%';
+    function setupDimensions(origW, origH) {
+        const maxDim = 800;
+        let w = origW;
+        let h = origH;
+        if (w > maxDim || h > maxDim) {
+            if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+            } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+            }
+        }
+        previewWidth = w;
+        previewHeight = h;
+        previewCanvas.width = previewWidth;
+        previewCanvas.height = previewHeight;
     }
 
-    // Attach listeners to sliders for real-time update
-    const sliders = [slideSharpen, slideUnsharpAmount, slideUnsharpRadius, slideBrightness, slideContrast, slideShadows, slideHue, slideSaturation];
-    sliders.forEach(slider => {
-        slider.addEventListener('input', () => {
-            updateSliderLabels();
-            requestRender();
-        });
-    });
+    function selectPreset(presetKey) {
+        selectedPreset = presetKey;
+        
+        // Update button active styles
+        if (selectedPreset === 'cf1') {
+            btnPresetCf1.style.background = 'var(--md-sys-color-primary)';
+            btnPresetCf1.style.color = 'var(--md-sys-color-on-primary)';
+            btnPresetCf1.style.border = 'none';
 
-    function requestRender() {
-        if (renderPending) return;
-        renderPending = true;
-        requestAnimationFrame(() => {
-            renderPending = false;
+            btnPresetCf2.style.background = 'var(--md-sys-color-surface-container-high)';
+            btnPresetCf2.style.color = 'var(--md-sys-color-on-surface)';
+            btnPresetCf2.style.border = '2px solid var(--md-sys-color-outline-variant)';
+        } else {
+            btnPresetCf2.style.background = 'var(--md-sys-color-primary)';
+            btnPresetCf2.style.color = 'var(--md-sys-color-on-primary)';
+            btnPresetCf2.style.border = 'none';
+
+            btnPresetCf1.style.background = 'var(--md-sys-color-surface-container-high)';
+            btnPresetCf1.style.color = 'var(--md-sys-color-on-surface)';
+            btnPresetCf1.style.border = '2px solid var(--md-sys-color-outline-variant)';
+        }
+        
+        if (fileType === 'image') {
             applyFilters(previewCanvas, previewWidth, previewHeight);
-        });
+        }
+    }
+
+    btnPresetCf1.addEventListener('click', () => selectPreset('cf1'));
+    btnPresetCf2.addEventListener('click', () => selectPreset('cf2'));
+
+    function startVideoRenderLoop() {
+        if (videoAnimFrameId) cancelAnimationFrame(videoAnimFrameId);
+
+        function renderFrame() {
+            if (originalVideo && !originalVideo.paused && !originalVideo.ended) {
+                applyFilters(previewCanvas, previewWidth, previewHeight);
+            }
+            videoAnimFrameId = requestAnimationFrame(renderFrame);
+        }
+        renderFrame();
     }
 
     // Color conversion algorithms
@@ -220,25 +263,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyFilters(targetCanvas, width, height) {
-        if (!originalImage) return;
-
-        const ctx = targetCanvas.getContext('2d');
-        // Render base image
-        ctx.drawImage(originalImage, 0, 0, width, height);
+        const ctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+        
+        // Render base frame (Image or Video)
+        if (fileType === 'image' && originalImage) {
+            ctx.drawImage(originalImage, 0, 0, width, height);
+        } else if (fileType === 'video' && originalVideo) {
+            ctx.drawImage(originalVideo, 0, 0, width, height);
+        } else {
+            return;
+        }
 
         // Retrieve pixel data
         const imgData = ctx.getImageData(0, 0, width, height);
         const data = imgData.data;
 
-        // Get filter settings
-        const sharpenAmt = parseInt(slideSharpen.value) / 100;
-        const unsharpAmount = parseInt(slideUnsharpAmount.value);
-        const unsharpRadius = parseFloat(slideUnsharpRadius.value);
-        const brightness = parseInt(slideBrightness.value);
-        const contrast = parseInt(slideContrast.value);
-        const shadowsVal = parseInt(slideShadows.value);
-        const hueShift = parseInt(slideHue.value);
-        const saturationShift = parseInt(slideSaturation.value);
+        // Fetch settings from the currently selected preset config
+        const preset = PRESETS[selectedPreset];
+        const sharpenAmt = preset.sharpen / 100;
+        const unsharpAmount = preset.unsharpAmount;
+        const unsharpRadius = preset.unsharpRadius;
+        const brightness = preset.brightness;
+        const contrast = preset.contrast;
+        const shadowsVal = preset.shadows;
+        const hueShift = preset.hue;
+        const saturationShift = preset.saturation;
 
         // 1. Color Adjustments: Brightness, Contrast, Shadows, Hue, Saturation
         const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
@@ -339,35 +388,129 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.putImageData(imgData, 0, 0);
     }
 
-    // Download High-Resolution Edited Image
+    // Download / Export handler
     btnDownload.addEventListener('click', () => {
-        if (!originalImage) return;
+        if (fileType === 'image') {
+            if (!originalImage) return;
 
-        btnDownload.disabled = true;
-        btnDownload.textContent = 'Processing high-res output...';
+            btnDownload.disabled = true;
+            btnDownload.textContent = 'Processing high-res output...';
 
-        setTimeout(() => {
-            const outCanvas = document.createElement('canvas');
-            const w = originalImage.width;
-            const h = originalImage.height;
-            outCanvas.width = w;
-            outCanvas.height = h;
+            setTimeout(() => {
+                const outCanvas = document.createElement('canvas');
+                const w = originalImage.width;
+                const h = originalImage.height;
+                outCanvas.width = w;
+                outCanvas.height = h;
 
-            applyFilters(outCanvas, w, h);
+                applyFilters(outCanvas, w, h);
 
-            outCanvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${originalFilename}_edited.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                outCanvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${originalFilename}_${selectedPreset.toUpperCase()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
 
-                btnDownload.disabled = false;
-                btnDownload.textContent = 'Download Edited Photo';
-            }, 'image/png');
-        }, 100);
-    });
+                    btnDownload.disabled = false;
+                    btnDownload.textContent = 'Download Edited File';
+                }, 'image/png');
+            }, 100);
+        } else if (fileType === 'video') {
+            if (!originalVideo || isRecording) return;
+            isRecording = true;
+
+            btnDownload.disabled = true;
+            btnDownload.textContent = 'Processing video export (please wait)...';
+
+            // Pause the main loop rendering & main video
+            if (videoAnimFrameId) cancelAnimationFrame(videoAnimFrameId);
+            originalVideo.pause();
+
+            // Set up export parameters
+            const exportVideo = document.createElement('video');
+            exportVideo.src = originalVideo.src;
+            exportVideo.muted = true;
+            exportVideo.playsInline = true;
+
+            const exportCanvas = document.createElement('canvas');
+            // Export at 720p or original video size to save memory / prevent recorder crashes
+            const exportW = Math.min(1280, originalVideo.videoWidth);
+            const exportH = Math.round((originalVideo.videoHeight * exportW) / originalVideo.videoWidth);
+            exportCanvas.width = exportW;
+            exportCanvas.height = exportH;
+            
+            const exportCtx = exportCanvas.getContext('2d');
+
+            exportVideo.onloadeddata = async () => {
+                exportVideo.currentTime = 0;
+                await new Promise(resolve => setTimeout(resolve, 150));
+
+                const stream = exportCanvas.captureStream(30); // Capture at 30 FPS
+                
+                let supportedType = 'video/webm;codecs=vp9';
+                if (!MediaRecorder.isTypeSupported(supportedType)) {
+                    supportedType = 'video/webm;codecs=vp8';
+                    if (!MediaRecorder.isTypeSupported(supportedType)) {
+                        supportedType = 'video/webm';
+                    }
+                }
+
+                const chunks = [];
+                const recorder = new MediaRecorder(stream, { mimeType: supportedType });
+
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${originalFilename}_${selectedPreset.toUpperCase()}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    // Restore state
+                    isRecording = false;
+                    btnDownload.disabled = false;
+                    btnDownload.textContent = 'Download Edited File';
+
+                    originalVideo.play();
+                    startVideoRenderLoop();
+                };
+
+                recorder.start();
+                exportVideo.play();
+
+                function recordFrame() {
+                    if (!isRecording) return;
+                    if (!exportVideo.paused && !exportVideo.ended) {
+                        // Temp swap originalVideo to exportVideo to apply filters on it
+                        const oldVideo = originalVideo;
+                        originalVideo = exportVideo;
+                        applyFilters(exportCanvas, exportW, exportH);
+                        originalVideo = oldVideo;
+
+                        // Progress status
+                        const progress = Math.round((exportVideo.currentTime / exportVideo.duration) * 100) || 0;
+                        btnDownload.textContent = `Processing video: ${progress}%`;
+                        
+                        requestAnimationFrame(recordFrame);
+                    } else {
+                        recorder.stop();
+                        exportVideo.src = "";
+                        exportVideo.load();
+                    }
+                }
+                recordFrame();
+            };
+        }
+    }
 });

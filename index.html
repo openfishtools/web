@@ -485,7 +485,7 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">image</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Edit Photo</h3>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Edit Photo / Video</h3>
                                 <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
                                     Local Process</div>
                             </div>
@@ -493,9 +493,9 @@
 
                         <!-- Drag Drop Area -->
                         <div class="drag-drop-area" id="photo-drop-area">
-                            <span class="material-symbols-rounded">image</span>
-                            <span>Drag & drop photo here or click to select</span>
-                            <input type="file" id="photo-file-input" accept="image/png,image/jpeg,image/jpg,image/webp"
+                            <span class="material-symbols-rounded">movie</span>
+                            <span>Drag & drop photo or video here or click to select</span>
+                            <input type="file" id="photo-file-input" accept="image/*,video/*"
                                 hidden>
                         </div>
 
@@ -506,82 +506,13 @@
                                 <canvas id="photo-preview-canvas" style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; display: block;"></canvas>
                             </div>
 
-                            <!-- Sliders Group -->
-                            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
-                                <!-- Sharpen -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Sharpen</span>
-                                        <span id="val-sharpen">0%</span>
-                                    </div>
-                                    <input type="range" id="slide-sharpen" min="0" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Unsharp Mask Amount -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Unsharp Mask Amount</span>
-                                        <span id="val-unsharp-amount">0%</span>
-                                    </div>
-                                    <input type="range" id="slide-unsharp-amount" min="0" max="250" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Unsharp Mask Radius -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Unsharp Mask Radius</span>
-                                        <span id="val-unsharp-radius">1.0px</span>
-                                    </div>
-                                    <input type="range" id="slide-unsharp-radius" min="0.5" max="10.0" step="0.1" value="1.0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Brightness -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Brightness</span>
-                                        <span id="val-brightness">0</span>
-                                    </div>
-                                    <input type="range" id="slide-brightness" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Contrast -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Contrast</span>
-                                        <span id="val-contrast">0</span>
-                                    </div>
-                                    <input type="range" id="slide-contrast" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Shadows -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Shadows</span>
-                                        <span id="val-shadows">0</span>
-                                    </div>
-                                    <input type="range" id="slide-shadows" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Hue -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Hue</span>
-                                        <span id="val-hue">0°</span>
-                                    </div>
-                                    <input type="range" id="slide-hue" min="-180" max="180" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
-
-                                <!-- Saturation -->
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
-                                        <span>Saturation</span>
-                                        <span id="val-saturation">0%</span>
-                                    </div>
-                                    <input type="range" id="slide-saturation" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
-                                </div>
+                            <!-- Preset Buttons Group -->
+                            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                                <button id="btn-preset-cf1" class="btn-primary" style="flex: 1; height: 48px; border-radius: 24px; font-weight: 700; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; cursor: pointer; transition: all 0.2s ease; font-size: 15px;">CF1</button>
+                                <button id="btn-preset-cf2" class="btn-primary" style="flex: 1; height: 48px; border-radius: 24px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 2px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 15px;">CF2</button>
                             </div>
 
-                            <button id="btn-download-photo" class="btn-primary w-full">Download Edited Photo</button>
+                            <button id="btn-download-photo" class="btn-primary w-full">Download Edited File</button>
                         </div>
                     </div>
 
