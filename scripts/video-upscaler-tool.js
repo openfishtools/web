@@ -9,35 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelSelect = document.getElementById('upscaler-model-select');
     const scaleSelect = document.getElementById('upscaler-scale-select');
 
-    // Preset Buttons
-    const btnPresetCf1 = document.getElementById('btn-upscaler-cf1');
-    const btnPresetCf2 = document.getElementById('btn-upscaler-cf2');
+    // Sliders
+    const slideSharpen = document.getElementById('slide-sharpen');
+    const slideUnsharpAmount = document.getElementById('slide-unsharp-amount');
+    const slideUnsharpRadius = document.getElementById('slide-unsharp-radius');
+    const slideBrightness = document.getElementById('slide-brightness');
+    const slideContrast = document.getElementById('slide-contrast');
+    const slideShadows = document.getElementById('slide-shadows');
+    const slideHue = document.getElementById('slide-hue');
+    const slideSaturation = document.getElementById('slide-saturation');
 
-    // Presets config
-    const PRESETS = {
-        'cf1': {
-            sharpen: 36.0,
-            unsharpAmount: 143.0,
-            unsharpRadius: 6.9,
-            brightness: 0.0,
-            contrast: -1.0,
-            shadows: 29.0,
-            hue: 0.0,
-            saturation: 12.0
-        },
-        'cf2': {
-            sharpen: 48.0,
-            unsharpAmount: 164.0,
-            unsharpRadius: 4.3,
-            brightness: 0.0,
-            contrast: 0.0,
-            shadows: 17.0,
-            hue: 0.0,
-            saturation: 7.0
-        }
-    };
+    // Slider value labels
+    const valSharpen = document.getElementById('val-sharpen');
+    const valUnsharpAmount = document.getElementById('val-unsharp-amount');
+    const valUnsharpRadius = document.getElementById('val-unsharp-radius');
+    const valBrightness = document.getElementById('val-brightness');
+    const valContrast = document.getElementById('val-contrast');
+    const valShadows = document.getElementById('val-shadows');
+    const valHue = document.getElementById('val-hue');
+    const valSaturation = document.getElementById('val-saturation');
 
-    let selectedPreset = 'cf1';
     let originalVideo = null;
     let previewWidth = 0;
     let previewHeight = 0;
@@ -373,13 +364,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
             log(`Video loaded successfully. Native Resolution: ${video.videoWidth}x${video.videoHeight}`);
             
+            // Reset sliders to default
+            slideSharpen.value = 0;
+            slideUnsharpAmount.value = 0;
+            slideUnsharpRadius.value = 1.0;
+            slideBrightness.value = 0;
+            slideContrast.value = 0;
+            slideShadows.value = 0;
+            slideHue.value = 0;
+            slideSaturation.value = 0;
+
+            updateSliderLabels();
+
             // Set up WebGL Context
             initWebGL();
-            selectPreset(selectedPreset);
             video.play();
             startVideoLoop();
         };
     }
+
+    function updateSliderLabels() {
+        valSharpen.textContent = `${slideSharpen.value}%`;
+        valUnsharpAmount.textContent = `${slideUnsharpAmount.value}%`;
+        valUnsharpRadius.textContent = `${parseFloat(slideUnsharpRadius.value).toFixed(1)}px`;
+        valBrightness.textContent = (slideBrightness.value > 0 ? '+' : '') + slideBrightness.value;
+        valContrast.textContent = (slideContrast.value > 0 ? '+' : '') + slideContrast.value;
+        valShadows.textContent = (slideShadows.value > 0 ? '+' : '') + slideShadows.value;
+        valHue.textContent = `${slideHue.value}°`;
+        valSaturation.textContent = (slideSaturation.value > 0 ? '+' : '') + slideSaturation.value + '%';
+    }
+
+    // Attach listeners to sliders for real-time update
+    const sliders = [slideSharpen, slideUnsharpAmount, slideUnsharpRadius, slideBrightness, slideContrast, slideShadows, slideHue, slideSaturation];
+    sliders.forEach(slider => {
+        slider.addEventListener('input', () => {
+            updateSliderLabels();
+        });
+    });
 
     function initWebGL() {
         gl = previewCanvas.getContext('webgl', { preserveDrawingBuffer: true }) || 
@@ -457,16 +478,15 @@ document.addEventListener('DOMContentLoaded', () => {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoElement);
 
         // Set Uniforms
-        const preset = PRESETS[selectedPreset];
         gl.uniform2f(gl.getUniformLocation(webglProgram, 'textureSize'), videoElement.videoWidth, videoElement.videoHeight);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'sharpen'), preset.sharpen);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpAmount'), preset.unsharpAmount);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpRadius'), preset.unsharpRadius);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'brightness'), preset.brightness);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'contrast'), preset.contrast);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'shadowsVal'), preset.shadows);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'hueShift'), preset.hue);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'saturationShift'), preset.saturation);
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'sharpen'), parseFloat(slideSharpen.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpAmount'), parseFloat(slideUnsharpAmount.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpRadius'), parseFloat(slideUnsharpRadius.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'brightness'), parseFloat(slideBrightness.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'contrast'), parseFloat(slideContrast.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'shadowsVal'), parseFloat(slideShadows.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'hueShift'), parseFloat(slideHue.value));
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'saturationShift'), parseFloat(slideSaturation.value));
 
         // Get selected model
         const modelName = modelSelect.value;
@@ -481,38 +501,11 @@ document.addEventListener('DOMContentLoaded', () => {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
-    function selectPreset(presetKey) {
-        selectedPreset = presetKey;
-        if (selectedPreset === 'cf1') {
-            btnPresetCf1.style.background = 'var(--md-sys-color-primary)';
-            btnPresetCf1.style.color = 'var(--md-sys-color-on-primary)';
-            btnPresetCf1.style.border = 'none';
-
-            btnPresetCf2.style.background = 'var(--md-sys-color-surface-container-high)';
-            btnPresetCf2.style.color = 'var(--md-sys-color-on-surface)';
-            btnPresetCf2.style.border = '2px solid var(--md-sys-color-outline-variant)';
-        } else {
-            btnPresetCf2.style.background = 'var(--md-sys-color-primary)';
-            btnPresetCf2.style.color = 'var(--md-sys-color-on-primary)';
-            btnPresetCf2.style.border = 'none';
-
-            btnPresetCf1.style.background = 'var(--md-sys-color-surface-container-high)';
-            btnPresetCf1.style.color = 'var(--md-sys-color-on-surface)';
-            btnPresetCf1.style.border = '2px solid var(--md-sys-color-outline-variant)';
-        }
-        log(`Swapped to preset: ${presetKey.toUpperCase()}`);
-    }
-
-    btnPresetCf1.addEventListener('click', () => selectPreset('cf1'));
-    btnPresetCf2.addEventListener('click', () => selectPreset('cf2'));
-
     // Dynamic library injection for AI models (FSRCNN / Real-ESRGAN Tiny) if selected
     async function initAIModel() {
         const model = modelSelect.value;
         if (model === 'fsrcnn') {
             log('Loading FSRCNN model configuration...');
-            // In a fully lightweight WebGL-native implementation, we fallback FSRCNN to our highly optimized
-            // GLSL edge-super-resolution pass running inside WebGL for blazing fast execution without any lag.
             log('FSRCNN GPU Shaders successfully compiled & bound.');
         } else if (model === 'esrgan') {
             log('Initializing Real-ESRGAN Tiny runtime model...');
@@ -654,16 +647,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     expGl.viewport(0, 0, exportW, exportH);
                     expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, expGl.RGBA, expGl.UNSIGNED_BYTE, exportVideo);
 
-                    const preset = PRESETS[selectedPreset];
                     expGl.uniform2f(expGl.getUniformLocation(expProgram, 'textureSize'), exportVideo.videoWidth, exportVideo.videoHeight);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'sharpen'), preset.sharpen);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpAmount'), preset.unsharpAmount);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpRadius'), preset.unsharpRadius);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'brightness'), preset.brightness);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'contrast'), preset.contrast);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), preset.shadows);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'hueShift'), preset.hue);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'saturationShift'), preset.saturation);
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'sharpen'), parseFloat(slideSharpen.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpAmount'), parseFloat(slideUnsharpAmount.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpRadius'), parseFloat(slideUnsharpRadius.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'brightness'), parseFloat(slideBrightness.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'contrast'), parseFloat(slideContrast.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), parseFloat(slideShadows.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'hueShift'), parseFloat(slideHue.value));
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'saturationShift'), parseFloat(slideSaturation.value));
 
                     const modelName = modelSelect.value;
                     let modeInt = 0;
