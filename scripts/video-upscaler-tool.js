@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shadows: 4.0,
             hue: 0.0,
             saturation: 1.0,
-            denoise: 1.0
+            denoise: 0.5
         },
         cf2: {
             sharpen: 40.0,
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shadows: 3.0,
             hue: 0.0,
             saturation: 0.0,
-            denoise: 1.0
+            denoise: 0.5
         }
     };
     let selectedPreset = 'cf1';
@@ -255,6 +255,42 @@ document.addEventListener('DOMContentLoaded', () => {
             return sumColor / max(sumWeight, 0.0001);
         }
 
+        // Edge-Directed Interpolation (EDI) for clean edge reconstruction
+        vec4 textureEDI(sampler2D tex, vec2 uv, vec2 size) {
+            vec2 texel = 1.0 / size;
+            vec2 pixel = uv * size;
+            vec2 f = fract(pixel);
+            vec2 p = (floor(pixel) + 0.5) / size;
+            
+            // Sample 3x3 neighborhood
+            vec4 a = texture2D(tex, p + vec2(-texel.x, -texel.y));
+            vec4 b = texture2D(tex, p + vec2(0.0, -texel.y));
+            vec4 c = texture2D(tex, p + vec2(texel.x, -texel.y));
+            vec4 d = texture2D(tex, p + vec2(-texel.x, 0.0));
+            vec4 e = texture2D(tex, p); // Center
+            vec4 f_col = texture2D(tex, p + vec2(texel.x, 0.0));
+            vec4 g = texture2D(tex, p + vec2(-texel.x, texel.y));
+            vec4 h = texture2D(tex, p + vec2(0.0, texel.y));
+            vec4 i = texture2D(tex, p + vec2(texel.x, texel.y));
+            
+            // Gradients in diagonal directions
+            float gD1 = length(a.rgb - i.rgb);
+            float gD2 = length(c.rgb - g.rgb);
+            
+            vec4 edgeColor;
+            if (gD1 < gD2 * 0.7) {
+                edgeColor = mix(mix(a, i, 0.5), e, 0.3);
+            } else if (gD2 < gD1 * 0.7) {
+                edgeColor = mix(mix(c, g, 0.5), e, 0.3);
+            } else {
+                // Bilinear fallback for flat regions
+                vec4 top = mix(e, f_col, f.x);
+                vec4 bottom = mix(h, i, f.x);
+                edgeColor = mix(top, bottom, f.y);
+            }
+            return mix(edgeColor, e, 0.15);
+        }
+
         void main() {
             vec4 rawColor;
             
@@ -262,21 +298,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (upscaleMode == 0) {
                 rawColor = textureLanczos(videoTexture, texCoord, textureSize);
             } else if (upscaleMode == 1) {
-                rawColor = textureBicubic(videoTexture, texCoord, textureSize);
+                // Real-ESRGAN: Clean Edge-Directed Interpolation (EDI)
+                rawColor = textureEDI(videoTexture, texCoord, textureSize);
             } else if (upscaleMode == 2) {
                 rawColor = textureAnime4K(videoTexture, texCoord, textureSize);
             } else {
-                // FSRCNN approximation (Multi-scale edge-enhancement filter)
-                vec4 base = textureBicubic(videoTexture, texCoord, textureSize);
+                // FSRCNN: Edge-Directed Interpolation + Edge-Sharpening pass
+                vec4 base = textureEDI(videoTexture, texCoord, textureSize);
                 vec2 t = 1.0 / textureSize;
-                vec4 edge1 = textureBicubic(videoTexture, texCoord + vec2(-t.x, -t.y), textureSize);
-                vec4 edge2 = textureBicubic(videoTexture, texCoord + vec2(t.x, t.y), textureSize);
-                rawColor = base + 0.35 * (base - (edge1 + edge2) * 0.5);
+                vec4 edge1 = textureEDI(videoTexture, texCoord + vec2(-t.x, -t.y), textureSize);
+                vec4 edge2 = textureEDI(videoTexture, texCoord + vec2(t.x, t.y), textureSize);
+                rawColor = base + 0.45 * (base - (edge1 + edge2) * 0.5);
             }
 
             vec3 color = rawColor.rgb;
             if (denoiseVal > 0.0) {
-                color = denoiseFilter(videoTexture, texCoord, textureSize);
+                vec3 denoised = denoiseFilter(videoTexture, texCoord, textureSize);
+                color = mix(color, denoised, denoiseVal);
             }
 
             // 1. Brightness & Contrast
