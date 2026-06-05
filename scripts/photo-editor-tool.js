@@ -7,17 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sliders
     const slideSharpen = document.getElementById('slide-sharpen');
-    const slideUnsharp = document.getElementById('slide-unsharp');
+    const slideUnsharpAmount = document.getElementById('slide-unsharp-amount');
+    const slideUnsharpRadius = document.getElementById('slide-unsharp-radius');
     const slideBrightness = document.getElementById('slide-brightness');
     const slideContrast = document.getElementById('slide-contrast');
+    const slideShadows = document.getElementById('slide-shadows');
     const slideHue = document.getElementById('slide-hue');
     const slideSaturation = document.getElementById('slide-saturation');
 
     // Slider value labels
     const valSharpen = document.getElementById('val-sharpen');
-    const valUnsharp = document.getElementById('val-unsharp');
+    const valUnsharpAmount = document.getElementById('val-unsharp-amount');
+    const valUnsharpRadius = document.getElementById('val-unsharp-radius');
     const valBrightness = document.getElementById('val-brightness');
     const valContrast = document.getElementById('val-contrast');
+    const valShadows = document.getElementById('val-shadows');
     const valHue = document.getElementById('val-hue');
     const valSaturation = document.getElementById('val-saturation');
 
@@ -91,9 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Reset sliders to default
                 slideSharpen.value = 0;
-                slideUnsharp.value = 0;
+                slideUnsharpAmount.value = 0;
+                slideUnsharpRadius.value = 1.0;
                 slideBrightness.value = 0;
                 slideContrast.value = 0;
+                slideShadows.value = 0;
                 slideHue.value = 0;
                 slideSaturation.value = 0;
 
@@ -111,15 +117,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSliderLabels() {
         valSharpen.textContent = `${slideSharpen.value}%`;
-        valUnsharp.textContent = `${slideUnsharp.value}%`;
+        valUnsharpAmount.textContent = `${slideUnsharpAmount.value}%`;
+        valUnsharpRadius.textContent = `${parseFloat(slideUnsharpRadius.value).toFixed(1)}px`;
         valBrightness.textContent = (slideBrightness.value > 0 ? '+' : '') + slideBrightness.value;
         valContrast.textContent = (slideContrast.value > 0 ? '+' : '') + slideContrast.value;
+        valShadows.textContent = (slideShadows.value > 0 ? '+' : '') + slideShadows.value;
         valHue.textContent = `${slideHue.value}°`;
         valSaturation.textContent = (slideSaturation.value > 0 ? '+' : '') + slideSaturation.value + '%';
     }
 
     // Attach listeners to sliders for real-time update
-    const sliders = [slideSharpen, slideUnsharp, slideBrightness, slideContrast, slideHue, slideSaturation];
+    const sliders = [slideSharpen, slideUnsharpAmount, slideUnsharpRadius, slideBrightness, slideContrast, slideShadows, slideHue, slideSaturation];
     sliders.forEach(slider => {
         slider.addEventListener('input', () => {
             updateSliderLabels();
@@ -224,15 +232,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Get filter settings
         const sharpenAmt = parseInt(slideSharpen.value) / 100;
-        const unsharpAmt = parseInt(slideUnsharp.value) / 100;
+        const unsharpAmount = parseInt(slideUnsharpAmount.value);
+        const unsharpRadius = parseFloat(slideUnsharpRadius.value);
         const brightness = parseInt(slideBrightness.value);
         const contrast = parseInt(slideContrast.value);
+        const shadowsVal = parseInt(slideShadows.value);
         const hueShift = parseInt(slideHue.value);
         const saturationShift = parseInt(slideSaturation.value);
 
-        // 1. Color Adjustments: Brightness, Contrast, Hue, Saturation
+        // 1. Color Adjustments: Brightness, Contrast, Shadows, Hue, Saturation
         const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-        const hasColorAdjust = brightness !== 0 || contrast !== 0 || hueShift !== 0 || saturationShift !== 0;
+        const hasColorAdjust = brightness !== 0 || contrast !== 0 || shadowsVal !== 0 || hueShift !== 0 || saturationShift !== 0;
 
         if (hasColorAdjust) {
             for (let i = 0; i < data.length; i += 4) {
@@ -245,6 +255,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     r = ((r - 128) * contrastFactor) + 128 + brightness;
                     g = ((g - 128) * contrastFactor) + 128 + brightness;
                     b = ((b - 128) * contrastFactor) + 128 + brightness;
+                }
+
+                // Shadows (lift or darken darker areas of the image)
+                if (shadowsVal !== 0) {
+                    const l = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                    if (l < 0.5) {
+                        const factor = Math.max(0, 1.0 - (l * 2));
+                        const shift = shadowsVal * factor * 0.5;
+                        r += shift;
+                        g += shift;
+                        b += shift;
+                    }
                 }
 
                 // Hue & Saturation
@@ -278,31 +300,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. Unsharp Mask Filter
-        if (unsharpAmt > 0) {
-            // Unsharp Mask requires subtracting a blurred copy.
-            // Generate a wider blur by running 3x3 Gaussian Blur twice
-            const blurKernel = [
-                1/16, 2/16, 1/16,
-                2/16, 4/16, 2/16,
-                1/16, 2/16, 1/16
-            ];
-            
-            // First blur pass
-            const blurPass1 = convolve(imgData, width, height, blurKernel);
-            
-            // Create temporary ImageData for the second blur pass
-            const tempImgData = new ImageData(new Uint8ClampedArray(blurPass1), width, height);
-            const blurredPixels = convolve(tempImgData, width, height, blurKernel);
-            
-            const threshold = 3; // Prevent sharpening micro-noise/grain
+        if (unsharpAmount > 0 && unsharpRadius > 0) {
+            // Apply current state to a temp canvas to generate blurred reference
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imgData, 0, 0);
+
+            // Generate blurred copy using hardware-accelerated canvas filter
+            const blurCanvas = document.createElement('canvas');
+            blurCanvas.width = width;
+            blurCanvas.height = height;
+            const blurCtx = blurCanvas.getContext('2d');
+            blurCtx.filter = `blur(${unsharpRadius}px)`;
+            blurCtx.drawImage(tempCanvas, 0, 0);
+
+            // Get blurred pixel buffer
+            const blurredData = blurCtx.getImageData(0, 0, width, height).data;
+
+            const amtFactor = unsharpAmount / 100;
+            const threshold = 2; // Prevent sharpening flat areas
+
             for (let i = 0; i < data.length; i += 4) {
                 for (let c = 0; c < 3; c++) {
                     const idx = i + c;
-                    const diff = data[idx] - blurredPixels[idx];
-                    
+                    const diff = data[idx] - blurredData[idx];
+
                     if (Math.abs(diff) > threshold) {
-                        // val = Original + Amount * (Original - Blurred)
-                        const val = data[idx] + unsharpAmt * 3 * diff;
+                        const val = data[idx] + amtFactor * diff;
                         data[idx] = Math.min(255, Math.max(0, val));
                     }
                 }
