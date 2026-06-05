@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const modelSelect = document.getElementById('upscaler-model-select');
     const scaleSelect = document.getElementById('upscaler-scale-select');
+    const btnPresetCf1 = document.getElementById('btn-preset-cf1');
+    const btnPresetCf2 = document.getElementById('btn-preset-cf2');
 
     // Sliders
     const slideSharpen = document.getElementById('slide-sharpen');
@@ -394,10 +396,71 @@ document.addEventListener('DOMContentLoaded', () => {
         valSaturation.textContent = (slideSaturation.value > 0 ? '+' : '') + slideSaturation.value + '%';
     }
 
+    function clearPresetButtons() {
+        if (btnPresetCf1 && btnPresetCf2) {
+            btnPresetCf1.style.background = 'var(--md-sys-color-surface-container-high)';
+            btnPresetCf1.style.color = 'var(--md-sys-color-on-surface)';
+            btnPresetCf1.style.borderColor = 'var(--md-sys-color-outline-variant)';
+            
+            btnPresetCf2.style.background = 'var(--md-sys-color-surface-container-high)';
+            btnPresetCf2.style.color = 'var(--md-sys-color-on-surface)';
+            btnPresetCf2.style.borderColor = 'var(--md-sys-color-outline-variant)';
+        }
+    }
+
+    function applyPreset(presetName) {
+        if (presetName === 'cf1') {
+            slideSharpen.value = 79;
+            slideUnsharpAmount.value = 87;
+            slideUnsharpRadius.value = 10.0;
+            slideBrightness.value = 0;
+            slideContrast.value = 0;
+            slideShadows.value = 4;
+            slideHue.value = 0;
+            slideSaturation.value = 1;
+            
+            if (btnPresetCf1 && btnPresetCf2) {
+                btnPresetCf1.style.background = 'var(--md-sys-color-primary)';
+                btnPresetCf1.style.color = 'var(--md-sys-color-on-primary)';
+                btnPresetCf1.style.borderColor = 'transparent';
+                
+                btnPresetCf2.style.background = 'var(--md-sys-color-surface-container-high)';
+                btnPresetCf2.style.color = 'var(--md-sys-color-on-surface)';
+                btnPresetCf2.style.borderColor = 'var(--md-sys-color-outline-variant)';
+            }
+        } else if (presetName === 'cf2') {
+            slideSharpen.value = 40;
+            slideUnsharpAmount.value = 210;
+            slideUnsharpRadius.value = 4.1;
+            slideBrightness.value = 0;
+            slideContrast.value = 0;
+            slideShadows.value = 3;
+            slideHue.value = 0;
+            slideSaturation.value = 0;
+            
+            if (btnPresetCf1 && btnPresetCf2) {
+                btnPresetCf2.style.background = 'var(--md-sys-color-primary)';
+                btnPresetCf2.style.color = 'var(--md-sys-color-on-primary)';
+                btnPresetCf2.style.borderColor = 'transparent';
+                
+                btnPresetCf1.style.background = 'var(--md-sys-color-surface-container-high)';
+                btnPresetCf1.style.color = 'var(--md-sys-color-on-surface)';
+                btnPresetCf1.style.borderColor = 'var(--md-sys-color-outline-variant)';
+            }
+        }
+        
+        updateSliderLabels();
+        log(`Loaded ${presetName.toUpperCase()} preset values to sliders.`);
+    }
+
+    if (btnPresetCf1) btnPresetCf1.addEventListener('click', () => applyPreset('cf1'));
+    if (btnPresetCf2) btnPresetCf2.addEventListener('click', () => applyPreset('cf2'));
+
     // Attach listeners to sliders for real-time update
     const sliders = [slideSharpen, slideUnsharpAmount, slideUnsharpRadius, slideBrightness, slideContrast, slideShadows, slideHue, slideSaturation];
     sliders.forEach(slider => {
         slider.addEventListener('input', () => {
+            clearPresetButtons();
             updateSliderLabels();
         });
     });
