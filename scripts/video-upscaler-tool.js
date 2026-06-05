@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
             contrast: 0.0,
             shadows: 4.0,
             hue: 0.0,
-            saturation: 1.0
+            saturation: 1.0,
+            denoise: 1.0
         },
         cf2: {
             sharpen: 40.0,
@@ -31,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
             contrast: 0.0,
             shadows: 3.0,
             hue: 0.0,
-            saturation: 0.0
+            saturation: 0.0,
+            denoise: 1.0
         }
     };
     let selectedPreset = 'cf1';
@@ -71,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uniform float shadowsVal;
         uniform float hueShift;
         uniform float saturationShift;
+        uniform float denoiseVal;
         uniform int upscaleMode; // 0: Lanczos, 1: Bicubic, 2: Anime4K, 3: FSRCNN approximation
 
         // RGB to HSL conversion
@@ -221,6 +224,37 @@ document.addEventListener('DOMContentLoaded', () => {
             return central;
         }
 
+        // Bilateral Denoise Filter
+        vec3 denoiseFilter(sampler2D tex, vec2 uv, vec2 size) {
+            vec2 texel = 1.0 / size;
+            vec3 center = texture2D(tex, uv).rgb;
+            float sumWeight = 0.0;
+            vec3 sumColor = vec3(0.0);
+            
+            // Spatial sigma = 2.0, Range sigma = 0.12 (standard for noise suppression)
+            const float sigmaS = 2.0;
+            const float sigmaI = 0.12;
+            
+            for (int y = -2; y <= 2; y++) {
+                for (int x = -2; x <= 2; x++) {
+                    vec2 offset = vec2(float(x), float(y)) * texel;
+                    vec3 sampleCol = texture2D(tex, uv + offset).rgb;
+                    
+                    float distS = float(x*x + y*y);
+                    float weightS = exp(-distS / (2.0 * sigmaS * sigmaS));
+                    
+                    vec3 diff = sampleCol - center;
+                    float distI = dot(diff, diff);
+                    float weightI = exp(-distI / (2.0 * sigmaI * sigmaI));
+                    
+                    float weight = weightS * weightI;
+                    sumColor += sampleCol * weight;
+                    sumWeight += weight;
+                }
+            }
+            return sumColor / max(sumWeight, 0.0001);
+        }
+
         void main() {
             vec4 rawColor;
             
@@ -241,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             vec3 color = rawColor.rgb;
+            if (denoiseVal > 0.0) {
+                color = denoiseFilter(videoTexture, texCoord, textureSize);
+            }
 
             // 1. Brightness & Contrast
             if (brightness != 0.0 || contrast != 0.0) {
@@ -495,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gl.uniform1f(gl.getUniformLocation(webglProgram, 'shadowsVal'), preset.shadows);
         gl.uniform1f(gl.getUniformLocation(webglProgram, 'hueShift'), preset.hue);
         gl.uniform1f(gl.getUniformLocation(webglProgram, 'saturationShift'), preset.saturation);
+        gl.uniform1f(gl.getUniformLocation(webglProgram, 'denoiseVal'), preset.denoise);
 
         // Get selected model
         const modelName = modelSelect.value;
@@ -608,16 +646,29 @@ document.addEventListener('DOMContentLoaded', () => {
             log('Establishing real-time video recorder stream...');
             const stream = exportCanvas.captureStream(30);
             
-            let supportedType = 'video/webm;codecs=vp9';
+            let supportedType = 'video/mp4;codecs=h264';
+            let fileExt = 'mp4';
             if (!MediaRecorder.isTypeSupported(supportedType)) {
-                supportedType = 'video/webm;codecs=vp8';
+                supportedType = 'video/mp4';
                 if (!MediaRecorder.isTypeSupported(supportedType)) {
-                    supportedType = 'video/webm';
+                    supportedType = 'video/webm;codecs=vp9';
+                    fileExt = 'webm';
+                    if (!MediaRecorder.isTypeSupported(supportedType)) {
+                        supportedType = 'video/webm;codecs=vp8';
+                        if (!MediaRecorder.isTypeSupported(supportedType)) {
+                            supportedType = 'video/webm';
+                        }
+                    }
                 }
             }
 
+            log(`Selected recording format: ${supportedType} (Bitrate: 15 Mbps)`);
+
             const chunks = [];
-            const recorder = new MediaRecorder(stream, { mimeType: supportedType });
+            const recorder = new MediaRecorder(stream, { 
+                mimeType: supportedType,
+                videoBitsPerSecond: 15000000
+            });
 
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunks.push(e.data);
@@ -625,11 +676,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             recorder.onstop = () => {
                 log('Recording stopped. Compiling final output video...');
-                const blob = new Blob(chunks, { type: 'video/webm' });
+                const blob = new Blob(chunks, { type: supportedType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${originalFilename}_${modelSelect.value.toUpperCase()}_x${scaleFactor}.webm`;
+                a.download = `${originalFilename}_${modelSelect.value.toUpperCase()}_x${scaleFactor}.${fileExt}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -665,6 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), preset.shadows);
                     expGl.uniform1f(expGl.getUniformLocation(expProgram, 'hueShift'), preset.hue);
                     expGl.uniform1f(expGl.getUniformLocation(expProgram, 'saturationShift'), preset.saturation);
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'denoiseVal'), preset.denoise);
 
                     const modelName = modelSelect.value;
                     let modeInt = 0;
