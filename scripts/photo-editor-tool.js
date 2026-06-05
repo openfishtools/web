@@ -280,20 +280,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Unsharp Mask Filter
         if (unsharpAmt > 0) {
             // Unsharp Mask requires subtracting a blurred copy.
-            // Generate simple 3x3 Gaussian Blur kernel
+            // Generate a wider blur by running 3x3 Gaussian Blur twice
             const blurKernel = [
                 1/16, 2/16, 1/16,
                 2/16, 4/16, 2/16,
                 1/16, 2/16, 1/16
             ];
-            const blurredPixels = convolve(imgData, width, height, blurKernel);
+            
+            // First blur pass
+            const blurPass1 = convolve(imgData, width, height, blurKernel);
+            
+            // Create temporary ImageData for the second blur pass
+            const tempImgData = new ImageData(new Uint8ClampedArray(blurPass1), width, height);
+            const blurredPixels = convolve(tempImgData, width, height, blurKernel);
+            
+            const threshold = 3; // Prevent sharpening micro-noise/grain
             for (let i = 0; i < data.length; i += 4) {
-                // val = Original + Amount * (Original - Blurred)
                 for (let c = 0; c < 3; c++) {
                     const idx = i + c;
                     const diff = data[idx] - blurredPixels[idx];
-                    const val = data[idx] + unsharpAmt * 2 * diff;
-                    data[idx] = Math.min(255, Math.max(0, val));
+                    
+                    if (Math.abs(diff) > threshold) {
+                        // val = Original + Amount * (Original - Blurred)
+                        const val = data[idx] + unsharpAmt * 3 * diff;
+                        data[idx] = Math.min(255, Math.max(0, val));
+                    }
                 }
             }
         }
