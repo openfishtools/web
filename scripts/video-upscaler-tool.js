@@ -66,6 +66,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
 
+    const vertexShaderNoFlipSrc = `
+        attribute vec2 position;
+        varying vec2 texCoord;
+        void main() {
+            texCoord = position * 0.5 + 0.5; // No flip for offscreen FBO texture mapping
+            gl_Position = vec4(position, 0.0, 1.0);
+        }
+    `;
+
     // Pass 1 Fragment Shader: Denoise at original low resolution
     const denoiseFragmentShaderSrc = `
         precision highp float;
@@ -532,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gl.linkProgram(denoiseProgram);
 
         // 2. Upscale Program (Pass 2)
-        const vsUpscale = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSrc);
+        const vsUpscale = compileShader(gl, gl.VERTEX_SHADER, vertexShaderNoFlipSrc);
         const fsUpscale = compileShader(gl, gl.FRAGMENT_SHADER, upscaleFragmentShaderSrc);
         upscaleProgram = gl.createProgram();
         gl.attachShader(upscaleProgram, vsUpscale);
@@ -601,7 +610,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Upload new video frame texture
         glContext.activeTexture(glContext.TEXTURE0);
         glContext.bindTexture(glContext.TEXTURE_2D, videoTexture);
-        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, videoElement);
+        if (videoElement.readyState >= 2 && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, videoElement);
+        } else {
+            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+        }
 
         // Set uniform values
         glContext.uniform1i(glContext.getUniformLocation(currentDenoiseProg, 'videoTexture'), 0);
@@ -714,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
         expGl.attachShader(expDenoiseProgram, expFsDenoise);
         expGl.linkProgram(expDenoiseProgram);
 
-        const expVsUpscale = compileShader(expGl, expGl.VERTEX_SHADER, vertexShaderSrc);
+        const expVsUpscale = compileShader(expGl, expGl.VERTEX_SHADER, vertexShaderNoFlipSrc);
         const expFsUpscale = compileShader(expGl, expGl.FRAGMENT_SHADER, upscaleFragmentShaderSrc);
         const expUpscaleProgram = expGl.createProgram();
         expGl.attachShader(expUpscaleProgram, expVsUpscale);
@@ -889,7 +902,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     expGl.activeTexture(expGl.TEXTURE0);
                     expGl.bindTexture(expGl.TEXTURE_2D, expTex);
-                    expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, expGl.RGBA, expGl.UNSIGNED_BYTE, exportVideo);
+                    if (exportVideo.readyState >= 2 && exportVideo.videoWidth > 0 && exportVideo.videoHeight > 0) {
+                        expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, expGl.RGBA, expGl.UNSIGNED_BYTE, exportVideo);
+                    } else {
+                        expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, 1, 1, 0, expGl.RGBA, expGl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+                    }
                     
                     expGl.uniform1i(expGl.getUniformLocation(expDenoiseProgram, 'videoTexture'), 0);
                     expGl.uniform2f(expGl.getUniformLocation(expDenoiseProgram, 'textureSize'), exportVideo.videoWidth, exportVideo.videoHeight);
@@ -918,7 +935,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'unsharpRadius'), preset.unsharpRadius);
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'brightness'), preset.brightness);
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'contrast'), preset.contrast);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), preset.shadows); // Note: using expProgram/expUpscaleProgram uniforms
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'shadowsVal'), preset.shadows);
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'hueShift'), preset.hue);
                     expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'saturationShift'), preset.saturation);
