@@ -512,5 +512,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 recordFrame();
             };
         }
-    }
+    });
 });
