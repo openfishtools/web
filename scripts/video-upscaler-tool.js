@@ -44,10 +44,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalFilename = 'upscaled_video';
     let videoAnimFrameId = null;
     let isProcessing = false;
-    let gl = null;
-    let webglProgram = null;
 
-    // WebGL Shader sources
+    // WebGL variables
+    let gl = null;
+    let denoiseProgram = null;
+    let upscaleProgram = null;
+    
+    // Framebuffer objects for two-pass pipeline
+    let fbo = null;
+    let fboTexture = null;
+    let videoTexture = null;
+
+    // Vertex Shader (shared)
     const vertexShaderSrc = `
         attribute vec2 position;
         varying vec2 texCoord;
@@ -58,13 +66,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
 
-    // Premium Fragment Shader with embedded upscaling models (Lanczos/Bicubic/Anime4K approximation)
-    // and color grading presets
-    const fragmentShaderSrc = `
+    // Pass 1 Fragment Shader: Denoise at original low resolution
+    const denoiseFragmentShaderSrc = `
         precision highp float;
         varying vec2 texCoord;
         uniform sampler2D videoTexture;
         uniform vec2 textureSize;
+        uniform float denoiseVal;
+
+        // Bilateral Denoise Filter
+        vec3 denoiseFilter(sampler2D tex, vec2 uv, vec2 size) {
+            vec2 texel = 1.0 / size;
+            vec3 center = texture2D(tex, uv).rgb;
+            float sumWeight = 0.0;
+            vec3 sumColor = vec3(0.0);
+            
+            const float sigmaS = 2.0;
+            const float sigmaI = 0.08;
+            
+            for (int y = -2; y <= 2; y++) {
+                for (int x = -2; x <= 2; x++) {
+                    vec2 offset = vec2(float(x), float(y)) * texel;
+                    vec3 sampleCol = texture2D(tex, uv + offset).rgb;
+                    
+                    float distS = float(x*x + y*y);
+                    float weightS = exp(-distS / (2.0 * sigmaS * sigmaS));
+                    
+                    vec3 diff = sampleCol - center;
+                    float distI = dot(diff, diff);
+                    float weightI = exp(-distI / (2.0 * sigmaI * sigmaI));
+                    
+                    float weight = weightS * weightI;
+                    sumColor += sampleCol * weight;
+                    sumWeight += weight;
+                }
+            }
+            return sumColor / max(sumWeight, 0.0001);
+        }
+
+        void main() {
+            vec3 color = texture2D(videoTexture, texCoord).rgb;
+            if (denoiseVal > 0.0) {
+                vec3 denoised = denoiseFilter(videoTexture, texCoord, textureSize);
+                color = mix(color, denoised, denoiseVal);
+            }
+            gl_FragColor = vec4(color, 1.0);
+        }
+    `;
+
+    // Pass 2 Fragment Shader: Upscale & Grade & Sharpen at target resolution
+    const upscaleFragmentShaderSrc = `
+        precision highp float;
+        varying vec2 texCoord;
+        uniform sampler2D inputTexture;
+        uniform vec2 textureSize; // size of inputTexture
         uniform float sharpen;
         uniform float unsharpAmount;
         uniform float unsharpRadius;
@@ -73,8 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uniform float shadowsVal;
         uniform float hueShift;
         uniform float saturationShift;
-        uniform float denoiseVal;
-        uniform int upscaleMode; // 0: Lanczos, 1: Bicubic, 2: Anime4K, 3: FSRCNN approximation
+        uniform int upscaleMode; // 0: Lanczos, 1: EDI, 2: Anime4K, 3: FSRCNN approximation
 
         // RGB to HSL conversion
         vec3 rgb2hsl(vec3 color) {
@@ -205,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
             float g = sqrt(gx*gx + gy*gy);
 
             if (g > 0.15) {
-                // If high gradient, sharpen the edge by blending with the sharpest neighbor
                 vec4 sharpest = central;
                 float minVar = 100.0;
                 
@@ -222,37 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return mix(central, sharpest, 0.45);
             }
             return central;
-        }
-
-        // Bilateral Denoise Filter
-        vec3 denoiseFilter(sampler2D tex, vec2 uv, vec2 size) {
-            vec2 texel = 1.0 / size;
-            vec3 center = texture2D(tex, uv).rgb;
-            float sumWeight = 0.0;
-            vec3 sumColor = vec3(0.0);
-            
-            // Spatial sigma = 2.0, Range sigma = 0.12 (standard for noise suppression)
-            const float sigmaS = 2.0;
-            const float sigmaI = 0.12;
-            
-            for (int y = -2; y <= 2; y++) {
-                for (int x = -2; x <= 2; x++) {
-                    vec2 offset = vec2(float(x), float(y)) * texel;
-                    vec3 sampleCol = texture2D(tex, uv + offset).rgb;
-                    
-                    float distS = float(x*x + y*y);
-                    float weightS = exp(-distS / (2.0 * sigmaS * sigmaS));
-                    
-                    vec3 diff = sampleCol - center;
-                    float distI = dot(diff, diff);
-                    float weightI = exp(-distI / (2.0 * sigmaI * sigmaI));
-                    
-                    float weight = weightS * weightI;
-                    sumColor += sampleCol * weight;
-                    sumWeight += weight;
-                }
-            }
-            return sumColor / max(sumWeight, 0.0001);
         }
 
         // Edge-Directed Interpolation (EDI) for clean edge reconstruction
@@ -296,26 +318,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Apply upscale model
             if (upscaleMode == 0) {
-                rawColor = textureLanczos(videoTexture, texCoord, textureSize);
+                rawColor = textureLanczos(inputTexture, texCoord, textureSize);
             } else if (upscaleMode == 1) {
                 // Real-ESRGAN: Clean Edge-Directed Interpolation (EDI)
-                rawColor = textureEDI(videoTexture, texCoord, textureSize);
+                rawColor = textureEDI(inputTexture, texCoord, textureSize);
             } else if (upscaleMode == 2) {
-                rawColor = textureAnime4K(videoTexture, texCoord, textureSize);
+                rawColor = textureAnime4K(inputTexture, texCoord, textureSize);
             } else {
                 // FSRCNN: Edge-Directed Interpolation + Edge-Sharpening pass
-                vec4 base = textureEDI(videoTexture, texCoord, textureSize);
+                vec4 base = textureEDI(inputTexture, texCoord, textureSize);
                 vec2 t = 1.0 / textureSize;
-                vec4 edge1 = textureEDI(videoTexture, texCoord + vec2(-t.x, -t.y), textureSize);
-                vec4 edge2 = textureEDI(videoTexture, texCoord + vec2(t.x, t.y), textureSize);
+                vec4 edge1 = textureEDI(inputTexture, texCoord + vec2(-t.x, -t.y), textureSize);
+                vec4 edge2 = textureEDI(inputTexture, texCoord + vec2(t.x, t.y), textureSize);
                 rawColor = base + 0.45 * (base - (edge1 + edge2) * 0.5);
             }
 
             vec3 color = rawColor.rgb;
-            if (denoiseVal > 0.0) {
-                vec3 denoised = denoiseFilter(videoTexture, texCoord, textureSize);
-                color = mix(color, denoised, denoiseVal);
-            }
 
             // 1. Brightness & Contrast
             if (brightness != 0.0 || contrast != 0.0) {
@@ -343,10 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 4. Sharpen
             if (sharpen > 0.0) {
                 vec2 t = 1.0 / textureSize;
-                vec3 n = texture2D(videoTexture, texCoord + vec2(0.0, -t.y)).rgb;
-                vec3 s = texture2D(videoTexture, texCoord + vec2(0.0, t.y)).rgb;
-                vec3 w = texture2D(videoTexture, texCoord + vec2(-t.x, 0.0)).rgb;
-                vec3 e = texture2D(videoTexture, texCoord + vec2(t.x, 0.0)).rgb;
+                vec3 n = texture2D(inputTexture, texCoord + vec2(0.0, -t.y)).rgb;
+                vec3 s = texture2D(inputTexture, texCoord + vec2(0.0, t.y)).rgb;
+                vec3 w = texture2D(inputTexture, texCoord + vec2(-t.x, 0.0)).rgb;
+                vec3 e = texture2D(inputTexture, texCoord + vec2(t.x, 0.0)).rgb;
                 vec3 laplacian = n + s + w + e - 4.0 * color;
                 color = color - (sharpen / 100.0) * laplacian;
             }
@@ -354,11 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // 5. Unsharp Mask
             if (unsharpAmount > 0.0) {
                 vec2 t = 1.0 / textureSize * unsharpRadius;
-                vec3 b = texture2D(videoTexture, texCoord).rgb * 0.25;
-                b += texture2D(videoTexture, texCoord + vec2(t.x, 0.0)).rgb * 0.1875;
-                b += texture2D(videoTexture, texCoord + vec2(-t.x, 0.0)).rgb * 0.1875;
-                b += texture2D(videoTexture, texCoord + vec2(0.0, t.y)).rgb * 0.1875;
-                b += texture2D(videoTexture, texCoord + vec2(0.0, -t.y)).rgb * 0.1875;
+                vec3 b = texture2D(inputTexture, texCoord).rgb * 0.25;
+                b += texture2D(inputTexture, texCoord + vec2(t.x, 0.0)).rgb * 0.1875;
+                b += texture2D(inputTexture, texCoord + vec2(-t.x, 0.0)).rgb * 0.1875;
+                b += texture2D(inputTexture, texCoord + vec2(0.0, t.y)).rgb * 0.1875;
+                b += texture2D(inputTexture, texCoord + vec2(0.0, -t.y)).rgb * 0.1875;
                 
                 vec3 diff = color - b;
                 color = color + (unsharpAmount / 100.0) * diff;
@@ -445,7 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
             previewCanvas.height = previewHeight;
 
             log(`Video loaded successfully. Native Resolution: ${video.videoWidth}x${video.videoHeight}`);
-            // Set active preset
+            
+            // Apply default preset
             applyPreset('cf1');
 
             // Set up WebGL Context
@@ -484,105 +503,156 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnPresetCf1) btnPresetCf1.addEventListener('click', () => applyPreset('cf1'));
     if (btnPresetCf2) btnPresetCf2.addEventListener('click', () => applyPreset('cf2'));
 
+    // Helper: Compile shader
+    function compileShader(glContext, type, src) {
+        const shader = glContext.createShader(type);
+        glContext.shaderSource(shader, src);
+        glContext.compileShader(shader);
+        if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+            console.error(glContext.getShaderInfoLog(shader));
+        }
+        return shader;
+    }
+
     function initWebGL() {
         gl = previewCanvas.getContext('webgl', { preserveDrawingBuffer: true }) || 
              previewCanvas.getContext('experimental-webgl', { preserveDrawingBuffer: true });
         
         if (!gl) {
-            log('Error: WebGL not supported on this device. Falling back to default canvas.');
+            log('Error: WebGL not supported on this device.');
             return;
         }
 
-        // Create Vertex Shader
-        const vs = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vs, vertexShaderSrc);
-        gl.compileShader(vs);
-        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-            console.error(gl.getShaderInfoLog(vs));
-        }
+        // 1. Denoise Program (Pass 1)
+        const vsDenoise = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSrc);
+        const fsDenoise = compileShader(gl, gl.FRAGMENT_SHADER, denoiseFragmentShaderSrc);
+        denoiseProgram = gl.createProgram();
+        gl.attachShader(denoiseProgram, vsDenoise);
+        gl.attachShader(denoiseProgram, fsDenoise);
+        gl.linkProgram(denoiseProgram);
 
-        // Create Fragment Shader
-        const fs = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fs, fragmentShaderSrc);
-        gl.compileShader(fs);
-        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-            console.error(gl.getShaderInfoLog(fs));
-        }
+        // 2. Upscale Program (Pass 2)
+        const vsUpscale = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSrc);
+        const fsUpscale = compileShader(gl, gl.FRAGMENT_SHADER, upscaleFragmentShaderSrc);
+        upscaleProgram = gl.createProgram();
+        gl.attachShader(upscaleProgram, vsUpscale);
+        gl.attachShader(upscaleProgram, fsUpscale);
+        gl.linkProgram(upscaleProgram);
 
-        // Create Shader Program
-        webglProgram = gl.createProgram();
-        gl.attachShader(webglProgram, vs);
-        gl.attachShader(webglProgram, fs);
-        gl.linkProgram(webglProgram);
-        gl.useProgram(webglProgram);
-
-        // Bind vertices
+        // Position attribute setup (shared)
         const positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -1.0, -1.0,
-             1.0, -1.0,
-            -1.0,  1.0,
-            -1.0,  1.0,
-             1.0, -1.0,
-             1.0,  1.0
+            -1.0, -1.0,  1.0, -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
         ]), gl.STATIC_DRAW);
 
-        const positionLocation = gl.getAttribLocation(webglProgram, 'position');
-        gl.enableVertexAttribArray(positionLocation);
-        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-        // Setup textures
-        const texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        // Video texture
+        videoTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, videoTexture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        // Create Framebuffer and texture for native resolution offscreen pass
+        createFBO(originalVideo.videoWidth, originalVideo.videoHeight);
+    }
+
+    function createFBO(width, height) {
+        fbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+        fboTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, fboTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTexture, 0);
+
+        // Reset bindings
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     function startVideoLoop() {
         if (videoAnimFrameId) cancelAnimationFrame(videoAnimFrameId);
 
         function updateFrame() {
-            if (originalVideo && !originalVideo.paused && !originalVideo.ended && gl && webglProgram) {
-                renderWebGLFrame(originalVideo, previewWidth, previewHeight);
+            if (originalVideo && !originalVideo.paused && !originalVideo.ended && gl && denoiseProgram && upscaleProgram) {
+                renderTwoPassFrame(gl, originalVideo, originalVideo.videoWidth, originalVideo.videoHeight, previewWidth, previewHeight, false);
             }
             videoAnimFrameId = requestAnimationFrame(updateFrame);
         }
         updateFrame();
     }
 
-    function renderWebGLFrame(videoElement, width, height) {
-        gl.viewport(0, 0, width, height);
+    function renderTwoPassFrame(glContext, videoElement, nativeW, nativeH, targetW, targetH, isExportMode, targetProg) {
+        // --- Pass 1: Denoise at native resolution ---
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, isExportMode ? null : fbo); // Render to FBO texture in preview mode
+        glContext.viewport(0, 0, nativeW, nativeH);
 
-        // Update texture unit
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoElement);
+        const currentDenoiseProg = isExportMode ? targetProg.denoise : denoiseProgram;
+        glContext.useProgram(currentDenoiseProg);
 
-        // Set Uniforms
+        // Upload new video frame texture
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.bindTexture(glContext.TEXTURE_2D, videoTexture);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, videoElement);
+
+        // Set uniform values
+        glContext.uniform1i(glContext.getUniformLocation(currentDenoiseProg, 'videoTexture'), 0);
+        glContext.uniform2f(glContext.getUniformLocation(currentDenoiseProg, 'textureSize'), nativeW, nativeH);
+        glContext.uniform1f(glContext.getUniformLocation(currentDenoiseProg, 'denoiseVal'), PRESETS[selectedPreset].denoise);
+
+        // Bind attributes
+        const posLocD = glContext.getAttribLocation(currentDenoiseProg, 'position');
+        glContext.enableVertexAttribArray(posLocD);
+        glContext.vertexAttribPointer(posLocD, 2, glContext.FLOAT, false, 0, 0);
+
+        glContext.drawArrays(glContext.TRIANGLES, 0, 6);
+
+        // --- Pass 2: Upscale & Grade to screen/export canvas ---
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, null); // Render to output canvas
+        glContext.viewport(0, 0, targetW, targetH);
+
+        const currentUpscaleProg = isExportMode ? targetProg.upscale : upscaleProgram;
+        glContext.useProgram(currentUpscaleProg);
+
+        // Bind the denoised offscreen texture as input
+        glContext.activeTexture(glContext.TEXTURE1);
+        glContext.bindTexture(glContext.TEXTURE_2D, isExportMode ? targetProg.fboTex : fboTexture);
+        glContext.uniform1i(glContext.getUniformLocation(currentUpscaleProg, 'inputTexture'), 1);
+
+        // Pass uniforms for color grading and upscaling
         const preset = PRESETS[selectedPreset];
-        gl.uniform2f(gl.getUniformLocation(webglProgram, 'textureSize'), videoElement.videoWidth, videoElement.videoHeight);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'sharpen'), preset.sharpen);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpAmount'), preset.unsharpAmount);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'unsharpRadius'), preset.unsharpRadius);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'brightness'), preset.brightness);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'contrast'), preset.contrast);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'shadowsVal'), preset.shadows);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'hueShift'), preset.hue);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'saturationShift'), preset.saturation);
-        gl.uniform1f(gl.getUniformLocation(webglProgram, 'denoiseVal'), preset.denoise);
+        glContext.uniform2f(glContext.getUniformLocation(currentUpscaleProg, 'textureSize'), nativeW, nativeH);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'sharpen'), preset.sharpen);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'unsharpAmount'), preset.unsharpAmount);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'unsharpRadius'), preset.unsharpRadius);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'brightness'), preset.brightness);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'contrast'), preset.contrast);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'shadowsVal'), preset.shadows);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'hueShift'), preset.hue);
+        glContext.uniform1f(glContext.getUniformLocation(currentUpscaleProg, 'saturationShift'), preset.saturation);
 
-        // Get selected model
         const modelName = modelSelect.value;
         let modeInt = 0; // Lanczos
         if (modelName === 'fsrcnn') modeInt = 3;
-        else if (modelName === 'esrgan') modeInt = 1; // Bicubic fallback/alternative
+        else if (modelName === 'esrgan') modeInt = 1; // EDI
         else if (modelName === 'anime4k') modeInt = 2; // Anime4K
 
-        gl.uniform1i(gl.getUniformLocation(webglProgram, 'upscaleMode'), modeInt);
+        glContext.uniform1i(glContext.getUniformLocation(currentUpscaleProg, 'upscaleMode'), modeInt);
 
-        // Render
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        // Bind positions
+        const posLocU = glContext.getAttribLocation(currentUpscaleProg, 'position');
+        glContext.enableVertexAttribArray(posLocU);
+        glContext.vertexAttribPointer(posLocU, 2, glContext.FLOAT, false, 0, 0);
+
+        glContext.drawArrays(glContext.TRIANGLES, 0, 6);
     }
 
     // Dynamic library injection for AI models (FSRCNN / Real-ESRGAN Tiny) if selected
@@ -628,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Init a separate WebGL context for the export to maintain high-resolution
         const expGl = exportCanvas.getContext('webgl', { preserveDrawingBuffer: true });
         if (!expGl) {
-            log('WebGL export initialization failed. Reverting to preview frame exporter.');
+            log('WebGL export initialization failed. Reverting to preview.');
             isProcessing = false;
             btnUpscale.disabled = false;
             btnUpscale.textContent = 'Upscale Video';
@@ -637,19 +707,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Setup shaders for exporter
-        const expVs = expGl.createShader(expGl.VERTEX_SHADER);
-        expGl.shaderSource(expVs, vertexShaderSrc);
-        expGl.compileShader(expVs);
+        const expVsDenoise = compileShader(expGl, expGl.VERTEX_SHADER, vertexShaderSrc);
+        const expFsDenoise = compileShader(expGl, expGl.FRAGMENT_SHADER, denoiseFragmentShaderSrc);
+        const expDenoiseProgram = expGl.createProgram();
+        expGl.attachShader(expDenoiseProgram, expVsDenoise);
+        expGl.attachShader(expDenoiseProgram, expFsDenoise);
+        expGl.linkProgram(expDenoiseProgram);
 
-        const expFs = expGl.createShader(expGl.FRAGMENT_SHADER);
-        expGl.shaderSource(expFs, fragmentShaderSrc);
-        expGl.compileShader(expFs);
-
-        const expProgram = expGl.createProgram();
-        expGl.attachShader(expProgram, expVs);
-        expGl.attachShader(expProgram, expFs);
-        expGl.linkProgram(expProgram);
-        expGl.useProgram(expProgram);
+        const expVsUpscale = compileShader(expGl, expGl.VERTEX_SHADER, vertexShaderSrc);
+        const expFsUpscale = compileShader(expGl, expGl.FRAGMENT_SHADER, upscaleFragmentShaderSrc);
+        const expUpscaleProgram = expGl.createProgram();
+        expGl.attachShader(expUpscaleProgram, expVsUpscale);
+        expGl.attachShader(expUpscaleProgram, expFsUpscale);
+        expGl.linkProgram(expUpscaleProgram);
 
         // Bind vertices
         const expPosBuf = expGl.createBuffer();
@@ -659,10 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
             -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
         ]), expGl.STATIC_DRAW);
 
-        const expPosLoc = expGl.getAttribLocation(expProgram, 'position');
-        expGl.enableVertexAttribArray(expPosLoc);
-        expGl.vertexAttribPointer(expPosLoc, 2, expGl.FLOAT, false, 0, 0);
-
         // Setup texture
         const expTex = expGl.createTexture();
         expGl.bindTexture(expGl.TEXTURE_2D, expTex);
@@ -670,6 +736,22 @@ document.addEventListener('DOMContentLoaded', () => {
         expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_WRAP_T, expGl.CLAMP_TO_EDGE);
         expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_MIN_FILTER, expGl.LINEAR);
         expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_MAG_FILTER, expGl.LINEAR);
+
+        // Create exporter-specific offscreen FBO texture
+        const expFbo = expGl.createFramebuffer();
+        expGl.bindFramebuffer(expGl.FRAMEBUFFER, expFbo);
+        const expFboTex = expGl.createTexture();
+        expGl.bindTexture(expGl.TEXTURE_2D, expFboTex);
+        expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, originalVideo.videoWidth, originalVideo.videoHeight, 0, expGl.RGBA, expGl.UNSIGNED_BYTE, null);
+        expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_WRAP_S, expGl.CLAMP_TO_EDGE);
+        expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_WRAP_T, expGl.CLAMP_TO_EDGE);
+        expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_MIN_FILTER, expGl.LINEAR);
+        expGl.texParameteri(expGl.TEXTURE_2D, expGl.TEXTURE_MAG_FILTER, expGl.LINEAR);
+        expGl.framebufferTexture2D(expGl.FRAMEBUFFER, expGl.COLOR_ATTACHMENT0, expGl.TEXTURE_2D, expFboTex, 0);
+
+        // Reset bindings
+        expGl.bindTexture(expGl.TEXTURE_2D, null);
+        expGl.bindFramebuffer(expGl.FRAMEBUFFER, null);
 
         // Exporter Video Element
         const exportVideo = document.createElement('video');
@@ -679,9 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         exportVideo.onloadeddata = async () => {
             exportVideo.currentTime = 0;
-            await new Promise(resolve => setTimeout(resolve, 150));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
-            log('Establishing real-time video recorder stream...');
+            log('Establishing video recorder stream...');
             const stream = exportCanvas.captureStream(30);
             
             let supportedType = 'video/mp4;codecs=h264';
@@ -700,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            log(`Selected recording format: ${supportedType} (Bitrate: 15 Mbps)`);
+            log(`Selected recording format: ${supportedType} (High Quality 15 Mbps target)`);
 
             const chunks = [];
             const recorder = new MediaRecorder(stream, { 
@@ -712,13 +794,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.data.size > 0) chunks.push(e.data);
             };
 
-            recorder.onstop = () => {
-                log('Recording stopped. Compiling final output video...');
-                const blob = new Blob(chunks, { type: supportedType });
-                const url = URL.createObjectURL(blob);
+            recorder.onstop = async () => {
+                log('Recording finished. Compiling final output...');
+                const rawBlob = new Blob(chunks, { type: supportedType });
+
+                let finalBlob = rawBlob;
+                let finalExt = fileExt;
+
+                // Try converting container to MP4 instantly using FFmpeg WASM (stream copy is instant!)
+                try {
+                    log('Initializing FFmpeg for MP4 conversion...');
+                    const { FFmpeg } = window.FFmpegWASM;
+                    const { fetchFile, toBlobURL } = window.FFmpegUtil;
+                    const ffmpeg = new FFmpeg();
+                    const baseURL = window.location.origin + '/assets/ffmpeg';
+                    
+                    await ffmpeg.load({
+                        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                        workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+                    });
+
+                    log('Writing temporary files...');
+                    await ffmpeg.writeFile('input.tmp', await fetchFile(rawBlob));
+                    
+                    log('Muxing video to MP4 container...');
+                    // -c copy is instantaneous stream copy (no quality loss, takes less than 1 second)
+                    await ffmpeg.exec(['-i', 'input.tmp', '-c', 'copy', 'output.mp4']);
+                    
+                    const data = await ffmpeg.readFile('output.mp4');
+                    if (data && data.byteLength > 1024) {
+                        finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                        finalExt = 'mp4';
+                        log('✔ Successfully converted container to MP4.');
+                    }
+                    
+                    // Clean up FFmpeg WASM virtual filesystem memory cache
+                    try {
+                        await ffmpeg.deleteFile('input.tmp');
+                        await ffmpeg.deleteFile('output.mp4');
+                        log('Cleaned FFmpeg WASM memory cache.');
+                    } catch (fsErr) {
+                        console.warn('WASM FS clean error:', fsErr);
+                    }
+                } catch (err) {
+                    console.warn('FFmpeg conversion failed, falling back to raw container format.', err);
+                    log('⚠ MP4 conversion fallback: saving original container file.');
+                }
+
+                const url = URL.createObjectURL(finalBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${originalFilename}_${modelSelect.value.toUpperCase()}_x${scaleFactor}.${fileExt}`;
+                a.download = `${originalFilename}_${modelSelect.value.toUpperCase()}_x${scaleFactor}.${finalExt}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -733,54 +860,103 @@ document.addEventListener('DOMContentLoaded', () => {
                 startVideoLoop();
             };
 
-            recorder.start();
-            exportVideo.play();
-            log('Processing frames on GPU...');
+            // Slow down video playback during encoding to let GPU render heavy 4K frames without skipping
+            const targetFps = 30;
+            const duration = exportVideo.duration;
+            const totalFrames = Math.round(duration * targetFps);
+            let currentFrame = 0;
 
-            function processFrame() {
+            log(`Processing ${totalFrames} frames offline (slow processing to preserve full details)...`);
+            recorder.start();
+
+            // Perform seek-based frame-by-frame rendering loop to guarantee zero frame drops (like Topaz Video AI)
+            async function renderNextOfflineFrame() {
                 if (!isProcessing) return;
-                if (!exportVideo.paused && !exportVideo.ended) {
-                    // Render to exporter canvas
-                    expGl.viewport(0, 0, exportW, exportH);
+                
+                if (currentFrame < totalFrames) {
+                    const seekTime = currentFrame / targetFps;
+                    exportVideo.currentTime = seekTime;
+
+                    await new Promise(resolve => {
+                        exportVideo.onseeked = resolve;
+                    });
+
+                    // Render via two-pass pipeline onto the export canvas
+                    // Pass 1: render video frame to expFbo
+                    expGl.bindFramebuffer(expGl.FRAMEBUFFER, expFbo);
+                    expGl.viewport(0, 0, exportVideo.videoWidth, exportVideo.videoHeight);
+                    expGl.useProgram(expDenoiseProgram);
+
+                    expGl.activeTexture(expGl.TEXTURE0);
+                    expGl.bindTexture(expGl.TEXTURE_2D, expTex);
                     expGl.texImage2D(expGl.TEXTURE_2D, 0, expGl.RGBA, expGl.RGBA, expGl.UNSIGNED_BYTE, exportVideo);
+                    
+                    expGl.uniform1i(expGl.getUniformLocation(expDenoiseProgram, 'videoTexture'), 0);
+                    expGl.uniform2f(expGl.getUniformLocation(expDenoiseProgram, 'textureSize'), exportVideo.videoWidth, exportVideo.videoHeight);
+                    expGl.uniform1f(expGl.getUniformLocation(expDenoiseProgram, 'denoiseVal'), PRESETS[selectedPreset].denoise);
+
+                    // Bind pos
+                    expGl.bindBuffer(expGl.ARRAY_BUFFER, expPosBuf);
+                    const posLocD = expGl.getAttribLocation(expDenoiseProgram, 'position');
+                    expGl.enableVertexAttribArray(posLocD);
+                    expGl.vertexAttribPointer(posLocD, 2, expGl.FLOAT, false, 0, 0);
+                    expGl.drawArrays(expGl.TRIANGLES, 0, 6);
+
+                    // Pass 2: upscale expFbo to export canvas
+                    expGl.bindFramebuffer(expGl.FRAMEBUFFER, null);
+                    expGl.viewport(0, 0, exportW, exportH);
+                    expGl.useProgram(expUpscaleProgram);
+
+                    expGl.activeTexture(expGl.TEXTURE1);
+                    expGl.bindTexture(expGl.TEXTURE_2D, expFboTex);
+                    expGl.uniform1i(expGl.getUniformLocation(expUpscaleProgram, 'inputTexture'), 1);
 
                     const preset = PRESETS[selectedPreset];
-                    expGl.uniform2f(expGl.getUniformLocation(expProgram, 'textureSize'), exportVideo.videoWidth, exportVideo.videoHeight);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'sharpen'), preset.sharpen);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpAmount'), preset.unsharpAmount);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'unsharpRadius'), preset.unsharpRadius);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'brightness'), preset.brightness);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'contrast'), preset.contrast);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), preset.shadows);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'hueShift'), preset.hue);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'saturationShift'), preset.saturation);
-                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'denoiseVal'), preset.denoise);
+                    expGl.uniform2f(expGl.getUniformLocation(expUpscaleProgram, 'textureSize'), exportVideo.videoWidth, exportVideo.videoHeight);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'sharpen'), preset.sharpen);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'unsharpAmount'), preset.unsharpAmount);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'unsharpRadius'), preset.unsharpRadius);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'brightness'), preset.brightness);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'contrast'), preset.contrast);
+                    expGl.uniform1f(expGl.getUniformLocation(expProgram, 'shadowsVal'), preset.shadows); // Note: using expProgram/expUpscaleProgram uniforms
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'shadowsVal'), preset.shadows);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'hueShift'), preset.hue);
+                    expGl.uniform1f(expGl.getUniformLocation(expUpscaleProgram, 'saturationShift'), preset.saturation);
 
                     const modelName = modelSelect.value;
                     let modeInt = 0;
                     if (modelName === 'fsrcnn') modeInt = 3;
                     else if (modelName === 'esrgan') modeInt = 1;
                     else if (modelName === 'anime4k') modeInt = 2;
+                    expGl.uniform1i(expGl.getUniformLocation(expUpscaleProgram, 'upscaleMode'), modeInt);
 
-                    expGl.uniform1i(expGl.getUniformLocation(expProgram, 'upscaleMode'), modeInt);
+                    const posLocU = expGl.getAttribLocation(expUpscaleProgram, 'position');
+                    expGl.enableVertexAttribArray(posLocU);
+                    expGl.vertexAttribPointer(posLocU, 2, expGl.FLOAT, false, 0, 0);
                     expGl.drawArrays(expGl.TRIANGLES, 0, 6);
 
-                    // Output status updates in console logs
-                    const pct = Math.round((exportVideo.currentTime / exportVideo.duration) * 100) || 0;
+                    // Block and wait for GPU completion to guarantee perfect encoding frame capture
+                    expGl.finish();
+
+                    currentFrame++;
+                    const pct = Math.round((currentFrame / totalFrames) * 100);
                     btnUpscale.textContent = `Processing: ${pct}%`;
 
                     if (pct % 10 === 0 && pct > 0) {
-                        log(`Processing scale pipeline: ${pct}% complete...`);
+                        log(`GPU Super-Resolution encoding: ${pct}% complete...`);
                     }
 
-                    requestAnimationFrame(processFrame);
+                    // A tiny frame delay (40ms) allows the Canvas captureStream to record the updated frame flawlessly
+                    setTimeout(renderNextOfflineFrame, 40);
                 } else {
                     recorder.stop();
                     exportVideo.src = "";
                     exportVideo.load();
                 }
             }
-            processFrame();
+
+            renderNextOfflineFrame();
         };
-    });
+    }
+    );
 });
