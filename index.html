@@ -480,6 +480,93 @@
                             style="margin-top: 16px;">Download</button>
                     </div>
 
+                    <div class="card" id="photo-editor-card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">image_editor</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Edit Photo</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
+                                    Local Process</div>
+                            </div>
+                        </div>
+
+                        <!-- Drag Drop Area -->
+                        <div class="drag-drop-area" id="photo-drop-area">
+                            <span class="material-symbols-rounded">image</span>
+                            <span>Drag & drop photo here or click to select</span>
+                            <input type="file" id="photo-file-input" accept="image/png,image/jpeg,image/jpg,image/webp"
+                                hidden>
+                        </div>
+
+                        <!-- Editor Controls (Hidden until uploaded) -->
+                        <div id="photo-editor-controls" class="hidden" style="margin-top: 20px;">
+                            <!-- Preview Canvas wrapper -->
+                            <div style="width: 100%; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; min-height: 180px; padding: 12px; box-sizing: border-box;">
+                                <canvas id="photo-preview-canvas" style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; display: block;"></canvas>
+                            </div>
+
+                            <!-- Sliders Group -->
+                            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+                                <!-- Sharpen -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Sharpen</span>
+                                        <span id="val-sharpen">0%</span>
+                                    </div>
+                                    <input type="range" id="slide-sharpen" min="0" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+
+                                <!-- Unsharp Mask -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Unsharp Mask</span>
+                                        <span id="val-unsharp">0%</span>
+                                    </div>
+                                    <input type="range" id="slide-unsharp" min="0" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+
+                                <!-- Brightness -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Brightness</span>
+                                        <span id="val-brightness">0</span>
+                                    </div>
+                                    <input type="range" id="slide-brightness" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+
+                                <!-- Contrast -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Contrast</span>
+                                        <span id="val-contrast">0</span>
+                                    </div>
+                                    <input type="range" id="slide-contrast" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+
+                                <!-- Hue -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Hue</span>
+                                        <span id="val-hue">0°</span>
+                                    </div>
+                                    <input type="range" id="slide-hue" min="-180" max="180" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+
+                                <!-- Saturation -->
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">
+                                        <span>Saturation</span>
+                                        <span id="val-saturation">0%</span>
+                                    </div>
+                                    <input type="range" id="slide-saturation" min="-100" max="100" value="0" style="width: 100%; accent-color: var(--md-sys-color-primary);">
+                                </div>
+                            </div>
+
+                            <button id="btn-download-photo" class="btn-primary w-full">Download Edited Photo</button>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -675,6 +762,7 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
+    <script src="scripts/photo-editor-tool.js"></script>
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
 </body>
