@@ -480,39 +480,69 @@
                             style="margin-top: 16px;">Download</button>
                     </div>
 
-                    <div class="card" id="photo-editor-card">
+                    <div class="card" id="video-upscaler-card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
                             <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">image</span>
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">hd</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Edit Photo / Video</h3>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Upscaler</h3>
                                 <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
-                                    Local Process</div>
+                                    Local GPU Process</div>
                             </div>
                         </div>
 
                         <!-- Drag Drop Area -->
-                        <div class="drag-drop-area" id="photo-drop-area">
+                        <div class="drag-drop-area" id="upscaler-drop-area">
                             <span class="material-symbols-rounded">movie</span>
-                            <span>Drag & drop photo or video here or click to select</span>
-                            <input type="file" id="photo-file-input" accept="image/*,video/*"
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="upscaler-file-input" accept="video/*"
                                 hidden>
                         </div>
 
                         <!-- Editor Controls (Hidden until uploaded) -->
-                        <div id="photo-editor-controls" class="hidden" style="margin-top: 20px;">
+                        <div id="upscaler-controls" class="hidden" style="margin-top: 20px;">
                             <!-- Preview Canvas wrapper -->
                             <div style="width: 100%; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; min-height: 180px; padding: 12px; box-sizing: border-box;">
-                                <canvas id="photo-preview-canvas" style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; display: block;"></canvas>
+                                <canvas id="upscaler-preview-canvas" style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; display: block;"></canvas>
                             </div>
 
-                            <!-- Preset Buttons Group -->
-                            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                                <button id="btn-preset-cf1" class="btn-primary" style="flex: 1; height: 48px; border-radius: 24px; font-weight: 700; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; cursor: pointer; transition: all 0.2s ease; font-size: 15px;">CF1</button>
-                                <button id="btn-preset-cf2" class="btn-primary" style="flex: 1; height: 48px; border-radius: 24px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 2px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 15px;">CF2</button>
+                            <!-- Preset Toggles -->
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Select Preset Filter</label>
+                                <div style="display: flex; gap: 12px;">
+                                    <button id="btn-upscaler-cf1" class="btn-primary" style="flex: 1; height: 40px; border-radius: 20px; font-weight: 700; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; cursor: pointer; transition: all 0.2s ease; font-size: 14px;">CF1 Preset</button>
+                                    <button id="btn-upscaler-cf2" class="btn-primary" style="flex: 1; height: 40px; border-radius: 20px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 2px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 14px;">CF2 Preset</button>
+                                </div>
                             </div>
 
-                            <button id="btn-download-photo" class="btn-primary w-full">Download Edited File</button>
+                            <!-- Model Selector & Multiplier Grid -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                                <div class="input-field" style="margin-bottom: 0;">
+                                    <label for="upscaler-model-select">Upscale Model</label>
+                                    <select id="upscaler-model-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
+                                        <option value="anime4k">Anime4K (Lightweight GLSL)</option>
+                                        <option value="fsrcnn">FSRCNN (ONNX / WebGPU)</option>
+                                        <option value="esrgan">Real-ESRGAN Tiny (WASM)</option>
+                                        <option value="lanczos">Lanczos-3 (Mathematical)</option>
+                                    </select>
+                                </div>
+                                <div class="input-field" style="margin-bottom: 0;">
+                                    <label for="upscaler-scale-select">Scale Factor</label>
+                                    <select id="upscaler-scale-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
+                                        <option value="2">x2</option>
+                                        <option value="4" selected>x4</option>
+                                        <option value="8">x8</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Logs Panel -->
+                            <div style="margin-bottom: 20px; text-align: left;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Process Logs</label>
+                                <pre id="upscaler-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                            </div>
+
+                            <button id="btn-upscale-video" class="btn-primary w-full">Upscale Video</button>
                         </div>
                     </div>
 
@@ -711,7 +741,7 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
-    <script src="scripts/photo-editor-tool.js"></script>
+    <script src="scripts/video-upscaler-tool.js"></script>
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
 </body>
