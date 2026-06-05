@@ -16,24 +16,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Presets config
     const PRESETS = {
         'cf1': {
-            sharpen: 0.36,
-            unsharpAmount: 1.43,
+            sharpen: 36.0,
+            unsharpAmount: 143.0,
             unsharpRadius: 6.9,
             brightness: 0.0,
-            contrast: -0.01,
-            shadows: 0.29,
+            contrast: -1.0,
+            shadows: 29.0,
             hue: 0.0,
-            saturation: 0.12
+            saturation: 12.0
         },
         'cf2': {
-            sharpen: 0.48,
-            unsharpAmount: 1.64,
+            sharpen: 48.0,
+            unsharpAmount: 164.0,
             unsharpRadius: 4.3,
             brightness: 0.0,
             contrast: 0.0,
-            shadows: 0.17,
+            shadows: 17.0,
             hue: 0.0,
-            saturation: 0.07
+            saturation: 7.0
         }
     };
 
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // RGB to HSL conversion
         vec3 rgb2hsl(vec3 color) {
             float maxColor = max(color.r, max(color.g, color.b));
-            float minColor = min(color.r, max(color.g, color.b));
+            float minColor = min(color.r, min(color.g, color.b));
             vec3 hsl = vec3(0.0);
             hsl.z = (maxColor + minColor) / 2.0;
 
@@ -246,8 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Brightness & Contrast
             if (brightness != 0.0 || contrast != 0.0) {
-                float cf = (259.0 * (contrast * 255.0 + 255.0)) / (255.0 * (259.0 - contrast * 255.0));
-                color = (color - 0.5) * cf + 0.5 + brightness;
+                float contrastFactor = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast));
+                color = (color - 0.5) * contrastFactor + 0.5 + (brightness / 255.0);
             }
 
             // 2. Shadows (Lift / darken darker regions)
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 float l = (0.299 * color.r + 0.587 * color.g + 0.114 * color.b);
                 if (l < 0.5) {
                     float factor = max(0.0, 1.0 - (l * 2.0));
-                    color += shadowsVal * factor * 0.5;
+                    color += (shadowsVal / 255.0) * factor * 0.5;
                 }
             }
 
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hueShift != 0.0 || saturationShift != 0.0) {
                 vec3 hsl = rgb2hsl(color);
                 hsl.x = mod(hsl.x + hueShift / 360.0, 1.0);
-                hsl.y = clamp(hsl.y + saturationShift, 0.0, 1.0);
+                hsl.y = clamp(hsl.y + (saturationShift / 100.0), 0.0, 1.0);
                 color = hsl2rgb(hsl);
             }
 
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 vec3 w = texture2D(videoTexture, texCoord + vec2(-t.x, 0.0)).rgb;
                 vec3 e = texture2D(videoTexture, texCoord + vec2(t.x, 0.0)).rgb;
                 vec3 laplacian = n + s + w + e - 4.0 * color;
-                color = color - sharpen * laplacian;
+                color = color - (sharpen / 100.0) * laplacian;
             }
 
             // 5. Unsharp Mask
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 b += texture2D(videoTexture, texCoord + vec2(0.0, -t.y)).rgb * 0.1875;
                 
                 vec3 diff = color - b;
-                color = color + unsharpAmount * diff;
+                color = color + (unsharpAmount / 100.0) * diff;
             }
 
             gl_FragColor = vec4(clamp(color, 0.0, 1.0), rawColor.a);
