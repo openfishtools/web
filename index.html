@@ -202,17 +202,38 @@
                                 <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">TikTok HQ Upload</div>
                             </div>
                         </div>
-                        <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-                            <span style="font-size: 13px; font-weight: 700; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 1px;">Method I Use</span>
-                            <a href="https://www.tiktok.com/@jv_60fps?lang=en" target="_blank" rel="noopener noreferrer" 
-                               style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border-radius: 30px; border: 2px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); font-weight: 600; text-decoration: none; font-size: 15px; transition: all 0.2s ease; box-sizing: border-box; text-align: center;"
-                               onmouseover="this.style.borderColor='var(--md-sys-color-primary)'; this.style.background='var(--md-sys-color-primary-container)'; this.style.color='var(--md-sys-color-on-primary-container)';"
-                               onmouseout="this.style.borderColor='var(--md-sys-color-outline-variant)'; this.style.background='var(--md-sys-color-surface-container-high)'; this.style.color='var(--md-sys-color-on-surface)';"
-                            >
-                                <span class="material-symbols-rounded" style="font-size: 20px;">open_in_new</span>
-                                <span>JV 60FPS</span>
-                            </a>
+                        <div class="drag-drop-area" id="tool-tiktok-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag & drop video here or click to select</span>
+                            <input type="file" id="tool-tiktok-input" accept="video/mp4,video/quicktime,video/webm"
+                                hidden>
                         </div>
+                        
+                        <div id="tool-tiktok-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
+
+                        <div id="tiktok-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="tiktok-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="tiktok-progress-text">Processing...</span>
+                                <span id="tiktok-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <div id="tiktok-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);">Process Logs:</div>
+                            <pre id="tiktok-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                        </div>
+
+                        <button id="btn-start-tiktok" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;">Process Video</button>
                     </div>
 
                     <div class="card">
@@ -653,6 +674,7 @@
     <script src="assets/ffmpeg/ffmpeg-core.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
+    <script src="scripts/tiktok-quality-tool.js"></script>
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
 </body>
