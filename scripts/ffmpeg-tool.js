@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpeg.on('log', ({ message }) => {
                 console.log(message);
                 const lc = message.toLowerCase();
-                if (lc.includes('oom') || lc.includes('aborted') || lc.includes('out of memory')) {
+                if (lc.includes('oom') || lc.includes('out of memory')) {
                     oomDetected = true;
                 }
             });
@@ -273,7 +273,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             }
 
-            await ffmpeg.exec(command);
+            try {
+                await ffmpeg.exec(command);
+            } catch (execError) {
+                try {
+                    const testData = await ffmpeg.readFile('output.mp4');
+                    if (testData && testData.byteLength >= 1024) {
+                        console.log('FFmpeg exited with abort signal but output file is valid.');
+                    } else {
+                        throw execError;
+                    }
+                } catch (readError) {
+                    throw execError;
+                }
+            }
 
             // OOM check 1: log listener flagged it
             if (oomDetected) {

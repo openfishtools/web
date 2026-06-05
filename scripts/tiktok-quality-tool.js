@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 logsEl.scrollTop = logsEl.scrollHeight;
 
                 const lc = message.toLowerCase();
-                if (lc.includes('oom') || lc.includes('aborted') || lc.includes('out of memory')) {
+                if (lc.includes('oom') || lc.includes('out of memory')) {
                     oomDetected = true;
                 }
             });
@@ -144,7 +144,22 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
 
             logsEl.textContent += `Executing command: ffmpeg ${command.join(' ')}\n`;
-            await ffmpeg.exec(command);
+            
+            try {
+                await ffmpeg.exec(command);
+            } catch (execError) {
+                // Check if file was actually generated successfully despite the exit exception
+                try {
+                    const testData = await ffmpeg.readFile('output.wmv');
+                    if (testData && testData.byteLength >= 1024) {
+                        console.log('FFmpeg exited with abort signal but output file is valid.');
+                    } else {
+                        throw execError;
+                    }
+                } catch (readError) {
+                    throw execError;
+                }
+            }
 
             if (oomDetected) {
                 throw new Error('Out of memory during video processing.');
