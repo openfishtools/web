@@ -97,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let oomDetected = false;
 
+            let oomLine = '';
+
             // Setup Progress Listener
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
@@ -113,6 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lc = message.toLowerCase();
                 if (lc.includes('oom') || lc.includes('out of memory')) {
                     oomDetected = true;
+                    oomLine = message;
+                    console.warn(`OOM detected in log line: "${message}"`);
                 }
             });
 
@@ -127,7 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
             logsEl.textContent += 'Writing file to virtual filesystem...\n';
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
 
-            const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
+            // Limit threads to a maximum of 4 to prevent WASM OOM crashes
+            const hardwareThreads = navigator.hardwareConcurrency || 4;
+            const threads = Math.min(4, hardwareThreads).toString();
             
             // WMV setting: ffmpeg -i IN.mp4 -c:v wmv2 -qscale:v 1 -r 60 -c:a wmav2 -b:a 320k OUT.wmv
             // Output 720p: scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)'
@@ -162,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (oomDetected) {
-                throw new Error('Out of memory during video processing.');
+                throw new Error(`Out of memory during video processing. (Triggered by log: "${oomLine}")`);
             }
 
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
