@@ -503,20 +503,20 @@
                         <div id="upscaler-controls" class="hidden" style="margin-top: 20px;">
                             <!-- Preview Canvas wrapper -->
                             <div style="width: 100%; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; min-height: 180px; padding: 12px; box-sizing: border-box;">
-                                <canvas id="upscaler-preview-canvas" style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; display: block;"></canvas>
+                                <div id="preview-slider-container" style="position: relative; display: inline-block; max-width: 100%; max-height: 300px; border-radius: 8px; overflow: hidden;">
+                                    <canvas id="upscaler-preview-canvas" style="display: block; max-width: 100%; max-height: 300px; object-fit: contain;"></canvas>
+                                    <!-- Slider Line -->
+                                    <div id="preview-slider-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: white; cursor: ew-resize; pointer-events: none; z-index: 10; box-shadow: 0 0 8px rgba(0,0,0,0.5);">
+                                        <!-- Slider Handle -->
+                                        <div id="preview-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid var(--md-sys-color-primary); cursor: ew-resize; pointer-events: auto; z-index: 11;">
+                                            <span class="material-symbols-rounded" style="color: var(--md-sys-color-primary); font-size: 20px; user-select: none;">compare_arrows</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Settings wrapper (hidden during upscaling) -->
                             <div id="upscaler-settings-wrapper">
-                                <!-- Filter Buttons -->
-                                <div style="margin-bottom: 20px;">
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Video Filter</label>
-                                    <div style="display: flex; gap: 8px;">
-                                        <button id="btn-preset-none" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">No Filter</button>
-                                        <button id="btn-preset-cf1" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF1</button>
-                                        <button id="btn-preset-cf2" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF2</button>
-                                    </div>
-                                </div>
 
                                 <!-- Model Selector & Multiplier Grid -->
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
