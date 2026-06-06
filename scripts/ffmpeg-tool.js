@@ -210,11 +210,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
-            const ffmpeg = new FFmpeg();
+            let ffmpeg = new FFmpeg();
 
             // Flag set by the log listener when WASM signals OOM.
             // Used to show the right error even when exec() doesn't throw.
             let oomDetected = false;
+
+            // Load ffmpeg.wasm
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Loading FFmpeg...</span>`;
+            const baseURL = window.location.origin + '/assets/ffmpeg';
+            const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
+            let loaded = false;
+
+            if (isMultiThread) {
+                try {
+                    console.log('Attempting to load multi-threaded FFmpeg...');
+                    const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+                    const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                    const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                    await ffmpeg.load({ coreURL, wasmURL, workerURL });
+                    loaded = true;
+                    console.log('Multi-threaded FFmpeg loaded successfully.');
+                } catch (err) {
+                    console.warn('Failed to load multi-threaded FFmpeg, falling back to single-threaded:', err);
+                    ffmpeg = new FFmpeg();
+                }
+            }
+
+            if (!loaded) {
+                console.log('Loading single-threaded FFmpeg...');
+                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+                await ffmpeg.load({ coreURL, wasmURL });
+                console.log('Single-threaded FFmpeg loaded successfully.');
+            }
 
             // Setup Progress Listener
             ffmpeg.on('progress', ({ progress }) => {
@@ -232,15 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lc.includes('oom') || lc.includes('out of memory')) {
                     oomDetected = true;
                 }
-            });
-
-            // Load ffmpeg.wasm
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Loading FFmpeg...</span>`;
-            const baseURL = window.location.origin + '/assets/ffmpeg';
-            await ffmpeg.load({
-                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
             });
 
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;

@@ -4,6 +4,10 @@
     {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
+    },
+    {
+      "source": "/realesrgan/:path*",
+      "destination": "https://upscale.chino.icu/realesrgan/:path*"
     }
   ],
   "headers": [

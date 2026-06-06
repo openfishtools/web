@@ -568,6 +568,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateAdminStatus = async () => {
         try {
             const res = await fetch(`${API_URL}/admin/status`);
+            if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
+                return;
+            }
             const data = await res.json();
             const statusEl = document.getElementById('admin-status-text');
             if (statusEl) {
@@ -583,7 +586,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let userIp = null;
     fetch(`${API_URL}/get-ip`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+                throw new Error('Response is not JSON');
+            }
+            return response.json();
+        })
         .then((data) => {
             userIp = normalizeClientIp(data.ip);
             userIpDisplay.textContent = `Your IP: ${userIp}`;
@@ -674,6 +682,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userIp) return;
         try {
             const res = await fetch(`${API_URL}/chats/check?ip=${encodeURIComponent(userIp)}`);
+            if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
+                return;
+            }
             const chat = await res.json();
             if (chat && chat._id) {
                 currentChatId = chat._id;
