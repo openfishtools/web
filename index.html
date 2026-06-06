@@ -480,75 +480,7 @@
                             style="margin-top: 16px;">Download</button>
                     </div>
 
-                    <div class="card" id="video-upscaler-card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">hd</span>
-                            <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Upscaler</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
-                                    Local GPU Process</div>
-                            </div>
-                        </div>
 
-                        <!-- Drag Drop Area -->
-                        <div class="drag-drop-area" id="upscaler-drop-area">
-                            <span class="material-symbols-rounded">movie</span>
-                            <span>Drag & drop video here or click to select</span>
-                            <input type="file" id="upscaler-file-input" accept="video/*"
-                                hidden>
-                        </div>
-
-                        <!-- Editor Controls (Hidden until uploaded) -->
-                        <div id="upscaler-controls" class="hidden" style="margin-top: 20px;">
-                            <!-- Preview Canvas wrapper -->
-                            <div style="width: 100%; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container-low); border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 20px; display: flex; justify-content: center; align-items: center; min-height: 180px; padding: 12px; box-sizing: border-box;">
-                                <div id="preview-slider-container" style="position: relative; display: inline-block; max-width: 100%; max-height: 300px; border-radius: 8px; overflow: hidden;">
-                                    <canvas id="upscaler-preview-canvas" style="display: block; max-width: 100%; max-height: 300px; object-fit: contain;"></canvas>
-                                    <!-- Slider Line -->
-                                    <div id="preview-slider-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: white; cursor: ew-resize; pointer-events: none; z-index: 10; box-shadow: 0 0 8px rgba(0,0,0,0.5);">
-                                        <!-- Slider Handle -->
-                                        <div id="preview-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid var(--md-sys-color-primary); cursor: ew-resize; pointer-events: auto; z-index: 11;">
-                                            <span class="material-symbols-rounded" style="color: var(--md-sys-color-primary); font-size: 20px; user-select: none;">compare_arrows</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Settings wrapper (hidden during upscaling) -->
-                            <div id="upscaler-settings-wrapper">
-
-                                <!-- Model Selector & Multiplier Grid -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                                    <div class="input-field" style="margin-bottom: 0;">
-                                        <label for="upscaler-model-select">Upscale Model</label>
-                                        <select id="upscaler-model-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                                            <option value="small">Fast (Small AI)</option>
-                                            <option value="medium" selected>Balanced (Medium AI)</option>
-                                            <option value="large">Quality (Large AI)</option>
-                                            <option value="mathematical">Mathematical (Lanczos)</option>
-                                        </select>
-                                    </div>
-                                    <div class="input-field" style="margin-bottom: 0;">
-                                        <label for="upscaler-scale-select">Scale Factor</label>
-                                        <select id="upscaler-scale-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                                            <option value="2" selected>x2 (AI Upscale)</option>
-                                            <option value="4">x4</option>
-                                            <option value="8">x8</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Logs Panel -->
-                            <div style="margin-bottom: 20px; text-align: left;">
-                                <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Process Logs</label>
-                                <pre id="upscaler-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
-                            </div>
-
-                            <button id="btn-upscale-video" class="btn-primary w-full">Upscale Video</button>
-                        </div>
-                    </div>
 
                 </div>
             </section>
@@ -745,8 +677,7 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
-    <script src="scripts/artplayer-upscaler.js"></script>
-    <script src="scripts/video-upscaler-tool.js"></script>
+
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
 </body>
