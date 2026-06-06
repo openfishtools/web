@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const comparisonContainer = document.getElementById('upscale-comparison-container');
     const canvasClip = document.getElementById('upscale-canvas-clip');
     const sliderLine = document.getElementById('upscale-slider-line');
-    const sliderLabelLeft = document.getElementById('upscale-slider-label-left');
+    const sliderLabelRight = document.getElementById('upscale-slider-label-right');
     const zoomBadge = document.getElementById('upscale-zoom-badge');
     const timeline = document.getElementById('upscale-timeline');
     const timeCurrent = document.getElementById('upscale-time-current');
@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSliding = false;
     let isPanning = false;
     let dragStart = { x: 0, y: 0 };
+    let isPinching = false;
+    let initialPinchDist = 0;
+    let initialZoom = 1;
     let cancelRender = false;
     let enhanceCanvas = null;
     let gpuEnhancer = null;
@@ -209,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.querySelectorAll('.upscale-transform-layer').forEach(el => {
             el.style.transform = transform;
         });
-        canvasClip.style.clipPath = `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`;
+        canvasClip.style.clipPath = `polygon(${sliderPos}% 0, 100% 0, 100% 100%, ${sliderPos}% 100%)`;
         sliderLine.style.left = `${sliderPos}%`;
         comparisonContainer.querySelector('.upscale-comparison-wrapper').classList.toggle('zoomed', zoom > 1);
         zoomBadge.classList.toggle('hidden', zoom <= 1);
@@ -219,11 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSliderLabel() {
         if (isPreviewed) {
-            sliderLabelLeft.textContent = 'Enhanced + 4x AI';
+            sliderLabelRight.textContent = 'Enhanced + 4x AI';
         } else if (enhanceOrder === 'before') {
-            sliderLabelLeft.textContent = 'Live Enhanced (1x)';
+            sliderLabelRight.textContent = 'Live Enhanced (1x)';
         } else {
-            sliderLabelLeft.textContent = 'Original (1x)';
+            sliderLabelRight.textContent = 'Original (1x)';
         }
     }
 
@@ -500,11 +503,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
 
+    // Slider & zoom/pan controls (Mouse & Touch support)
     sliderLine.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
         isSliding = true;
     });
+
+    sliderLine.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isSliding = true;
+    }, { passive: false });
 
     comparisonContainer.addEventListener('mousedown', (e) => {
         if (e.target.closest('.upscale-slider-line')) return;
@@ -513,6 +523,21 @@ document.addEventListener('DOMContentLoaded', () => {
             dragStart = { x: e.clientX, y: e.clientY };
         }
     });
+
+    comparisonContainer.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.upscale-slider-line')) return;
+        if (e.touches.length === 1 && zoom > 1) {
+            isPanning = true;
+            dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            isPinching = true;
+            isPanning = false;
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            initialPinchDist = Math.hypot(dx, dy);
+            initialZoom = zoom;
+        }
+    }, { passive: true });
 
     window.addEventListener('mousemove', (e) => {
         if (isSliding) {
@@ -528,10 +553,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('touchmove', (e) => {
+        if (isSliding) {
+            if (e.cancelable) e.preventDefault();
+            const touch = e.touches[0];
+            const rect = comparisonContainer.getBoundingClientRect();
+            sliderPos = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+            updateTransform();
+        } else if (isPinching && e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.hypot(dx, dy);
+            if (initialPinchDist > 0) {
+                const factor = dist / initialPinchDist;
+                const next = Math.max(1, Math.min(8, initialZoom * factor));
+                if (next === 1) pan = { x: 0, y: 0 };
+                zoom = Math.round(next * 100) / 100;
+                updateTransform();
+            }
+        } else if (isPanning && e.touches.length === 1 && zoom > 1) {
+            if (e.cancelable) e.preventDefault();
+            const touch = e.touches[0];
+            const dx = touch.clientX - dragStart.x;
+            const dy = touch.clientY - dragStart.y;
+            pan = { x: pan.x + dx, y: pan.y + dy };
+            dragStart = { x: touch.clientX, y: touch.clientY };
+            updateTransform();
+        }
+    }, { passive: false });
+
+    const handleRelease = () => {
         isSliding = false;
         isPanning = false;
-    });
+        isPinching = false;
+        initialPinchDist = 0;
+    };
+
+    window.addEventListener('mouseup', handleRelease);
+    window.addEventListener('touchend', handleRelease);
+    window.addEventListener('touchcancel', handleRelease);
 
     comparisonContainer.addEventListener('wheel', (e) => {
         if (appState !== 'ready' && appState !== 'completed') return;
