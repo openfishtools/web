@@ -508,12 +508,13 @@
 
                             <!-- Settings wrapper (hidden during upscaling) -->
                             <div id="upscaler-settings-wrapper">
-                                <!-- Preset Buttons -->
+                                <!-- Filter Buttons -->
                                 <div style="margin-bottom: 20px;">
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Load Preset</label>
-                                    <div style="display: flex; gap: 12px;">
-                                        <button id="btn-preset-cf1" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF1 Preset</button>
-                                        <button id="btn-preset-cf2" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF2 Preset</button>
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;">Video Filter</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button id="btn-preset-none" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">No Filter</button>
+                                        <button id="btn-preset-cf1" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF1</button>
+                                        <button id="btn-preset-cf2" class="btn-primary" style="flex: 1; height: 36px; border-radius: 18px; font-weight: 700; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline-variant); cursor: pointer; transition: all 0.2s ease; font-size: 13px;">CF2</button>
                                     </div>
                                 </div>
 
@@ -522,17 +523,17 @@
                                     <div class="input-field" style="margin-bottom: 0;">
                                         <label for="upscaler-model-select">Upscale Model</label>
                                         <select id="upscaler-model-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                                            <option value="anime4k">Anime4K (Lightweight GLSL)</option>
-                                            <option value="fsrcnn">FSRCNN (ONNX / WebGPU)</option>
-                                            <option value="esrgan">Real-ESRGAN Tiny (WASM)</option>
-                                            <option value="lanczos">Lanczos-3 (Mathematical)</option>
+                                            <option value="small">Fast (Small AI)</option>
+                                            <option value="medium" selected>Balanced (Medium AI)</option>
+                                            <option value="large">Quality (Large AI)</option>
+                                            <option value="mathematical">Mathematical (Lanczos)</option>
                                         </select>
                                     </div>
                                     <div class="input-field" style="margin-bottom: 0;">
                                         <label for="upscaler-scale-select">Scale Factor</label>
                                         <select id="upscaler-scale-select" style="width: 100%; box-sizing: border-box; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500;">
-                                            <option value="2">x2</option>
-                                            <option value="4" selected>x4</option>
+                                            <option value="2" selected>x2 (AI Upscale)</option>
+                                            <option value="4">x4</option>
                                             <option value="8">x8</option>
                                         </select>
                                     </div>
@@ -744,12 +745,7 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
-    <!-- TensorFlow.js and UpscalerJS for True AI Super-Resolution (Real-ESRGAN Slim) -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/upscaler@0.14.0/dist/browser/umd/upscaler.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-slim@0.4.0/dist/umd/2x.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-slim@0.4.0/dist/umd/4x.min.js"></script>
-
+    <script src="scripts/artplayer-upscaler.js"></script>
     <script src="scripts/video-upscaler-tool.js"></script>
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
