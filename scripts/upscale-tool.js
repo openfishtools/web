@@ -371,7 +371,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if ((aiReady || attempts > 10) && (gpuReady || attempts > 10)) {
+            const allReady = aiReady && gpuReady && ffmpegReady;
+            if (allReady) {
                 clearInterval(interval);
                 
                 setTimeout(() => {
@@ -379,6 +380,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     showWorkspace();
                     updateTransform();
                 }, 1000);
+            } else if (attempts > 10) {
+                clearInterval(interval);
             }
         }, 500);
     }
@@ -700,13 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnDownload.addEventListener('click', () => {
-        if (!renderedVideoSrc) return;
-        const a = document.createElement('a');
-        a.href = renderedVideoSrc;
-        a.download = 'enhanced_video.mp4';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        if (btnReset) btnReset.click();
     });
 
     async function getFFmpeg() {
@@ -802,108 +799,111 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = finalHeight;
 
         addLog('[System] FFmpeg ready.');
-        addLog('[System] Extracting and upscaling frames...');
+        addLog('[System] Extracting frames with FFmpeg WASM...');
 
-        const fps = 30;
-        const frameInterval = 1 / fps;
-        let renderTime = 0;
-        let frameCount = 0;
-        const totalFrames = Math.ceil(video.duration * fps);
         const originalTime = video.currentTime;
         const params = getPresetParams(activePreset);
         const orderBefore = enhanceOrder === 'before';
 
-        const writtenFrames = [];
+        const extractedFrames = [];
+        const enhancedFrames = [];
 
         try {
-            while (renderTime < video.duration) {
-                if (cancelRender) {
-                    addLog('[System] Cancelled.');
-                    video.currentTime = originalTime;
-                    appState = 'ready';
-                    progressContainer.classList.add('hidden');
-                    setProgress(0, '');
-                    btnCancel.classList.add('hidden');
-                    if (btnEnhance) btnEnhance.classList.remove('hidden');
-                    setCardControlsEnabled(true);
-                    
-                    // Cleanup files
-                    for (const file of writtenFrames) {
-                        try { await ffmpeg.deleteFile(file); } catch (e) {}
-                    }
-                    return;
+            // Write original video file for frame extraction
+            const { fetchFile } = window.FFmpegUtil;
+            await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+
+            if (cancelRender) throw new Error('Cancelled');
+
+            // Extract frames from the input video
+            await ffmpeg.exec(['-i', 'input.mp4', '-q:v', '2', 'frame_%04d.jpg']);
+
+            if (cancelRender) throw new Error('Cancelled');
+
+            // Count how many frames were extracted
+            let totalFrames = 0;
+            while (true) {
+                const filename = `frame_${(totalFrames + 1).toString().padStart(4, '0')}.jpg`;
+                try {
+                    await ffmpeg.readFile(filename);
+                    extractedFrames.push(filename);
+                    totalFrames++;
+                } catch (e) {
+                    break;
                 }
+            }
 
-                video.currentTime = renderTime;
-                await new Promise((resolve) => {
-                    let timeoutId;
-                    const checkReady = () => {
-                        if (video.readyState >= 2) {
-                            video.removeEventListener('seeked', checkReady);
-                            video.removeEventListener('canplay', checkReady);
-                            clearTimeout(timeoutId);
-                            resolve();
-                        } else {
-                            setTimeout(checkReady, 5);
-                        }
-                    };
-                    video.addEventListener('seeked', checkReady);
-                    video.addEventListener('canplay', checkReady);
-                    timeoutId = setTimeout(() => {
-                        video.removeEventListener('seeked', checkReady);
-                        video.removeEventListener('canplay', checkReady);
-                        resolve();
-                    }, 300);
+            if (totalFrames === 0) {
+                throw new Error('No frames extracted from the video.');
+            }
+
+            // Calculate exact output FPS matching the source video
+            const outputFps = (totalFrames / video.duration).toFixed(2);
+            addLog(`[System] Extracted ${totalFrames} frames. Processing at ${outputFps} FPS...`);
+
+            for (let i = 1; i <= totalFrames; i++) {
+                if (cancelRender) throw new Error('Cancelled');
+
+                // Update original video preview to match current frame progress
+                video.currentTime = ((i - 1) / totalFrames) * video.duration;
+
+                const filename = `frame_${i.toString().padStart(4, '0')}.jpg`;
+                const data = await ffmpeg.readFile(filename);
+
+                const blob = new Blob([data.buffer], { type: 'image/jpeg' });
+                const img = new Image();
+                const blobUrl = URL.createObjectURL(blob);
+                img.src = blobUrl;
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
                 });
+                URL.revokeObjectURL(blobUrl);
 
-                if (video.videoWidth === 0 || video.readyState < 2) {
-                    renderTime += frameInterval;
-                    continue;
+                // Dynamically adjust canvas to match frame dimensions and avoid stretching
+                const finalW = (img.width * scale) % 2 === 0 ? (img.width * scale) : (img.width * scale) + 1;
+                const finalH = (img.height * scale) % 2 === 0 ? (img.height * scale) : (img.height * scale) + 1;
+                if (canvas.width !== finalW || canvas.height !== finalH) {
+                    canvas.width = finalW;
+                    canvas.height = finalH;
                 }
 
                 const onFrameProgress = (frameProgress) => {
-                    const overallPct = (totalFrames && totalFrames > 0 && !isNaN(totalFrames)) 
-                        ? Math.min(85, Math.round(((frameCount + (frameProgress / 100)) / totalFrames) * 85)) 
-                        : 0;
-                    setProgress(overallPct, `Frame ${frameCount}/${totalFrames || '?'} (${frameProgress.toFixed(0)}%)`);
+                    const overallPct = Math.min(85, Math.round(((i - 1 + (frameProgress / 100)) / totalFrames) * 85));
+                    setProgress(overallPct, `Frame ${i}/${totalFrames} (${frameProgress.toFixed(0)}%)`);
                 };
 
                 if (orderBefore) {
-                    gpuEnhancer.process(video, params, enhanceCanvas);
+                    gpuEnhancer.process(img, params, enhanceCanvas);
                     await engine.renderFrame(enhanceCanvas, onFrameProgress);
                 } else {
-                    await engine.renderFrame(video, onFrameProgress);
+                    await engine.renderFrame(img, onFrameProgress);
                     gpuEnhancer.process(canvas, params, enhanceCanvas);
                     canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
                 }
 
-                // Convert canvas to Blob and write to FFmpeg virtual FS
-                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-                const arrayBuffer = await blob.arrayBuffer();
-                const filename = `frame_${frameCount.toString().padStart(4, '0')}.jpg`;
-                await ffmpeg.writeFile(filename, new Uint8Array(arrayBuffer));
-                writtenFrames.push(filename);
+                const outBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                const outArrayBuffer = await outBlob.arrayBuffer();
+                const outFilename = `enhanced_${i.toString().padStart(4, '0')}.jpg`;
+                await ffmpeg.writeFile(outFilename, new Uint8Array(outArrayBuffer));
+                enhancedFrames.push(outFilename);
 
-                const pct = (totalFrames && totalFrames > 0 && !isNaN(totalFrames)) 
-                    ? Math.min(85, Math.round((frameCount / totalFrames) * 85)) 
-                    : 0;
-                setProgress(pct, `Frame ${frameCount}/${totalFrames || '?'}`);
-                if (frameCount % 10 === 0) addLog(`[Process] Rendered frame ${frameCount}/${totalFrames} (${pct}%)`);
-                renderTime += frameInterval;
-                frameCount++;
+                const pct = Math.min(85, Math.round((i / totalFrames) * 85));
+                setProgress(pct, `Frame ${i}/${totalFrames}`);
+                if (i % 10 === 0 || i === totalFrames) {
+                    addLog(`[Process] Rendered frame ${i}/${totalFrames} (${pct}%)`);
+                }
             }
 
-            addLog('[System] Frame extraction complete. Encoding video using FFmpeg WASM...');
+            addLog('[System] Frame upscaling complete. Encoding video using FFmpeg WASM...');
             setProgress(88, 'Encoding video...');
 
-            // Write original video file for audio extraction/merge
-            const { fetchFile } = window.FFmpegUtil;
-            await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+            if (cancelRender) throw new Error('Cancelled');
 
             // Exec FFmpeg to combine images and overlay audio
             await ffmpeg.exec([
-                '-r', fps.toString(),
-                '-i', 'frame_%04d.jpg',
+                '-r', outputFps,
+                '-i', 'enhanced_%04d.jpg',
                 '-i', 'input.mp4',
                 '-map', '0:v',
                 '-map', '1:a?',
@@ -922,7 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderedVideoSrc = URL.createObjectURL(outputBlob);
 
             // Cleanup FFmpeg virtual files
-            for (const file of writtenFrames) {
+            for (const file of extractedFrames) {
+                try { await ffmpeg.deleteFile(file); } catch (e) {}
+            }
+            for (const file of enhancedFrames) {
                 try { await ffmpeg.deleteFile(file); } catch (e) {}
             }
             try { await ffmpeg.deleteFile('input.mp4'); } catch (e) {}
@@ -937,18 +940,35 @@ document.addEventListener('DOMContentLoaded', () => {
             btnDownload.classList.remove('hidden');
             btnCancel.classList.add('hidden');
             workspace.classList.add('hidden');
+            logsContainer.classList.add('hidden');
+            progressContainer.classList.add('hidden');
             if (btnEnhance) btnEnhance.classList.add('hidden');
             video.currentTime = originalTime;
+
+            // Automatically download video when finished
+            const a = document.createElement('a');
+            a.href = renderedVideoSrc;
+            a.download = 'enhanced_video.mp4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         } catch (err) {
-            addLog(`[Fatal Error] ${err.message}`);
+            if (err.message === 'Cancelled') {
+                addLog('[System] Cancelled.');
+            } else {
+                addLog(`[Fatal Error] ${err.message}`);
+            }
             appState = 'ready';
             progressContainer.classList.add('hidden');
             setProgress(0, '');
             btnCancel.classList.add('hidden');
             if (btnEnhance) btnEnhance.classList.remove('hidden');
             
-            // Cleanup on crash
-            for (const file of writtenFrames) {
+            // Cleanup on crash/cancel
+            for (const file of extractedFrames) {
+                try { await ffmpeg.deleteFile(file); } catch (e) {}
+            }
+            for (const file of enhancedFrames) {
                 try { await ffmpeg.deleteFile(file); } catch (e) {}
             }
             try { await ffmpeg.deleteFile('input.mp4'); } catch (e) {}
