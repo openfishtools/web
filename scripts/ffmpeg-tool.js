@@ -269,8 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const startMsg = needsScale ? 'Starting compression (downscaling to 4K max)...' : 'Starting compression...';
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${startMsg}</span>`;
 
-            // Determine optimal thread count
-            const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : '4';
+            // Determine optimal thread count (capped to 4 to prevent WASM Out of Memory)
+            const threads = navigator.hardwareConcurrency 
+                ? Math.min(navigator.hardwareConcurrency, 4).toString() 
+                : '2';
             console.log(`Using ${threads} threads for compression.`);
 
             // Scale filter — limits the longest edge to MAX_DIMENSION (4K), preserves aspect ratio,

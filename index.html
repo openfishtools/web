@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.webgpu.min.js"></script>
 </head>
 
 <body>
@@ -606,6 +607,116 @@
                         </div>
                     </div>
 
+                    <!-- Video Interpolation Card -->
+                    <div class="card" id="interpolation-video-card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">motion_photos_on</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Interpolation</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FPS Upscaler</div>
+                            </div>
+                        </div>
+
+                        <div class="drag-drop-area" id="interp-drop-area">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag &amp; drop video here or click to select</span>
+                            <input type="file" id="interp-file-input" accept="video/mp4,video/quicktime,video/webm" hidden>
+                        </div>
+
+                        <div id="interp-workspace" class="hidden" style="margin-top: 16px;">
+                            <!-- Expected vs Target FPS Side-by-side Panel -->
+                            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                                <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
+                                    <div id="interp-input-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-on-surface);">—</div>
+                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">Input</div>
+                                </div>
+                                <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
+                                    <div id="interp-target-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-primary);">—</div>
+                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">Output</div>
+                                </div>
+                            </div>
+
+                            <div id="interp-params-wrapper">
+                                <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface);">FPS Multiplier</p>
+                                <div class="ffmpeg-preset-container" style="margin-top: 0; margin-bottom: 16px;">
+                                    <div class="preset-switch-group" id="interp-multipliers">
+                                        <div class="preset-switch active" data-mult="2">2x</div>
+                                        <div class="preset-switch" data-mult="4">4x</div>
+                                        <div class="preset-switch" data-mult="8">8x</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WebGPU System Checking Screen -->
+                        <div id="interp-checking-screen" class="hidden" style="margin-top: 16px; padding: 24px; background: var(--md-sys-color-surface-container); border-radius: 16px; text-align: center;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);">Checking System Compatibility...</h3>
+                            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
+                                    <span id="interp-gpu-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
+                                    <span id="interp-gpu-status">WebGPU: Checking...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="interp-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);">Process Logs:</div>
+                            <pre id="interp-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                        </div>
+
+                        <div id="interp-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="interp-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="interp-progress-text">Processing...</span>
+                                <span id="interp-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-primary w-full hidden" id="interp-btn-process" style="margin-top: 16px;">
+                            <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 8px;">speed</span>
+                            Interpolate Video
+                        </button>
+
+                        <div id="interp-completed-panel" class="hidden" style="margin-top: 16px;">
+                            <div class="upscale-completed-player" style="position: relative; border-radius: 12px; overflow: hidden; background: #000;">
+                                <div class="upscale-comparison-container" id="interp-comparison-container" style="height: 300px; max-height: 300px; width: 100%; position: relative; overflow: hidden;">
+                                    <div class="upscale-comparison-wrapper" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+                                        <!-- Interpolated Output Video (Bottom Layer) -->
+                                        <div style="position: absolute; inset: 0; width: 100%; height: 100%;">
+                                            <video id="interp-video-output" loop crossorigin="anonymous" muted playsinline style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block;"></video>
+                                        </div>
+                                        
+                                        <!-- Original Video (Top Clip Layer) -->
+                                        <div id="interp-video-clip" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);">
+                                            <video id="interp-video-original" loop crossorigin="anonymous" muted playsinline style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block;"></video>
+                                        </div>
+                                        
+                                        <!-- Slider Line -->
+                                        <div id="interp-slider-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--md-sys-color-primary); cursor: col-resize; transform: translateX(-50%); z-index: 10;">
+                                            <div class="upscale-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; pointer-events: none; box-shadow: var(--elevation-1);">&#9664;&#9654;</div>
+                                        </div>
+                                        <div class="upscale-slider-label left" style="position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;">Original</div>
+                                        <div class="upscale-slider-label right" style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;">Interpolated</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="upscale-reset-row" style="margin-top: 16px;">
+                            <button type="button" class="btn-primary hidden" id="interp-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">Cancel</button>
+                            <button type="button" class="btn-primary hidden" id="interp-btn-reset">Interpolate Another</button>
+                        </div>
+                    </div>
+
+                </div>
+
                 </div>
             </section>
 
@@ -807,6 +918,7 @@
     <script src="assets/upscale/webm-muxer.min.js"></script>
     <script src="scripts/upscale-gpu-enhancer.js"></script>
     <script src="scripts/upscale-tool.js"></script>
+    <script src="scripts/video-interpolation.js"></script>
 </body>
 
 </html>
