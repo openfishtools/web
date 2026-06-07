@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.offscreenCanvas) this.offscreenCanvas = document.createElement('canvas');
             this.offscreenCanvas.width = width;
             this.offscreenCanvas.height = height;
-            const ctx = this.offscreenCanvas.getContext('2d');
+            const ctx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
             ctx.drawImage(source, 0, 0);
             const imgData = ctx.getImageData(0, 0, width, height);
 
@@ -861,38 +861,17 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[FFmpeg Log]', message);
         });
         const baseURL = window.location.origin + '/assets/ffmpeg';
-        const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
-        let loaded = false;
-
-        if (isMultiThread) {
-            try {
-                console.log('Attempting to load multi-threaded FFmpeg...');
-                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
-                await ffmpeg.load({ coreURL, wasmURL, workerURL });
-                loaded = true;
-                console.log('Multi-threaded FFmpeg loaded successfully.');
-            } catch (err) {
-                console.warn('Failed to load multi-threaded FFmpeg, falling back to single-threaded:', err);
-                ffmpeg = new FFmpeg();
-                ffmpeg.on('log', ({ message }) => {
-                    console.log('[FFmpeg Log]', message);
-                });
-            }
-        }
-
-        if (!loaded) {
-            try {
-                console.log('Loading single-threaded FFmpeg...');
-                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
-                await ffmpeg.load({ coreURL, wasmURL });
-                console.log('Single-threaded FFmpeg loaded successfully.');
-            } catch (err) {
-                console.error('getFFmpeg single-thread load error details:', err);
-                throw err;
-            }
+        // Force single-threaded FFmpeg — multi-threaded (SharedArrayBuffer + pthreads)
+        // causes hangs on Chrome/Windows after frame extraction completes.
+        try {
+            console.log('Loading single-threaded FFmpeg...');
+            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
+            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+            await ffmpeg.load({ coreURL, wasmURL });
+            console.log('Single-threaded FFmpeg loaded successfully.');
+        } catch (err) {
+            console.error('getFFmpeg single-thread load error details:', err);
+            throw err;
         }
 
         ffmpegInstance = ffmpeg;
@@ -981,6 +960,89 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Detects the exact FPS by running a lightweight FFmpeg probe on a file
+    // already written to the WASM FS, parsing the fps value from the log.
+    // Falls back to requestVideoFrameCallback, then 30fps.
+    async function detectVideoFps(vid, ffmpeg) {
+        // Strategy 1: parse FPS from an FFmpeg -i probe (most accurate)
+        if (ffmpeg) {
+            let detectedFps = null;
+            const logHandler = ({ message }) => {
+                // Match patterns like "29.97 fps", "60 fps", "59.94 tbr"
+                const m = message.match(/(\d+(?:\.\d+)?)\s+(?:fps|tbr)/);
+                if (m && !detectedFps) detectedFps = parseFloat(m[1]);
+            };
+            ffmpeg.on('log', logHandler);
+            try {
+                await ffmpeg.exec(['-i', 'input.mp4']);
+            } catch (e) { /* -i with no output always exits with error, that's fine */ }
+            ffmpeg.off('log', logHandler);
+            if (detectedFps && detectedFps > 0) {
+                console.log(`[FPS] Detected ${detectedFps} fps from FFmpeg probe`);
+                return detectedFps;
+            }
+        }
+
+        // Strategy 2: requestVideoFrameCallback playback probe (Chrome)
+        const commonFpsMap = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
+        if ('requestVideoFrameCallback' in vid) {
+            const probed = await new Promise((resolve) => {
+                const frames = [];
+                const timeout = setTimeout(() => { vid.pause(); resolve(null); }, 2500);
+                const cb = (now, meta) => {
+                    frames.push(meta.mediaTime);
+                    if (frames.length < 5) {
+                        vid.requestVideoFrameCallback(cb);
+                    } else {
+                        clearTimeout(timeout);
+                        vid.pause();
+                        const diffs = [];
+                        for (let k = 1; k < frames.length; k++) {
+                            const d = frames[k] - frames[k - 1];
+                            if (d > 0.001) diffs.push(d);
+                        }
+                        if (diffs.length === 0) { resolve(null); return; }
+                        const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                        const raw = 1 / avgDiff;
+                        const nearest = commonFpsMap.reduce((prev, cur) =>
+                            Math.abs(cur - raw) < Math.abs(prev - raw) ? cur : prev
+                        );
+                        resolve(nearest);
+                    }
+                };
+                vid.currentTime = 0;
+                vid.muted = true;
+                vid.playbackRate = 1;
+                vid.requestVideoFrameCallback(cb);
+                vid.play().catch(() => { clearTimeout(timeout); resolve(null); });
+            });
+            if (probed) {
+                console.log(`[FPS] Detected ${probed} fps from requestVideoFrameCallback`);
+                return probed;
+            }
+        }
+
+        // Strategy 3: fallback
+        console.warn('[FPS] Could not detect fps, falling back to 30');
+        return 30;
+    }
+
+    // Seeks video to a specific time and waits for seeked event.
+    function seekVideoToTime(vid, time) {
+        return new Promise((resolve) => {
+            if (Math.abs(vid.currentTime - time) < 0.001) {
+                resolve();
+                return;
+            }
+            const onSeeked = () => {
+                vid.removeEventListener('seeked', onSeeked);
+                resolve();
+            };
+            vid.addEventListener('seeked', onSeeked);
+            vid.currentTime = time;
+        });
+    }
+
     async function handleRender() {
         if (isImageMode) { handleImageRender(); return; }
         if (!video || !engine || !engine.isReady || !currentVideoFile) return;
@@ -1028,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = finalHeight;
 
         addLog('[System] FFmpeg ready.');
-        addLog('[System] Extracting frames with FFmpeg WASM...');
+        addLog('[System] Seeking frames via video element (no FFmpeg extraction)...');
 
         const originalTime = video.currentTime;
         const params = getPresetParams(activePreset);
@@ -1036,88 +1098,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const extractedFrames = [];
         const enhancedFrames = [];
+        const enhancedFrameBlobs = []; // kept in memory for abort-recovery re-encode
+        // Seek-based temp canvas for capturing frames without FFmpeg extraction
+        const seekCanvas = document.createElement('canvas');
+        seekCanvas.width = video.videoWidth;
+        seekCanvas.height = video.videoHeight;
+        const seekCtx = seekCanvas.getContext('2d');
 
         try {
-            // Write original video file for frame extraction
+            // Write original video file (needed only for audio muxing at the end)
             const { fetchFile } = window.FFmpegUtil;
+            addLog('[System] Writing video to FFmpeg FS for audio...');
             await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
 
             if (cancelRender) throw new Error('Cancelled');
 
-            // Extract frames from the input video
-            await ffmpeg.exec(['-i', 'input.mp4', '-q:v', '2', 'frame_%04d.jpg']);
+            // Determine frame count and FPS — probe from the already-written input.mp4.
+            // NOTE: the probe exec() causes Aborted() in ST WASM, which kills the instance.
+            // We reset and reload ffmpeg after the probe so frame writes go to a live instance.
+            const videoFps = await detectVideoFps(video, ffmpeg);
+            ffmpegInstance = null;  // probe killed the instance; get a fresh one
+            ffmpeg = await getFFmpeg();
+            // Re-write input.mp4 to the fresh instance (needed for audio mux)
+            await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
+            const totalFrames = Math.round(video.duration * videoFps);
+            const outputFps = videoFps.toFixed(2);
 
-            if (cancelRender) throw new Error('Cancelled');
+            addLog(`[System] Detected ${videoFps} FPS → ${totalFrames} frames total. Processing...`);
+            await new Promise(r => setTimeout(r, 0));
 
-            // Count how many frames were extracted
-            let totalFrames = 0;
-            while (true) {
-                const filename = `frame_${(totalFrames + 1).toString().padStart(4, '0')}.jpg`;
-                try {
-                    await ffmpeg.readFile(filename);
-                    extractedFrames.push(filename);
-                    totalFrames++;
-                } catch (e) {
-                    break;
-                }
-            }
-
-            if (totalFrames === 0) {
-                throw new Error('No frames extracted from the video.');
-            }
-
-            // Calculate exact output FPS matching the source video
-            const outputFps = (totalFrames / video.duration).toFixed(2);
-            addLog(`[System] Extracted ${totalFrames} frames. Processing at ${outputFps} FPS...`);
-
-            for (let i = 1; i <= totalFrames; i++) {
+            for (let i = 0; i < totalFrames; i++) {
                 if (cancelRender) throw new Error('Cancelled');
 
-                const filename = `frame_${i.toString().padStart(4, '0')}.jpg`;
-                const data = await ffmpeg.readFile(filename);
+                const frameNum = i + 1;
+                const timestamp = i / videoFps;
 
-                const blob = new Blob([data.buffer], { type: 'image/jpeg' });
-                const img = new Image();
-                const blobUrl = URL.createObjectURL(blob);
-                img.src = blobUrl;
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = reject;
-                });
-                URL.revokeObjectURL(blobUrl);
+                // Seek video to the target frame timestamp
+                await seekVideoToTime(video, timestamp);
 
-                // Dynamically adjust canvas to match frame dimensions and avoid stretching
-                const finalW = (img.width * scale) % 2 === 0 ? (img.width * scale) : (img.width * scale) + 1;
-                const finalH = (img.height * scale) % 2 === 0 ? (img.height * scale) : (img.height * scale) + 1;
+                // Draw the current video frame to the seek canvas
+                seekCtx.drawImage(video, 0, 0, seekCanvas.width, seekCanvas.height);
+
+                // Adjust output canvas size
+                const finalW = (seekCanvas.width * scale) % 2 === 0 ? (seekCanvas.width * scale) : (seekCanvas.width * scale) + 1;
+                const finalH = (seekCanvas.height * scale) % 2 === 0 ? (seekCanvas.height * scale) : (seekCanvas.height * scale) + 1;
                 if (canvas.width !== finalW || canvas.height !== finalH) {
                     canvas.width = finalW;
                     canvas.height = finalH;
                 }
 
                 const onFrameProgress = (frameProgress) => {
-                    const overallPct = Math.min(85, Math.round(((i - 1 + (frameProgress / 100)) / totalFrames) * 85));
-                    setProgress(overallPct, `Frame ${i}/${totalFrames} (${frameProgress.toFixed(0)}%)`);
+                    const overallPct = Math.min(85, Math.round(((i + (frameProgress / 100)) / totalFrames) * 85));
+                    setProgress(overallPct, `Frame ${frameNum}/${totalFrames} (${frameProgress.toFixed(0)}%)`);
                 };
 
                 if (orderBefore) {
-                    gpuEnhancer.process(img, params, enhanceCanvas);
+                    gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
                     await engine.renderFrame(enhanceCanvas, onFrameProgress);
                 } else {
-                    await engine.renderFrame(img, onFrameProgress);
+                    await engine.renderFrame(seekCanvas, onFrameProgress);
                     gpuEnhancer.process(canvas, params, enhanceCanvas);
                     canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
                 }
 
                 const outBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
                 const outArrayBuffer = await outBlob.arrayBuffer();
-                const outFilename = `enhanced_${i.toString().padStart(4, '0')}.jpg`;
+                const outFilename = `enhanced_${frameNum.toString().padStart(4, '0')}.jpg`;
                 await ffmpeg.writeFile(outFilename, new Uint8Array(outArrayBuffer));
                 enhancedFrames.push(outFilename);
+                enhancedFrameBlobs.push(outBlob); // save for abort recovery
 
-                const pct = Math.min(85, Math.round((i / totalFrames) * 85));
-                setProgress(pct, `Frame ${i}/${totalFrames}`);
-                if (i % 10 === 0 || i === totalFrames) {
-                    addLog(`[Process] Rendered frame ${i}/${totalFrames} (${pct}%)`);
+                const pct = Math.min(85, Math.round((frameNum / totalFrames) * 85));
+                setProgress(pct, `Frame ${frameNum}/${totalFrames}`);
+                if (frameNum % 10 === 0 || frameNum === totalFrames) {
+                    addLog(`[Process] Rendered frame ${frameNum}/${totalFrames} (${pct}%)`);
+                }
+
+                // Yield to the event loop every 5 frames to keep Chrome/Windows responsive
+                if (frameNum % 5 === 0) {
+                    await new Promise(r => setTimeout(r, 0));
                 }
             }
 
@@ -1126,9 +1185,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (cancelRender) throw new Error('Cancelled');
 
-            // Exec FFmpeg to combine images and overlay audio
-            await ffmpeg.exec([
-                '-r', outputFps,
+            // Exec FFmpeg to encode frames + mux audio.
+            // ST WASM always calls exit(0) → Emscripten throws Aborted().
+            // The output file IS written to the JS-side FS before the throw,
+            // so we try to readFile immediately on the same instance.
+            const encodeArgs = [
+                '-r', String(outputFps),
                 '-i', 'enhanced_%04d.jpg',
                 '-i', 'input.mp4',
                 '-map', '0:v',
@@ -1138,11 +1200,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 '-preset', 'ultrafast',
                 '-shortest',
                 'output.mp4'
-            ]);
+            ];
+
+            const runEncode = async (ff) => {
+                try {
+                    await ff.exec(encodeArgs);
+                } catch (execErr) {
+                    const msg = String(execErr);
+                    const isAbort = msg.includes('Aborted') || msg.includes('exit') || msg.includes('unreachable');
+                    if (!isAbort) throw execErr;
+                    addLog('[System] FFmpeg encode exited (ST WASM normal). Reading output...');
+                }
+                // Try to read output from the same instance (FS is JS-side, may survive abort)
+                return await ff.readFile('output.mp4');
+            };
+
+            let outputData;
+            try {
+                outputData = await runEncode(ffmpeg);
+            } catch (firstErr) {
+                // FS wasn't readable — spawn fresh instance and re-encode from saved blobs
+                addLog('[System] Re-encoding on fresh FFmpeg instance...');
+                ffmpegInstance = null;
+                const freshFfmpeg = await getFFmpeg();
+                const { fetchFile: fetchFile2 } = window.FFmpegUtil;
+                await freshFfmpeg.writeFile('input.mp4', await fetchFile2(currentVideoFile));
+                for (let fi = 0; fi < enhancedFrameBlobs.length; fi++) {
+                    const fn = `enhanced_${(fi + 1).toString().padStart(4, '0')}.jpg`;
+                    const ab = await enhancedFrameBlobs[fi].arrayBuffer();
+                    await freshFfmpeg.writeFile(fn, new Uint8Array(ab));
+                }
+                ffmpeg = freshFfmpeg;
+                outputData = await runEncode(freshFfmpeg);
+            }
 
             setProgress(97, 'Reading output...');
-            const data = await ffmpeg.readFile('output.mp4');
-            const outputBlob = new Blob([data.buffer], { type: 'video/mp4' });
+            const outputBlob = new Blob([outputData.buffer], { type: 'video/mp4' });
 
             if (renderedVideoSrc) URL.revokeObjectURL(renderedVideoSrc);
             renderedVideoSrc = URL.createObjectURL(outputBlob);
