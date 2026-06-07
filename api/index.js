@@ -1,4 +1,13 @@
 require('dotenv').config();
+
+// Register Vercel OpenTelemetry for serverless function monitoring
+try {
+    const { registerOTel } = require('@vercel/otel');
+    registerOTel({ serviceName: 'chros-api' });
+} catch (e) {
+    console.warn('Vercel OTel registration skipped:', e.message);
+}
+
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 if (dns.setDefaultResultOrder) {
