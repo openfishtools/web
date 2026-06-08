@@ -227,8 +227,8 @@ class GpuEnhancer {
 
   _upload(source) {
     const gl = this.gl;
-    const w = source.videoWidth || source.width;
-    const h = source.videoHeight || source.height;
+    const w = source.naturalWidth || source.videoWidth || source.width;
+    const h = source.naturalHeight || source.videoHeight || source.height;
     if (this.w !== w || this.h !== h) {
       this.w = w;
       this.h = h;
@@ -271,8 +271,8 @@ class GpuEnhancer {
   process(source, params, targetCanvas) {
     if (!this.init()) {
       const ctx = targetCanvas.getContext('2d');
-      targetCanvas.width = source.videoWidth || source.width;
-      targetCanvas.height = source.videoHeight || source.height;
+      targetCanvas.width = source.naturalWidth || source.videoWidth || source.width;
+      targetCanvas.height = source.naturalHeight || source.videoHeight || source.height;
       ctx.drawImage(source, 0, 0);
       return false;
     }

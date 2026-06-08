@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('upscale-file-input');
     const workspace = document.getElementById('upscale-workspace');
     const video = document.getElementById('upscale-video');
+    const imageEl = document.getElementById('upscale-image');
     const canvas = document.getElementById('upscale-canvas');
     const comparisonContainer = document.getElementById('upscale-comparison-container');
     const canvasClip = document.getElementById('upscale-canvas-clip');
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeline = document.getElementById('upscale-timeline');
     const timeCurrent = document.getElementById('upscale-time-current');
     const timeDuration = document.getElementById('upscale-time-duration');
+    const durationContainer = document.getElementById('upscale-duration-container');
     const btnPreview = document.getElementById('upscale-btn-preview');
     const btnEnhance = document.getElementById('upscale-btn-enhance');
     const btnZoom = document.getElementById('upscale-btn-zoom');
@@ -29,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsEl = document.getElementById('upscale-logs');
     const completedPanel = document.getElementById('upscale-completed-panel');
     const completedVideo = document.getElementById('upscale-completed-video');
+    const completedImage = document.getElementById('upscale-completed-image');
     const checkingScreen = document.getElementById('upscale-checking-screen');
     const engineStatus = document.getElementById('upscale-engine-status');
     const engineDot = document.getElementById('upscale-engine-dot');
@@ -54,7 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const TFJS_PARAMS = { model: 'anime_fast', factor: 4, tile_size: 128, min_lap: 0, backend: 'webgl' };
 
     let appState = 'import';
+    let isImageMode = false;
     let videoSrc = null;
+    let imageSrc = null;
     let renderedVideoSrc = null;
     let activePreset = 'none';
     let enhanceOrder = 'before';
@@ -73,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gpuEnhancer = null;
     let gpuReady = false;
     let currentVideoFile = null;
+    let currentImageFile = null;
     let ffmpegInstance = null;
 
     class UpscaleEngine {
@@ -85,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.offscreenCanvas = null;
             this.activeRequest = null;
             this.tfjsParams = TFJS_PARAMS;
+            this.lastSrcWidth = 0;
+            this.lastSrcHeight = 0;
             this.init();
         }
 
@@ -115,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (done && output && this.activeRequest) {
                         const factor = this.tfjsParams.factor;
-                        const w = this.video.videoWidth * factor;
-                        const h = this.video.videoHeight * factor;
+                        const w = this.lastSrcWidth * factor;
+                        const h = this.lastSrcHeight * factor;
                         this.canvas.width = w;
                         this.canvas.height = h;
                         const ctx = this.canvas.getContext('2d');
@@ -136,9 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async renderFrame(source, onProgress) {
             if (!this.worker) throw new Error('Worker not initialized.');
-            const width = source.videoWidth || source.width || 0;
-            const height = source.videoHeight || source.height || 0;
+            const width = source.naturalWidth || source.videoWidth || source.width || 0;
+            const height = source.naturalHeight || source.videoHeight || source.height || 0;
             if (!width || !height) throw new Error('Source dimensions are 0.');
+            this.lastSrcWidth = width;
+            this.lastSrcHeight = height;
 
             if (!this.offscreenCanvas) this.offscreenCanvas = document.createElement('canvas');
             this.offscreenCanvas.width = width;
@@ -230,16 +240,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getActiveMediaSource() {
+        return isImageMode ? imageEl : video;
+    }
+
+    function getMediaDimensions() {
+        if (isImageMode) {
+            return { w: imageEl.naturalWidth, h: imageEl.naturalHeight };
+        }
+        return { w: video.videoWidth, h: video.videoHeight };
+    }
+
     function drawGpuPreview() {
-        if (!video || !canvas || isPreviewed || appState !== 'ready') return;
-        if (!video.videoWidth || video.readyState < 2) return;
+        if (!canvas || isPreviewed || appState !== 'ready') return;
+        const source = getActiveMediaSource();
+        const dims = getMediaDimensions();
+        if (!dims.w || !dims.h) return;
+        if (!isImageMode && video.readyState < 2) return;
         const params = getPresetParams(activePreset);
         if (enhanceOrder === 'before') {
-            gpuEnhancer.process(video, params, canvas);
+            gpuEnhancer.process(source, params, canvas);
         } else {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.width = dims.w;
+            canvas.height = dims.h;
+            canvas.getContext('2d').drawImage(source, 0, 0);
         }
         updateSliderLabel();
     }
@@ -250,6 +274,18 @@ document.addEventListener('DOMContentLoaded', () => {
         logsContainer.classList.remove('hidden');
         if (btnReset) btnReset.classList.remove('hidden');
         if (btnEnhance) btnEnhance.classList.remove('hidden');
+        // Show/hide duration controls based on media type
+        if (durationContainer) {
+            durationContainer.classList.toggle('hidden', isImageMode);
+        }
+        // Show correct media element
+        if (isImageMode) {
+            video.classList.add('hidden');
+            imageEl.classList.remove('hidden');
+        } else {
+            video.classList.remove('hidden');
+            imageEl.classList.add('hidden');
+        }
     }
 
     function setCardControlsEnabled(enabled) {
@@ -388,15 +424,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadVideoFile(file) {
         if (!file || !file.type.startsWith('video/')) return;
+        isImageMode = false;
         currentVideoFile = file;
+        currentImageFile = null;
         if (videoSrc) URL.revokeObjectURL(videoSrc);
+        if (imageSrc) { URL.revokeObjectURL(imageSrc); imageSrc = null; }
         videoSrc = URL.createObjectURL(file);
         video.src = videoSrc;
+        imageEl.src = '';
+        imageEl.classList.add('hidden');
+        video.classList.remove('hidden');
         isPreviewed = false;
         zoom = 1;
         pan = { x: 0, y: 0 };
         appState = 'ready';
         completedPanel.classList.add('hidden');
+        completedVideo.classList.add('hidden');
+        completedImage.classList.add('hidden');
         progressContainer.classList.add('hidden');
         btnCancel.classList.add('hidden');
         btnDownload.classList.add('hidden');
@@ -405,10 +449,94 @@ document.addEventListener('DOMContentLoaded', () => {
             btnEnhance.removeAttribute('title');
         }
         logsEl.textContent = `[System] Video loaded: ${file.name}`;
-        
         dropArea.classList.add('hidden');
         checkingScreen.classList.remove('hidden');
         checkSystemAndContinue();
+    }
+
+    function loadImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        isImageMode = true;
+        currentImageFile = file;
+        currentVideoFile = null;
+        if (imageSrc) URL.revokeObjectURL(imageSrc);
+        if (videoSrc) { URL.revokeObjectURL(videoSrc); videoSrc = null; }
+        imageSrc = URL.createObjectURL(file);
+        imageEl.src = imageSrc;
+        video.src = '';
+        video.classList.add('hidden');
+        imageEl.classList.remove('hidden');
+        isPreviewed = false;
+        zoom = 1;
+        pan = { x: 0, y: 0 };
+        appState = 'ready';
+        completedPanel.classList.add('hidden');
+        completedVideo.classList.add('hidden');
+        completedImage.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        btnCancel.classList.add('hidden');
+        btnDownload.classList.add('hidden');
+        if (btnEnhance) {
+            btnEnhance.disabled = false;
+            btnEnhance.removeAttribute('title');
+        }
+        logsEl.textContent = `[System] Image loaded: ${file.name}`;
+        imageEl.onload = () => {
+            logsEl.textContent += `\n[System] Dimensions: ${imageEl.naturalWidth}x${imageEl.naturalHeight}`;
+            drawGpuPreview();
+        };
+        dropArea.classList.add('hidden');
+        checkingScreen.classList.remove('hidden');
+        checkSystemAndContinueImage();
+    }
+
+    function checkSystemAndContinueImage() {
+        if (engineDot) {
+            engineDot.textContent = 'sync';
+            engineDot.style.color = 'var(--md-sys-color-primary)';
+            engineDot.classList.add('upscale-spinner');
+        }
+        if (engineStatus) engineStatus.textContent = 'AI Engine: Checking...';
+        if (gpuDot) {
+            gpuDot.textContent = 'sync';
+            gpuDot.style.color = 'var(--md-sys-color-primary)';
+            gpuDot.classList.add('upscale-spinner');
+        }
+        if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Checking...';
+        if (webcodecsDot) {
+            webcodecsDot.textContent = 'check_circle';
+            webcodecsDot.style.color = '#4CAF50';
+            webcodecsDot.classList.remove('upscale-spinner');
+        }
+        if (webcodecsStatus) webcodecsStatus.textContent = 'FFmpeg WASM: Not needed for images';
+
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (gpuReady) {
+                if (gpuDot) { gpuDot.textContent = 'check_circle'; gpuDot.style.color = '#4CAF50'; gpuDot.classList.remove('upscale-spinner'); }
+                if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Ready';
+            } else {
+                if (gpuDot) { gpuDot.textContent = 'cancel'; gpuDot.style.color = '#F44336'; gpuDot.classList.remove('upscale-spinner'); }
+                if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Unavailable';
+            }
+            const aiReady = engine && engine.isReady;
+            if (aiReady) {
+                if (engineDot) { engineDot.textContent = 'check_circle'; engineDot.style.color = '#4CAF50'; engineDot.classList.remove('upscale-spinner'); }
+                if (engineStatus) engineStatus.textContent = 'AI Engine: Ready';
+            } else if (attempts > 10) {
+                if (engineDot) { engineDot.textContent = 'cancel'; engineDot.style.color = '#F44336'; engineDot.classList.remove('upscale-spinner'); }
+                if (engineStatus) engineStatus.textContent = 'AI Engine: Timeout/Failed';
+            }
+            if ((aiReady && gpuReady) || attempts > 10) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    checkingScreen.classList.add('hidden');
+                    showWorkspace();
+                    updateTransform();
+                }, 800);
+            }
+        }, 500);
     }
 
     PRESETS.forEach(p => {
@@ -441,9 +569,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function handleFileInput(file) {
+        if (!file) return;
+        if (file.type.startsWith('image/')) {
+            loadImageFile(file);
+        } else if (file.type.startsWith('video/')) {
+            loadVideoFile(file);
+        }
+    }
+
     dropArea.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) loadVideoFile(e.target.files[0]);
+        if (e.target.files[0]) handleFileInput(e.target.files[0]);
     });
 
     ['dragenter', 'dragover'].forEach(evt => {
@@ -460,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     dropArea.addEventListener('drop', (e) => {
         const file = e.dataTransfer.files[0];
-        if (file) loadVideoFile(file);
+        if (file) handleFileInput(file);
     });
 
     video.addEventListener('loadedmetadata', async () => {
@@ -621,7 +758,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const startTime = performance.now();
         try {
             isPreviewed = true;
-            if (video.readyState < 2) {
+            const source = getActiveMediaSource();
+            if (!isImageMode && video.readyState < 2) {
                 await new Promise((resolve) => {
                     const check = () => {
                         if (video.readyState >= 2) resolve();
@@ -642,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawGpuPreview();
                 await engine.renderFrame(canvas, onFrameProgress);
             } else {
-                await engine.renderFrame(video, onFrameProgress);
+                await engine.renderFrame(source, onFrameProgress);
                 if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
                 gpuEnhancer.process(canvas, params, enhanceCanvas);
                 canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
@@ -651,9 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPreview.classList.add('active');
             updateSliderLabel();
             const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-            addLog(`[Preview] Frame upscaled successfully in ${elapsed}s.`);
-            
-            // Keep the progress bar visible at 100% for a brief moment before hiding
+            addLog(`[Preview] ${isImageMode ? 'Image' : 'Frame'} upscaled successfully in ${elapsed}s.`);
             await new Promise(r => setTimeout(r, 500));
         } catch (err) {
             isPreviewed = false;
@@ -669,42 +805,52 @@ document.addEventListener('DOMContentLoaded', () => {
     btnEnhance.addEventListener('click', handleRender);
     btnCancel.addEventListener('click', () => { cancelRender = true; });
 
-    if (btnReset) {
-        btnReset.addEventListener('click', () => {
-            if (videoSrc) URL.revokeObjectURL(videoSrc);
-            if (renderedVideoSrc) URL.revokeObjectURL(renderedVideoSrc);
-            videoSrc = null;
-            renderedVideoSrc = null;
-            video.removeAttribute('src');
-            video.load();
-            isPreviewed = false;
-            zoom = 1;
-            pan = { x: 0, y: 0 };
-            appState = 'import';
-            currentVideoFile = null;
-            if (ffmpegInstance) {
-                try {
-                    ffmpegInstance.deleteFile('input.mp4').catch(()=>{});
-                    ffmpegInstance.deleteFile('output.mp4').catch(()=>{});
-                } catch(e){}
-            }
-            dropArea.classList.remove('hidden');
-            workspace.classList.add('hidden');
-            completedPanel.classList.add('hidden');
-            progressContainer.classList.add('hidden');
-            setProgress(0, '');
-            logsContainer.classList.add('hidden');
-            logsEl.textContent = '';
-            btnCancel.classList.add('hidden');
-            btnDownload.classList.add('hidden');
-            if (btnEnhance) btnEnhance.classList.add('hidden');
-            fileInput.value = '';
-        });
+    function resetTool() {
+        if (videoSrc) URL.revokeObjectURL(videoSrc);
+        if (imageSrc) URL.revokeObjectURL(imageSrc);
+        if (renderedVideoSrc) URL.revokeObjectURL(renderedVideoSrc);
+        videoSrc = null;
+        imageSrc = null;
+        renderedVideoSrc = null;
+        video.removeAttribute('src');
+        video.load();
+        imageEl.src = '';
+        imageEl.classList.add('hidden');
+        video.classList.remove('hidden');
+        isPreviewed = false;
+        zoom = 1;
+        pan = { x: 0, y: 0 };
+        appState = 'import';
+        isImageMode = false;
+        currentVideoFile = null;
+        currentImageFile = null;
+        if (ffmpegInstance) {
+            try {
+                ffmpegInstance.deleteFile('input.mp4').catch(()=>{});
+                ffmpegInstance.deleteFile('output.mp4').catch(()=>{});
+            } catch(e){}
+        }
+        dropArea.classList.remove('hidden');
+        workspace.classList.add('hidden');
+        completedPanel.classList.add('hidden');
+        completedVideo.classList.add('hidden');
+        completedImage.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        setProgress(0, '');
+        logsContainer.classList.add('hidden');
+        logsEl.textContent = '';
+        btnCancel.classList.add('hidden');
+        btnDownload.classList.add('hidden');
+        if (btnEnhance) btnEnhance.classList.add('hidden');
+        if (durationContainer) durationContainer.classList.remove('hidden');
+        fileInput.value = '';
     }
 
-    btnDownload.addEventListener('click', () => {
-        if (btnReset) btnReset.click();
-    });
+    if (btnReset) {
+        btnReset.addEventListener('click', resetTool);
+    }
+
+    btnDownload.addEventListener('click', resetTool);
 
     async function getFFmpeg() {
         if (ffmpegInstance) return ffmpegInstance;
@@ -753,7 +899,90 @@ document.addEventListener('DOMContentLoaded', () => {
         return ffmpeg;
     }
 
+    async function handleImageRender() {
+        if (!imageEl || !engine || !engine.isReady || !currentImageFile) return;
+        const startTime = performance.now();
+        appState = 'rendering';
+        cancelRender = false;
+        setProgress(0, 'Preparing...');
+        progressContainer.classList.remove('hidden');
+        logsContainer.classList.remove('hidden');
+        btnCancel.classList.remove('hidden');
+        if (btnEnhance) btnEnhance.classList.add('hidden');
+        setCardControlsEnabled(false);
+
+        const dims = getMediaDimensions();
+        addLog(`[System] Image: ${dims.w}x${dims.h}`);
+        addLog(`[System] Target: ${dims.w * 4}x${dims.h * 4}`);
+
+        const params = getPresetParams(activePreset);
+
+        try {
+            setProgress(5, 'Applying GPU enhancement...');
+            const source = getActiveMediaSource();
+            const onFrameProgress = (progress) => {
+                const pct = Math.min(95, 5 + Math.round(progress * 0.9));
+                setProgress(pct, `Processing... (${progress.toFixed(0)}%)`);
+            };
+
+            if (enhanceOrder === 'before') {
+                if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+                gpuEnhancer.process(source, params, enhanceCanvas);
+                await engine.renderFrame(enhanceCanvas, onFrameProgress);
+            } else {
+                await engine.renderFrame(source, onFrameProgress);
+                if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+                gpuEnhancer.process(canvas, params, enhanceCanvas);
+                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+            }
+
+            setProgress(97, 'Generating output...');
+            const outBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            const outUrl = URL.createObjectURL(outBlob);
+
+            setProgress(100, 'Complete');
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+            addLog(`[System] Enhancement complete in ${elapsed}s!`);
+
+            appState = 'completed';
+            completedImage.src = outUrl;
+            completedImage.classList.remove('hidden');
+            completedVideo.classList.add('hidden');
+            completedPanel.classList.remove('hidden');
+            btnDownload.classList.remove('hidden');
+            btnCancel.classList.add('hidden');
+            workspace.classList.add('hidden');
+            logsContainer.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            if (btnEnhance) btnEnhance.classList.add('hidden');
+
+            // Auto download
+            const ext = currentImageFile.name.split('.').pop() || 'png';
+            const baseName = currentImageFile.name.replace(/\.[^.]+$/, '');
+            const a = document.createElement('a');
+            a.href = outUrl;
+            a.download = `enhanced_${baseName}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            if (err.message === 'Cancelled') {
+                addLog('[System] Cancelled.');
+            } else {
+                addLog(`[Fatal Error] ${err.message}`);
+            }
+            appState = 'ready';
+            progressContainer.classList.add('hidden');
+            setProgress(0, '');
+            btnCancel.classList.add('hidden');
+            if (btnEnhance) btnEnhance.classList.remove('hidden');
+        } finally {
+            setCardControlsEnabled(true);
+        }
+    }
+
     async function handleRender() {
+        if (isImageMode) { handleImageRender(); return; }
         if (!video || !engine || !engine.isReady || !currentVideoFile) return;
 
         const scale = 4;
@@ -844,8 +1073,10 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 1; i <= totalFrames; i++) {
                 if (cancelRender) throw new Error('Cancelled');
 
-                // Update original video preview to match current frame progress
-                video.currentTime = ((i - 1) / totalFrames) * video.duration;
+                // Update original video preview safely without freezing on some platforms
+                try {
+                    video.currentTime = ((i - 1) / totalFrames) * video.duration;
+                } catch(e) {}
 
                 const filename = `frame_${i.toString().padStart(4, '0')}.jpg`;
                 const data = await ffmpeg.readFile(filename);
@@ -936,6 +1167,8 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`[System] Enhancement complete in ${elapsed}s!`);
             appState = 'completed';
             completedVideo.src = renderedVideoSrc;
+            completedVideo.classList.remove('hidden');
+            completedImage.classList.add('hidden');
             completedPanel.classList.remove('hidden');
             btnDownload.classList.remove('hidden');
             btnCancel.classList.add('hidden');
