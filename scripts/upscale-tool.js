@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const PRESETS = [
         { id: 'cartoonist', name: 'Cartoonist', sharpen: 14, unsharpAmount: 107, unsharpRadius: 5.1, denoise: 2.9, shadows: 2, saturation: 1 },
+        { id: 'cartoonist2', name: 'Cartoonist 2', sharpen: 20, unsharpAmount: 120, unsharpRadius: 10, denoise: 2, shadows: 4, saturation: 1.3 },
         { id: 'humanDetail', name: 'Human Detail', sharpen: 100, denoise: 1.2 },
         { id: 'smoothFace', name: 'Smooth Face', sharpen: 26, unsharpRadius: 4.5 },
         { id: 'idgaf', name: 'IDGAF', sharpen: 100 },
