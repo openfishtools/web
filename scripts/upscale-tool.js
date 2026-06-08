@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const webcodecsStatus = document.getElementById('upscale-webcodecs-status');
     const webcodecsDot = document.getElementById('upscale-webcodecs-dot');
     const presetList = document.getElementById('upscale-preset-list');
+    const unprocessedOverlay = document.getElementById('upscale-unprocessed-overlay');
 
     const PRESETS = [
         { id: 'cartoonist', name: 'Cartoonist', sharpen: 14, unsharpAmount: 107, unsharpRadius: 5.1, denoise: 2.9, shadows: 2, saturation: 1 },
@@ -233,10 +234,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSliderLabel() {
         if (isPreviewed) {
             sliderLabelRight.textContent = 'Enhanced + 4x AI';
-        } else if (enhanceOrder === 'before') {
-            sliderLabelRight.textContent = 'Live Enhanced (1x)';
+            if (unprocessedOverlay) unprocessedOverlay.classList.remove('show');
         } else {
-            sliderLabelRight.textContent = 'Original (1x)';
+            if (enhanceOrder === 'before') {
+                sliderLabelRight.textContent = 'Live Enhanced (1x)';
+            } else {
+                sliderLabelRight.textContent = 'Original (1x)';
+            }
+            if (unprocessedOverlay) unprocessedOverlay.classList.add('show');
         }
     }
 
@@ -286,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video.classList.remove('hidden');
             imageEl.classList.add('hidden');
         }
+        updateSliderLabel();
     }
 
     function setCardControlsEnabled(enabled) {

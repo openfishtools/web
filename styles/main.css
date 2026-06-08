@@ -3078,6 +3078,41 @@ body {
     z-index: 10;
 }
 
+#upscale-video-card .upscale-unprocessed-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    padding: 16px;
+}
+
+#upscale-video-card .upscale-unprocessed-overlay.show {
+    opacity: 1;
+}
+
+#upscale-video-card .upscale-unprocessed-overlay .unprocessed-title {
+    color: #ff4d4d;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#upscale-video-card .upscale-unprocessed-overlay .unprocessed-subtitle {
+    color: #e0e0e0;
+    font-size: 12px;
+    font-weight: 400;
+}
+
 #upscale-video-card .upscale-slider-line {
     position: absolute;
     top: 0;
