@@ -1073,11 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 1; i <= totalFrames; i++) {
                 if (cancelRender) throw new Error('Cancelled');
 
-                // Update original video preview safely without freezing on some platforms
-                try {
-                    video.currentTime = ((i - 1) / totalFrames) * video.duration;
-                } catch(e) {}
-
                 const filename = `frame_${i.toString().padStart(4, '0')}.jpg`;
                 const data = await ffmpeg.readFile(filename);
 
