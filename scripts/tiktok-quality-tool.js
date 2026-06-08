@@ -136,11 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const threads = Math.min(4, hardwareThreads).toString();
             
             // WMV setting: ffmpeg -i IN.mp4 -c:v wmv2 -qscale:v 1 -r 60 -c:a wmav2 -b:a 320k OUT.wmv
-            // Output 720p: scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)'
+            // Output max 1080p: scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'
             const command = [
                 '-i', 'input.mp4',
                 '-threads', threads,
-                '-vf', "scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)'",
+                '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'",
                 '-c:v', 'wmv2',
                 '-qscale:v', '1',
                 '-r', '60',
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Trigger Download
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${file.name.replace(/\.[^.]+$/, '')}_720p_hq.wmv`;
+            a.download = `${file.name.replace(/\.[^.]+$/, '')}_hq.wmv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
