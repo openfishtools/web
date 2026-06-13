@@ -10,40 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsContainer = document.getElementById('tiktok-logs-container');
     const logsEl = document.getElementById('tiktok-logs');
     const versionSwitch = document.getElementById('tiktok-version-switch');
-    const versionDesc = document.getElementById('tiktok-version-desc');
 
     let selectedFile = null;
     let isProcessing = false;
     let currentVersion = 'v1';
 
     const MAX_FILE_MB_HARD = 1500;
-
-    const V1_DESC = `<div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-        <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-            <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> WMV2</li>
-            <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Quality:</strong> qscale 1 (Best)</li>
-            <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Output:</strong> .wmv (max 1080p, 60fps)</li>
-        </ul>
-        <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-        <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-            <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-            <span>Classic WMV method. Converts video to WMV format which TikTok processes at higher quality.</span>
-        </div>
-    </div>`;
-
-    const V2_DESC = `<div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-        <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-            <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-            <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow (Smaller Size)</li>
-            <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">equalizer</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Bitrate:</strong> VBR 12–20 Mbps</li>
-            <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Output:</strong> .mp4 (max 1080p, 60fps)</li>
-        </ul>
-        <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-        <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-            <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-            <span>Shark method. Compresses to H.264 MP4, then applies fake EOF sample patch to trick TikTok into preserving quality.</span>
-        </div>
-    </div>`;
 
     if (versionSwitch) {
         versionSwitch.addEventListener('click', (e) => {
@@ -52,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
             versionSwitch.querySelectorAll('.preset-switch').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentVersion = btn.dataset.version;
-            versionDesc.innerHTML = currentVersion === 'v1' ? V1_DESC : V2_DESC;
         });
     }
 
