@@ -341,6 +341,54 @@ function isAllowedTikTokResolveHost(hostname) {
     );
 }
 
+async function extractTikTokFromPage(pageUrl) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        
+        const pageResponse = await fetch(pageUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeout);
+        
+        if (!pageResponse.ok) return null;
+        
+        const html = await pageResponse.text();
+        
+        // Try to extract from __UNIVERSAL_DATA_FOR_REHYDRATION__
+        const jsonMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/);
+        if (!jsonMatch) return null;
+        
+        const pageData = JSON.parse(jsonMatch[1]);
+        const videoData = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.videoData;
+        
+        if (!videoData || (!videoData.downloadAddr && !videoData.playAddr)) {
+            return null;
+        }
+        
+        return {
+            play: videoData.downloadAddr || videoData.playAddr || '',
+            hdplay: videoData.playAddr || videoData.downloadAddr || '',
+            wmplay: '',
+            cover: videoData.dynamicCover || videoData.originCover || '',
+            title: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.desc || '',
+            author_unique_id: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.uniqueId || '',
+            author_nickname: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.nickname || '',
+            size: 0,
+            duration: videoData.duration || 0,
+            w: videoData.width || 0,
+            h: videoData.height || 0
+        };
+    } catch (e) {
+        console.error('[TikTok Page Extract] Error:', e.message);
+        return null;
+    }
+}
+
 app.get('/api/tiktok-resolve', async (req, res) => {
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
@@ -357,7 +405,8 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         const bypassCache = req.query.nocache === '1';
         if (!bypassCache) {
             const cached = await TikTokCache.findOne({ url: pageUrl });
-            if (cached && (Date.now() - cached.updatedAt.getTime() < 1 * 60 * 60 * 1000)) {
+            // Check fresh cache (24 hours)
+            if (cached && (Date.now() - cached.updatedAt.getTime() < 24 * 60 * 60 * 1000)) {
                 return res.json({
                     play: cached.play,
                     cover: cached.cover,
@@ -372,50 +421,114 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             }
         }
 
+        // Strategy: Try multiple methods
+        let result = null;
+        let lastError = null;
+
+        // Method 1: Try TikWM API mirrors
         const mirrors = [
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
-            `https://api.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
+            `https://api.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
+            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
         ];
         const apiKey = process.env.TIKWM_API_KEY;
 
-        for (const upstream of mirrors) {
+        for (let idx = 0; idx < mirrors.length; idx++) {
+            const upstream = mirrors[idx];
             try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 4000);
+                
                 const fetchOptions = {
-                    headers: { 'User-Agent': 'Mozilla/5.0' },
-                    signal: AbortSignal.timeout(8000)
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
                 };
                 if (apiKey) {
                     fetchOptions.headers['x-api-key'] = apiKey;
                 }
-                const r = await fetch(upstream, fetchOptions);
-                if (r.ok) {
-                    const json = await r.json();
-                    if (json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
-                        const d = json.data;
-                        const result = {
-                            play: d.play || d.hdplay || '',
-                            hdplay: d.hdplay || '',
-                            wmplay: d.wmplay || '',
-                            cover: d.cover || d.origin_cover || '',
-                            title: d.title || '',
-                            author_unique_id: d.author?.unique_id || '',
-                            author_nickname: d.author?.nickname || '',
-                            size: d.size || 0,
-                            duration: d.duration || 0,
-                            w: d.w || 0,
-                            h: d.h || 0
-                        };
-                        if (!bypassCache) {
-                            await TikTokCache.findOneAndUpdate({ url: pageUrl }, { ...result, updatedAt: new Date() }, { upsert: true });
-                        }
-                        return res.json(result);
-                    }
+                
+                const r = await fetch(upstream, { ...fetchOptions, signal: controller.signal });
+                clearTimeout(timeout);
+                const json = await r.json().catch(() => ({}));
+                
+                if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
+                    const d = json.data;
+                    result = {
+                        play: d.play || d.hdplay || '',
+                        hdplay: d.hdplay || '',
+                        wmplay: d.wmplay || '',
+                        cover: d.cover || d.origin_cover || '',
+                        title: d.title || '',
+                        author_unique_id: d.author?.unique_id || '',
+                        author_nickname: d.author?.nickname || '',
+                        size: d.size || 0,
+                        duration: d.duration || 0,
+                        w: d.w || 0,
+                        h: d.h || 0,
+                        is_fallback: false,
+                        method: 'tikwm'
+                    };
+                    break;
                 }
-            } catch (e) { /* try next */ }
+                
+                lastError = `TikWM Mirror ${idx + 1}: ${r.status}`;
+            } catch (e) {
+                lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
+            }
         }
-        res.status(404).json({ error: 'Video unavailable' });
+
+        // Method 2: Try direct page extraction
+        if (!result) {
+            try {
+                result = await extractTikTokFromPage(pageUrl);
+                if (result) {
+                    result.is_fallback = false;
+                    result.method = 'direct_extract';
+                }
+            } catch (e) {
+                lastError = `Direct Extract: ${e.message}`;
+            }
+        }
+
+        // If we got a result, cache and return it
+        if (result) {
+            if (!bypassCache) {
+                await TikTokCache.findOneAndUpdate(
+                    { url: pageUrl },
+                    { ...result, updatedAt: new Date() },
+                    { upsert: true }
+                );
+            }
+            return res.json(result);
+        }
+
+        // Method 3: Try old cache if available (even if expired)
+        const oldCache = await TikTokCache.findOne({ url: pageUrl });
+        if (oldCache) {
+            console.warn(`[TikTok Resolve] Using expired cache for ${pageUrl}`);
+            return res.json({
+                play: oldCache.play,
+                cover: oldCache.cover,
+                title: oldCache.title,
+                author_unique_id: oldCache.author_unique_id || '',
+                author_nickname: oldCache.author_nickname || '',
+                size: oldCache.size || 0,
+                duration: oldCache.duration || 0,
+                fps: oldCache.fps || null,
+                is_fallback: true,
+                cached: true,
+                warning: 'API temporarily unavailable, using old cached version'
+            });
+        }
+
+        // All methods failed
+        console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
+        res.status(404).json({ 
+            error: 'Video unavailable', 
+            details: lastError,
+            hint: 'Try alternative URL format or video might be private/deleted'
+        });
     } catch (err) {
-        res.status(500).json({ error: 'Resolve failed' });
+        console.error(`[TikTok Resolve] Unexpected error: ${err.message}`);
+        res.status(500).json({ error: 'Resolve failed', details: err.message });
     }
 });
 

@@ -71,6 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             btnDownload.disabled = false;
             btnDownload.textContent = "Download HD";
+            
+            // Show warning if using cached/fallback version
+            if (currentMeta.is_fallback || currentMeta.warning) {
+                showStatus(
+                    currentMeta.warning || "Using cached version - API may be temporarily unavailable",
+                    "var(--md-sys-color-tertiary)"
+                );
+            }
+            
             downloadVideo();
 
         } catch (err) {
