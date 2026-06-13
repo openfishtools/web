@@ -208,9 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════
-    //  V2: Shark MP4 Patch Method
+    //  V2: HQ MP4 Patch Method
     //  Step 1: FFmpeg compress (h264, max 1080p, max 60fps, VBR 12-20Mbps, preset slow)
-    //  Step 2: Apply NXT_Shark537 fake EOF video samples patch
+    //  Step 2: Apply fake EOF video samples patch
     // ═══════════════════════════════════════════════
 
     const FAKE_SAMPLE_COUNT      = 8573;
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = 'Compressing...';
-        logsEl.textContent = '[v2] Shark Method — Starting...\n';
+        logsEl.textContent = '[v2] HQ Method — Starting...\n';
 
         try {
             const { FFmpeg } = window.FFmpegWASM;
@@ -665,11 +665,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`Out of memory during compression. (Triggered by log: "${oomLine}")`);
             }
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 2/2: Applying Shark patch...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 2/2: Applying patch...</span>`;
             progressText.textContent = 'Patching...';
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
-            logsEl.textContent += '\n[Step 2/2] Applying Shark MP4 patch...\n';
+            logsEl.textContent += '\n[Step 2/2] Applying MP4 patch...\n';
 
             const compressedData = await ffmpeg.readFile('compressed.mp4');
 
@@ -698,13 +698,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${file.name.replace(/\.[^.]+$/, '')}_shark.mp4`;
+            a.download = `${file.name.replace(/\.[^.]+$/, '')}_hq.mp4`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Shark patch applied! Download started.</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Patch applied! Download started.</span>`;
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
             progressText.textContent = 'Complete!';
