@@ -633,9 +633,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const command = [
                 '-i', 'input.mp4',
                 '-threads', threads,
-                '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)',fps='min(source_fps,60)'",
+                '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
                 '-c:v', 'libx264',
-                '-preset', 'slow',
+                '-preset', 'fast',
+                '-bf', '0',
+                '-video_track_timescale', '90000',
                 '-b:v', '16M',
                 '-minrate', '12M',
                 '-maxrate', '20M',
