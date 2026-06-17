@@ -92,6 +92,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function loadFFmpegHelper(ffmpeg, toBlobURL) {
+        const baseURL = window.location.origin + '/assets/ffmpeg';
+        const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
+        let loaded = false;
+
+        if (isMultiThread) {
+            try {
+                console.log('Attempting to load multi-threaded FFmpeg for TikTok Patcher...');
+                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                await ffmpeg.load({ coreURL, wasmURL, workerURL });
+                loaded = true;
+                console.log('Multi-threaded FFmpeg loaded successfully.');
+            } catch (err) {
+                console.warn('Failed to load multi-threaded FFmpeg, falling back to single-threaded:', err);
+            }
+        }
+
+        if (!loaded) {
+            console.log('Loading single-threaded FFmpeg for TikTok Patcher...');
+            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
+            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+            await ffmpeg.load({ coreURL, wasmURL });
+            console.log('Single-threaded FFmpeg loaded successfully.');
+        }
+    }
+
     async function processVideoV1(file) {
         if (isProcessing) return;
         isProcessing = true;
@@ -131,12 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const baseURL = window.location.origin + '/assets/ffmpeg';
-            await ffmpeg.load({
-                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
-            });
+            await loadFFmpegHelper(ffmpeg, toBlobURL);
 
             logsEl.textContent += 'Writing file to virtual filesystem...\n';
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
@@ -617,12 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const baseURL = window.location.origin + '/assets/ffmpeg';
-            await ffmpeg.load({
-                coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
-            });
+            await loadFFmpegHelper(ffmpeg, toBlobURL);
 
             logsEl.textContent += 'Writing file to virtual filesystem...\n';
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
