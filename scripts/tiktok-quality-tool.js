@@ -10,12 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsContainer = document.getElementById('tiktok-logs-container');
     const logsEl = document.getElementById('tiktok-logs');
     const versionSwitch = document.getElementById('tiktok-version-switch');
+    const compressToggleRow = document.getElementById('tiktok-compress-toggle-row');
+    const compressSwitch = document.getElementById('tiktok-compress-switch');
+    const warningModal = document.getElementById('tiktok-compress-warning-modal');
+    const warnFlagsList = document.getElementById('tiktok-warn-flags-list');
+    const warnBtnCancel = document.getElementById('tiktok-warn-btn-cancel');
+    const warnBtnProceed = document.getElementById('tiktok-warn-btn-proceed');
+    const fpsWarningModal = document.getElementById('tiktok-fps-warning-modal');
+    const fpsWarnSubtitle = document.getElementById('tiktok-fps-warn-subtitle');
+    const fpsBtnCancel = document.getElementById('tiktok-fps-btn-cancel');
+    const fpsBtnProceed = document.getElementById('tiktok-fps-btn-proceed');
 
     let selectedFile = null;
     let isProcessing = false;
     let currentVersion = 'v1';
 
     const MAX_FILE_MB_HARD = 1500;
+    const COMPRESS_WARN_MB = 50;
+    const COMPRESS_WARN_MAX_SIDE = 1920;
+    const COMPRESS_WARN_FPS = 60;
 
     if (versionSwitch) {
         versionSwitch.addEventListener('click', (e) => {
@@ -24,6 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
             versionSwitch.querySelectorAll('.preset-switch').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentVersion = btn.dataset.version;
+            if (compressToggleRow) {
+                if (currentVersion === 'v2') {
+                    compressToggleRow.classList.remove('hidden');
+                    compressToggleRow.style.display = 'flex';
+                } else {
+                    compressToggleRow.classList.add('hidden');
+                    compressToggleRow.style.display = 'none';
+                }
+            }
         });
     }
 
@@ -87,10 +109,185 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedFile) return;
         if (currentVersion === 'v1') {
             await processVideoV1(selectedFile);
-        } else {
-            await processVideoV2(selectedFile);
+            return;
         }
+        const compressEnabled = compressSwitch ? compressSwitch.checked : true;
+        if (!compressEnabled) {
+            let fps = null;
+            try {
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                fps = parseFpsFromMp4(arrayBuffer);
+            } catch (e) {}
+
+            if (fps !== null && fps < 60) {
+                showFpsWarningModal(fps);
+                return;
+            }
+
+            const flags = await detectCompatibilityFlags(selectedFile);
+            if (flags.length > 0) {
+                showWarningModal(flags);
+                return;
+            }
+        }
+        await processVideoV2(selectedFile, !compressEnabled);
     });
+
+    function showFpsWarningModal(fps) {
+        if (fpsWarnSubtitle) {
+            fpsWarnSubtitle.textContent = `Detected: ${fps}fps`;
+        }
+        if (fpsWarningModal) {
+            fpsWarningModal.classList.add('visible');
+        }
+    }
+
+    if (fpsBtnCancel) {
+        fpsBtnCancel.addEventListener('click', () => {
+            if (fpsWarningModal) {
+                fpsWarningModal.classList.remove('visible');
+            }
+        });
+    }
+
+    if (fpsBtnProceed) {
+        fpsBtnProceed.addEventListener('click', async () => {
+            if (fpsWarningModal) {
+                fpsWarningModal.classList.remove('visible');
+            }
+            if (compressSwitch) {
+                compressSwitch.checked = true;
+            }
+            await processVideoV2(selectedFile, false);
+        });
+    }
+
+    function showWarningModal(flags) {
+        warnFlagsList.innerHTML = flags.map(f =>
+            `<li><span class="material-symbols-rounded">warning</span>${f}</li>`
+        ).join('');
+        warningModal.classList.add('visible');
+    }
+
+    function hideWarningModal() {
+        warningModal.classList.remove('visible');
+    }
+
+    warnBtnCancel.addEventListener('click', () => {
+        hideWarningModal();
+        if (compressSwitch) compressSwitch.checked = true;
+    });
+
+    warnBtnProceed.addEventListener('click', async () => {
+        hideWarningModal();
+        await processVideoV2(selectedFile, true);
+    });
+
+    function parseFpsFromMp4(arrayBuffer) {
+        try {
+            const data = new Uint8Array(arrayBuffer);
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            const topLevel = parseBoxes(data, view, 0, data.length, '');
+            const moov = findTopLevel(topLevel, 'moov');
+            if (!moov) return null;
+            const videoTrak = moov.children.find(
+                c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
+            );
+            if (!videoTrak) return null;
+            const mdhd = findDescendant(videoTrak, ['mdia', 'mdhd']);
+            const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
+            const stsz = stbl && findChild(stbl, 'stsz');
+            if (!mdhd || !stsz) return null;
+
+            const mdhdPayload = boxPayload(mdhd);
+            const version = mdhdPayload[0];
+            let timescale, duration;
+            if (version === 0) {
+                timescale = readU32BE(mdhdPayload, 12);
+                duration = readU32BE(mdhdPayload, 16);
+            } else if (version === 1) {
+                timescale = readU32BE(mdhdPayload, 20);
+                const high = readU32BE(mdhdPayload, 24);
+                const low = readU32BE(mdhdPayload, 28);
+                duration = high * 4294967296 + low;
+            } else {
+                return null;
+            }
+
+            if (!timescale || !duration) return null;
+            const durationSec = duration / timescale;
+            const frameCount = stsz.view.getUint32(stsz.offset + 16, false);
+
+            if (!frameCount || durationSec <= 0) return null;
+            return Math.round(frameCount / durationSec);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function detectCompatibilityFlags(file) {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file);
+            const video = document.createElement('video');
+            const flags = [];
+            const fileMB = file.size / (1024 * 1024);
+
+            let resolved = false;
+            const cleanup = () => {
+                URL.revokeObjectURL(url);
+            };
+
+            const safeResolve = (result) => {
+                if (resolved) return;
+                resolved = true;
+                cleanup();
+                resolve(result);
+            };
+
+            const timeoutId = setTimeout(() => {
+                if (fileMB > COMPRESS_WARN_MB) {
+                    flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
+                }
+                safeResolve(flags);
+            }, 1500);
+
+            video.preload = 'metadata';
+            video.muted = true;
+            video.playsInline = true;
+            video.src = url;
+
+            video.onloadedmetadata = async () => {
+                clearTimeout(timeoutId);
+                const w = video.videoWidth;
+                const h = video.videoHeight;
+
+                if (fileMB > COMPRESS_WARN_MB) {
+                    flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
+                }
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const fps = parseFpsFromMp4(arrayBuffer);
+                    const maxSide = Math.max(w, h);
+                    if (maxSide > 1080 && maxSide <= 1920 && fps !== null && fps >= 60) {
+                        flags.push(`Video specs: ${w}x${h} at ${fps}fps (exceeds 1080p 60fps compatibility target)`);
+                    }
+                } catch (e) {}
+
+                safeResolve(flags);
+            };
+
+            video.onerror = () => {
+                clearTimeout(timeoutId);
+                if (fileMB > COMPRESS_WARN_MB) {
+                    flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
+                }
+                safeResolve(flags);
+            };
+
+            video.load();
+        });
+    }
 
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
         const baseURL = window.location.origin + '/assets/ffmpeg';
@@ -601,105 +798,123 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    async function processVideoV2(file) {
+    async function processVideoV2(file, skipCompress = false) {
         if (isProcessing) return;
         isProcessing = true;
 
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing FFmpeg...</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing${skipCompress ? '' : ' FFmpeg'}...</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
-        progressText.textContent = 'Compressing...';
-        logsEl.textContent = '[v2] HQ Method — Starting...\n';
+        progressText.textContent = skipCompress ? 'Patching...' : 'Compressing...';
+        logsEl.textContent = `[v2] HQ Method — Starting (compress: ${skipCompress ? 'off' : 'on'})...\n`;
 
         try {
-            const { FFmpeg } = window.FFmpegWASM;
-            const { fetchFile, toBlobURL } = window.FFmpegUtil;
-            const ffmpeg = new FFmpeg();
+            let dataToPath;
 
-            let oomDetected = false;
-            let oomLine = '';
+            if (skipCompress) {
+                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
+                progressFill.style.width = '10%';
+                progressPercent.textContent = '10%';
+                logsEl.textContent += 'Compress step skipped — reading original file...\n';
 
-            ffmpeg.on('progress', ({ progress }) => {
-                const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
-                progressFill.style.width = `${percent}%`;
-                progressPercent.textContent = `${percent}%`;
-                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 1/2: Compressing video...</span>`;
-            });
+                const rawBuffer = await file.arrayBuffer();
+                dataToPath = new Uint8Array(rawBuffer);
 
-            ffmpeg.on('log', ({ message }) => {
-                logsEl.textContent += message + '\n';
-                logsEl.scrollTop = logsEl.scrollHeight;
+                logsEl.textContent += `Original size: ${(dataToPath.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
 
-                const lc = message.toLowerCase();
-                if (lc.includes('oom') || lc.includes('out of memory')) {
-                    oomDetected = true;
-                    oomLine = message;
-                }
-            });
+                progressFill.style.width = '40%';
+                progressPercent.textContent = '40%';
+            } else {
+                const { FFmpeg } = window.FFmpegWASM;
+                const { fetchFile, toBlobURL } = window.FFmpegUtil;
+                const ffmpeg = new FFmpeg();
 
-            await loadFFmpegHelper(ffmpeg, toBlobURL);
+                let oomDetected = false;
+                let oomLine = '';
 
-            logsEl.textContent += 'Writing file to virtual filesystem...\n';
-            await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+                ffmpeg.on('progress', ({ progress }) => {
+                    const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
+                    progressFill.style.width = `${percent}%`;
+                    progressPercent.textContent = `${percent}%`;
+                    statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 1/2: Compressing video...</span>`;
+                });
 
-            const hardwareThreads = navigator.hardwareConcurrency || 4;
-            const threads = Math.min(4, hardwareThreads).toString();
+                ffmpeg.on('log', ({ message }) => {
+                    logsEl.textContent += message + '\n';
+                    logsEl.scrollTop = logsEl.scrollHeight;
 
-            const command = [
-                '-i', 'input.mp4',
-                '-threads', threads,
-                '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
-                '-c:v', 'libx264',
-                '-preset', 'fast',
-                '-bf', '0',
-                '-video_track_timescale', '90000',
-                '-b:v', '16M',
-                '-minrate', '12M',
-                '-maxrate', '20M',
-                '-bufsize', '24M',
-                '-c:a', 'aac',
-                '-b:a', '320k',
-                '-movflags', '+faststart',
-                'compressed.mp4'
-            ];
+                    const lc = message.toLowerCase();
+                    if (lc.includes('oom') || lc.includes('out of memory')) {
+                        oomDetected = true;
+                        oomLine = message;
+                    }
+                });
 
-            logsEl.textContent += `[Step 1/2] Compressing: ffmpeg ${command.join(' ')}\n`;
+                await loadFFmpegHelper(ffmpeg, toBlobURL);
 
-            try {
-                await ffmpeg.exec(command);
-            } catch (execError) {
+                logsEl.textContent += 'Writing file to virtual filesystem...\n';
+                await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+
+                const hardwareThreads = navigator.hardwareConcurrency || 4;
+                const threads = Math.min(4, hardwareThreads).toString();
+
+                const command = [
+                    '-i', 'input.mp4',
+                    '-threads', threads,
+                    '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-bf', '0',
+                    '-video_track_timescale', '90000',
+                    '-b:v', '16M',
+                    '-minrate', '12M',
+                    '-maxrate', '20M',
+                    '-bufsize', '24M',
+                    '-c:a', 'aac',
+                    '-b:a', '320k',
+                    '-movflags', '+faststart',
+                    'compressed.mp4'
+                ];
+
+                logsEl.textContent += `[Step 1/2] Compressing: ffmpeg ${command.join(' ')}\n`;
+
                 try {
-                    const testData = await ffmpeg.readFile('compressed.mp4');
-                    if (!testData || testData.byteLength < 1024) {
+                    await ffmpeg.exec(command);
+                } catch (execError) {
+                    try {
+                        const testData = await ffmpeg.readFile('compressed.mp4');
+                        if (!testData || testData.byteLength < 1024) {
+                            throw execError;
+                        }
+                    } catch (readError) {
                         throw execError;
                     }
-                } catch (readError) {
-                    throw execError;
                 }
+
+                if (oomDetected) {
+                    throw new Error(`Out of memory during compression. (Triggered by log: "${oomLine}")`);
+                }
+
+                const compressedData = await ffmpeg.readFile('compressed.mp4');
+
+                if (!compressedData || compressedData.byteLength < 1024) {
+                    throw new Error('Compression failed (output is empty or too small).');
+                }
+
+                logsEl.textContent += `Compressed size: ${(compressedData.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
+                dataToPath = compressedData;
             }
 
-            if (oomDetected) {
-                throw new Error(`Out of memory during compression. (Triggered by log: "${oomLine}")`);
-            }
-
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 2/2: Applying patch...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step ${skipCompress ? '1' : '2'}/2: Applying patch...</span>`;
             progressText.textContent = 'Patching...';
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
-            logsEl.textContent += '\n[Step 2/2] Applying MP4 patch...\n';
+            logsEl.textContent += `\n[Step ${skipCompress ? '1' : '2'}/2] Applying MP4 patch...\n`;
 
-            const compressedData = await ffmpeg.readFile('compressed.mp4');
-
-            if (!compressedData || compressedData.byteLength < 1024) {
-                throw new Error('Compression failed (output is empty or too small).');
-            }
-
-            logsEl.textContent += `Compressed size: ${(compressedData.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
-
-            const patchResult = patchMp4(compressedData);
+            const patchResult = patchMp4(dataToPath);
 
             logsEl.textContent += `Patch complete:\n`;
             logsEl.textContent += `  Real samples: ${patchResult.realSamples}\n`;

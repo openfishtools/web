@@ -215,6 +215,20 @@
                             </div>
                         </div>
 
+                        <div id="tiktok-compress-toggle-row" class="hidden" style="display: none; align-items: center; justify-content: space-between; background: var(--md-sys-color-surface-container); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="material-symbols-rounded" style="font-size: 20px; color: var(--md-sys-color-primary);">compress</span>
+                                <div>
+                                    <div style="font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface);">Compress</div>
+                                    <div style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;">Compress video file before patching</div>
+                                </div>
+                            </div>
+                            <label class="tiktok-ios-toggle" for="tiktok-compress-switch" aria-label="Toggle compression">
+                                <input type="checkbox" id="tiktok-compress-switch" checked>
+                                <span class="tiktok-ios-toggle-track"></span>
+                            </label>
+                        </div>
+
 
                         <div class="drag-drop-area" id="tool-tiktok-drop">
                             <span class="material-symbols-rounded">video_file</span>
@@ -919,6 +933,226 @@
                         <span id="res-popup-download-label">Select OS & Version</span>
                     </div>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .tiktok-ios-toggle {
+            position: relative;
+            display: inline-flex;
+            width: 48px;
+            height: 28px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .tiktok-ios-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .tiktok-ios-toggle-track {
+            position: absolute;
+            inset: 0;
+            background: var(--md-sys-color-surface-variant);
+            border-radius: 14px;
+            transition: background 0.25s ease;
+        }
+        .tiktok-ios-toggle-track::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            transition: transform 0.25s ease;
+        }
+        .tiktok-ios-toggle input:checked + .tiktok-ios-toggle-track {
+            background: var(--md-sys-color-primary);
+        }
+        .tiktok-ios-toggle input:checked + .tiktok-ios-toggle-track::after {
+            transform: translateX(20px);
+        }
+
+        #tiktok-compress-warning-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #tiktok-compress-warning-modal.visible {
+            display: flex;
+        }
+        .tiktok-warn-card {
+            background: var(--md-sys-color-surface-container-high);
+            border-radius: 20px;
+            padding: 28px 24px 20px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+            border: 1px solid var(--md-sys-color-outline-variant);
+        }
+        .tiktok-warn-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .tiktok-warn-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 160, 0, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .tiktok-warn-icon .material-symbols-rounded {
+            font-size: 24px;
+            color: #f4a21e;
+        }
+        .tiktok-warn-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--md-sys-color-on-surface);
+            line-height: 1.3;
+        }
+        .tiktok-warn-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-top: 2px;
+        }
+        .tiktok-warn-body {
+            font-size: 13.5px;
+            line-height: 1.65;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-bottom: 8px;
+        }
+        .tiktok-warn-flags {
+            list-style: none;
+            padding: 0;
+            margin: 12px 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .tiktok-warn-flags li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--md-sys-color-on-surface);
+            background: var(--md-sys-color-surface-container);
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+        }
+        .tiktok-warn-flags li .material-symbols-rounded {
+            font-size: 16px;
+            color: #f4a21e;
+            margin-top: 1px;
+            flex-shrink: 0;
+        }
+        .tiktok-warn-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .tiktok-warn-btn-cancel {
+            flex: 1;
+            padding: 11px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            background: transparent;
+            color: var(--md-sys-color-on-surface);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .tiktok-warn-btn-cancel:hover {
+            background: var(--md-sys-color-surface-container-highest);
+        }
+        .tiktok-warn-btn-proceed {
+            flex: 1;
+            padding: 11px;
+            border-radius: 12px;
+            border: none;
+            background: #f4a21e;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .tiktok-warn-btn-proceed:hover {
+            opacity: 0.88;
+        }
+
+        #tiktok-fps-warning-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #tiktok-fps-warning-modal.visible {
+            display: flex;
+        }
+    </style>
+
+    <div id="tiktok-compress-warning-modal">
+        <div class="tiktok-warn-card">
+            <div class="tiktok-warn-header">
+                <div class="tiktok-warn-icon">
+                    <span class="material-symbols-rounded">warning</span>
+                </div>
+                <div>
+                    <div class="tiktok-warn-title">Compatibility Risk Detected</div>
+                    <div class="tiktok-warn-subtitle">Compression is currently disabled</div>
+                </div>
+            </div>
+            <p class="tiktok-warn-body">Your video exceeds the recommended safe limits for direct patching. Proceeding without compression may result in playback failures across a wide range of devices and platforms.</p>
+            <ul class="tiktok-warn-flags" id="tiktok-warn-flags-list"></ul>
+            <p class="tiktok-warn-body" style="margin-bottom: 0; font-size: 13px; color: var(--md-sys-color-error);">Videos outside these limits are likely to flop — poor reach, low engagement, and broken playback on most viewers' devices.</p>
+            <div class="tiktok-warn-footer">
+                <button class="tiktok-warn-btn-cancel" id="tiktok-warn-btn-cancel">Enable Compress</button>
+                <button class="tiktok-warn-btn-proceed" id="tiktok-warn-btn-proceed">Proceed Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tiktok-fps-warning-modal">
+        <div class="tiktok-warn-card">
+            <div class="tiktok-warn-header">
+                <div class="tiktok-warn-icon" style="background: rgba(255, 87, 34, 0.12);">
+                    <span class="material-symbols-rounded" style="color: #ff5722;">speed</span>
+                </div>
+                <div>
+                    <div class="tiktok-warn-title">Frame Rate Incompatibility</div>
+                    <div class="tiktok-warn-subtitle" id="tiktok-fps-warn-subtitle">Detected: 30fps</div>
+                </div>
+            </div>
+            <p class="tiktok-warn-body">The patch configuration requires a frame rate of 60fps or higher. Lower frame rates will play at accelerated speeds (fast playback/speed-up).</p>
+            <p class="tiktok-warn-body">Would you like to enable compression to automatically adjust the frame rate to 60fps and proceed?</p>
+            <div class="tiktok-warn-footer">
+                <button class="tiktok-warn-btn-cancel" id="tiktok-fps-btn-cancel">Cancel</button>
+                <button class="tiktok-warn-btn-proceed" id="tiktok-fps-btn-proceed" style="background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);">Enable Compression</button>
             </div>
         </div>
     </div>
