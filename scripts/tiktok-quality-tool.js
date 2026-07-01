@@ -11,48 +11,102 @@ document.addEventListener('DOMContentLoaded', () => {
     const logsEl = document.getElementById('tiktok-logs');
     const versionSwitch = document.getElementById('tiktok-version-switch');
     const compressToggleRow = document.getElementById('tiktok-compress-toggle-row');
-    const compressSwitch = document.getElementById('tiktok-compress-switch');
-    const warningModal = document.getElementById('tiktok-compress-warning-modal');
-    const warnFlagsList = document.getElementById('tiktok-warn-flags-list');
-    const warnBtnCancel = document.getElementById('tiktok-warn-btn-cancel');
-    const warnBtnProceed = document.getElementById('tiktok-warn-btn-proceed');
-    const fpsWarningModal = document.getElementById('tiktok-fps-warning-modal');
-    const fpsWarnSubtitle = document.getElementById('tiktok-fps-warn-subtitle');
-    const fpsBtnCancel = document.getElementById('tiktok-fps-btn-cancel');
-    const fpsBtnProceed = document.getElementById('tiktok-fps-btn-proceed');
+    const compressModeSelector = document.getElementById('tiktok-compress-mode');
+
+    const analysisModal = document.getElementById('tiktok-analysis-modal');
+    const tktk = {
+        checkFps:  document.getElementById('tktk-check-fps'),
+        checkRes:  document.getElementById('tktk-check-res'),
+        checkSize: document.getElementById('tktk-check-size'),
+        iconFps:   document.getElementById('tktk-icon-fps'),
+        iconRes:   document.getElementById('tktk-icon-res'),
+        iconSize:  document.getElementById('tktk-icon-size'),
+        valFps:    document.getElementById('tktk-val-fps'),
+        valRes:    document.getElementById('tktk-val-res'),
+        valSize:   document.getElementById('tktk-val-size'),
+        btnCancel:  document.getElementById('tktk-btn-cancel'),
+        btnProceed: document.getElementById('tktk-btn-proceed'),
+        btnCompress: document.getElementById('tktk-btn-compress'),
+    };
 
     let selectedFile = null;
     let isProcessing = false;
     let currentVersion = 'v1';
+    let compressMode = 'hd';
 
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
-    const COMPRESS_WARN_MAX_SIDE = 1920;
-    const COMPRESS_WARN_FPS = 60;
+
+    function updateSwitchIndicator(trackEl, indicatorEl, activeClass) {
+        if (!trackEl || !indicatorEl) return;
+        const active = trackEl.querySelector(`.${activeClass}.active`);
+        if (active) {
+            indicatorEl.style.left = active.offsetLeft + 'px';
+            indicatorEl.style.width = active.offsetWidth + 'px';
+        }
+    }
 
     if (versionSwitch) {
         versionSwitch.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-version]');
+            const btn = e.target.closest('.tiktok-switch-option');
             if (!btn || isProcessing) return;
-            versionSwitch.querySelectorAll('.preset-switch').forEach(b => b.classList.remove('active'));
+            versionSwitch.querySelectorAll('.tiktok-switch-option').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentVersion = btn.dataset.version;
+            const ind = document.getElementById('tiktok-version-indicator');
+            updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
             if (compressToggleRow) {
                 if (currentVersion === 'v2') {
                     compressToggleRow.classList.remove('hidden');
-                    compressToggleRow.style.display = 'flex';
+                    compressToggleRow.style.display = 'block';
+                    requestAnimationFrame(() => updateModeIndicator(compressMode));
                 } else {
                     compressToggleRow.classList.add('hidden');
                     compressToggleRow.style.display = 'none';
                 }
             }
         });
+        requestAnimationFrame(() => {
+            const ind = document.getElementById('tiktok-version-indicator');
+            updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
+        });
+    }
+
+    if (compressModeSelector) {
+        compressModeSelector.addEventListener('click', (e) => {
+            const option = e.target.closest('.tiktok-switch-option');
+            if (!option || isProcessing) return;
+            compressMode = option.dataset.mode;
+            updateModeIndicator(compressMode);
+        });
+    }
+
+    function updateModeIndicator(mode) {
+        if (!compressModeSelector) return;
+        const indicator = document.getElementById('tiktok-mode-indicator');
+        const descPanel = document.getElementById('tiktok-mode-desc');
+        const option = compressModeSelector.querySelector(`.tiktok-switch-option[data-mode="${mode}"]`);
+        compressModeSelector.querySelectorAll('.tiktok-switch-option').forEach(c => c.classList.toggle('active', c.dataset.mode === mode));
+        if (indicator && option) {
+            indicator.style.left = option.offsetLeft + 'px';
+            indicator.style.width = option.offsetWidth + 'px';
+        }
+        if (descPanel && option) {
+            descPanel.style.opacity = '0';
+            setTimeout(() => {
+                descPanel.textContent = option.dataset.desc || '';
+                descPanel.style.opacity = '1';
+            }, 160);
+        }
+    }
+
+    function setCompressMode(mode) {
+        compressMode = mode;
+        updateModeIndicator(mode);
     }
 
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelection(e.target.files[0]);
-        }
+        if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
     });
 
     dropArea.addEventListener('click', () => fileInput.click());
@@ -70,9 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         dropArea.style.borderColor = '';
         dropArea.style.background = '';
-        if (e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files[0]);
-        }
+        if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]);
     });
 
     function showStatusError(msg) {
@@ -81,28 +133,129 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFileSelection(file) {
         if (!file.type.startsWith('video/')) {
-            showStatusError("Please select a valid video file.");
+            showStatusError('Please select a valid video file.');
             btnStart.classList.add('hidden');
             return;
         }
-
         const fileMB = file.size / (1024 * 1024);
-
         if (fileMB > MAX_FILE_MB_HARD) {
             showStatusError(`File is too large (${fileMB.toFixed(1)} MB). Max limit is ${MAX_FILE_MB_HARD} MB.`);
             btnStart.classList.add('hidden');
             selectedFile = null;
             return;
         }
-
         selectedFile = file;
-        const infoLine = `Selected: ${file.name} (${fileMB.toFixed(2)} MB)`;
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${infoLine}</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Selected: ${file.name} (${fileMB.toFixed(2)} MB)</span>`;
         btnStart.classList.remove('hidden');
-
         progressContainer.classList.add('hidden');
         logsContainer.classList.add('hidden');
         logsEl.textContent = '';
+    }
+
+    function setCheckState(iconEl, itemEl, state, valueText) {
+        const iconMap = { loading: 'progress_activity', pass: 'check', fail: 'close' };
+        iconEl.className = `tktk-check-icon ${state}`;
+        iconEl.innerHTML = `<span class="material-symbols-rounded">${iconMap[state]}</span>`;
+        itemEl.className = `tktk-check-item ${state === 'loading' ? '' : state}`;
+        const valEl = itemEl.querySelector('.tktk-check-value');
+        if (valEl && valueText !== undefined) valEl.textContent = valueText;
+    }
+
+    function openAnalysisModal() {
+        setCheckState(tktk.iconFps, tktk.checkFps, 'loading', 'Analyzing...');
+        setCheckState(tktk.iconRes, tktk.checkRes, 'loading', 'Analyzing...');
+        setCheckState(tktk.iconSize, tktk.checkSize, 'loading', 'Analyzing...');
+        tktk.btnProceed.disabled = true;
+        tktk.btnCompress.disabled = true;
+        analysisModal.classList.add('visible');
+    }
+
+    function closeAnalysisModal() {
+        analysisModal.classList.remove('visible');
+    }
+
+    async function runAnalysis(file) {
+        openAnalysisModal();
+
+        const fileMB = file.size / (1024 * 1024);
+        let fps = null;
+        let w = 0, h = 0;
+        let hasFail = false;
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            fps = parseFpsFromMp4(arrayBuffer);
+            const res = parseResolutionFromMp4(arrayBuffer);
+            if (res) {
+                w = res.width;
+                h = res.height;
+            }
+        } catch (e) {}
+
+        if (w === 0 || h === 0) {
+            await new Promise(resolve => {
+                const url = URL.createObjectURL(file);
+                const vid = document.createElement('video');
+                vid.preload = 'metadata';
+                vid.muted = true;
+                vid.src = url;
+                const done = () => { URL.revokeObjectURL(url); resolve(); };
+                vid.onloadedmetadata = () => {
+                    if (vid.videoWidth && vid.videoHeight) {
+                        w = vid.videoWidth;
+                        h = vid.videoHeight;
+                    }
+                    done();
+                };
+                vid.onerror = done;
+                setTimeout(done, 2000);
+                vid.load();
+            });
+        }
+
+        const fpsFail = fps !== null && fps < 60;
+        const fpsLabel = fps !== null ? `${fps} fps` : 'Unable to detect';
+        setCheckState(tktk.iconFps, tktk.checkFps, fps === null ? 'pass' : (fpsFail ? 'fail' : 'pass'), fpsLabel);
+        if (fpsFail) hasFail = true;
+
+        const shortSide = Math.min(w, h);
+        const longSide = Math.max(w, h);
+        const resFail = w > 0 && (shortSide > 1080 || longSide > 1920);
+        const resLabel = w > 0 ? `${w}x${h}` : 'Unable to detect';
+        setCheckState(tktk.iconRes, tktk.checkRes, w === 0 ? 'pass' : (resFail ? 'fail' : 'pass'), resLabel);
+        if (resFail) hasFail = true;
+
+        const sizeFail = fileMB > COMPRESS_WARN_MB;
+        setCheckState(tktk.iconSize, tktk.checkSize, sizeFail ? 'fail' : 'pass', `${fileMB.toFixed(1)} MB`);
+        if (sizeFail) hasFail = true;
+
+        if (!hasFail) {
+            closeAnalysisModal();
+            await processVideoV2(file, 'off');
+            return;
+        }
+
+        tktk.btnProceed.disabled = false;
+        tktk.btnCompress.disabled = false;
+    }
+
+    if (tktk.btnCancel) {
+        tktk.btnCancel.addEventListener('click', () => closeAnalysisModal());
+    }
+
+    if (tktk.btnProceed) {
+        tktk.btnProceed.addEventListener('click', async () => {
+            closeAnalysisModal();
+            await processVideoV2(selectedFile, 'off');
+        });
+    }
+
+    if (tktk.btnCompress) {
+        tktk.btnCompress.addEventListener('click', async () => {
+            closeAnalysisModal();
+            setCompressMode('hd');
+            await processVideoV2(selectedFile, 'hd');
+        });
     }
 
     btnStart.addEventListener('click', async () => {
@@ -111,77 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
             await processVideoV1(selectedFile);
             return;
         }
-        const compressEnabled = compressSwitch ? compressSwitch.checked : true;
-        if (!compressEnabled) {
-            let fps = null;
-            try {
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                fps = parseFpsFromMp4(arrayBuffer);
-            } catch (e) {}
-
-            if (fps !== null && fps < 60) {
-                showFpsWarningModal(fps);
-                return;
-            }
-
-            const flags = await detectCompatibilityFlags(selectedFile);
-            if (flags.length > 0) {
-                showWarningModal(flags);
-                return;
-            }
+        if (compressMode === 'off') {
+            await runAnalysis(selectedFile);
+            return;
         }
-        await processVideoV2(selectedFile, !compressEnabled);
+        await processVideoV2(selectedFile, compressMode);
     });
 
-    function showFpsWarningModal(fps) {
-        if (fpsWarnSubtitle) {
-            fpsWarnSubtitle.textContent = `Detected: ${fps}fps`;
-        }
-        if (fpsWarningModal) {
-            fpsWarningModal.classList.add('visible');
-        }
-    }
 
-    if (fpsBtnCancel) {
-        fpsBtnCancel.addEventListener('click', () => {
-            if (fpsWarningModal) {
-                fpsWarningModal.classList.remove('visible');
-            }
-        });
-    }
-
-    if (fpsBtnProceed) {
-        fpsBtnProceed.addEventListener('click', async () => {
-            if (fpsWarningModal) {
-                fpsWarningModal.classList.remove('visible');
-            }
-            if (compressSwitch) {
-                compressSwitch.checked = true;
-            }
-            await processVideoV2(selectedFile, false);
-        });
-    }
-
-    function showWarningModal(flags) {
-        warnFlagsList.innerHTML = flags.map(f =>
-            `<li><span class="material-symbols-rounded">warning</span>${f}</li>`
-        ).join('');
-        warningModal.classList.add('visible');
-    }
-
-    function hideWarningModal() {
-        warningModal.classList.remove('visible');
-    }
-
-    warnBtnCancel.addEventListener('click', () => {
-        hideWarningModal();
-        if (compressSwitch) compressSwitch.checked = true;
-    });
-
-    warnBtnProceed.addEventListener('click', async () => {
-        hideWarningModal();
-        await processVideoV2(selectedFile, true);
-    });
 
     function parseFpsFromMp4(arrayBuffer) {
         try {
@@ -223,6 +313,61 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             return null;
         }
+    }
+
+    function parseResolutionFromMp4(arrayBuffer) {
+        try {
+            const data = new Uint8Array(arrayBuffer);
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            const topLevel = parseBoxes(data, view, 0, data.length, '');
+            const moov = findTopLevel(topLevel, 'moov');
+            if (!moov) return null;
+            const videoTrak = moov.children.find(
+                c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
+            );
+            if (!videoTrak) return null;
+
+            // 1. Try stsd first
+            const stsd = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stsd']);
+            if (stsd) {
+                const entryCount = stsd.view.getUint32(stsd.offset + 12, false);
+                if (entryCount >= 1) {
+                    const entryOffset = stsd.offset + 16;
+                    if (entryOffset + 36 <= stsd.end) {
+                        let width = stsd.view.getUint16(entryOffset + 32, false);
+                        let height = stsd.view.getUint16(entryOffset + 34, false);
+                        if (!width || !height) {
+                            width = stsd.view.getUint16(entryOffset + 24, false);
+                            height = stsd.view.getUint16(entryOffset + 26, false);
+                        }
+                        if (width > 0 && height > 0) {
+                            return { width, height };
+                        }
+                    }
+                }
+            }
+
+            // 2. Try tkhd fallback
+            const tkhd = findChild(videoTrak, 'tkhd');
+            if (tkhd) {
+                const tkhdPayload = boxPayload(tkhd);
+                const version = tkhdPayload[0];
+                let width = 0, height = 0;
+                if (version === 0) {
+                    width = readU32BE(tkhdPayload, 72) >>> 16;
+                    height = readU32BE(tkhdPayload, 76) >>> 16;
+                } else if (version === 1) {
+                    width = readU32BE(tkhdPayload, 80) >>> 16;
+                    height = readU32BE(tkhdPayload, 84) >>> 16;
+                }
+                if (width > 0 && height > 0) {
+                    return { width, height };
+                }
+            }
+        } catch (e) {
+            console.error('Failed to parse resolution from MP4 box', e);
+        }
+        return null;
     }
 
     function detectCompatibilityFlags(file) {
@@ -795,27 +940,30 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    async function processVideoV2(file, skipCompress = false) {
+    async function processVideoV2(file, mode = 'hd') {
         if (isProcessing) return;
         isProcessing = true;
+
+        const isOff = mode === 'off';
+        const modeLabel = mode === 'off' ? 'OFF' : mode === 'fast' ? 'Compatibility (720p)' : 'Quality (1080p)';
 
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing${skipCompress ? '' : ' FFmpeg'}...</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing${isOff ? '' : ' FFmpeg'}...</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
-        progressText.textContent = skipCompress ? 'Patching...' : 'Compressing...';
-        logsEl.textContent = `[v2] HQ Method — Starting (compress: ${skipCompress ? 'off' : 'on'})...\n`;
+        progressText.textContent = isOff ? 'Patching...' : 'Compressing...';
+        logsEl.textContent = `[v2] HQ Method | Mode: ${modeLabel}\n`;
 
         try {
             let dataToPath;
 
-            if (skipCompress) {
+            if (isOff) {
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
                 progressFill.style.width = '10%';
                 progressPercent.textContent = '10%';
-                logsEl.textContent += 'Compress step skipped — reading original file...\n';
+                logsEl.textContent += 'Compression skipped | reading original file...\n';
 
                 const rawBuffer = await file.arrayBuffer();
                 dataToPath = new Uint8Array(rawBuffer);
@@ -836,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
                     progressFill.style.width = `${percent}%`;
                     progressPercent.textContent = `${percent}%`;
-                    statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step 1/2: Compressing video...</span>`;
+                    statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Compressing...</span>`;
                 });
 
                 ffmpeg.on('log', ({ message }) => {
@@ -858,25 +1006,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hardwareThreads = navigator.hardwareConcurrency || 4;
                 const threads = Math.min(4, hardwareThreads).toString();
 
-                const command = [
-                    '-i', 'input.mp4',
-                    '-threads', threads,
-                    '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
-                    '-c:v', 'libx264',
-                    '-preset', 'fast',
-                    '-bf', '0',
-                    '-video_track_timescale', '90000',
-                    '-b:v', '16M',
-                    '-minrate', '12M',
-                    '-maxrate', '20M',
-                    '-bufsize', '24M',
-                    '-c:a', 'aac',
-                    '-b:a', '320k',
-                    '-movflags', '+faststart',
-                    'compressed.mp4'
-                ];
+                let command;
+                if (mode === 'fast') {
+                    command = [
+                        '-i', 'input.mp4',
+                        '-threads', threads,
+                        '-vf', "scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)',fps=60",
+                        '-c:v', 'libx264',
+                        '-preset', 'ultrafast',
+                        '-pix_fmt', 'yuv420p',
+                        '-bf', '0',
+                        '-video_track_timescale', '90000',
+                        '-b:v', '16M',
+                        '-minrate', '12M',
+                        '-maxrate', '20M',
+                        '-bufsize', '24M',
+                        '-c:a', 'aac',
+                        '-b:a', '320k',
+                        '-movflags', '+faststart',
+                        'compressed.mp4'
+                    ];
+                } else {
+                    command = [
+                        '-i', 'input.mp4',
+                        '-threads', threads,
+                        '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
+                        '-c:v', 'libx264',
+                        '-preset', 'fast',
+                        '-pix_fmt', 'yuv420p',
+                        '-bf', '0',
+                        '-video_track_timescale', '90000',
+                        '-b:v', '16M',
+                        '-minrate', '12M',
+                        '-maxrate', '20M',
+                        '-bufsize', '24M',
+                        '-c:a', 'aac',
+                        '-b:a', '320k',
+                        '-movflags', '+faststart',
+                        'compressed.mp4'
+                    ];
+                }
 
-                logsEl.textContent += `[Step 1/2] Compressing: ffmpeg ${command.join(' ')}\n`;
+                logsEl.textContent += `Compressing: ffmpeg ${command.join(' ')}\n`;
 
                 try {
                     await ffmpeg.exec(command);
@@ -905,11 +1076,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 dataToPath = compressedData;
             }
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Step ${skipCompress ? '1' : '2'}/2: Applying patch...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Applying patch...</span>`;
             progressText.textContent = 'Patching...';
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
-            logsEl.textContent += `\n[Step ${skipCompress ? '1' : '2'}/2] Applying MP4 patch...\n`;
+            logsEl.textContent += `\nApplying MP4 patch...\n`;
 
             const patchResult = patchMp4(dataToPath);
 
