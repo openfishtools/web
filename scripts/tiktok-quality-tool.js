@@ -70,6 +70,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const ind = document.getElementById('tiktok-version-indicator');
             updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
         });
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (item.getAttribute('data-tab') === 'tools') {
+                    setTimeout(() => {
+                        const ind = document.getElementById('tiktok-version-indicator');
+                        updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
+                        updateModeIndicator(compressMode);
+                    }, 50);
+                }
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            const ind = document.getElementById('tiktok-version-indicator');
+            updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
+            updateModeIndicator(compressMode);
+        });
     }
 
     if (compressModeSelector) {
@@ -153,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setCheckState(iconEl, itemEl, state, valueText) {
-        const iconMap = { loading: 'progress_activity', pass: 'check', fail: 'close' };
+        const iconMap = { loading: 'progress_activity', pass: 'check', fail: 'close', warn: 'warning' };
         iconEl.className = `tktk-check-icon ${state}`;
         iconEl.innerHTML = `<span class="material-symbols-rounded">${iconMap[state]}</span>`;
         itemEl.className = `tktk-check-item ${state === 'loading' ? '' : state}`;
@@ -213,20 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const fpsFail = fps !== null && fps < 60;
+        const fpsFail = false;
         const fpsLabel = fps !== null ? `${fps} fps` : 'Unable to detect';
-        setCheckState(tktk.iconFps, tktk.checkFps, fps === null ? 'pass' : (fpsFail ? 'fail' : 'pass'), fpsLabel);
-        if (fpsFail) hasFail = true;
+        setCheckState(tktk.iconFps, tktk.checkFps, fps === null ? 'pass' : 'pass', fpsLabel);
 
         const shortSide = Math.min(w, h);
         const longSide = Math.max(w, h);
         const resFail = w > 0 && (shortSide > 1080 || longSide > 1920);
         const resLabel = w > 0 ? `${w}x${h}` : 'Unable to detect';
-        setCheckState(tktk.iconRes, tktk.checkRes, w === 0 ? 'pass' : (resFail ? 'fail' : 'pass'), resLabel);
+        setCheckState(tktk.iconRes, tktk.checkRes, w === 0 ? 'pass' : (resFail ? 'warn' : 'pass'), resLabel);
         if (resFail) hasFail = true;
 
         const sizeFail = fileMB > COMPRESS_WARN_MB;
-        setCheckState(tktk.iconSize, tktk.checkSize, sizeFail ? 'fail' : 'pass', `${fileMB.toFixed(1)} MB`);
+        setCheckState(tktk.iconSize, tktk.checkSize, sizeFail ? 'warn' : 'pass', `${fileMB.toFixed(1)} MB`);
         if (sizeFail) hasFail = true;
 
         if (!hasFail) {
@@ -756,32 +773,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return dv.getUint32(offset, false);
     }
 
-    function buildMdhd(box) {
+    function buildMdhd(box, dynamicTimescale, dynamicDuration) {
         const payload = new Uint8Array(boxPayload(box));
         const version = payload[0];
         if (version !== 0) throw new Error(`Unsupported mdhd version: ${version}`);
-        writeU32BE(payload, 12, VIDEO_TIMESCALE);
-        writeU32BE(payload, 16, VIDEO_DURATION);
+        writeU32BE(payload, 12, dynamicTimescale);
+        writeU32BE(payload, 16, dynamicDuration);
         return makeBox('mdhd', payload);
     }
 
-    function buildElst(box) {
+    function buildElst(box, dynamicEditMediaTime) {
         const payload    = new Uint8Array(boxPayload(box));
         const version    = payload[0];
         const entryCount = readU32BE(payload, 4);
         if (version !== 0 || entryCount < 1)
             throw new Error('Need elst version 0 with at least one entry.');
-        writeU32BE(payload, 12, VIDEO_EDIT_MEDIA_TIME);
+        writeU32BE(payload, 12, dynamicEditMediaTime);
         return makeBox('elst', payload);
     }
 
-    function buildStts(realSampleCount) {
+    function buildStts(realSampleCount, dynamicSampleDelta) {
         const payload = new Uint8Array(4 + 4 + 8 + 8);
         writeU32BE(payload, 4, 2);
         writeU32BE(payload, 8, realSampleCount);
-        writeU32BE(payload, 12, VIDEO_SAMPLE_DELTA);
+        writeU32BE(payload, 12, dynamicSampleDelta);
         writeU32BE(payload, 16, FAKE_SAMPLE_COUNT);
-        writeU32BE(payload, 20, VIDEO_SAMPLE_DELTA);
+        writeU32BE(payload, 20, dynamicSampleDelta);
         return makeBox('stts', payload);
     }
 
@@ -901,10 +918,34 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
             .map(boxBytes);
 
+        // 1. Get original timescale from mdhd
+        const mdhdPayload = boxPayload(mdhd);
+        const mdhdVer = mdhdPayload[0];
+        let dynamicTimescale = 90000;
+        if (mdhdVer === 0) {
+            dynamicTimescale = readU32BE(mdhdPayload, 12);
+        } else if (mdhdVer === 1) {
+            dynamicTimescale = readU32BE(mdhdPayload, 20);
+        }
+
+        // 2. Get original frame delta from stts
+        const sttsPayload = boxPayload(stts);
+        const sttsEntryCount = readU32BE(sttsPayload, 4);
+        let dynamicSampleDelta = 1500;
+        if (sttsEntryCount >= 1) {
+            dynamicSampleDelta = readU32BE(sttsPayload, 12);
+        }
+
+        // 3. Compute dynamic duration and edit media time
+        const realSampleCount = originalSizes.length;
+        const totalSamples = realSampleCount + FAKE_SAMPLE_COUNT;
+        const dynamicDuration = totalSamples * dynamicSampleDelta;
+        const dynamicEditMediaTime = 2 * dynamicSampleDelta;
+
         const fixedReplacements = new Map([
-            [mdhd, buildMdhd(mdhd)],
-            [elst, buildElst(elst)],
-            [stts, buildStts(originalSizes.length)],
+            [mdhd, buildMdhd(mdhd, dynamicTimescale, dynamicDuration)],
+            [elst, buildElst(elst, dynamicEditMediaTime)],
+            [stts, buildStts(realSampleCount, dynamicSampleDelta)],
             [stsc, buildStsc(originalStscRows, originalChunkOffsets.length)],
             [stsz, buildStsz(originalSizes)],
         ]);
@@ -1017,10 +1058,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         '-pix_fmt', 'yuv420p',
                         '-bf', '0',
                         '-video_track_timescale', '90000',
-                        '-b:v', '16M',
-                        '-minrate', '12M',
-                        '-maxrate', '20M',
-                        '-bufsize', '24M',
+                        '-b:v', '25M',
+                        '-minrate', '20M',
+                        '-maxrate', '35M',
+                        '-bufsize', '35M',
                         '-c:a', 'aac',
                         '-b:a', '320k',
                         '-movflags', '+faststart',
@@ -1036,10 +1077,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         '-pix_fmt', 'yuv420p',
                         '-bf', '0',
                         '-video_track_timescale', '90000',
-                        '-b:v', '16M',
-                        '-minrate', '12M',
-                        '-maxrate', '20M',
-                        '-bufsize', '24M',
+                        '-b:v', '35M',
+                        '-minrate', '25M',
+                        '-maxrate', '50M',
+                        '-bufsize', '50M',
                         '-c:a', 'aac',
                         '-b:a', '320k',
                         '-movflags', '+faststart',

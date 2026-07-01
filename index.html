@@ -294,10 +294,10 @@
                             <div class="tiktok-switch-track" id="tiktok-compress-mode">
                                 <div class="tiktok-switch-indicator" id="tiktok-mode-indicator"></div>
                                 <div class="tiktok-switch-option" data-mode="off" data-desc="Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.">OFF</div>
-                                <div class="tiktok-switch-option" data-mode="fast" data-desc="720p, 60fps | H.264 VBR 16 Mbps, preset ultrafast | Compresses video to 720p for fast processing and optimal performance. Runs smoothly without lag on all devices.">Compatibility</div>
-                                <div class="tiktok-switch-option active" data-mode="hd" data-desc="1080p, 60fps | H.264 VBR 16 Mbps, preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.">Quality</div>
+                                <div class="tiktok-switch-option" data-mode="fast" data-desc="720p, 60fps | H.264 VBR 25 Mbps (20M-35M), preset ultrafast | Compresses video to 720p for fast processing and optimal performance. Runs smoothly without lag on all devices.">Compatibility</div>
+                                <div class="tiktok-switch-option active" data-mode="hd" data-desc="1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.">Quality</div>
                             </div>
-                            <div class="tiktok-preset-desc" id="tiktok-mode-desc">1080p, 60fps | H.264 VBR 16 Mbps, preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.</div>
+                            <div class="tiktok-preset-desc" id="tiktok-mode-desc">1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.</div>
                         </div>
 
                         <div id="tool-tiktok-status"
@@ -1075,6 +1075,10 @@
             border-color: var(--md-sys-color-error, #ba1a1a);
             background: color-mix(in srgb, var(--md-sys-color-error, #ba1a1a) 8%, var(--md-sys-color-surface-container));
         }
+        .tktk-check-item.warn {
+            border-color: #f4a21e;
+            background: color-mix(in srgb, #f4a21e 8%, var(--md-sys-color-surface-container));
+        }
         .tktk-check-item.pass {
             border-color: var(--md-sys-color-primary);
             background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container));
@@ -1098,6 +1102,9 @@
         .tktk-check-icon.fail {
             background: var(--md-sys-color-error, #ba1a1a);
         }
+        .tktk-check-icon.warn {
+            background: #f4a21e;
+        }
         .tktk-check-icon .material-symbols-rounded {
             font-size: 14px;
             color: var(--md-sys-color-on-primary);
@@ -1107,7 +1114,8 @@
             color: var(--md-sys-color-on-surface-variant);
             animation: tktk-spin 1s linear infinite;
         }
-        .tktk-check-icon.fail .material-symbols-rounded {
+        .tktk-check-icon.fail .material-symbols-rounded,
+        .tktk-check-icon.warn .material-symbols-rounded {
             color: #fff;
         }
         @keyframes tktk-spin {
@@ -1131,12 +1139,16 @@
         }
         .tktk-check-error {
             font-size: 11px;
-            color: var(--md-sys-color-error, #ba1a1a);
             margin-top: 3px;
             display: none;
         }
         .tktk-check-item.fail .tktk-check-error {
             display: block;
+            color: var(--md-sys-color-error, #ba1a1a);
+        }
+        .tktk-check-item.warn .tktk-check-error {
+            display: block;
+            color: #f4a21e;
         }
         .tktk-modal-footer {
             display: flex;
@@ -1160,7 +1172,7 @@
         }
         .tktk-btn-cancel:hover { background: var(--md-sys-color-surface-container-highest); }
         .tktk-btn-proceed {
-            background: var(--md-sys-color-error, #ba1a1a);
+            background: #f4a21e;
             color: #fff;
         }
         .tktk-btn-proceed:hover { opacity: 0.86; }
