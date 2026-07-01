@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video.playsInline = true;
             video.src = url;
 
-            video.onloadedmetadata = async () => {
+            video.onloadedmetadata = () => {
                 clearTimeout(timeoutId);
                 const w = video.videoWidth;
                 const h = video.videoHeight;
@@ -265,14 +265,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
                 }
 
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const fps = parseFpsFromMp4(arrayBuffer);
-                    const maxSide = Math.max(w, h);
-                    if (maxSide > 1080 && maxSide <= 1920 && fps !== null && fps >= 60) {
-                        flags.push(`Video specs: ${w}x${h} at ${fps}fps (exceeds 1080p 60fps compatibility target)`);
-                    }
-                } catch (e) {}
+                const shortSide = Math.min(w, h);
+                const longSide = Math.max(w, h);
+                if (shortSide > 1080 || longSide > 1920) {
+                    flags.push(`Resolution ${w}x${h} exceeds the 1080p limit (max 1080x1920 or 1920x1080)`);
+                }
 
                 safeResolve(flags);
             };
