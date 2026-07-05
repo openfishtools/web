@@ -344,6 +344,68 @@
                             style="margin-top: 16px;">Process Video</button>
                     </div>
 
+                    <!-- iOS Experimental Card -->
+                    <div class="card" id="ios-experimental-card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 20px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">science</span>
+                            <div style="flex: 1;">
+                                <h3 style="font-size: 1.25rem; font-weight: 600;">iOS Experimental</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">iOS Direct Patch</div>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button id="btn-ios-clear-cache" title="Clear cache" aria-label="Clear cache"
+                                    style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease;">
+                                    <span class="material-symbols-rounded" style="font-size: 22px;">cleaning_services</span>
+                                </button>
+                                <button id="btn-ios-hard-refresh" title="Hard refresh" aria-label="Hard refresh"
+                                    style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease;">
+                                    <span class="material-symbols-rounded" style="font-size: 22px;">restart_alt</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="drag-drop-area" id="tool-ios-drop" style="margin-bottom: 20px;">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span>Drag &amp; drop video here or click to select</span>
+                            <input type="file" id="tool-ios-input" accept="video/mp4,video/quicktime,video/webm"
+                                hidden>
+                        </div>
+
+                        <div id="tool-ios-status"
+                            style="margin-top: 4px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
+
+                        <div id="ios-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="ios-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="ios-progress-text">Processing...</span>
+                                <span id="ios-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <div id="ios-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">Process Logs:</span>
+                                <button id="btn-ios-copy-logs" title="Copy logs" aria-label="Copy logs"
+                                    style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; gap: 4px; color: var(--md-sys-color-on-surface-variant); font-size: 11px; font-family: inherit; transition: background 0.2s ease;">
+                                    <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span>
+                                    <span id="btn-ios-copy-logs-label">Copy</span>
+                                </button>
+                            </div>
+                            <pre id="ios-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                        </div>
+
+                        <button id="btn-start-ios" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;">Process Video</button>
+                    </div>
+
                     <div class="card">
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
                             <span class="material-symbols-rounded"
@@ -1261,6 +1323,7 @@
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
+    <script src="scripts/ios-experimental.js"></script>
 
     <script src="scripts/tiktok-stats-tool.js"></script>
     <script src="scripts/tiktok-downloader.js"></script>
