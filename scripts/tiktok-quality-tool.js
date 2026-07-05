@@ -292,8 +292,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parseFpsFromMp4(arrayBuffer) {
         try {
-            const data = new Uint8Array(arrayBuffer);
-            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+            const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+            const fresh = new Uint8Array(srcArr.byteLength);
+            fresh.set(srcArr);
+            const data = fresh;
+            const view = new DataView(data.buffer);
             const topLevel = parseBoxes(data, view, 0, data.length, '');
             const moov = findTopLevel(topLevel, 'moov');
             if (!moov) return null;
@@ -334,8 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parseResolutionFromMp4(arrayBuffer) {
         try {
-            const data = new Uint8Array(arrayBuffer);
-            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+            const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+            const fresh = new Uint8Array(srcArr.byteLength);
+            fresh.set(srcArr);
+            const data = fresh;
+            const view = new DataView(data.buffer);
             const topLevel = parseBoxes(data, view, 0, data.length, '');
             const moov = findTopLevel(topLevel, 'moov');
             if (!moov) return null;
@@ -881,8 +889,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function patchMp4(inputData) {
-        const data = new Uint8Array(inputData);
-        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+        // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+        const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
+        const fresh = new Uint8Array(srcArr.byteLength);
+        fresh.set(srcArr);
+        const data = fresh;
+        const view = new DataView(data.buffer);
         const topLevel = parseBoxes(data, view, 0, data.length, '');
 
         const ftyp = findTopLevel(topLevel, 'ftyp');
