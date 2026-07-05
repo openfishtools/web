@@ -87,6 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'Unknown OS';
     }
 
+    function isIosDevice() {
+        const ua = navigator.userAgent;
+        return /iPhone|iPad|iPod|VisionPro/i.test(ua) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+               (ua.includes('Macintosh') && 'ontouchend' in document);
+    }
+
     // --- Global error handlers ---
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return; // Only log when tool is active
@@ -519,21 +526,65 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
             return;
         }
-
         isProcessing = false; // Reset to allow sub-methods to set isProcessing = true
+
+        const iosWarningModal = document.getElementById('tiktok-ios-warning-modal');
+        const btnIosWarningCancel = document.getElementById('btn-ios-warning-cancel');
+        const btnIosWarningProceed = document.getElementById('btn-ios-warning-proceed');
+
+        function checkIosWarningAndProceed(onProceed) {
+            if (currentVersion === 'v2' && isIosDevice()) {
+                if (iosWarningModal) {
+                    iosWarningModal.classList.add('visible');
+                }
+                
+                const handleProceed = () => {
+                    if (iosWarningModal) iosWarningModal.classList.remove('visible');
+                    btnIosWarningProceed.removeEventListener('click', handleProceed);
+                    btnIosWarningCancel.removeEventListener('click', handleCancel);
+                    onProceed();
+                };
+                
+                const handleCancel = () => {
+                    if (iosWarningModal) iosWarningModal.classList.remove('visible');
+                    btnIosWarningProceed.removeEventListener('click', handleProceed);
+                    btnIosWarningCancel.removeEventListener('click', handleCancel);
+                    
+                    // Reset UI
+                    btnStart.classList.remove('hidden');
+                    progressContainer.classList.add('hidden');
+                    logsContainer.classList.add('hidden');
+                    statusText.innerHTML = '';
+                    isProcessing = false;
+                };
+
+                if (btnIosWarningProceed && btnIosWarningCancel) {
+                    btnIosWarningProceed.addEventListener('click', handleProceed);
+                    btnIosWarningCancel.addEventListener('click', handleCancel);
+                } else {
+                    onProceed();
+                }
+            } else {
+                onProceed();
+            }
+        }
+
+        const startV2Process = async () => {
+            isProcessing = false; // allow processVideoV2 or runAnalysis to run
+            if (compressMode === 'off') {
+                await runAnalysis(selectedFile);
+                return;
+            }
+            await processVideoV2(selectedFile, compressMode);
+        };
 
         if (currentVersion === 'v1') {
             await processVideoV1(selectedFile);
             return;
         }
-        if (compressMode === 'off') {
-            await runAnalysis(selectedFile);
-            return;
-        }
-        await processVideoV2(selectedFile, compressMode);
+
+        checkIosWarningAndProceed(startV2Process);
     });
-
-
 
     function parseFpsFromMp4(arrayBuffer) {
         try {
@@ -703,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
         const baseURL = window.location.origin + '/assets/ffmpeg';
-        const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
+        const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice();
         let loaded = false;
 
         logSection('FFmpeg Load');

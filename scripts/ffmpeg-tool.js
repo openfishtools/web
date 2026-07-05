@@ -219,7 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load ffmpeg.wasm
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Loading FFmpeg...</span>`;
             const baseURL = window.location.origin + '/assets/ffmpeg';
-            const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
+            const isIosDevice = /iPhone|iPad|iPod|VisionPro/i.test(navigator.userAgent) || 
+                               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+                               (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
+            const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice;
             let loaded = false;
 
             if (isMultiThread) {
