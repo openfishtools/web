@@ -194,11 +194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 location.hash = `#${target}`;
             }
             const isChatTab = target === 'chat';
-            fetch(`${API_URL}/admin/heartbeat`, { 
-                method: 'POST', 
-                headers: jsonHeaders(),
-                body: JSON.stringify({ forceStatus: isChatTab ? 'online' : 'offline' })
-            }).catch(() => {});
         });
     });
 
@@ -1552,22 +1547,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const list = document.getElementById('active-chats');
         if (!list) return;
-        if (activeSupportChatId) {
-            const currentChat = chats.find(c => c._id === activeSupportChatId);
-            const statusEl = document.getElementById('current-chat-status');
-            if (currentChat && statusEl) {
-                const newStatus = currentChat.online ? 'Online' : 'Offline';
-                if (statusEl.textContent !== newStatus) {
-                    statusEl.textContent = newStatus;
-                    statusEl.style.color = currentChat.online ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)';
-                }
-            }
-        }
         if (chats.length === 0) {
             list.innerHTML = `<div class="empty-chats"><span class="material-symbols-rounded">chat_bubble_outline</span><p>No active conversations</p></div>`;
             return;
         }
-        const newListHTML = chats.map(c => `<div class="chat-list-item ${activeSupportChatId === c._id ? 'active' : ''}" data-id="${c._id}" data-name="${c.name}"><div class="avatar">${c.name.charAt(0)}</div><div class="chat-meta"><div class="flex align-center gap-8"><span class="chat-name">${c.name}</span><span class="status-dot ${c.online ? 'online' : 'offline'}"></span></div><span class="chat-preview">${c.lastMsg}</span></div><div class="chat-time">${c.time}</div></div>`).join('');
+        const newListHTML = chats.map(c => `<div class="chat-list-item ${activeSupportChatId === c._id ? 'active' : ''}" data-id="${c._id}" data-name="${c.name}"><div class="avatar">${c.name.charAt(0)}</div><div class="chat-meta"><div class="flex align-center gap-8"><span class="chat-name">${c.name}</span></div><span class="chat-preview">${c.lastMsg}</span></div><div class="chat-time">${c.time}</div></div>`).join('');
         if (list.innerHTML !== newListHTML) {
             list.innerHTML = newListHTML;
             list.querySelectorAll('.chat-list-item').forEach(item => {

@@ -552,37 +552,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let globalMuted = false;
     let currentChatId = null;
     let messagesPollInterval = null;
-    let heartbeatInterval = null;
-
     const stopChatPolling = () => {
         if (messagesPollInterval != null) {
             clearInterval(messagesPollInterval);
             messagesPollInterval = null;
         }
-        if (heartbeatInterval != null) {
-            clearInterval(heartbeatInterval);
-            heartbeatInterval = null;
-        }
     };
 
-    const updateAdminStatus = async () => {
-        try {
-            const res = await fetch(`${API_URL}/admin/status`);
-            if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
-                return;
-            }
-            const data = await res.json();
-            const statusEl = document.getElementById('admin-status-text');
-            if (statusEl) {
-                statusEl.textContent = data.online ? 'Online' : 'Offline';
-                statusEl.style.color = data.online ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface-variant)';
-            }
-        } catch (err) {
-            console.error('Admin status check failed:', err);
-        }
-    };
-    setInterval(updateAdminStatus, 5000);
-    updateAdminStatus();
 
     let userIp = null;
     fetch(`${API_URL}/get-ip`)
@@ -671,11 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
         stopChatPolling();
         loadMessages();
         messagesPollInterval = setInterval(loadMessages, 3000);
-        heartbeatInterval = setInterval(async () => {
-            if (currentChatId) {
-                await fetch(`${API_URL}/chats/${currentChatId}/heartbeat`, { method: 'POST' });
-            }
-        }, 5000);
     };
 
     const checkExistingChat = async () => {

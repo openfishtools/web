@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let selectedFile = null;
+    let currentFileBuffer = null;
     let isProcessing = false;
     let currentVersion = 'v1';
     let compressMode = 'hd';
@@ -201,12 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let hasFail = false;
 
         try {
-            const arrayBuffer = await file.arrayBuffer();
-            fps = parseFpsFromMp4(arrayBuffer);
-            const res = parseResolutionFromMp4(arrayBuffer);
-            if (res) {
-                w = res.width;
-                h = res.height;
+            if (currentFileBuffer) {
+                fps = parseFpsFromMp4(currentFileBuffer);
+                const res = parseResolutionFromMp4(currentFileBuffer);
+                if (res) {
+                    w = res.width;
+                    h = res.height;
+                }
             }
         } catch (e) {}
 
@@ -275,8 +277,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('Failed to read video file.'));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
     btnStart.addEventListener('click', async () => {
         if (!selectedFile) return;
+        if (isProcessing) return;
+        isProcessing = true;
+
+        btnStart.classList.add('hidden');
+        progressContainer.classList.remove('hidden');
+        logsContainer.classList.remove('hidden');
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
+        progressFill.style.width = '5%';
+        progressPercent.textContent = '5%';
+        progressText.textContent = 'Reading...';
+
+        try {
+            currentFileBuffer = await readFileAsArrayBuffer(selectedFile);
+        } catch (error) {
+            console.error(error);
+            showStatusError(`Error reading file: ${error.message}`);
+            btnStart.classList.remove('hidden');
+            isProcessing = false;
+            return;
+        }
+
+        isProcessing = false; // Reset to allow sub-methods to set isProcessing = true
+
         if (currentVersion === 'v1') {
             await processVideoV1(selectedFile);
             return;
@@ -526,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadFFmpegHelper(ffmpeg, toBlobURL);
 
             logsEl.textContent += 'Writing file to virtual filesystem...\n';
-            await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+            await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
 
             const hardwareThreads = navigator.hardwareConcurrency || 4;
             const threads = Math.min(4, hardwareThreads).toString();
@@ -1018,8 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressPercent.textContent = '10%';
                 logsEl.textContent += 'Compression skipped | reading original file...\n';
 
-                const rawBuffer = await file.arrayBuffer();
-                dataToPath = new Uint8Array(rawBuffer);
+                dataToPath = new Uint8Array(currentFileBuffer);
 
                 logsEl.textContent += `Original size: ${(dataToPath.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
 
@@ -1054,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loadFFmpegHelper(ffmpeg, toBlobURL);
 
                 logsEl.textContent += 'Writing file to virtual filesystem...\n';
-                await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+                await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
 
                 const hardwareThreads = navigator.hardwareConcurrency || 4;
                 const threads = Math.min(4, hardwareThreads).toString();

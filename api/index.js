@@ -37,7 +37,6 @@ app.use(express.json());
 
 /** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
-let lastAdminHeartbeat = 0;
 
 async function requireAdmin(req, res, next) {
     const h = req.headers.authorization;
@@ -574,13 +573,6 @@ app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/api/admin/heartbeat', requireAdmin, (req, res) => {
-    const { forceStatus } = req.body || {};
-    lastAdminHeartbeat = forceStatus === 'offline' ? 0 : Date.now();
-    res.json({ success: true });
-});
-
-app.get('/api/admin/status', (req, res) => res.json({ online: (Date.now() - lastAdminHeartbeat) < 15000 }));
 
 app.get('/api/presets', async (req, res) => {
     try {
@@ -687,8 +679,7 @@ app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
 
 app.get('/api/chats', requireAdmin, async (req, res) => {
     const chats = await Chat.find().sort({ lastUpdate: -1 }).lean();
-    const now = new Date();
-    res.json(chats.map(c => ({ ...c, online: (now - new Date(c.lastUpdate)) < 15000 })));
+    res.json(chats);
 });
 
 app.get('/api/chats/check', async (req, res) => {
@@ -744,10 +735,6 @@ app.get('/api/chats/:id', requireAdmin, async (req, res) => {
     res.json(chat);
 });
 
-app.post('/api/chats/:id/heartbeat', async (req, res) => {
-    await Chat.findByIdAndUpdate(req.params.id, { lastUpdate: Date.now() });
-    res.json({ success: true });
-});
 
 app.patch('/api/chats/:id/block', requireAdmin, async (req, res) => {
     const chat = await Chat.findById(req.params.id);
