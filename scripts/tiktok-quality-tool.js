@@ -150,6 +150,75 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.innerHTML = `<span style="color: var(--md-sys-color-error);">${msg}</span>`;
     }
 
+    function resetToolState() {
+        selectedFile = null;
+        currentFileBuffer = null;
+        fileInput.value = '';
+        statusText.innerHTML = '';
+        btnStart.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        progressFill.style.width = '0%';
+        progressPercent.textContent = '0%';
+        progressText.textContent = 'Processing...';
+        logsContainer.classList.add('hidden');
+        logsEl.textContent = '';
+        dropArea.style.borderColor = '';
+        dropArea.style.background = '';
+    }
+
+    const btnClearCache = document.getElementById('btn-tiktok-clear-cache');
+    const btnHardRefresh = document.getElementById('btn-tiktok-hard-refresh');
+
+    if (btnClearCache) {
+        btnClearCache.addEventListener('click', () => {
+            if (isProcessing) return;
+            resetToolState();
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Cache cleared.</span>`;
+            // Animate icon spin
+            const icon = btnClearCache.querySelector('.material-symbols-rounded');
+            if (icon) {
+                icon.style.transition = 'transform 0.4s ease';
+                icon.style.transform = 'rotate(20deg) scale(1.15)';
+                setTimeout(() => { icon.style.transform = ''; }, 400);
+            }
+        });
+        btnClearCache.addEventListener('mouseenter', () => {
+            btnClearCache.style.background = 'var(--md-sys-color-surface-container-high)';
+        });
+        btnClearCache.addEventListener('mouseleave', () => {
+            btnClearCache.style.background = 'none';
+        });
+    }
+
+    if (btnHardRefresh) {
+        btnHardRefresh.addEventListener('click', async () => {
+            if (isProcessing) return;
+            const icon = btnHardRefresh.querySelector('.material-symbols-rounded');
+            if (icon) {
+                icon.style.transition = 'transform 0.5s ease';
+                icon.style.transform = 'rotate(360deg)';
+            }
+            try {
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(r => r.unregister()));
+                }
+            } catch (e) { /* ignore */ }
+            location.reload(true);
+        });
+        btnHardRefresh.addEventListener('mouseenter', () => {
+            btnHardRefresh.style.background = 'var(--md-sys-color-surface-container-high)';
+        });
+        btnHardRefresh.addEventListener('mouseleave', () => {
+            btnHardRefresh.style.background = 'none';
+        });
+    }
+
+
     function handleFileSelection(file) {
         if (!file.type.startsWith('video/')) {
             showStatusError('Please select a valid video file.');
