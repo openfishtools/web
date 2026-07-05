@@ -55,6 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
         log('');
     }
 
+    function appendToLogsEl(message) {
+        if (!logsEl) return;
+        const lines = logsEl.textContent.split('\n');
+        lines.push(message);
+        if (lines.length > 150) {
+            logsEl.textContent = lines.slice(lines.length - 150).join('\n');
+        } else {
+            logsEl.textContent = lines.join('\n');
+        }
+        logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
     // --- Browser detection ---
     function detectBrowser() {
         const ua = navigator.userAgent;
@@ -817,15 +829,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Processing quality settings...</span>`;
             });
 
+            let warnRepeatCount = 0;
             ffmpeg.on('log', ({ message }) => {
-                logsEl.textContent += message + '\n';
-                logsEl.scrollTop = logsEl.scrollHeight;
-
                 const lc = message.toLowerCase();
                 if (lc.includes('oom') || lc.includes('out of memory')) {
                     oomDetected = true;
                     oomLine = message;
                 }
+
+                if (lc.includes('missing picture in access') || lc.includes('no frame!') || lc.includes('invalid data found when processing')) {
+                    warnRepeatCount++;
+                    if (warnRepeatCount % 100 !== 1) {
+                        return;
+                    }
+                }
+
+                appendToLogsEl(message);
             });
 
             await loadFFmpegHelper(ffmpeg, toBlobURL);
@@ -1413,15 +1432,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Compressing...</span>`;
                 });
 
+                let warnRepeatCount = 0;
                 ffmpeg.on('log', ({ message }) => {
-                    logsEl.textContent += message + '\n';
-                    logsEl.scrollTop = logsEl.scrollHeight;
-
                     const lc = message.toLowerCase();
                     if (lc.includes('oom') || lc.includes('out of memory')) {
                         oomDetected = true;
                         oomLine = message;
                     }
+
+                    if (lc.includes('missing picture in access') || lc.includes('no frame!') || lc.includes('invalid data found when processing')) {
+                        warnRepeatCount++;
+                        if (warnRepeatCount % 100 !== 1) {
+                            return;
+                        }
+                    }
+
+                    appendToLogsEl(message);
                 });
 
                 await loadFFmpegHelper(ffmpeg, toBlobURL);
