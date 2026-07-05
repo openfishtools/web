@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
 
-    // ─── Centralized logger ───────────────────────────────────────────────────
+    // --- Centralized logger ---
     function log(msg) {
         const ts = new Date().toISOString().replace('T', ' ').replace('Z', '');
         const line = `[${ts}] ${msg}`;
@@ -49,14 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     function logSection(title) {
-        const bar = '─'.repeat(Math.max(0, 46 - title.length));
-        log(`┌── ${title} ${bar}`);
+        log(`== ${title} ==`);
     }
     function logEnd() {
-        log('└' + '─'.repeat(50));
+        log('');
     }
 
-    // ─── Browser detection ────────────────────────────────────────────────────
+    // --- Browser detection ---
     function detectBrowser() {
         const ua = navigator.userAgent;
         if (/CriOS/i.test(ua))  return 'Chrome (iOS)';
@@ -88,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'Unknown OS';
     }
 
-    // ─── Global error handlers ────────────────────────────────────────────────
+    // --- Global error handlers ---
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return; // Only log when tool is active
         logSection('UNCAUGHT ERROR');
@@ -113,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logEnd();
     });
 
-    // ─── Copy logs button ─────────────────────────────────────────────────────
+    // --- Copy logs button ---
     const btnCopyLogs = document.getElementById('btn-copy-logs');
     const btnCopyLogsLabel = document.getElementById('btn-copy-logs-label');
     if (btnCopyLogs) {
