@@ -38,6 +38,125 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
 
+    // ─── Centralized logger ───────────────────────────────────────────────────
+    function log(msg) {
+        const ts = new Date().toISOString().replace('T', ' ').replace('Z', '');
+        const line = `[${ts}] ${msg}`;
+        console.log(line);
+        if (logsEl) {
+            logsEl.textContent += line + '\n';
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+    }
+    function logSection(title) {
+        const bar = '─'.repeat(Math.max(0, 46 - title.length));
+        log(`┌── ${title} ${bar}`);
+    }
+    function logEnd() {
+        log('└' + '─'.repeat(50));
+    }
+
+    // ─── Browser detection ────────────────────────────────────────────────────
+    function detectBrowser() {
+        const ua = navigator.userAgent;
+        if (/CriOS/i.test(ua))  return 'Chrome (iOS)';
+        if (/FxiOS/i.test(ua))  return 'Firefox (iOS)';
+        if (/EdgiOS/i.test(ua)) return 'Edge (iOS)';
+        if (/OPiOS/i.test(ua))  return 'Opera (iOS)';
+        if (/EdgA/i.test(ua))   return 'Edge (Android)';
+        if (/SamsungBrowser/i.test(ua)) return 'Samsung Browser';
+        if (/OPR|Opera/i.test(ua))      return 'Opera';
+        if (/Edg\//i.test(ua))          return 'Edge';
+        if (/YaBrowser/i.test(ua))      return 'Yandex';
+        if (/Firefox/i.test(ua))        return 'Firefox';
+        if (/Chrome/i.test(ua))         return 'Chrome';
+        if (/Safari/i.test(ua))         return 'Safari';
+        return 'Unknown Browser';
+    }
+    function detectOS() {
+        const ua = navigator.userAgent;
+        if (/iPhone/i.test(ua))  return `iOS iPhone (${(ua.match(/OS (\d+[_\d]*)/) || [])[1]?.replace(/_/g,'.') || '?'})`;
+        if (/iPad/i.test(ua))    return `iOS iPad (${(ua.match(/OS (\d+[_\d]*)/) || [])[1]?.replace(/_/g,'.') || '?'})`;
+        if (/Android/i.test(ua)) return `Android ${(ua.match(/Android ([\d.]+)/) || [])[1] || '?'}`;
+        if (/Windows NT/i.test(ua)) {
+            const v = (ua.match(/Windows NT ([\d.]+)/) || [])[1];
+            const map = {'10.0':'10/11','6.3':'8.1','6.2':'8','6.1':'7'};
+            return `Windows ${map[v] || v || '?'}`;
+        }
+        if (/Mac OS X/i.test(ua)) return `macOS ${(ua.match(/Mac OS X ([\d_]+)/) || [])[1]?.replace(/_/g,'.') || '?'}`;
+        if (/Linux/i.test(ua))    return 'Linux';
+        return 'Unknown OS';
+    }
+
+    // ─── Global error handlers ────────────────────────────────────────────────
+    window.addEventListener('error', (e) => {
+        if (!logsEl || logsEl.textContent === '') return; // Only log when tool is active
+        logSection('UNCAUGHT ERROR');
+        log(`  Message : ${e.message}`);
+        log(`  Source  : ${e.filename || 'unknown'}`);
+        log(`  Line    : ${e.lineno}:${e.colno}`);
+        if (e.error && e.error.stack) {
+            e.error.stack.split('\n').slice(0, 5).forEach(l => log(`  Stack   : ${l.trim()}`));
+        }
+        logEnd();
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+        if (!logsEl || logsEl.textContent === '') return;
+        logSection('UNHANDLED PROMISE REJECTION');
+        const reason = e.reason;
+        if (reason instanceof Error) {
+            log(`  Message : ${reason.message}`);
+            if (reason.stack) reason.stack.split('\n').slice(0, 5).forEach(l => log(`  Stack   : ${l.trim()}`));
+        } else {
+            log(`  Reason  : ${String(reason)}`);
+        }
+        logEnd();
+    });
+
+    // ─── Copy logs button ─────────────────────────────────────────────────────
+    const btnCopyLogs = document.getElementById('btn-copy-logs');
+    const btnCopyLogsLabel = document.getElementById('btn-copy-logs-label');
+    if (btnCopyLogs) {
+        btnCopyLogs.addEventListener('mouseenter', () => {
+            btnCopyLogs.style.background = 'var(--md-sys-color-surface-container-high)';
+        });
+        btnCopyLogs.addEventListener('mouseleave', () => {
+            btnCopyLogs.style.background = 'none';
+        });
+        btnCopyLogs.addEventListener('click', async () => {
+            const text = logsEl ? logsEl.textContent : '';
+            if (!text.trim()) return;
+            const icon = btnCopyLogs.querySelector('.material-symbols-rounded');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    // Fallback for iOS Safari / older browsers
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                if (icon) icon.textContent = 'check';
+                if (btnCopyLogsLabel) btnCopyLogsLabel.textContent = 'Copied!';
+                btnCopyLogs.style.color = 'var(--md-sys-color-primary)';
+            } catch (err) {
+                if (icon) icon.textContent = 'error';
+                if (btnCopyLogsLabel) btnCopyLogsLabel.textContent = 'Failed';
+                btnCopyLogs.style.color = 'var(--md-sys-color-error)';
+            }
+            setTimeout(() => {
+                if (icon) icon.textContent = 'content_copy';
+                if (btnCopyLogsLabel) btnCopyLogsLabel.textContent = 'Copy';
+                btnCopyLogs.style.color = '';
+            }, 2000);
+        });
+    }
+
     function updateSwitchIndicator(trackEl, indicatorEl, activeClass) {
         if (!trackEl || !indicatorEl) return;
         const active = trackEl.querySelector(`.${activeClass}.active`);
@@ -363,14 +482,38 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
+        logsEl.textContent = '';
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
         progressFill.style.width = '5%';
         progressPercent.textContent = '5%';
         progressText.textContent = 'Reading...';
 
+        logSection('FILE READ');
+        log(`  Name        : ${selectedFile.name}`);
+        log(`  Size        : ${(selectedFile.size / (1024*1024)).toFixed(3)} MB (${selectedFile.size} bytes)`);
+        log(`  MIME type   : ${selectedFile.type}`);
+        log(`  Last modif  : ${new Date(selectedFile.lastModified).toISOString()}`);
+        log(`  Version     : ${currentVersion.toUpperCase()}  |  Compress mode: ${compressMode}`);
+        log(`  Browser     : ${detectBrowser()}`);
+        log(`  OS          : ${detectOS()}`);
+        log(`  Platform    : ${navigator.platform || 'unknown'}`);
+        log(`  User-Agent  : ${navigator.userAgent}`);
+        log(`  Threads(HW) : ${navigator.hardwareConcurrency || 'unknown'}`);
+        log(`  SharedArrayBuffer: ${'SharedArrayBuffer' in window ? 'available (multi-thread)' : 'NOT available (single-thread)'}`);
+        logEnd();
+
         try {
             currentFileBuffer = await readFileAsArrayBuffer(selectedFile);
+            log(`  ArrayBuffer byteLength : ${currentFileBuffer.byteLength} bytes`);
+            log(`  FileReader read        : SUCCESS`);
+            // Peek at first 12 bytes to confirm MP4 ftyp
+            const peek = new Uint8Array(currentFileBuffer, 0, Math.min(12, currentFileBuffer.byteLength));
+            const ftypMagic = String.fromCharCode(peek[4], peek[5], peek[6], peek[7]);
+            log(`  Box[0] magic bytes    : ${ftypMagic} (expect: ftyp or mdat)`);
+            logEnd();
         } catch (error) {
+            log(`  FileReader ERROR: ${error.name} — ${error.message}`);
+            logEnd();
             console.error(error);
             showStatusError(`Error reading file: ${error.message}`);
             btnStart.classList.remove('hidden');
@@ -564,27 +707,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMultiThread = typeof SharedArrayBuffer !== 'undefined';
         let loaded = false;
 
+        logSection('FFmpeg Load');
+        log(`  Base URL    : ${baseURL}`);
+        log(`  Multi-thread: ${isMultiThread}`);
+
         if (isMultiThread) {
             try {
-                console.log('Attempting to load multi-threaded FFmpeg for TikTok Patcher...');
+                log(`  Attempting multi-thread load...`);
                 const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
                 const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
                 const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
                 await ffmpeg.load({ coreURL, wasmURL, workerURL });
                 loaded = true;
-                console.log('Multi-threaded FFmpeg loaded successfully.');
+                log(`  Multi-thread load: SUCCESS`);
             } catch (err) {
-                console.warn('Failed to load multi-threaded FFmpeg, falling back to single-threaded:', err);
+                log(`  Multi-thread load FAILED: ${err.message} — falling back to single-thread`);
             }
         }
 
         if (!loaded) {
-            console.log('Loading single-threaded FFmpeg for TikTok Patcher...');
+            log(`  Loading single-thread FFmpeg...`);
             const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
             const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
             await ffmpeg.load({ coreURL, wasmURL });
-            console.log('Single-threaded FFmpeg loaded successfully.');
+            log(`  Single-thread load: SUCCESS`);
         }
+        logEnd();
     }
 
     async function processVideoV1(file) {
@@ -598,7 +746,11 @@ document.addEventListener('DOMContentLoaded', () => {
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = 'Processing...';
-        logsEl.textContent = 'Initializing process...\n';
+
+        logSection('V1 PROCESS START');
+        log(`  File : ${file.name}`);
+        log(`  Mode : WMV2 lossless re-encode (v1)`);
+        logEnd();
 
         try {
             const { FFmpeg } = window.FFmpegWASM;
@@ -627,12 +779,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             await loadFFmpegHelper(ffmpeg, toBlobURL);
-
-            logsEl.textContent += 'Writing file to virtual filesystem...\n';
+            logSection('FFmpeg V1 — Writing Input');
+            log(`  Buffer size : ${currentFileBuffer.byteLength} bytes`);
             await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
+            log(`  Write       : DONE`);
+            logEnd();
 
             const hardwareThreads = navigator.hardwareConcurrency || 4;
             const threads = Math.min(4, hardwareThreads).toString();
+            logSection('FFmpeg V1 — Command');
+            log(`  Hardware threads : ${hardwareThreads}`);
+            log(`  Using threads    : ${threads}`);
 
             const command = [
                 '-i', 'input.mp4',
@@ -647,6 +804,9 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
 
             logsEl.textContent += `Executing command: ffmpeg ${command.join(' ')}\n`;
+            log(`  Full command: ffmpeg ${command.join(' ')}`);
+            logEnd();
+            logSection('FFmpeg V1 — Encoding');
 
             try {
                 await ffmpeg.exec(command);
@@ -661,19 +821,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            logEnd();
             if (oomDetected) {
+                log(`  OOM detected! Triggered by: ${oomLine}`);
                 throw new Error(`Out of memory during video processing. (Triggered by log: "${oomLine}")`);
             }
 
+            logSection('FFmpeg V1 — Output');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
             const data = await ffmpeg.readFile('output.wmv');
-
+            log(`  Output bytes : ${data ? data.byteLength : 0}`);
+            log(`  Output size  : ${data ? (data.byteLength / (1024*1024)).toFixed(2) + ' MB' : 'EMPTY'}`);
             if (!data || data.byteLength < 1024) {
+                log(`  ERROR: Output too small or empty!`);
                 throw new Error('Processing failed (output is empty or too small).');
             }
+            logEnd();
 
             const blob = new Blob([data.buffer], { type: 'video/x-ms-wmv' });
             const url = URL.createObjectURL(blob);
+            log(`  Blob URL created, triggering download...`);
 
             const a = document.createElement('a');
             a.href = url;
@@ -682,6 +849,8 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            log(`  Download triggered: ${a.download}`);
+            logEnd();
 
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Process finished! Download started.</span>`;
             progressFill.style.width = '100%';
@@ -689,6 +858,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btnStart.classList.remove('hidden');
 
         } catch (error) {
+            log(`  !! V1 ERROR: ${error.name} — ${error.message}`);
+            if (error.stack) log(`  Stack: ${error.stack.split('\n').slice(0,3).join(' | ')}`);
+            logEnd();
             console.error(error);
             showStatusError(`Error: ${error.message}`);
             btnStart.classList.remove('hidden');
@@ -991,14 +1163,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return map;
     }
 
-    function patchMp4(inputData) {
+    function patchMp4(inputData, _logFn) {
+        const _log = _logFn || (() => {});
         // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
         const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
         const fresh = new Uint8Array(srcArr.byteLength);
         fresh.set(srcArr);
         const data = fresh;
         const view = new DataView(data.buffer);
+
+        _log(`  Input buffer : ${data.byteLength} bytes (${(data.byteLength/(1024*1024)).toFixed(3)} MB)`);
+        _log(`  byteOffset   : ${fresh.byteOffset} (should be 0 on iOS fix)`);
+
         const topLevel = parseBoxes(data, view, 0, data.length, '');
+        _log(`  Top-level boxes: ${topLevel.map(b => `${b.type}(${b.size})`).join(', ')}`);
 
         const ftyp = findTopLevel(topLevel, 'ftyp');
         const moov = findTopLevel(topLevel, 'moov');
@@ -1008,10 +1186,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!moov) throw new Error('"moov" box not found. Missing MP4 metadata.');
         if (!mdat) throw new Error('"mdat" box not found. No media data.');
 
+        _log(`  ftyp @ offset ${ftyp.offset}, size ${ftyp.size}`);
+        _log(`  moov @ offset ${moov.offset}, size ${moov.size}`);
+        _log(`  mdat @ offset ${mdat.offset}, size ${mdat.size}, content @ ${mdat.contentStart}`);
+        _log(`  moov children: ${moov.children.map(c => c.type).join(', ')}`);
+
         const videoTrak = moov.children.find(
             c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
         );
         if (!videoTrak) throw new Error('Video track not found.');
+        _log(`  Video trak children: ${videoTrak.children.map(c => c.type).join(', ')}`);
 
         const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
         const mdhd = findDescendant(videoTrak, ['mdia', 'mdhd']);
@@ -1021,13 +1205,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const stsz = stbl && findChild(stbl, 'stsz');
         const stco = stbl && findChild(stbl, 'stco');
 
-        if (!stbl || !mdhd || !elst || !stts || !stsc || !stsz || !stco)
+        if (!stbl || !mdhd || !elst || !stts || !stsc || !stsz || !stco) {
+            _log(`  MISSING BOXES — stbl:${!!stbl} mdhd:${!!mdhd} elst:${!!elst} stts:${!!stts} stsc:${!!stsc} stsz:${!!stsz} stco:${!!stco}`);
             throw new Error('Missing required boxes: mdhd, elst, stts, stsc, stsz, stco.');
+        }
+        _log(`  All required boxes found ✓`);
 
         const originalSizes        = parseStsz(stsz);
         const originalStscRows     = parseStsc(stsc);
         const originalChunkOffsets = parseStco(stco);
         const stcoBoxes            = collectTrackStcoBoxes(moov);
+
+        _log(`  stsz: ${originalSizes.length} samples, first=${originalSizes[0]}, last=${originalSizes[originalSizes.length-1]}`);
+        _log(`  stsc: ${originalStscRows.length} entries`);
+        _log(`  stco: ${originalChunkOffsets.length} chunks, first offset=${originalChunkOffsets[0]}, last=${originalChunkOffsets[originalChunkOffsets.length-1]}`);
+        _log(`  stco tracks total: ${stcoBoxes.length}`);
 
         const preservedTopLevel = topLevel
             .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
@@ -1042,6 +1234,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (mdhdVer === 1) {
             dynamicTimescale = readU32BE(mdhdPayload, 20);
         }
+        _log(`  mdhd version   : ${mdhdVer}`);
+        _log(`  timescale      : ${dynamicTimescale}`);
 
         // 2. Get original frame delta from stts
         const sttsPayload = boxPayload(stts);
@@ -1050,12 +1244,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sttsEntryCount >= 1) {
             dynamicSampleDelta = readU32BE(sttsPayload, 12);
         }
+        _log(`  stts entries   : ${sttsEntryCount}`);
+        _log(`  sample delta   : ${dynamicSampleDelta}`);
 
         // 3. Compute dynamic duration and edit media time
         const realSampleCount = originalSizes.length;
         const totalSamples = realSampleCount + FAKE_SAMPLE_COUNT;
         const dynamicDuration = totalSamples * dynamicSampleDelta;
         const dynamicEditMediaTime = 2 * dynamicSampleDelta;
+        _log(`  realSamples    : ${realSampleCount}`);
+        _log(`  fakeSamples    : ${FAKE_SAMPLE_COUNT}`);
+        _log(`  totalSamples   : ${totalSamples}`);
+        _log(`  dynamicDuration: ${dynamicDuration} ticks = ${(dynamicDuration/dynamicTimescale).toFixed(3)}s`);
+        _log(`  editMediaTime  : ${dynamicEditMediaTime}`);
 
         const fixedReplacements = new Map([
             [mdhd, buildMdhd(mdhd, dynamicTimescale, dynamicDuration)],
@@ -1073,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newMdatStart1     = ftyp.size + moovPlaceholder.byteLength + preservedBytes.byteLength + 8;
         const delta1            = newMdatStart1 - mdat.contentStart;
         const fakeOffset1       = newMdatStart1 + oldMdatPayload.byteLength;
+        _log(`  Pass 1 — moovPlaceholder: ${moovPlaceholder.byteLength}B, newMdatStart: ${newMdatStart1}, delta: ${delta1}`);
 
         let finalRep = new Map(fixedReplacements);
         buildStcoReplacements(stcoBoxes, stco, delta1, fakeOffset1).forEach((v, k) => finalRep.set(k, v));
@@ -1080,6 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newMdatStart2 = ftyp.size + moovV2.byteLength + preservedBytes.byteLength + 8;
         const delta2        = newMdatStart2 - mdat.contentStart;
         const fakeOffset2   = newMdatStart2 + oldMdatPayload.byteLength;
+        _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}, fakeOffset: ${fakeOffset2}`);
 
         finalRep = new Map(fixedReplacements);
         buildStcoReplacements(stcoBoxes, stco, delta2, fakeOffset2).forEach((v, k) => finalRep.set(k, v));
@@ -1088,11 +1291,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const mdatNew        = makeBox('mdat', mdatPayloadNew);
         const ftypBytes      = boxBytes(ftyp);
         const output         = concatBytes([ftypBytes, moovFinal, preservedBytes, mdatNew]);
+        _log(`  Pass 3 — moovFinal: ${moovFinal.byteLength}B`);
+        _log(`  Output layout: ftyp(${ftypBytes.byteLength}) + moov(${moovFinal.byteLength}) + preserved(${preservedBytes.byteLength}) + mdat(${mdatNew.byteLength})`);
+        _log(`  Total output: ${output.byteLength} bytes (${(output.byteLength/(1024*1024)).toFixed(3)} MB)`);
 
         return {
             output,
             realSamples:    originalSizes.length,
             fakeSamples:    FAKE_SAMPLE_COUNT,
+            timescale:      dynamicTimescale,
+            sampleDelta:    dynamicSampleDelta,
+            duration:       dynamicDuration,
+            chunkCount:     originalChunkOffsets.length,
         };
     }
 
@@ -1110,7 +1320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = isOff ? 'Patching...' : 'Compressing...';
-        logsEl.textContent = `[v2] HQ Method | Mode: ${modeLabel}\n`;
+        logSection('V2 PROCESS START');
+        log(`  File     : ${file.name}`);
+        log(`  Mode     : ${modeLabel}`);
+        log(`  Buffer   : ${currentFileBuffer ? (currentFileBuffer.byteLength/(1024*1024)).toFixed(3)+' MB' : 'NOT LOADED'}`);
+        logEnd();
 
         try {
             let dataToPath;
@@ -1122,8 +1336,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 logsEl.textContent += 'Compression skipped | reading original file...\n';
 
                 dataToPath = new Uint8Array(currentFileBuffer);
-
-                logsEl.textContent += `Original size: ${(dataToPath.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
+                logSection('Direct Patch — Buffer Prep');
+                log(`  Uint8Array byteLength : ${dataToPath.byteLength}`);
+                log(`  byteOffset            : ${dataToPath.byteOffset}`);
+                // First 8 bytes of the MP4 box
+                const h = dataToPath;
+                log(`  First box size bytes  : [${h[0]},${h[1]},${h[2]},${h[3]}] = ${((h[0]<<24)|(h[1]<<16)|(h[2]<<8)|h[3])>>>0}`);
+                log(`  First box type bytes  : ${String.fromCharCode(h[4],h[5],h[6],h[7])}`);
+                log(`  Original size         : ${(dataToPath.byteLength / (1024 * 1024)).toFixed(3)} MB`);
+                logEnd();
 
                 progressFill.style.width = '40%';
                 progressPercent.textContent = '40%';
@@ -1154,12 +1375,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 await loadFFmpegHelper(ffmpeg, toBlobURL);
-
-                logsEl.textContent += 'Writing file to virtual filesystem...\n';
+                logSection('V2 FFmpeg — Writing Input');
+                log(`  Buffer byteLength: ${currentFileBuffer.byteLength}`);
                 await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
+                log(`  Write: DONE`);
+                logEnd();
 
                 const hardwareThreads = navigator.hardwareConcurrency || 4;
                 const threads = Math.min(4, hardwareThreads).toString();
+                logSection('V2 FFmpeg — Command');
+                log(`  Hardware threads : ${hardwareThreads}`);
+                log(`  Using threads    : ${threads}`);
+                log(`  Mode             : ${mode}`);
 
                 let command;
                 if (mode === 'fast') {
@@ -1203,6 +1430,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 logsEl.textContent += `Compressing: ffmpeg ${command.join(' ')}\n`;
+                log(`  Full command: ffmpeg ${command.join(' ')}`);
+                logEnd();
+                logSection('V2 FFmpeg — Encoding');
 
                 try {
                     await ffmpeg.exec(command);
@@ -1217,16 +1447,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                logEnd();
                 if (oomDetected) {
+                    log(`  OOM: ${oomLine}`);
                     throw new Error(`Out of memory during compression. (Triggered by log: "${oomLine}")`);
                 }
 
                 const compressedData = await ffmpeg.readFile('compressed.mp4');
+                logSection('V2 FFmpeg — Compress Output');
+                log(`  compressedData bytes : ${compressedData ? compressedData.byteLength : 0}`);
+                log(`  compressedData byteOffset : ${compressedData ? compressedData.byteOffset : 'N/A'}`);
+                log(`  Size : ${compressedData ? (compressedData.byteLength/(1024*1024)).toFixed(3)+' MB' : 'EMPTY'}`);
 
                 if (!compressedData || compressedData.byteLength < 1024) {
+                    log(`  ERROR: Compressed output is empty or too small!`);
                     throw new Error('Compression failed (output is empty or too small).');
                 }
-
+                logEnd();
                 logsEl.textContent += `Compressed size: ${(compressedData.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
                 dataToPath = compressedData;
             }
@@ -1235,15 +1472,20 @@ document.addEventListener('DOMContentLoaded', () => {
             progressText.textContent = 'Patching...';
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
-            logsEl.textContent += `\nApplying MP4 patch...\n`;
 
-            const patchResult = patchMp4(dataToPath);
+            logSection('MP4 Patch');
+            const patchResult = patchMp4(dataToPath, log);
 
-            logsEl.textContent += `Patch complete:\n`;
-            logsEl.textContent += `  Real samples: ${patchResult.realSamples}\n`;
-            logsEl.textContent += `  Fake samples: ${patchResult.fakeSamples}\n`;
-            logsEl.textContent += `  Total declared: ${patchResult.realSamples + patchResult.fakeSamples}\n`;
-            logsEl.textContent += `  Output size: ${(patchResult.output.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
+            log(`  Patch result:`);
+            log(`    Real samples     : ${patchResult.realSamples}`);
+            log(`    Fake samples     : ${patchResult.fakeSamples}`);
+            log(`    Total declared   : ${patchResult.realSamples + patchResult.fakeSamples}`);
+            log(`    Timescale        : ${patchResult.timescale}`);
+            log(`    Sample delta     : ${patchResult.sampleDelta}`);
+            log(`    Duration ticks   : ${patchResult.duration}`);
+            log(`    Chunks           : ${patchResult.chunkCount}`);
+            log(`    Output size      : ${(patchResult.output.byteLength/(1024*1024)).toFixed(3)} MB`);
+            logEnd();
             logsEl.scrollTop = logsEl.scrollHeight;
 
             progressFill.style.width = '98%';
@@ -1253,6 +1495,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const blob = new Blob([patchResult.output], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
+            logSection('Download');
+            log(`  Blob size  : ${blob.size} bytes`);
+            log(`  Blob type  : ${blob.type}`);
+            log(`  Filename   : ${file.name.replace(/\.[^.]+$/, '')}_hq.mp4`);
 
             const a = document.createElement('a');
             a.href = url;
@@ -1261,6 +1507,8 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            log(`  Download triggered ✓`);
+            logEnd();
 
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Patch applied! Download started.</span>`;
             progressFill.style.width = '100%';

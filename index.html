@@ -329,8 +329,15 @@
                         </div>
 
                         <div id="tiktok-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);">Process Logs:</div>
-                            <pre id="tiktok-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">Process Logs:</span>
+                                <button id="btn-copy-logs" title="Copy logs" aria-label="Copy logs"
+                                    style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; gap: 4px; color: var(--md-sys-color-on-surface-variant); font-size: 11px; font-family: inherit; transition: background 0.2s ease;">
+                                    <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span>
+                                    <span id="btn-copy-logs-label">Copy</span>
+                                </button>
+                            </div>
+                            <pre id="tiktok-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
                         </div>
 
                         <button id="btn-start-tiktok" class="btn-primary w-full hidden"
