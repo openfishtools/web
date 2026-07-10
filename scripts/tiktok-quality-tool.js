@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
 
-    // --- Centralized logger ---
+
     function log(msg) {
         const ts = new Date().toISOString().replace('T', ' ').replace('Z', '');
         const line = `[${ts}] ${msg}`;
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logsEl.scrollTop = logsEl.scrollHeight;
     }
 
-    // --- Browser detection ---
+
     function detectBrowser() {
         const ua = navigator.userAgent;
         if (/CriOS/i.test(ua))  return 'Chrome (iOS)';
@@ -106,9 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
                (ua.includes('Macintosh') && 'ontouchend' in document);
     }
 
-    // --- Global error handlers ---
+
     window.addEventListener('error', (e) => {
-        if (!logsEl || logsEl.textContent === '') return; // Only log when tool is active
+        if (!logsEl || logsEl.textContent === '') return;
         logSection('UNCAUGHT ERROR');
         log(`  Message : ${e.message}`);
         log(`  Source  : ${e.filename || 'unknown'}`);
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logEnd();
     });
 
-    // --- Copy logs button ---
+
     const btnCopyLogs = document.getElementById('btn-copy-logs');
     const btnCopyLogsLabel = document.getElementById('btn-copy-logs-label');
     if (btnCopyLogs) {
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(text);
                 } else {
-                    // Fallback for iOS Safari / older browsers
+
                     const ta = document.createElement('textarea');
                     ta.value = text;
                     ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Patch status system ---
+
     const patcherCard       = document.getElementById('tiktok-patcher-card');
     const patchedOverlay    = document.getElementById('tiktok-patched-overlay');
     const btnOverlayIgnore  = document.getElementById('btn-patched-overlay-ignore');
@@ -197,12 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const v1Patched = patcherCard?.dataset.v1Patched === 'true';
     const v2Patched = patcherCard?.dataset.v2Patched === 'true';
 
-    // Show overlay if BOTH are patched
+
     if (v1Patched && v2Patched && patchedOverlay) {
         patchedOverlay.style.display = 'flex';
     }
 
-    // Ignore button hides overlay
+
     if (btnOverlayIgnore && patchedOverlay) {
         btnOverlayIgnore.addEventListener('click', () => {
             patchedOverlay.style.opacity = '0';
@@ -264,9 +264,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            // Intercept if the clicked version is patched (and not both patched, overlay handles that)
+
             if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
-                doSwitch('v2'); // visually switch first
+                doSwitch('v2');
                 showVersionPatchedModal(
                     'v2',
                     () => { /* proceed anyway – already on v2 */ },
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isProcessing) return;
             resetToolState();
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Cache cleared.</span>`;
-            // Animate icon spin
+
             const icon = btnClearCache.querySelector('.material-symbols-rounded');
             if (icon) {
                 icon.style.transition = 'transform 0.4s ease';
@@ -603,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFileBuffer = await readFileAsArrayBuffer(selectedFile);
             log(`  ArrayBuffer byteLength : ${currentFileBuffer.byteLength} bytes`);
             log(`  FileReader read        : SUCCESS`);
-            // Peek at first 12 bytes to confirm MP4 ftyp
+
             const peek = new Uint8Array(currentFileBuffer, 0, Math.min(12, currentFileBuffer.byteLength));
             const ftypMagic = String.fromCharCode(peek[4], peek[5], peek[6], peek[7]);
             log(`  Box[0] magic bytes    : ${ftypMagic} (expect: ftyp or mdat)`);
@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
             return;
         }
-        isProcessing = false; // Reset to allow sub-methods to set isProcessing = true
+        isProcessing = false;
 
         const iosWarningModal = document.getElementById('tiktok-ios-warning-modal');
         const btnIosWarningCancel = document.getElementById('btn-ios-warning-cancel');
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnIosWarningProceed.removeEventListener('click', handleProceed);
                     btnIosWarningCancel.removeEventListener('click', handleCancel);
                     
-                    // Reset UI
+
                     btnStart.classList.remove('hidden');
                     progressContainer.classList.add('hidden');
                     logsContainer.classList.add('hidden');
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const startV2Process = async () => {
-            isProcessing = false; // allow processVideoV2 or runAnalysis to run
+            isProcessing = false;
             if (compressMode === 'off') {
                 await runAnalysis(selectedFile);
                 return;
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parseFpsFromMp4(arrayBuffer) {
         try {
-            // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+
             const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
             const fresh = new Uint8Array(srcArr.byteLength);
             fresh.set(srcArr);
@@ -725,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function parseResolutionFromMp4(arrayBuffer) {
         try {
-            // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+
             const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
             const fresh = new Uint8Array(srcArr.byteLength);
             fresh.set(srcArr);
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             if (!videoTrak) return null;
 
-            // 1. Try stsd first
+
             const stsd = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stsd']);
             if (stsd) {
                 const entryCount = stsd.view.getUint32(stsd.offset + 12, false);
@@ -759,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 2. Try tkhd fallback
+
             const tkhd = findChild(videoTrak, 'tkhd');
             if (tkhd) {
                 const tkhdPayload = boxPayload(tkhd);
@@ -1017,18 +1017,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ═══════════════════════════════════════════════
-    //  V2: HQ MP4 Patch Method
-    //  Step 1: FFmpeg compress (h264, max 1080p, max 60fps, VBR 12-20Mbps, preset slow)
-    //  Step 2: Apply fake EOF video samples patch
-    // ═══════════════════════════════════════════════
 
-    const FAKE_SAMPLE_COUNT      = 8573;
+
     const FAKE_SAMPLE_SIZE       = 8;
     const FAKE_SAMPLE_BYTES      = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
     const VIDEO_TIMESCALE        = 90000;
     const VIDEO_DURATION         = 2269500;
-    const VIDEO_EDIT_MEDIA_TIME  = 3000;
+    const VIDEO_EDIT_MEDIA_TIME  = 0;
     const VIDEO_SAMPLE_DELTA     = 1500;
 
     const CONTAINER_BOXES = new Set([
@@ -1223,23 +1218,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return makeBox('elst', payload);
     }
 
-    function buildStts(realSampleCount, dynamicSampleDelta) {
+    function buildStts(realSampleCount, fakeSampleCount) {
         const payload = new Uint8Array(4 + 4 + 8 + 8);
         writeU32BE(payload, 4, 2);
         writeU32BE(payload, 8, realSampleCount);
-        writeU32BE(payload, 12, dynamicSampleDelta);
-        writeU32BE(payload, 16, FAKE_SAMPLE_COUNT);
-        writeU32BE(payload, 20, dynamicSampleDelta);
+        writeU32BE(payload, 12, VIDEO_SAMPLE_DELTA);
+        writeU32BE(payload, 16, fakeSampleCount);
+        writeU32BE(payload, 20, VIDEO_SAMPLE_DELTA);
         return makeBox('stts', payload);
     }
 
-    function buildStsz(originalSizes) {
-        const total   = originalSizes.length + FAKE_SAMPLE_COUNT;
+    function buildStsz(originalSizes, fakeSampleCount) {
+        const total   = originalSizes.length + fakeSampleCount;
         const payload = new Uint8Array(4 + 4 + 4 + total * 4);
         writeU32BE(payload, 8, total);
         let off = 12;
         for (const s of originalSizes) { writeU32BE(payload, off, s); off += 4; }
-        for (let i = 0; i < FAKE_SAMPLE_COUNT; i++) {
+        for (let i = 0; i < fakeSampleCount; i++) {
             writeU32BE(payload, off, FAKE_SAMPLE_SIZE); off += 4;
         }
         return makeBox('stsz', payload);
@@ -1261,9 +1256,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return makeBox('stsc', payload);
     }
 
-    function buildStco(originalOffsets, delta, fakeOffset) {
+    function buildStco(originalOffsets, delta, fakeOffset, fakeSampleCount) {
         const hasFake = fakeOffset !== null && fakeOffset !== undefined;
-        const count   = originalOffsets.length + (hasFake ? FAKE_SAMPLE_COUNT : 0);
+        const count   = originalOffsets.length + (hasFake ? fakeSampleCount : 0);
         const payload = new Uint8Array(4 + 4 + count * 4);
         writeU32BE(payload, 4, count);
         let off = 8;
@@ -1274,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (hasFake) {
             assertUint32(fakeOffset, 'stco.fake_sample_offset');
-            for (let i = 0; i < FAKE_SAMPLE_COUNT; i++) {
+            for (let i = 0; i < fakeSampleCount; i++) {
                 writeU32BE(payload, off, fakeOffset); off += 4;
             }
         }
@@ -1303,17 +1298,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return stcoBoxes;
     }
 
-    function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeOffset) {
+    function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeOffset, fakeSampleCount) {
         const map = new Map();
         for (const stco of stcoBoxes) {
-            map.set(stco, buildStco(parseStco(stco), delta, stco === videoStco ? fakeOffset : null));
+            map.set(stco, buildStco(parseStco(stco), delta, stco === videoStco ? fakeOffset : null, fakeSampleCount));
         }
         return map;
     }
 
     function patchMp4(inputData, _logFn) {
         const _log = _logFn || (() => {});
-        // Normalize to a fresh ArrayBuffer so byteOffset is always 0 (iOS Safari fix)
+
         const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
         const fresh = new Uint8Array(srcArr.byteLength);
         fresh.set(srcArr);
@@ -1373,49 +1368,26 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
             .map(boxBytes);
 
-        // 1. Get original timescale from mdhd
-        const mdhdPayload = boxPayload(mdhd);
-        const mdhdVer = mdhdPayload[0];
-        let dynamicTimescale = 90000;
-        if (mdhdVer === 0) {
-            dynamicTimescale = readU32BE(mdhdPayload, 12);
-        } else if (mdhdVer === 1) {
-            dynamicTimescale = readU32BE(mdhdPayload, 20);
-        }
-        _log(`  mdhd version   : ${mdhdVer}`);
-        _log(`  timescale      : ${dynamicTimescale}`);
 
-        // 2. Get original frame delta from stts
-        const sttsPayload = boxPayload(stts);
-        const sttsEntryCount = readU32BE(sttsPayload, 4);
-        let dynamicSampleDelta = 1500;
-        if (sttsEntryCount >= 1) {
-            dynamicSampleDelta = readU32BE(sttsPayload, 12);
-        }
-        _log(`  stts entries   : ${sttsEntryCount}`);
-        _log(`  sample delta   : ${dynamicSampleDelta}`);
-
-        // 3. Compute dynamic duration and edit media time
-        const realSampleCount = originalSizes.length;
-        const totalSamples = realSampleCount + FAKE_SAMPLE_COUNT;
-        const dynamicDuration = totalSamples * dynamicSampleDelta;
-        const dynamicEditMediaTime = 2 * dynamicSampleDelta;
+        const realSampleCount  = originalSizes.length;
+        const fakeSampleCount  = realSampleCount * 9;
         _log(`  realSamples    : ${realSampleCount}`);
-        _log(`  fakeSamples    : ${FAKE_SAMPLE_COUNT}`);
-        _log(`  totalSamples   : ${totalSamples}`);
-        _log(`  dynamicDuration: ${dynamicDuration} ticks = ${(dynamicDuration/dynamicTimescale).toFixed(3)}s`);
-        _log(`  editMediaTime  : ${dynamicEditMediaTime}`);
+        _log(`  fakeSamples    : ${fakeSampleCount} (realSamples × 9)`);
+        _log(`  timescale      : ${VIDEO_TIMESCALE} (fixed)`);
+        _log(`  duration       : ${VIDEO_DURATION} (fixed)`);
+        _log(`  sampleDelta    : ${VIDEO_SAMPLE_DELTA} (fixed)`);
+        _log(`  editMediaTime  : ${VIDEO_EDIT_MEDIA_TIME} (fixed)`);
 
         const fixedReplacements = new Map([
-            [mdhd, buildMdhd(mdhd, dynamicTimescale, dynamicDuration)],
-            [elst, buildElst(elst, dynamicEditMediaTime)],
-            [stts, buildStts(realSampleCount, dynamicSampleDelta)],
+            [mdhd, buildMdhd(mdhd, VIDEO_TIMESCALE, VIDEO_DURATION)],
+            [elst, buildElst(elst, VIDEO_EDIT_MEDIA_TIME)],
+            [stts, buildStts(realSampleCount, fakeSampleCount)],
             [stsc, buildStsc(originalStscRows, originalChunkOffsets.length)],
-            [stsz, buildStsz(originalSizes)],
+            [stsz, buildStsz(originalSizes, fakeSampleCount)],
         ]);
 
         const placeholderRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, 0, 0).forEach((v, k) => placeholderRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, 0, 0, fakeSampleCount).forEach((v, k) => placeholderRep.set(k, v));
         const moovPlaceholder   = rebuildBox(moov, placeholderRep);
         const preservedBytes    = concatBytes(preservedTopLevel);
         const oldMdatPayload    = new Uint8Array(data.buffer, data.byteOffset + mdat.contentStart, mdat.end - mdat.contentStart);
@@ -1425,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _log(`  Pass 1 — moovPlaceholder: ${moovPlaceholder.byteLength}B, newMdatStart: ${newMdatStart1}, delta: ${delta1}`);
 
         let finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta1, fakeOffset1).forEach((v, k) => finalRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, delta1, fakeOffset1, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovV2        = rebuildBox(moov, finalRep);
         const newMdatStart2 = ftyp.size + moovV2.byteLength + preservedBytes.byteLength + 8;
         const delta2        = newMdatStart2 - mdat.contentStart;
@@ -1433,7 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}, fakeOffset: ${fakeOffset2}`);
 
         finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta2, fakeOffset2).forEach((v, k) => finalRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, delta2, fakeOffset2, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovFinal      = rebuildBox(moov, finalRep);
         const mdatPayloadNew = concatBytes([oldMdatPayload, FAKE_SAMPLE_BYTES]);
         const mdatNew        = makeBox('mdat', mdatPayloadNew);
@@ -1445,11 +1417,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return {
             output,
-            realSamples:    originalSizes.length,
-            fakeSamples:    FAKE_SAMPLE_COUNT,
-            timescale:      dynamicTimescale,
-            sampleDelta:    dynamicSampleDelta,
-            duration:       dynamicDuration,
+            realSamples:    realSampleCount,
+            fakeSamples:    fakeSampleCount,
+            timescale:      VIDEO_TIMESCALE,
+            sampleDelta:    VIDEO_SAMPLE_DELTA,
+            duration:       VIDEO_DURATION,
             chunkCount:     originalChunkOffsets.length,
         };
     }
@@ -1487,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 logSection('Direct Patch — Buffer Prep');
                 log(`  Uint8Array byteLength : ${dataToPath.byteLength}`);
                 log(`  byteOffset            : ${dataToPath.byteOffset}`);
-                // First 8 bytes of the MP4 box
+
                 const h = dataToPath;
                 log(`  First box size bytes  : [${h[0]},${h[1]},${h[2]},${h[3]}] = ${((h[0]<<24)|(h[1]<<16)|(h[2]<<8)|h[3])>>>0}`);
                 log(`  First box type bytes  : ${String.fromCharCode(h[4],h[5],h[6],h[7])}`);
