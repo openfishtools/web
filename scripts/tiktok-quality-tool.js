@@ -1218,13 +1218,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return makeBox('elst', payload);
     }
 
-    function buildStts(realSampleCount, fakeSampleCount) {
+    function buildStts(realSampleCount, fakeSampleCount, dynamicSampleDelta) {
         const payload = new Uint8Array(4 + 4 + 8 + 8);
         writeU32BE(payload, 4, 2);
         writeU32BE(payload, 8, realSampleCount);
-        writeU32BE(payload, 12, VIDEO_SAMPLE_DELTA);
+        writeU32BE(payload, 12, dynamicSampleDelta);
         writeU32BE(payload, 16, fakeSampleCount);
-        writeU32BE(payload, 20, VIDEO_SAMPLE_DELTA);
+        writeU32BE(payload, 20, dynamicSampleDelta);
         return makeBox('stts', payload);
     }
 
@@ -1369,19 +1369,51 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(boxBytes);
 
 
+        // Read dynamic timescale from mdhd
+        const mdhdPayload = boxPayload(mdhd);
+        const mdhdVer = mdhdPayload[0];
+        let originalTimescale = 90000;
+        if (mdhdVer === 0) {
+            originalTimescale = readU32BE(mdhdPayload, 12);
+        } else if (mdhdVer === 1) {
+            originalTimescale = readU32BE(mdhdPayload, 20);
+        }
+
+        // Read dynamic sample delta from stts
+        const sttsPayload = boxPayload(stts);
+        const sttsEntryCount = readU32BE(sttsPayload, 4);
+        let originalSampleDelta = 1500;
+        if (sttsEntryCount >= 1) {
+            originalSampleDelta = readU32BE(sttsPayload, 12);
+        }
+
+        // Read dynamic edit media time from elst
+        const elstPayload = boxPayload(elst);
+        let originalEditMediaTime = 0;
+        if (elstPayload[0] === 0) {
+            originalEditMediaTime = readU32BE(elstPayload, 12);
+        }
+
         const realSampleCount  = originalSizes.length;
         const fakeSampleCount  = realSampleCount * 9;
+        const dynamicDuration  = (realSampleCount + fakeSampleCount) * originalSampleDelta;
+
+        const inputFps = Math.round(originalTimescale / originalSampleDelta);
+        const patchedFps = Math.round(((realSampleCount + fakeSampleCount) * originalTimescale) / dynamicDuration);
+
         _log(`  realSamples    : ${realSampleCount}`);
         _log(`  fakeSamples    : ${fakeSampleCount} (realSamples × 9)`);
-        _log(`  timescale      : ${VIDEO_TIMESCALE} (fixed)`);
-        _log(`  duration       : ${VIDEO_DURATION} (fixed)`);
-        _log(`  sampleDelta    : ${VIDEO_SAMPLE_DELTA} (fixed)`);
-        _log(`  editMediaTime  : ${VIDEO_EDIT_MEDIA_TIME} (fixed)`);
+        _log(`  timescale      : ${originalTimescale} (dynamic)`);
+        _log(`  duration       : ${dynamicDuration} (dynamic)`);
+        _log(`  sampleDelta    : ${originalSampleDelta} (dynamic)`);
+        _log(`  editMediaTime  : ${originalEditMediaTime} (dynamic)`);
+        _log(`  Input FPS      : ${inputFps}`);
+        _log(`  Patched FPS    : ${patchedFps}`);
 
         const fixedReplacements = new Map([
-            [mdhd, buildMdhd(mdhd, VIDEO_TIMESCALE, VIDEO_DURATION)],
-            [elst, buildElst(elst, VIDEO_EDIT_MEDIA_TIME)],
-            [stts, buildStts(realSampleCount, fakeSampleCount)],
+            [mdhd, buildMdhd(mdhd, originalTimescale, dynamicDuration)],
+            [elst, buildElst(elst, originalEditMediaTime)],
+            [stts, buildStts(realSampleCount, fakeSampleCount, originalSampleDelta)],
             [stsc, buildStsc(originalStscRows, originalChunkOffsets.length)],
             [stsz, buildStsz(originalSizes, fakeSampleCount)],
         ]);
@@ -1419,9 +1451,9 @@ document.addEventListener('DOMContentLoaded', () => {
             output,
             realSamples:    realSampleCount,
             fakeSamples:    fakeSampleCount,
-            timescale:      VIDEO_TIMESCALE,
-            sampleDelta:    VIDEO_SAMPLE_DELTA,
-            duration:       VIDEO_DURATION,
+            timescale:      originalTimescale,
+            sampleDelta:    originalSampleDelta,
+            duration:       dynamicDuration,
             chunkCount:     originalChunkOffsets.length,
         };
     }
