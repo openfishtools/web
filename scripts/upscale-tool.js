@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const webcodecsDot = document.getElementById('upscale-webcodecs-dot');
     const presetList = document.getElementById('upscale-preset-list');
     const unprocessedOverlay = document.getElementById('upscale-unprocessed-overlay');
+    const normaliseToggle = document.getElementById('upscale-normalise-toggle');
 
     const PRESETS = [
         { id: 'cartoonist', name: 'Cartoonist', sharpen: 14, unsharpAmount: 107, unsharpRadius: 5.1, denoise: 2.9, shadows: 2, saturation: 1 },
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialPinchDist = 0;
     let initialZoom = 1;
     let cancelRender = false;
+    let normaliseSize = false;
     let enhanceCanvas = null;
     let gpuEnhancer = null;
     let gpuReady = false;
@@ -205,6 +207,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = Math.floor(t / 60);
         const s = Math.floor(t % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Center-crops srcCanvas to 1080x1920 using cover-fit logic.
+     * - Horizontal images: crops left/right, keeps center vertical strip.
+     * - Tall images: crops top/bottom, keeps center horizontal strip.
+     * Returns a new canvas of size 1080x1920.
+     */
+    function applyCropTo1080x1920(srcCanvas) {
+        const targetW = 1080;
+        const targetH = 1920;
+        const srcW = srcCanvas.width;
+        const srcH = srcCanvas.height;
+
+        // Cover-fit: scale so that the image fully covers the target rect
+        const scaleX = targetW / srcW;
+        const scaleY = targetH / srcH;
+        const scale = Math.max(scaleX, scaleY);
+
+        const drawW = Math.round(srcW * scale);
+        const drawH = Math.round(srcH * scale);
+        const offsetX = Math.round((drawW - targetW) / 2);
+        const offsetY = Math.round((drawH - targetH) / 2);
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = targetW;
+        cropCanvas.height = targetH;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.drawImage(srcCanvas, -offsetX, -offsetY, drawW, drawH);
+        return cropCanvas;
     }
 
     function addLog(msg) {
@@ -810,6 +842,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnEnhance.addEventListener('click', handleRender);
+
+    if (normaliseToggle) {
+        normaliseToggle.addEventListener('change', () => {
+            normaliseSize = normaliseToggle.checked;
+        });
+    }
     btnCancel.addEventListener('click', () => { cancelRender = true; });
 
     function resetTool() {
@@ -923,7 +961,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             setProgress(97, 'Generating output...');
-            const outBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            // Apply normalise crop if enabled
+            let outCanvas = canvas;
+            if (normaliseSize) {
+                addLog('[Normalise] Cropping to 1080×1920 (center crop)...');
+                outCanvas = applyCropTo1080x1920(canvas);
+            }
+            const outBlob = await new Promise(res => outCanvas.toBlob(res, 'image/jpeg', 0.92));
             const outUrl = URL.createObjectURL(outBlob);
 
             setProgress(100, 'Complete');
@@ -943,11 +987,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnEnhance) btnEnhance.classList.add('hidden');
 
             // Auto download
-            const ext = currentImageFile.name.split('.').pop() || 'png';
             const baseName = currentImageFile.name.replace(/\.[^.]+$/, '');
             const a = document.createElement('a');
             a.href = outUrl;
-            a.download = `enhanced_${baseName}.png`;
+            a.download = `enhanced_${baseName}.jpg`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1168,7 +1211,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
                 }
 
-                const outBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                // Apply normalise crop per-frame if enabled
+                let frameCanvas = canvas;
+                if (normaliseSize) {
+                    frameCanvas = applyCropTo1080x1920(canvas);
+                }
+                const outBlob = await new Promise(res => frameCanvas.toBlob(res, 'image/jpeg', 0.92));
                 const outArrayBuffer = await outBlob.arrayBuffer();
                 const outFilename = `enhanced_${frameNum.toString().padStart(4, '0')}.jpg`;
                 await ffmpeg.writeFile(outFilename, new Uint8Array(outArrayBuffer));

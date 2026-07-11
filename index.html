@@ -675,6 +675,73 @@
                                         <button type="button" class="upscale-order-btn" data-order="after">After Upscale</button>
                                     </div>
 
+                                    <style>
+                                        .upscale-normalise-row {
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: space-between;
+                                            padding: 10px 14px;
+                                            background: var(--md-sys-color-surface-container);
+                                            border-radius: 12px;
+                                            border: 1px solid var(--md-sys-color-outline-variant);
+                                            margin-bottom: 12px;
+                                        }
+                                        .normalise-switch-wrap {
+                                            position: relative;
+                                            display: inline-block;
+                                            width: 48px;
+                                            height: 26px;
+                                            cursor: pointer;
+                                            flex-shrink: 0;
+                                        }
+                                        .normalise-switch-wrap input {
+                                            opacity: 0;
+                                            width: 0;
+                                            height: 0;
+                                            position: absolute;
+                                        }
+                                        .normalise-track {
+                                            position: absolute;
+                                            inset: 0;
+                                            background: var(--md-sys-color-surface-container-highest);
+                                            border-radius: 13px;
+                                            transition: background 0.25s, border-color 0.25s;
+                                            border: 2px solid var(--md-sys-color-outline-variant);
+                                        }
+                                        .normalise-thumb {
+                                            position: absolute;
+                                            left: 3px;
+                                            top: 50%;
+                                            transform: translateY(-50%);
+                                            width: 16px;
+                                            height: 16px;
+                                            background: var(--md-sys-color-outline);
+                                            border-radius: 50%;
+                                            transition: left 0.25s cubic-bezier(.4,0,.2,1), background 0.25s, width 0.1s;
+                                        }
+                                        .normalise-switch-wrap input:checked ~ .normalise-track {
+                                            background: var(--md-sys-color-primary);
+                                            border-color: var(--md-sys-color-primary);
+                                        }
+                                        .normalise-switch-wrap input:checked ~ .normalise-thumb {
+                                            left: 26px;
+                                            background: var(--md-sys-color-on-primary);
+                                        }
+                                    </style>
+
+                                    <p class="upscale-controls-title" style="margin-top: 4px;">Output</p>
+                                    <div class="upscale-normalise-row">
+                                        <div>
+                                            <div style="font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface);">Normalise Size</div>
+                                            <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;">Crop center to 1080×1920 · Save as JPG</div>
+                                        </div>
+                                        <label class="normalise-switch-wrap" for="upscale-normalise-toggle">
+                                            <input type="checkbox" id="upscale-normalise-toggle">
+                                            <span class="normalise-track"></span>
+                                            <span class="normalise-thumb"></span>
+                                        </label>
+                                    </div>
+
                                     <div id="upscale-duration-container">
                                         <p class="upscale-controls-title" style="margin-top: 4px;">Duration</p>
                                         <div class="upscale-timeline">
