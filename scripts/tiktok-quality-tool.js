@@ -184,24 +184,103 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Patch status system ---
+    const patcherCard       = document.getElementById('tiktok-patcher-card');
+    const patchedOverlay    = document.getElementById('tiktok-patched-overlay');
+    const btnOverlayIgnore  = document.getElementById('btn-patched-overlay-ignore');
+    const vpModal           = document.getElementById('tiktok-version-patched-modal');
+    const vpModalTitle      = document.getElementById('vp-modal-title');
+    const vpModalBody       = document.getElementById('vp-modal-body');
+    const btnVpProceed      = document.getElementById('btn-vp-proceed');
+    const btnVpSwitch       = document.getElementById('btn-vp-switch');
+
+    const v1Patched = patcherCard?.dataset.v1Patched === 'true';
+    const v2Patched = patcherCard?.dataset.v2Patched === 'true';
+
+    // Show overlay if BOTH are patched
+    if (v1Patched && v2Patched && patchedOverlay) {
+        patchedOverlay.style.display = 'flex';
+    }
+
+    // Ignore button hides overlay
+    if (btnOverlayIgnore && patchedOverlay) {
+        btnOverlayIgnore.addEventListener('click', () => {
+            patchedOverlay.style.opacity = '0';
+            patchedOverlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => { patchedOverlay.style.display = 'none'; }, 300);
+        });
+        btnOverlayIgnore.addEventListener('mouseenter', () => {
+            btnOverlayIgnore.style.background = 'rgba(255,255,255,0.22)';
+        });
+        btnOverlayIgnore.addEventListener('mouseleave', () => {
+            btnOverlayIgnore.style.background = 'rgba(255,255,255,0.1)';
+        });
+    }
+
+    function showVersionPatchedModal(patchedVersion, onProceed, onSwitch) {
+        if (!vpModal) { onProceed && onProceed(); return; }
+        const other = patchedVersion === 'v2' ? 'V1' : 'V2';
+        vpModalTitle.textContent = `${patchedVersion.toUpperCase()} Method Patched`;
+        vpModalBody.innerHTML = `<strong>${patchedVersion.toUpperCase()}</strong> is currently patched and may not work as expected. We recommend switching to <strong>${other}</strong> which is currently stable.`;
+        btnVpSwitch.textContent = `Use ${other}`;
+        vpModal.classList.remove('hidden');
+        requestAnimationFrame(() => vpModal.classList.add('visible'));
+
+        const cleanup = () => {
+            vpModal.classList.remove('visible');
+            setTimeout(() => vpModal.classList.add('hidden'), 260);
+            btnVpProceed.removeEventListener('click', handleProceed);
+            btnVpSwitch.removeEventListener('click', handleSwitch);
+        };
+        const handleProceed = () => { cleanup(); onProceed && onProceed(); };
+        const handleSwitch  = () => { cleanup(); onSwitch  && onSwitch();  };
+        btnVpProceed.addEventListener('click', handleProceed);
+        btnVpSwitch.addEventListener('click', handleSwitch);
+    }
+
+
     if (versionSwitch) {
         versionSwitch.addEventListener('click', (e) => {
             const btn = e.target.closest('.tiktok-switch-option');
             if (!btn || isProcessing) return;
-            versionSwitch.querySelectorAll('.tiktok-switch-option').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentVersion = btn.dataset.version;
-            const ind = document.getElementById('tiktok-version-indicator');
-            updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
-            if (compressToggleRow) {
-                if (currentVersion === 'v2') {
-                    compressToggleRow.classList.remove('hidden');
-                    compressToggleRow.style.display = 'block';
-                    requestAnimationFrame(() => updateModeIndicator(compressMode));
-                } else {
-                    compressToggleRow.classList.add('hidden');
-                    compressToggleRow.style.display = 'none';
+            const clickedVersion = btn.dataset.version;
+
+            const doSwitch = (version) => {
+                versionSwitch.querySelectorAll('.tiktok-switch-option').forEach(b => b.classList.remove('active'));
+                const target = versionSwitch.querySelector(`[data-version="${version}"]`);
+                if (target) target.classList.add('active');
+                currentVersion = version;
+                const ind = document.getElementById('tiktok-version-indicator');
+                updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
+                if (compressToggleRow) {
+                    if (currentVersion === 'v2') {
+                        compressToggleRow.classList.remove('hidden');
+                        compressToggleRow.style.display = 'block';
+                        requestAnimationFrame(() => updateModeIndicator(compressMode));
+                    } else {
+                        compressToggleRow.classList.add('hidden');
+                        compressToggleRow.style.display = 'none';
+                    }
                 }
+            };
+
+            // Intercept if the clicked version is patched (and not both patched, overlay handles that)
+            if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
+                doSwitch('v2'); // visually switch first
+                showVersionPatchedModal(
+                    'v2',
+                    () => { /* proceed anyway – already on v2 */ },
+                    () => doSwitch('v1')
+                );
+            } else if (clickedVersion === 'v1' && v1Patched && !v2Patched) {
+                doSwitch('v1');
+                showVersionPatchedModal(
+                    'v1',
+                    () => { /* proceed anyway */ },
+                    () => doSwitch('v2')
+                );
+            } else {
+                doSwitch(clickedVersion);
             }
         });
         requestAnimationFrame(() => {

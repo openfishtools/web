@@ -198,7 +198,42 @@
                     <h1 class="page-title">Tools</h1>
                 </div>
                 <div class="grid">
-                    <div class="card" id="tiktok-patcher-card">
+                    <div class="card" id="tiktok-patcher-card"
+                        data-v1-patched="false"
+                        data-v2-patched="true"
+                        style="position: relative; overflow: hidden;">
+
+                        <!-- Both-patched overlay (shown when both v1+v2 are patched) -->
+                        <div id="tiktok-patched-overlay" style="
+                            display: none;
+                            position: absolute;
+                            inset: 0;
+                            background: rgba(0, 0, 0, 0.72);
+                            z-index: 50;
+                            border-radius: inherit;
+                            align-items: center;
+                            justify-content: center;
+                            flex-direction: column;
+                            gap: 16px;
+                            text-align: center;
+                        ">
+                            <span class="material-symbols-rounded" style="font-size: 40px; color: #ff6b6b;">block</span>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 0.02em;">Method Patched</div>
+                            <div style="font-size: 13px; color: rgba(255,255,255,0.65); max-width: 240px; line-height: 1.5;">Both V1 and V2 are currently unavailable.</div>
+                            <button id="btn-patched-overlay-ignore" style="
+                                margin-top: 4px;
+                                padding: 10px 28px;
+                                border-radius: 100px;
+                                border: 1.5px solid rgba(255,255,255,0.3);
+                                background: rgba(255,255,255,0.1);
+                                color: #fff;
+                                font-size: 14px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: background 0.2s;
+                            ">Ignore</button>
+                        </div>
+
                         <div class="flex align-center gap-16" style="margin-bottom: 20px;">
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">high_quality</span>
@@ -1252,6 +1287,104 @@
                 <button class="tktk-btn tktk-btn-cancel" id="tktk-btn-cancel">Cancel</button>
                 <button class="tktk-btn tktk-btn-proceed" id="tktk-btn-proceed" disabled>Proceed Anyway</button>
                 <button class="tktk-btn tktk-btn-compress" id="tktk-btn-compress" disabled>Compress</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version-patched notice popup -->
+    <div id="tiktok-version-patched-modal" class="hidden">
+        <style>
+            #tiktok-version-patched-modal {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s ease;
+            }
+            #tiktok-version-patched-modal.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .vp-modal-card {
+                background: var(--md-sys-color-surface-container-high);
+                border: 1px solid var(--md-sys-color-outline-variant);
+                border-radius: 24px;
+                padding: 24px;
+                max-width: 420px;
+                width: 90%;
+                box-shadow: var(--elevation-3);
+            }
+            .vp-modal-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 14px;
+            }
+            .vp-modal-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+                background: var(--md-sys-color-error-container);
+                color: var(--md-sys-color-on-error-container);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .vp-modal-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--md-sys-color-on-surface);
+            }
+            .vp-modal-body {
+                font-size: 14px;
+                line-height: 1.65;
+                color: var(--md-sys-color-on-surface-variant);
+                margin-bottom: 22px;
+            }
+            .vp-modal-body strong {
+                color: var(--md-sys-color-on-surface);
+            }
+            .vp-modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+            .vp-btn {
+                padding: 10px 22px;
+                border-radius: 100px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                transition: opacity 0.2s ease;
+            }
+            .vp-btn:hover { opacity: 0.88; }
+            .vp-btn-proceed {
+                background: var(--md-sys-color-surface-container-highest);
+                color: var(--md-sys-color-on-surface);
+            }
+            .vp-btn-use-v1 {
+                background: var(--md-sys-color-primary);
+                color: var(--md-sys-color-on-primary);
+            }
+        </style>
+        <div class="vp-modal-card">
+            <div class="vp-modal-header">
+                <div class="vp-modal-icon">
+                    <span class="material-symbols-rounded" style="font-size: 22px;">error</span>
+                </div>
+                <div class="vp-modal-title" id="vp-modal-title">Method Patched</div>
+            </div>
+            <div class="vp-modal-body" id="vp-modal-body"></div>
+            <div class="vp-modal-footer">
+                <button class="vp-btn vp-btn-proceed" id="btn-vp-proceed">Proceed Anyway</button>
+                <button class="vp-btn vp-btn-use-v1" id="btn-vp-switch">Use V1</button>
             </div>
         </div>
     </div>
