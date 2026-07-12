@@ -1337,7 +1337,7 @@ body {
 .tiktok-rail {
     position: absolute;
     right: 10px;
-    bottom: 210px; /* Shifted up to avoid overlap with full-width bottom details */
+    bottom: 170px; /* Shifted down slightly per user request */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2304,19 +2304,19 @@ body {
 .mini-popup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9000;
-    opacity: 0;
     visibility: hidden;
-    transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+    transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), visibility 0.25s step-end;
 }
 
 .mini-popup-overlay.show {
-    opacity: 1;
+    background: rgba(0, 0, 0, 0.72);
     visibility: visible;
+    transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), visibility 0s;
 }
 
 .mini-popup {
@@ -2328,11 +2328,150 @@ body {
     max-width: 400px;
     box-shadow: var(--elevation-5);
     transform: translateY(24px) scale(0.96);
-    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .mini-popup-overlay.show .mini-popup {
     transform: translateY(0) scale(1);
+}
+
+/* --- Preset Popups Bottom Sheets on Mobile --- */
+#sw-download-picker,
+#sw-detail-picker,
+#am-variant-picker {
+    align-items: flex-end;
+}
+
+#sw-download-picker .mini-popup,
+#sw-detail-picker .mini-popup,
+#am-variant-picker .mini-popup {
+    border-radius: 28px 28px 0 0;
+    width: 100%;
+    max-width: 100%;
+    transform: translateY(100%);
+    transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)) 24px;
+    position: relative;
+}
+
+/* iOS Stacked Card Animations */
+#sw-download-picker .mini-popup.stacked {
+    transform: translateY(-24px) scale(0.92) !important;
+    opacity: 0.6;
+    pointer-events: none;
+    transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+}
+
+.mini-popup-overlay.transparent-bg {
+    background: rgba(0, 0, 0, 0) !important;
+    backdrop-filter: none !important;
+}
+
+#sw-download-picker.show .mini-popup,
+#sw-detail-picker.show .mini-popup,
+#am-variant-picker.show .mini-popup {
+    transform: translateY(0);
+}
+
+/* Flexbox Header Row for Popups */
+.mini-popup-header-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+/* Premium Block Header for Detail Popup */
+#sw-detail-picker .mini-popup-title {
+    background: var(--md-sys-color-surface-container-highest);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 14px 18px;
+    border-radius: 18px;
+    font-size: 22px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-grow: 1;
+    box-sizing: border-box;
+}
+
+#sw-detail-picker .mini-popup-title img,
+#sw-detail-picker .mini-popup-title .material-symbols-rounded {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 28px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Close & Back Button styles for popups */
+.mini-popup-close-btn {
+    margin-left: auto; /* Push to the right */
+    background: var(--md-sys-color-surface-container-highest);
+    border: none;
+    color: var(--md-sys-color-on-surface-variant);
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+.mini-popup-close-btn:hover {
+    background: var(--md-sys-color-outline-variant);
+}
+.mini-popup-close-btn .material-symbols-rounded {
+    font-size: 18px;
+}
+
+
+.mini-popup-handle {
+    display: none !important;
+}
+
+/* Preset Required Plugins Badges styling */
+.plugin-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    margin-top: 12px;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+.plugin-badges-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+.plugin-badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--md-sys-color-surface-container-highest);
+    border: 1.5px solid var(--md-sys-color-outline-variant);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    transition: all 0.2s ease;
+}
+
+.plugin-badge-item span.material-symbols-rounded {
+    font-size: 16px;
+    color: var(--md-sys-color-primary);
 }
 
 .mini-popup-title {
@@ -2408,12 +2547,19 @@ body {
 }
 
 .am-xml-btn {
-    justify-content: center !important;
-    gap: 8px !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
 }
 
 .am-xml-btn .material-symbols-rounded {
     margin-left: 0 !important;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: 8px;
 }
 
 .explore-badges {

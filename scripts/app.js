@@ -644,17 +644,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     const softwareArr = Array.isArray(data.software) ? data.software : (data.software ? [data.software] : []);
                     
                     if (softwareArr.length === 1 && softwareArr.includes('AM')) {
-                        openAmDownloadPicker(data);
+                        openAmVariantPicker(data, false);
                     } else if (urls.length > 1) {
                         openSwDownloadPicker(urls, data.name, data);
                     } else if (urls.length === 1) {
                         if (urls[0].sw === 'AM') {
-                            openAmDownloadPicker(data);
+                            openAmVariantPicker(data, false);
                         } else {
-                            window.open(ensureProtocol(urls[0].url), '_blank');
+                            openSwDetailPicker(urls[0], data, false);
                         }
                     } else if (data.url) {
-                        window.open(ensureProtocol(data.url), '_blank');
+                        const hasAe = softwareArr.includes('AE');
+                        if (hasAe || data.plugin) {
+                            openSwDetailPicker({ sw: 'AE', url: data.url }, data, false);
+                        } else {
+                            window.open(ensureProtocol(data.url), '_blank');
+                        }
                     }
                 } catch (err) {
                     console.error('Download error:', err);
@@ -678,10 +683,33 @@ document.addEventListener('DOMContentLoaded', () => {
         'Node': 'Node Video'
     };
 
-    const openAmDownloadPicker = (presetData) => {
-        const picker = document.getElementById('sw-download-picker');
-        const optionsContainer = document.getElementById('sw-download-options');
+    const openAmVariantPicker = (presetData, showBackButton = false) => {
+        const picker = document.getElementById('am-variant-picker');
+        const optionsContainer = document.getElementById('am-variant-options');
+        const backBtn = document.getElementById('back-am-variant');
         if (!picker || !optionsContainer) return;
+
+        if (backBtn) {
+            const iconSpan = backBtn.querySelector('.material-symbols-rounded');
+            if (iconSpan) {
+                iconSpan.textContent = showBackButton ? 'arrow_back' : 'close';
+            }
+            backBtn.onclick = (e) => {
+                e.stopPropagation();
+                picker.classList.remove('show');
+                picker.classList.remove('transparent-bg');
+                if (showBackButton) {
+                    document.querySelector('#sw-download-picker .mini-popup')?.classList.remove('stacked');
+                }
+            };
+        }
+
+        if (showBackButton) {
+            picker.classList.add('transparent-bg');
+            document.querySelector('#sw-download-picker .mini-popup')?.classList.add('stacked');
+        } else {
+            picker.classList.remove('transparent-bg');
+        }
 
         let html = '';
         
@@ -742,6 +770,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (url) window.open(ensureProtocol(url), '_blank');
                 if (!btn.classList.contains('am-extra-btn')) {
                     picker.classList.remove('show');
+                    picker.classList.remove('transparent-bg');
+                    document.querySelector('#sw-download-picker .mini-popup')?.classList.remove('stacked');
+                    document.getElementById('sw-download-picker')?.classList.remove('show');
                 }
             });
         });
@@ -773,21 +804,106 @@ document.addEventListener('DOMContentLoaded', () => {
         optionsContainer.querySelectorAll('.sw-download-option-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const sw = btn.dataset.sw;
+                const url = btn.dataset.url;
                 if (sw === 'AM') {
-                    openAmDownloadPicker(presetData);
+                    openAmVariantPicker(presetData, true);
+                    // Do not close sw-download-picker, let it stay open in stacked mode
                 } else {
-                    const url = btn.dataset.url;
-                    if (url) window.open(ensureProtocol(url), '_blank');
-                    picker.classList.remove('show');
+                    openSwDetailPicker({ sw, url }, presetData, true);
+                    // Do not close sw-download-picker, let it stay open in stacked mode
                 }
             });
         });
         picker.classList.add('show');
     };
 
-    const cancelSwDownloadBtn = document.getElementById('cancel-sw-download');
-    if (cancelSwDownloadBtn) {
-        cancelSwDownloadBtn.addEventListener('click', () => {
+    const openSwDetailPicker = (entry, presetData, showBackButton = false) => {
+        const picker = document.getElementById('sw-detail-picker');
+        const titleText = document.getElementById('sw-detail-title-text');
+        const iconEl = document.getElementById('sw-detail-icon');
+        const downloadBtn = document.getElementById('sw-detail-download-btn');
+        const pluginSection = document.getElementById('sw-detail-plugin-section');
+        const pluginsContainer = document.getElementById('sw-detail-plugins');
+        const backBtn = document.getElementById('back-sw-detail');
+        
+        if (!picker || !titleText || !downloadBtn) return;
+
+        if (backBtn) {
+            const iconSpan = backBtn.querySelector('.material-symbols-rounded');
+            if (iconSpan) {
+                iconSpan.textContent = showBackButton ? 'arrow_back' : 'close';
+            }
+            backBtn.onclick = (e) => {
+                e.stopPropagation();
+                picker.classList.remove('show');
+                picker.classList.remove('transparent-bg');
+                if (showBackButton) {
+                    document.querySelector('#sw-download-picker .mini-popup')?.classList.remove('stacked');
+                }
+            };
+        }
+
+        if (showBackButton) {
+            picker.classList.add('transparent-bg');
+            document.querySelector('#sw-download-picker .mini-popup')?.classList.add('stacked');
+        } else {
+            picker.classList.remove('transparent-bg');
+        }
+        
+        const badgeIcons = {
+            'AE': 'assets/icon/Ae.png',
+            'AM': 'assets/icon/Am.png',
+            'Blurr': 'assets/icon/Blurr.png',
+            'CC': 'assets/icon/CC.png',
+            'FM': 'assets/icon/Fm.png',
+            'Node': 'assets/icon/Node.png'
+        };
+        
+        const swLabel = SOFTWARE_FULL_NAMES[entry.sw] || entry.sw;
+        titleText.textContent = swLabel;
+        
+        const iconSrc = badgeIcons[entry.sw];
+        if (iconSrc && iconEl) {
+            iconEl.src = iconSrc;
+            iconEl.alt = swLabel;
+            iconEl.style.display = 'block';
+        } else if (iconEl) {
+            iconEl.style.display = 'none';
+        }
+        
+        downloadBtn.onclick = () => {
+            if (entry.url) {
+                window.open(ensureProtocol(entry.url), '_blank');
+            }
+            picker.classList.remove('show');
+            picker.classList.remove('transparent-bg');
+            document.querySelector('#sw-download-picker .mini-popup')?.classList.remove('stacked');
+            document.getElementById('sw-download-picker')?.classList.remove('show');
+        };
+        
+        if (entry.sw === 'AE' && presetData.plugin) {
+            const plugins = presetData.plugin.split(',').map(p => p.trim()).filter(Boolean);
+            if (plugins.length > 0) {
+                pluginsContainer.innerHTML = plugins.map(pName => `
+                    <div class="plugin-badge-item">
+                        <span class="material-symbols-rounded">extension</span>
+                        <span>${escapeHtmlAttr(pName)}</span>
+                    </div>
+                `).join('');
+                pluginSection.style.display = 'flex';
+            } else {
+                pluginSection.style.display = 'none';
+            }
+        } else {
+            pluginSection.style.display = 'none';
+        }
+        
+        picker.classList.add('show');
+    };
+
+    const closeSwDownloadBtn = document.getElementById('close-sw-download');
+    if (closeSwDownloadBtn) {
+        closeSwDownloadBtn.addEventListener('click', () => {
             document.getElementById('sw-download-picker')?.classList.remove('show');
         });
     }
@@ -797,6 +913,20 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.remove('show');
         }
     });
+
+    document.getElementById('sw-detail-picker')?.addEventListener('click', (e) => {
+        if (e.target.id === 'sw-detail-picker') {
+            document.getElementById('back-sw-detail')?.click();
+        }
+    });
+
+    document.getElementById('am-variant-picker')?.addEventListener('click', (e) => {
+        if (e.target.id === 'am-variant-picker') {
+            document.getElementById('back-am-variant')?.click();
+        }
+    });
+
+
 
     const handleLike = async (id, btn, onlyLike = false) => {
         const isLiked = btn.classList.contains('liked');
@@ -1070,14 +1200,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            ${p.plugin ? `
-                            <div class="tiktok-plugin-bar">
-                                <span class="material-symbols-rounded">extension</span>
-                                <span>${dsa(p.plugin)}</span>
-                            </div>
-                            ` : ''}
-                            
                             <button type="button" class="tiktok-download-btn-full" data-action="download">
                                 Download
                             </button>
@@ -1507,4 +1629,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         tryOpenFishTools();
     }
+
+    // Pause all playing videos when page is hidden or window loses focus
+    const pauseAllPlayingVideos = () => {
+        document.querySelectorAll('video').forEach(v => {
+            if (!v.paused) {
+                v.pause();
+            }
+        });
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            pauseAllPlayingVideos();
+        }
+    });
+
+    window.addEventListener('blur', pauseAllPlayingVideos);
 });

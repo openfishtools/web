@@ -941,15 +941,57 @@
 
     <div id="sw-download-picker" class="mini-popup-overlay">
         <div class="mini-popup">
-            <h3 class="mini-popup-title">
-                <span class="material-symbols-rounded">download</span>
-                Choose Version
-            </h3>
-            <p class="mini-popup-desc">Select the software you want to download for:</p>
-            <div class="mini-popup-body" id="sw-download-options"></div>
-            <div class="mini-popup-footer">
-                <button class="btn-text" id="cancel-sw-download">Cancel</button>
+            <div class="mini-popup-header-row">
+                <h3 class="mini-popup-title" style="margin: 0; display: flex; align-items: center; gap: 10px; flex-grow: 1;">
+                    <span class="material-symbols-rounded">download</span>
+                    <span>Choose Version</span>
+                </h3>
+                <button class="mini-popup-close-btn" id="close-sw-download" aria-label="Close">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
             </div>
+            <p class="mini-popup-desc" style="margin-top: 10px; margin-bottom: 16px;">Select the software you want to download for:</p>
+            <div class="mini-popup-body" id="sw-download-options"></div>
+        </div>
+    </div>
+
+    <div id="sw-detail-picker" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <div class="mini-popup-header-row" style="gap: 12px;">
+                <h3 class="mini-popup-title" id="sw-detail-title-text-wrap" style="margin: 0; flex-grow: 1;">
+                    <img id="sw-detail-icon" src="" alt="" style="width: 24px; height: 24px; border-radius: 6px; display: none;">
+                    <span id="sw-detail-title-text">Preset Info</span>
+                </h3>
+                <button class="mini-popup-close-btn" id="back-sw-detail" aria-label="Back">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
+            </div>
+            <div class="mini-popup-body" style="margin-top: 16px;">
+                <div id="sw-detail-plugin-section" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; width: 100%;">
+                    <div class="plugin-section-title">Required Plugins:</div>
+                    <div id="sw-detail-plugins" class="plugin-badges-container"></div>
+                </div>
+                <button class="sw-download-option-btn" id="sw-detail-download-btn" style="justify-content: center; font-weight: 600; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none;">
+                    <span class="material-symbols-rounded" style="color: inherit; margin-left: 0; margin-right: 8px;">download</span>
+                    <span>Download Preset</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="am-variant-picker" class="mini-popup-overlay">
+        <div class="mini-popup">
+            <div class="mini-popup-header-row" style="gap: 12px;">
+                <h3 class="mini-popup-title" style="margin: 0; display: flex; align-items: center; gap: 10px; flex-grow: 1; font-size: 20px;">
+                    <img src="assets/icon/Am.png" alt="Alight Motion" style="width: 24px; height: 24px; border-radius: 6px;">
+                    <span>Choose Variant</span>
+                </h3>
+                <button class="mini-popup-close-btn" id="back-am-variant" aria-label="Back">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
+            </div>
+            <p class="mini-popup-desc" style="margin-top: 10px; margin-bottom: 16px;">Select the variant you want to download:</p>
+            <div class="mini-popup-body" id="am-variant-options" style="margin-top: 16px;"></div>
         </div>
     </div>
 
