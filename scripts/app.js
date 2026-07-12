@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
+    let globalMuted = false;
 
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
@@ -37,70 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const presetExploreView = document.getElementById('preset-explore-view');
         const presetFeedView = document.getElementById('preset-feed-view');
         
-        if (presetFeedView && !presetFeedView.classList.contains('hidden') && lastClickedRect) {
-            const targetInGrid = document.querySelector(`.explore-item[data-id="${lastClickedId}"]`);
-            if (!targetInGrid) {
-                presetFeedView.classList.add('hidden');
-                presetExploreView.classList.remove('hidden');
-                return;
-            }
+        history.pushState(null, null, '/#preset');
 
-            const morph = document.createElement('div');
-            morph.className = 'morph-element';
-            const clone = targetInGrid.cloneNode(true);
-            morph.appendChild(clone);
-
-            const mockupScreen = document.querySelector('.phone-screen');
-            const isMockup = mockupScreen && getComputedStyle(document.querySelector('.phone-notch')).display !== 'none';
-            
-            const first = isMockup ? mockupScreen.getBoundingClientRect() : { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
-            const last = lastClickedRect;
-
-            const scaleX = last.width / first.width;
-            const scaleY = last.height / first.height;
-            const translateX = last.left - first.left;
-            const translateY = last.top - first.top;
-
-            Object.assign(morph.style, {
-                position: 'fixed',
-                top: `${first.top}px`,
-                left: `${first.left}px`,
-                width: `${first.width}px`,
-                height: `${first.height}px`,
-                zIndex: '10000',
-                borderRadius: isMockup ? '16px' : '0',
-                overflow: 'hidden',
-                transformOrigin: 'top left',
-                willChange: 'transform, opacity',
-                pointerEvents: 'none',
-                boxShadow: 'var(--md-sys-elevation-4)',
-            });
-
-            document.body.appendChild(morph);
+        if (presetFeedView && !presetFeedView.classList.contains('hidden')) {
+            // Slide down + fade out animation — works regardless of grid scroll position
+            presetFeedView.style.transition = 'transform 0.28s cubic-bezier(0.4, 0, 1, 1), opacity 0.22s ease';
+            presetFeedView.style.transform = 'translateY(6%)';
             presetFeedView.style.opacity = '0';
-            presetFeedView.style.transition = 'opacity 0.15s ease';
 
             if (presetExploreView) {
                 presetExploreView.classList.remove('hidden');
-                presetExploreView.style.opacity = '1';
-                presetExploreView.style.transition = 'none';
-            }
-
-            // Double RAF to ensure initial styles are painted before transition starts
-            requestAnimationFrame(() => {
+                presetExploreView.style.opacity = '0';
+                presetExploreView.style.transition = 'opacity 0.2s ease';
                 requestAnimationFrame(() => {
-                    morph.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
-                    morph.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`;
-                    morph.style.borderRadius = '12px';
+                    presetExploreView.style.opacity = '1';
                 });
-            });
+            }
 
             setTimeout(() => {
                 presetFeedView.classList.add('hidden');
-                morph.style.opacity = '0';
-                morph.style.transition = 'opacity 0.15s ease';
-                setTimeout(() => morph.remove(), 150);
-            }, 250);
+                presetFeedView.style.transform = '';
+                presetFeedView.style.transition = '';
+                presetFeedView.style.opacity = '';
+            }, 300);
+        } else {
+            if (presetFeedView) {
+                presetFeedView.classList.add('hidden');
+                presetFeedView.style.opacity = '0';
+            }
+            if (presetExploreView) {
+                presetExploreView.classList.remove('hidden');
+                presetExploreView.style.opacity = '1';
+            }
         }
 
         if (presetFeedView) {
@@ -120,80 +89,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!feedView || !feedContainer) return;
 
+        history.pushState(null, null, `/${targetId}`);
+
         lastClickedId = targetId;
         lastClickedRect = clickedEl ? clickedEl.getBoundingClientRect() : null;
 
+        // Reset transition styles
+        feedView.style.transition = 'none';
+        feedView.style.transform = 'translateY(6%)';
         feedView.style.opacity = '0';
         feedView.style.display = 'block';
         feedView.classList.remove('hidden');
 
-        if (clickedEl && lastClickedRect) {
-            const morph = document.createElement('div');
-            morph.className = 'morph-element';
-            const clone = clickedEl.cloneNode(true);
-            morph.appendChild(clone);
-
-            const mockupScreen = document.querySelector('.phone-screen');
-            const isMockup = mockupScreen && getComputedStyle(document.querySelector('.phone-notch')).display !== 'none';
-
-            const first = lastClickedRect;
-            const last = isMockup ? mockupScreen.getBoundingClientRect() : {
-                top: 0,
-                left: 0,
-                width: window.innerWidth,
-                height: window.innerHeight
-            };
-
-            const scaleX = first.width / last.width;
-            const scaleY = first.height / last.height;
-            const translateX = first.left - last.left;
-            const translateY = first.top - last.top;
-
-            Object.assign(morph.style, {
-                position: 'fixed',
-                top: `${last.top}px`,
-                left: `${last.left}px`,
-                width: `${last.width}px`,
-                height: `${last.height}px`,
-                zIndex: '10000',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                transformOrigin: 'top left',
-                transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`,
-                willChange: 'transform, opacity',
-                backfaceVisibility: 'hidden',
-                pointerEvents: 'none',
-                boxShadow: 'var(--md-sys-elevation-4)',
-                transition: 'none'
-            });
-
-            document.body.appendChild(morph);
-
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    morph.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
-                    morph.style.transform = 'translate3d(0, 0, 0) scale(1)';
-                    morph.style.borderRadius = isMockup ? '16px' : '0';
-                    feedView.style.opacity = '1';
-                    feedView.style.transition = 'opacity 0.2s ease';
-                });
-            });
-
-            if (exploreView) {
-                exploreView.style.transition = 'opacity 0.15s ease';
-                exploreView.style.opacity = '0';
-            }
-
-            setTimeout(() => {
-                if (exploreView) exploreView.classList.add('hidden');
-                morph.style.opacity = '0';
-                morph.style.transition = 'opacity 0.15s ease';
-                setTimeout(() => morph.remove(), 150);
-            }, 250);
-        } else {
-            if (exploreView) exploreView.classList.add('hidden');
-            feedView.style.opacity = '1';
+        if (exploreView) {
+            exploreView.style.transition = 'opacity 0.15s ease';
+            exploreView.style.opacity = '0';
         }
+
+        // Trigger reflow to apply starting styles before transition starts
+        void feedView.offsetWidth;
+
+        requestAnimationFrame(() => {
+            feedView.style.transition = 'transform 0.28s cubic-bezier(0, 0, 0.2, 1), opacity 0.22s ease';
+            feedView.style.transform = 'translateY(0)';
+            feedView.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+            if (exploreView) exploreView.classList.add('hidden');
+            feedView.style.transform = '';
+            feedView.style.transition = '';
+            feedView.style.opacity = '';
+        }, 300);
 
         if (feedContainer) {
             hydrateTikTokHosts(feedContainer, 'video');
@@ -222,6 +149,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (container.dataset.interactionsSet) return;
             container.dataset.interactionsSet = 'true';
             
+            const muteBtn = container.querySelector('.video-mute-btn');
+            if (muteBtn) {
+                muteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const video = container.querySelector('video') || container.querySelector('.tiktok-media-host video');
+                    if (video) {
+                        video.muted = !video.muted;
+                        globalMuted = video.muted;
+                        const icon = muteBtn.querySelector('.material-symbols-rounded');
+                        if (icon) icon.textContent = video.muted ? 'volume_off' : 'volume_up';
+                    }
+                });
+            }
+
             let lastTap = 0;
             let tapTimeout;
             
@@ -364,12 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (isDirectVideoUrl(m)) {
             // Remove controls, keep autoplay and loop
-            return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous"></video>`;
+            return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous" referrerpolicy="no-referrer"></video>`;
         }
         if (isTikTokLikeUrl(m)) {
             return `<div class="tiktok-media-host" data-tiktok-url="${escapeHtmlAttr(m)}" role="group" aria-label="${label}"><div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div></div>`;
         }
-        return `<img src="${escapeHtmlAttr(m)}" alt="${label}">`;
+        return `<img src="${escapeHtmlAttr(m)}" alt="${label}" referrerpolicy="no-referrer">`;
     };
 
     const hydrateTikTokHosts = async (root, mode = 'video') => {
@@ -390,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const src = el.dataset.tiktokUrl;
                 if (!src) return;
                 
-                el.dataset.tiktokState = 'loading';
+                 el.dataset.tiktokState = 'loading';
                 
                 const resolveWithRetry = async (retryCount = 0, bypassCache = false) => {
                     try {
@@ -412,14 +353,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const img = document.createElement('img');
                                 img.src = j.cover;
                                 img.alt = j.title || 'Preset';
+                                img.setAttribute('referrerpolicy', 'no-referrer');
                                 el.appendChild(img);
                                 if (mode === 'video') {
-                                    const link = document.createElement('a');
-                                    link.href = src;
-                                    link.target = '_blank';
-                                    link.className = 'tiktok-fallback-link';
-                                    link.innerHTML = '<span class="material-symbols-rounded">open_in_new</span><span>View on TikTok</span>';
-                                    el.appendChild(link);
+                                    const videoId = j.id || getTikTokId(src);
+                                    if (videoId) {
+                                        el.innerHTML = `<iframe src="https://www.tiktok.com/embed/${videoId}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+                                    } else {
+                                        const link = document.createElement('a');
+                                        link.href = src;
+                                        link.target = '_blank';
+                                        link.className = 'tiktok-fallback-link';
+                                        link.innerHTML = '<span class="material-symbols-rounded">open_in_new</span><span>View on TikTok</span>';
+                                        el.appendChild(link);
+                                    }
                                 }
                             } else {
                                 const v = document.createElement('video');
@@ -430,31 +377,49 @@ document.addEventListener('DOMContentLoaded', () => {
                                 v.autoplay = true;
                                 v.setAttribute('playsinline', '');
                                 v.setAttribute('crossorigin', 'anonymous');
+                                v.setAttribute('referrerpolicy', 'no-referrer');
                                 if (!globalMuted) v.volume = 1;
                                 el.appendChild(v);
+ 
+                                const slide = el.closest('.tiktok-slide');
+                                const muteBtn = slide?.querySelector('.video-mute-btn');
+                                if (muteBtn) {
+                                    const icon = muteBtn.querySelector('.material-symbols-rounded');
+                                    if (icon) icon.textContent = v.muted ? 'volume_off' : 'volume_up';
+                                }
 
                                 v.onerror = () => {
                                     if (retryCount < 1) {
                                         el.innerHTML = '';
                                         el.dataset.tiktokState = 'loading';
                                         resolveWithRetry(retryCount + 1, true);
-                                    } else if (j.cover) {
-                                        el.innerHTML = '';
-                                        const img = document.createElement('img');
-                                        img.src = j.cover;
-                                        img.alt = j.title || 'Preset';
-                                        el.appendChild(img);
-                                        el.dataset.tiktokState = 'ready';
                                     } else {
-                                        el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
-                                        el.dataset.tiktokState = 'error';
+                                        const videoId = j.id || getTikTokId(src);
+                                        if (videoId) {
+                                            el.innerHTML = `<iframe src="https://www.tiktok.com/embed/${videoId}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+                                            el.dataset.tiktokState = 'ready';
+                                        } else if (j.cover) {
+                                            el.innerHTML = '';
+                                            const img = document.createElement('img');
+                                            img.src = j.cover;
+                                            img.alt = j.title || 'Preset';
+                                            img.setAttribute('referrerpolicy', 'no-referrer');
+                                            el.appendChild(img);
+                                            el.dataset.tiktokState = 'ready';
+                                        } else {
+                                            el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
+                                            el.dataset.tiktokState = 'error';
+                                        }
                                     }
                                 };
-
+ 
                                 v.play().catch((err) => {
-                                    console.warn('Autoplay blocked in resolver, retrying muted:', err);
                                     v.muted = true;
-                                    v.play().catch(e => console.error('Final resolve play attempt failed:', e));
+                                    if (muteBtn) {
+                                        const icon = muteBtn.querySelector('.material-symbols-rounded');
+                                        if (icon) icon.textContent = 'volume_off';
+                                    }
+                                    v.play().catch(e => {});
                                 });
                             }
                             el.dataset.tiktokState = 'ready';
@@ -511,7 +476,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (v) {
                     v.muted = globalMuted;
                     if (!globalMuted) v.volume = 1;
-                    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+                    v.play().catch(() => { 
+                        v.muted = true;
+                        const muteBtn = bestSlide.querySelector('.video-mute-btn');
+                        if (muteBtn) {
+                            const icon = muteBtn.querySelector('.material-symbols-rounded');
+                            if (icon) icon.textContent = 'volume_off';
+                        }
+                        v.play().catch(() => {});
+                    });
+                    
+                    const muteBtn = bestSlide.querySelector('.video-mute-btn');
+                    if (muteBtn) {
+                        const icon = muteBtn.querySelector('.material-symbols-rounded');
+                        if (icon) icon.textContent = v.muted ? 'volume_off' : 'volume_up';
+                    }
+                }
+                
+                const slideId = bestSlide.dataset.id;
+                if (slideId) {
+                    // Update lastClickedId so close animation targets the current card
+                    lastClickedId = slideId;
+                    // Find matching grid item and update its rect for the close animation
+                    const gridItem = document.querySelector(`.explore-item[data-id="${slideId}"]`);
+                    if (gridItem) {
+                        lastClickedRect = gridItem.getBoundingClientRect();
+                    }
+                    history.pushState(null, null, `/${slideId}`);
                 }
             }
         };
@@ -571,6 +562,20 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = item.getAttribute('data-tab');
+
+            // Stop any playing video if switching away from the feed
+            const feedView = document.getElementById('preset-feed-view');
+            const feedContainer = document.getElementById('preset-feed');
+            if (feedView && !feedView.classList.contains('hidden')) {
+                feedView.querySelectorAll('video').forEach(v => v.pause());
+                // If on a direct-link preset URL and switching tab, hide the feed
+                if (targetTab !== 'preset') {
+                    feedView.classList.add('hidden');
+                    feedView.style.opacity = '0';
+                    feedView.style.transform = '';
+                }
+            }
+
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
             sections.forEach(section => {
@@ -596,7 +601,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    const hash = window.location.hash.substring(1);
+    const path = window.location.pathname.substring(1);
+    
+    let targetTab = '';
+    let targetSubId = null;
+    
+    if (/^[a-f0-9]{24}$/i.test(path)) {
+        targetTab = 'preset';
+        targetSubId = path;
+    }
+    
     const downloadModal = document.getElementById('download-modal');
     const closeModalBtn = document.getElementById('close-modal');
     const modalBadgeContainer = document.getElementById('modal-badge-container');
@@ -1020,6 +1034,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="tiktok-slide-media post-media-container">
                         ${presetMediaInnerHtml(p.media, p.name)}
                         <div class="tiktok-slide-gradient" aria-hidden="true"></div>
+                        <button type="button" class="video-mute-btn" aria-label="Toggle mute" style="position: absolute; top: max(12px, env(safe-area-inset-top, 12px)); right: 12px; z-index: 160; background: rgba(0, 0, 0, 0.45); border: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;">
+                            <span class="material-symbols-rounded" style="font-size: 24px;">volume_off</span>
+                        </button>
                         <div class="video-interaction-overlay">
                             <span class="material-symbols-rounded overlay-pause">pause</span>
                         </div>
@@ -1052,16 +1069,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span>${dsa(p.version || 'v1.0')}</span>
                                     </div>
                                 </div>
-                                ${p.plugin ? `
-                                <div class="plugin-scroll-container">
-                                    <div class="plugin-tag-v2">
-                                        <span class="material-symbols-rounded">extension</span>
-                                        <span>${dsa(p.plugin)}</span>
-                                    </div>
-                                </div>
-                                ` : ''}
                             </div>
-                            <button type="button" class="tiktok-download-btn" data-action="download">
+                            
+                            ${p.plugin ? `
+                            <div class="tiktok-plugin-bar">
+                                <span class="material-symbols-rounded">extension</span>
+                                <span>${dsa(p.plugin)}</span>
+                            </div>
+                            ` : ''}
+                            
+                            <button type="button" class="tiktok-download-btn-full" data-action="download">
                                 Download
                             </button>
                         </div>
@@ -1079,6 +1096,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
+            if (targetSubId) {
+                const presetExists = allPresets.some(p => p._id === targetSubId);
+                if (presetExists) {
+                    showFeed(targetSubId);
+                }
+            }
         }
     };
     const OS_SVG = { WIN: 'assets/svg/windows.svg', MAC: 'assets/svg/apple.svg', ANDROID: 'assets/svg/android.svg' };
@@ -1463,12 +1486,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const initialTab = (hash === 'fishtoolupdate') ? 'resource' : (hash || 'social');
+    const initialTab = (targetTab === 'fishtoolupdate') ? 'resource' : (targetTab || 'social');
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
 
     // Auto-open FishTools popup when hash is #fishtoolupdate
-    if (hash === 'fishtoolupdate') {
+    if (targetTab === 'fishtoolupdate') {
         const tryOpenFishTools = async () => {
             // Wait for resources to be fetched and rendered
             let attempts = 0;

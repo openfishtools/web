@@ -41,8 +41,11 @@ app.get('/realesrgan/*', (req, res) => {
     res.redirect(`https://upscale.chino.icu${req.originalUrl}`);
 });
 
-// Serve static frontend files from root directory
 app.use(express.static(path.join(__dirname, '..')));
+
+app.get('/:id([a-f0-9]{24})', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
 
 
 /** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
@@ -337,6 +340,10 @@ async function extractTikTokFromPage(pageUrl) {
         
         const html = await pageResponse.text();
         
+        const finalUrl = pageResponse.url || pageUrl;
+        const urlMatch = finalUrl.match(/\/video\/(\d+)/);
+        const videoId = urlMatch ? urlMatch[1] : '';
+
         // Try to extract from __UNIVERSAL_DATA_FOR_REHYDRATION__
         const jsonMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/);
         if (!jsonMatch) return null;
@@ -349,6 +356,7 @@ async function extractTikTokFromPage(pageUrl) {
         }
         
         return {
+            id: videoId || '',
             play: videoData.downloadAddr || videoData.playAddr || '',
             hdplay: videoData.playAddr || videoData.downloadAddr || '',
             wmplay: '',
@@ -386,6 +394,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             // Check fresh cache (4 hours)
             if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
                 return res.json({
+                    id: cached.id || '',
                     play: cached.play,
                     cover: cached.cover,
                     title: cached.title,
@@ -430,6 +439,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                 if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                     const d = json.data;
                     result = {
+                        id: d.id || '',
                         play: d.play || d.hdplay || '',
                         hdplay: d.hdplay || '',
                         wmplay: d.wmplay || '',
@@ -481,6 +491,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         if (oldCache) {
             console.warn(`[TikTok Resolve] Using expired cache for ${pageUrl}`);
             return res.json({
+                id: oldCache.id || '',
                 play: oldCache.play,
                 cover: oldCache.cover,
                 title: oldCache.title,

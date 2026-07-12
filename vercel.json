@@ -8,6 +8,10 @@
     {
       "source": "/realesrgan/:path*",
       "destination": "https://upscale.chino.icu/realesrgan/:path*"
+    },
+    {
+      "source": "/:id([a-f0-9]{24})",
+      "destination": "/index.html"
     }
   ],
   "headers": [
