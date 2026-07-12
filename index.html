@@ -8,6 +8,7 @@
     <meta name="description" content="CHROS is the ultimate resource hub for video editors and creators. Access a curated collection of premium presets, essential editing software, professional plugins, and powerful online tools to supercharge your creative workflow.">
     <link rel="stylesheet" href="assets/fonts/outfit.css">
     <link rel="stylesheet" href="assets/fonts/material-symbols.css">
+    <link rel="stylesheet" href="assets/fonts/brand-icons.css">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/responsive.css">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -46,11 +47,11 @@
                 </div>
                 <span class="nav-label">Tools</span>
             </a>
-            <a href="#chat" class="nav-item" data-tab="chat">
+            <a href="#contact" class="nav-item" data-tab="contact">
                 <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">chat_bubble</span>
+                    <span class="material-symbols-rounded">mail</span>
                 </div>
-                <span class="nav-label">Chat</span>
+                <span class="nav-label">Contact Us</span>
             </a>
         </nav>
 
@@ -245,10 +246,6 @@
                                 <button id="btn-tiktok-clear-cache" title="Clear cache" aria-label="Clear cache"
                                     style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease;">
                                     <span class="material-symbols-rounded" style="font-size: 22px;">cleaning_services</span>
-                                </button>
-                                <button id="btn-tiktok-hard-refresh" title="Hard refresh" aria-label="Hard refresh"
-                                    style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease;">
-                                    <span class="material-symbols-rounded" style="font-size: 22px;">restart_alt</span>
                                 </button>
                             </div>
                         </div>
@@ -929,87 +926,17 @@
                     </div>
 
                 </div>
-
-                </div>
             </section>
 
-            <section id="chat" class="section">
-                <div class="chat-container">
-                    <div id="chat-login" class="chat-login-overlay">
-                        <div class="card login-card">
-                            <span class="material-symbols-rounded login-icon">account_circle</span>
-                            <h2 class="card-title">Welcome</h2>
-                            <p class="login-desc">Please enter your details to start chatting.</p>
-
-                            <div class="input-field">
-                                <label>Name</label>
-                                <input type="text" id="user-name" placeholder="Enter your name">
-                            </div>
-
-                            <div class="input-field">
-                                <label>Username</label>
-                                <input type="text" id="user-handle" placeholder="@username">
-                            </div>
-
-                            <div class="ip-info">
-                                <span class="material-symbols-rounded">language</span>
-                                <span id="user-ip">Fetching IP...</span>
-                            </div>
-
-                            <button class="btn-primary w-full" id="start-chat-btn">Start Chatting</button>
-                        </div>
-                    </div>
-
-                    <div id="chat-active" class="chat-active-view hidden">
-                        <header class="chat-header">
-                            <div class="avatar">
-                                <span class="material-symbols-rounded">person</span>
-                            </div>
-                            <div class="chat-info">
-                                <h3 id="active-chat-name">cutefishrbx</h3>
-                            </div>
-                            <div class="chat-actions">
-                            </div>
-                        </header>
-                        <div class="messages" id="message-container">
-                        </div>
-                        <div class="chat-input-area">
-                            <div class="input-pill">
-                                <span class="material-symbols-rounded pointer" id="open-upload-modal">add_circle</span>
-                                <input type="text" id="chat-input" placeholder="Text message">
-                            </div>
-                            <button class="send-fab" id="send-btn">
-                                <span class="material-symbols-rounded">send</span>
-                            </button>
-                        </div>
-                    </div>
+            <section id="contact" class="section">
+                <div class="page-header-row">
+                    <h1 class="page-title">Contact Us</h1>
+                </div>
+                <div class="grid" id="contact-grid">
+                    <!-- Loaded dynamically via scripts/app.js -->
                 </div>
             </section>
         </main>
-    </div>
-
-    <div id="upload-modal" class="modal-overlay">
-        <div class="card upload-card">
-            <h2 class="card-title">Upload File</h2>
-            <p class="login-desc">Share documents, images or videos (Max 50MB)</p>
-
-            <div class="drag-drop-area" id="chat-upload-drop">
-                <span class="material-symbols-rounded">cloud_upload</span>
-                <span>Drag & drop or click to upload</span>
-                <input type="file" id="chat-file-input" hidden>
-            </div>
-
-            <div id="upload-progress-container" class="hidden">
-                <div class="progress-bar-bg">
-                    <div id="upload-progress-fill"></div>
-                </div>
-                <p id="upload-status-text" class="upload-status-caption">Uploading...</p>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn-text" id="close-upload-modal">Cancel</button>
-            </div>
-        </div>
     </div>
 
     <div id="sw-download-picker" class="mini-popup-overlay">

@@ -6,6 +6,7 @@
     <title>CHROS Admin Panel</title>
     <link rel="stylesheet" href="assets/fonts/outfit.css">
     <link rel="stylesheet" href="assets/fonts/material-symbols.css">
+    <link rel="stylesheet" href="assets/fonts/brand-icons.css">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/responsive.css">
     <link rel="stylesheet" href="styles/admin.css">
@@ -55,11 +56,11 @@
                 </div>
                 <span class="nav-label">Resources</span>
             </a>
-            <a href="#chat" class="nav-item" data-tab="chat">
+            <a href="#contact" class="nav-item" data-tab="contact">
                 <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">support_agent</span>
+                    <span class="material-symbols-rounded">mail</span>
                 </div>
-                <span class="nav-label">Support</span>
+                <span class="nav-label">Contact</span>
             </a>
             <a href="#" class="nav-item" id="admin-logout-btn">
                 <div class="nav-icon-wrapper">
@@ -144,49 +145,25 @@
                 </div>
             </section>
 
-            <section id="chat" class="section">
-                <div class="chat-container">
-                    <div id="admin-chat-list-view" class="chat-view-container">
-                        <header class="chat-header">
-                            <div class="avatar">
-                                <span class="material-symbols-rounded">support_agent</span>
-                            </div>
-                            <div class="chat-info">
-                                <h3>Messages</h3>
-                                <p>Active Conversations</p>
-                            </div>
-                        </header>
-                        <div class="chat-list" id="active-chats">
-                        </div>
-                    </div>
-
-                    <div id="admin-chat-detail-view" class="chat-view-container hidden">
-                        <header class="chat-header">
-                            <button class="icon-btn" id="back-to-chat-list">
-                                <span class="material-symbols-rounded">arrow_back</span>
-                            </button>
-                            <div class="avatar" id="current-chat-avatar">
-                                <span class="material-symbols-rounded">person</span>
-                            </div>
-                            <div class="chat-info">
-                                <h3 id="current-chat-name">Customer Name</h3>
-                            </div>
-                            <div class="chat-header-actions"></div>
-                        </header>
-                        <div class="messages" id="admin-message-container">
-                        </div>
-                        <div class="chat-input-area">
-                            <button class="icon-btn" id="open-chat-upload-modal">
-                                <span class="material-symbols-rounded">add</span>
-                            </button>
-                            <div class="input-pill">
-                                <input type="text" id="admin-chat-input" placeholder="Reply to customer...">
-                            </div>
-                            <button class="send-fab" id="admin-send-btn">
-                                <span class="material-symbols-rounded">send</span>
-                            </button>
-                        </div>
-                    </div>
+            <section id="contact" class="section">
+                <div class="section-header">
+                    <h1 class="page-title">Contact Links</h1>
+                    <button class="fab" id="open-contact-modal">
+                        <span class="material-symbols-rounded">add</span>
+                    </button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Platform</th>
+                                <th>URL</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contact-table-body"></tbody>
+                    </table>
                 </div>
             </section>
         </main>
@@ -199,16 +176,42 @@
                 Manage Social Link
             </h2>
             <div class="admin-form">
-                <div class="drag-drop-area" id="social-icon-drop">
-                    <button type="button" class="remove-upload-btn" id="remove-social-icon-btn" title="Remove icon">
-                        <span class="material-symbols-rounded">close</span>
-                    </button>
-                    <img class="drag-drop-preview" id="social-icon-img-preview">
-                    <span class="material-symbols-rounded">image</span>
-                    <span class="label">Drag & drop platform icon or click to select</span>
-                    <input type="file" id="social-icon-file-input" hidden accept="image/*">
-                    <div class="file-preview" id="social-icon-preview"></div>
-                    <input type="hidden" id="modal-social-icon">
+                <div class="input-field">
+                    <label>Icon Source</label>
+                    <div class="icon-source-toggle">
+                        <button type="button" class="btn-source active" id="btn-social-icon-stock">Stock Icon</button>
+                        <button type="button" class="btn-source" id="btn-social-icon-custom">Custom Link</button>
+                    </div>
+                </div>
+                <div class="input-field" id="social-stock-icon-container">
+                    <label>Select Icon</label>
+                    <select id="modal-social-icon-select">
+                        <option value="bi-tiktok">TikTok</option>
+                        <option value="bi-instagram">Instagram</option>
+                        <option value="bi-youtube">YouTube</option>
+                        <option value="bi-facebook">Facebook</option>
+                        <option value="bi-whatsapp">WhatsApp</option>
+                        <option value="bi-telegram">Telegram</option>
+                        <option value="bi-discord">Discord</option>
+                        <option value="bi-github">GitHub</option>
+                        <option value="bi-twitter">Twitter / X</option>
+                        <option value="bi-playstore">Google Play Store</option>
+                        <option value="bi-appstore">Apple App Store</option>
+                        <option value="bi-website">Website / Link</option>
+                        <option value="bi-spotify">Spotify</option>
+                        <option value="bi-twitch">Twitch</option>
+                        <option value="bi-steam">Steam</option>
+                        <option value="bi-snapchat">Snapchat</option>
+                        <option value="bi-pinterest">Pinterest</option>
+                        <option value="bi-linkedin">LinkedIn</option>
+                        <option value="bi-reddit">Reddit</option>
+                        <option value="bi-threads">Threads</option>
+                        <option value="ms-code">XML (Code)</option>
+                    </select>
+                </div>
+                <div class="input-field d-none" id="social-custom-icon-container">
+                    <label>Icon Image URL</label>
+                    <input type="text" id="modal-social-icon" placeholder="https://... (Icon URL)">
                 </div>
                 <div class="input-field">
                     <label>Platform Name</label>
@@ -218,16 +221,60 @@
                     <label>URL</label>
                     <input type="text" id="modal-social-url" placeholder="https://...">
                 </div>
-                <div id="social-upload-progress" class="hidden" style="margin-top: 16px;">
-                    <div class="progress-bar-bg">
-                        <div id="social-progress-fill"></div>
-                    </div>
-                    <p id="social-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-text modal-close-btn" data-modal="social-modal">Cancel</button>
                 <button class="btn-primary" id="save-social-btn">Save Link</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="contact-modal" class="modal-overlay">
+        <div class="admin-modal">
+            <h2 class="modal-title">
+                <span class="material-symbols-rounded">mail</span>
+                Manage Contact Link
+            </h2>
+            <div class="admin-form">
+                <div class="input-field">
+                    <label>Icon Source</label>
+                    <div class="icon-source-toggle">
+                        <button type="button" class="btn-source active" id="btn-contact-icon-stock">Stock Icon</button>
+                        <button type="button" class="btn-source" id="btn-contact-icon-custom">Custom Link</button>
+                    </div>
+                </div>
+                <div class="input-field" id="contact-stock-icon-container">
+                    <label>Select Icon</label>
+                    <select id="modal-contact-icon-select">
+                        <option value="bi-whatsapp">WhatsApp</option>
+                        <option value="bi-telegram">Telegram</option>
+                        <option value="bi-instagram">Instagram</option>
+                        <option value="bi-discord">Discord</option>
+                        <option value="bi-facebook">Facebook</option>
+                        <option value="bi-tiktok">TikTok</option>
+                        <option value="bi-youtube">YouTube</option>
+                        <option value="bi-github">GitHub</option>
+                        <option value="bi-twitter">Twitter / X</option>
+                        <option value="bi-website">Website / Link</option>
+                        <option value="ms-code">XML (Code)</option>
+                    </select>
+                </div>
+                <div class="input-field d-none" id="contact-custom-icon-container">
+                    <label>Icon Image URL</label>
+                    <input type="text" id="modal-contact-icon" placeholder="https://... (Icon URL)">
+                </div>
+                <div class="input-field">
+                    <label>Platform Name</label>
+                    <input type="text" id="modal-contact-name" placeholder="e.g. WhatsApp">
+                </div>
+                <div class="input-field">
+                    <label>URL</label>
+                    <input type="text" id="modal-contact-url" placeholder="https://...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text modal-close-btn" data-modal="contact-modal">Cancel</button>
+                <button class="btn-primary" id="save-contact-btn">Save Link</button>
             </div>
         </div>
     </div>
@@ -359,13 +406,6 @@
                     <div id="preset-download-links-container">
                         <p class="no-sw-selected-hint">Select software above to add download links.</p>
                     </div>
-                    <input type="file" id="preset-file-input" hidden>
-                </div>
-                <div id="preset-upload-progress" class="hidden" style="margin-top: 16px;">
-                    <div class="progress-bar-bg">
-                        <div id="preset-progress-fill"></div>
-                    </div>
-                    <p id="preset-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -382,17 +422,10 @@
                 Manage Resource
             </h2>
             <div class="admin-form">
-                <!-- Icon Upload -->
-                <div class="drag-drop-area" id="resource-icon-drop">
-                    <button type="button" class="remove-upload-btn" id="remove-resource-icon-btn" title="Remove icon">
-                        <span class="material-symbols-rounded">close</span>
-                    </button>
-                    <img class="drag-drop-preview" id="resource-icon-img-preview">
-                    <span class="material-symbols-rounded">image</span>
-                    <span class="label">Drag & drop app icon or click to select</span>
-                    <input type="file" id="resource-icon-file-input" hidden accept="image/*">
-                    <div class="file-preview" id="resource-icon-preview"></div>
-                    <input type="hidden" id="modal-resource-icon">
+                <!-- Icon URL Input -->
+                <div class="input-field">
+                    <label>Icon Image URL</label>
+                    <input type="text" id="modal-resource-icon" placeholder="https://... (Icon URL)">
                 </div>
 
                 <!-- Title -->
@@ -493,13 +526,6 @@
                     <label>Instruction (optional)</label>
                     <textarea class="modal-textarea" id="modal-resource-instruction" placeholder="Installation steps or notes..."></textarea>
                 </div>
-
-                <div id="resource-upload-progress" class="hidden" style="margin-top: 16px;">
-                    <div class="progress-bar-bg">
-                        <div id="resource-progress-fill"></div>
-                    </div>
-                    <p id="resource-upload-status" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant); margin-top: 8px;">Uploading...</p>
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-text modal-close-btn" data-modal="resource-modal">Cancel</button>
@@ -549,33 +575,6 @@
     </div>
 
 
-    <div id="chat-upload-modal" class="modal-overlay">
-        <div class="admin-modal" style="max-width: 400px;">
-            <h2 class="modal-title">
-                <span class="material-symbols-rounded">cloud_upload</span>
-                Upload File
-            </h2>
-            <p class="login-desc">Share files with customer (Max 50MB)</p>
-            
-            <div class="drag-drop-area" id="admin-chat-upload-drop">
-                <span class="material-symbols-rounded">upload</span>
-                <span class="label">Drag & drop or click to upload</span>
-                <input type="file" id="admin-chat-file-input" hidden>
-            </div>
-            
-            <div id="admin-upload-progress-container" class="hidden">
-                <div class="progress-bar-bg">
-                    <div id="admin-upload-progress-fill"></div>
-                </div>
-                <p id="admin-upload-status-text" style="font-size: 12px; text-align: center; color: var(--md-sys-color-on-surface-variant);">Uploading...</p>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn-text" id="close-chat-upload-modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-
     <div id="custom-badge-popup" class="mini-popup-overlay">
         <div class="mini-popup">
             <h3 class="mini-popup-title">
@@ -584,17 +583,8 @@
             </h3>
             <div class="mini-popup-body">
                 <div class="input-field">
-                    <label>Icon (Upload or URL)</label>
-                    <div class="drag-drop-area mini-drag-drop" id="custom-badge-icon-drop">
-                        <button type="button" class="remove-upload-btn" id="remove-custom-badge-icon-btn" title="Remove icon">
-                            <span class="material-symbols-rounded">close</span>
-                        </button>
-                        <img class="drag-drop-preview" id="custom-badge-icon-img-preview">
-                        <span class="material-symbols-rounded">image</span>
-                        <span class="label">Drag &amp; drop or click to upload</span>
-                        <input type="file" id="custom-badge-icon-file-input" hidden accept="image/*">
-                    </div>
-                    <input type="text" id="custom-badge-icon-url" placeholder="or paste URL here">
+                    <label>Icon Image URL</label>
+                    <input type="text" id="custom-badge-icon-url" placeholder="https://... (Icon URL)">
                 </div>
                 <div class="input-field">
                     <label>Software Name</label>

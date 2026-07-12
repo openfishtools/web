@@ -1,16 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    const messageContainer = document.getElementById('message-container');
-    const chatLogin = document.getElementById('chat-login');
-    const chatActive = document.getElementById('chat-active');
-    const startChatBtn = document.getElementById('start-chat-btn');
-    const userNameInput = document.getElementById('user-name');
-    const userHandleInput = document.getElementById('user-handle');
-    const userIpDisplay = document.getElementById('user-ip');
-
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
 
     const ensureProtocol = (url) => {
@@ -19,14 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
-    // Returns a proxied + resized Supabase image URL, or original if not a Supabase storage URL
     const thumbUrl = (url, width = 128) => {
-        if (!url) return url;
-        if (url.includes('supabase.co/storage/v1/object/public')) {
-            const sep = url.includes('?') ? '&' : '?';
-            const supaUrl = `${url}${sep}width=${width}&quality=80&resize=contain`;
-            return `${API_URL}/image-proxy?url=${encodeURIComponent(supaUrl)}`;
-        }
         return url;
     };
 
@@ -549,165 +532,40 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    let globalMuted = false;
-    let currentChatId = null;
-    let messagesPollInterval = null;
-    const stopChatPolling = () => {
-        if (messagesPollInterval != null) {
-            clearInterval(messagesPollInterval);
-            messagesPollInterval = null;
-        }
-    };
-
-
-    let userIp = null;
-    fetch(`${API_URL}/get-ip`)
-        .then(response => {
-            if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
-                throw new Error('Response is not JSON');
-            }
-            return response.json();
-        })
-        .then((data) => {
-            userIp = normalizeClientIp(data.ip);
-            userIpDisplay.textContent = `Your IP: ${userIp}`;
-            checkExistingChat();
-        })
-        .catch(() => {
-            userIp = '127.0.0.1';
-            userIpDisplay.textContent = 'IP: 127.0.0.1 (Local/Mock)';
-            checkExistingChat();
-        });
-
-    const loadMessages = async () => {
-        if (!currentChatId) return;
+    const renderContacts = async () => {
+        const grid = document.getElementById('contact-grid');
+        if (!grid) return;
         try {
-            const res = await fetch(`${API_URL}/messages/${currentChatId}`);
-            if (res.status === 404) {
-                stopChatPolling();
-                currentChatId = null;
-                alert('Your chat has been closed by the admin.');
-                location.reload();
+            grid.innerHTML = Array(6).fill('<div class="skeleton-social-card"><div class="skeleton-social-icon"></div><div class="skeleton-social-name"></div></div>').join('');
+            const res = await fetch(`${API_URL}/contacts`);
+            const contacts = await res.json();
+            if (contacts.length === 0) {
+                grid.innerHTML = '<div class="empty-state">No contact links found.</div>';
                 return;
             }
-            const messages = await res.json();
-            
-            const currentCount = messageContainer.querySelectorAll('.message-group').length;
-            if (messages.length === currentCount) return;
-
-            messageContainer.innerHTML = messages.map(m => `
-                <div class="message-group ${m.type}">
-                    <div class="message">${renderMessageContent(m.text)}</div>
-                    <div class="timestamp">${m.time}</div>
-                </div>
-            `).join('');
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        } catch (err) {
-            console.error('Load messages failed:', err);
-        }
-    };
-
-    const renderMessageContent = (text) => {
-        const fileMatch = text.match(/📁 Shared a file: \[(.*?)\]\((.*?)\)/);
-        if (!fileMatch) return text;
-
-        const [_, fileName, fileUrl] = fileMatch;
-        const ext = fileName.split('.').pop().toLowerCase();
-
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-            return `
-                <a href="${fileUrl}" target="_blank" class="message-media">
-                    <img src="${fileUrl}" class="message-img" alt="${fileName}">
+            grid.innerHTML = contacts.map(c => {
+                const iconHtml = (c.icon && (c.icon.startsWith('http') || c.icon.includes('/')))
+                    ? `<img src="${thumbUrl(c.icon, 96)}" class="social-icon-img" alt="${c.name}" loading="lazy">`
+                    : (c.icon && c.icon.startsWith('bi-'))
+                        ? `<span class="brand-icon ${c.icon} social-icon"></span>`
+                        : (c.icon && c.icon.startsWith('ms-'))
+                            ? `<span class="material-symbols-rounded social-icon">${c.icon.substring(3)}</span>`
+                            : `<span class="material-symbols-rounded social-icon">${c.icon || 'public'}</span>`;
+                
+                return `
+                <a href="${ensureProtocol(c.url)}" class="card social-card" target="_blank">
+                    <div class="flex align-center gap-16">
+                        ${iconHtml}
+                        <h3 class="social-name">${c.name}</h3>
+                    </div>
                 </a>
-            `;
-        }
-
-        if (['mp4', 'webm', 'ogg'].includes(ext)) {
-            return `
-                <div class="message-media">
-                    <video src="${fileUrl}" class="message-video" controls></video>
-                </div>
-            `;
-        }
-
-        return `
-            <a href="${fileUrl}" target="_blank" class="message-file">
-                <div class="file-icon-wrapper">
-                    <span class="material-symbols-rounded">description</span>
-                </div>
-                <div class="file-info">
-                    <span class="file-name">${fileName}</span>
-                    <span class="file-ext">${ext}</span>
-                </div>
-            </a>
-        `;
-    };
-
-    const pollMessages = () => {
-        stopChatPolling();
-        loadMessages();
-        messagesPollInterval = setInterval(loadMessages, 3000);
-    };
-
-    const checkExistingChat = async () => {
-        if (!userIp) return;
-        try {
-            const res = await fetch(`${API_URL}/chats/check?ip=${encodeURIComponent(userIp)}`);
-            if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
-                return;
-            }
-            const chat = await res.json();
-            if (chat && chat._id) {
-                currentChatId = chat._id;
-                chatLogin.classList.add('hidden');
-                chatActive.classList.remove('hidden');
-                pollMessages();
-            }
+                `;
+            }).join('');
         } catch (err) {
-            console.error('Check existing chat failed:', err);
+            console.error('Render contacts failed:', err);
+            grid.innerHTML = '<div class="error-state">Failed to load contacts.</div>';
         }
     };
-
-    startChatBtn.addEventListener('click', async () => {
-        const name = userNameInput.value.trim();
-        const handle = userHandleInput.value.trim();
-
-        if (name && handle && userIp) {
-            try {
-                const res = await fetch(`${API_URL}/chats`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: `${name} (${handle})`, 
-                        ip: userIp,
-                        lastMsg: 'Joined chat', 
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                    })
-                });
-
-                if (res.status === 403) {
-                    alert('You have been blocked from the chat.');
-                    return;
-                }
-
-                if (res.ok) {
-                    const chat = await res.json();
-                    currentChatId = chat._id;
-                    chatLogin.classList.add('hidden');
-                    chatActive.classList.remove('hidden');
-                    pollMessages();
-                } else {
-                    const err = await res.json();
-                    alert(`Error: ${err.error || 'Failed to start chat'}`);
-                }
-            } catch (err) {
-                alert('Connection error. Is the server running?');
-                console.error(err);
-            }
-        } else {
-            alert('Please enter both Name and Username');
-        }
-    });
 
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
@@ -726,112 +584,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (targetTab === 'social') {
                 renderSocials();
-                stopChatPolling();
             } else if (targetTab === 'preset') {
                 renderPresets();
-                stopChatPolling();
             } else if (targetTab === 'resource') {
                 renderResources();
-                stopChatPolling();
-            } else if (targetTab === 'chat') {
-                pollMessages();
+            } else if (targetTab === 'contact') {
+                renderContacts();
             }
             if (history.pushState) {
                 history.pushState(null, null, `#${targetTab}`);
             }
         });
-    });
-
-    const sendMessage = async (customText = null) => {
-        const text = (typeof customText === 'string') ? customText : chatInput.value.trim();
-        if (text && currentChatId) {
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const res = await fetch(`${API_URL}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chatId: currentChatId, text, type: 'sent', time })
-            });
-            if (res.status === 403) {
-                alert('You are blocked from sending messages.');
-                return;
-            }
-            if (typeof customText !== 'string') chatInput.value = '';
-            loadMessages();
-        }
-    };
-
-    const openUploadBtn = document.getElementById('open-upload-modal');
-    const closeUploadBtn = document.getElementById('close-upload-modal');
-    const uploadModal = document.getElementById('upload-modal');
-    const uploadDrop = document.getElementById('chat-upload-drop');
-    const fileInput = document.getElementById('chat-file-input');
-    const progressContainer = document.getElementById('upload-progress-container');
-    const progressFill = document.getElementById('upload-progress-fill');
-    const statusText = document.getElementById('upload-status-text');
-
-    if (openUploadBtn) openUploadBtn.onclick = () => uploadModal.classList.add('show');
-    if (closeUploadBtn) closeUploadBtn.onclick = () => uploadModal.classList.remove('show');
-
-    const handleFileUpload = async (file) => {
-        if (!file) return;
-        if (file.size > 50 * 1024 * 1024) {
-            alert('File too large. Max size is 50MB.');
-            return;
-        }
-        progressContainer.classList.remove('hidden');
-        progressFill.style.width = '0%';
-        statusText.textContent = `Uploading ${file.name}...`;
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            let progress = 0;
-            const progInterval = setInterval(() => {
-                progress += 5;
-                if (progress <= 90) progressFill.style.width = `${progress}%`;
-            }, 1500);
-            const res = await fetch(`${API_URL}/upload`, {
-                method: 'POST',
-                body: formData
-            });
-            clearInterval(progInterval);
-            if (res.ok) {
-                const data = await res.json();
-                progressFill.style.width = '100%';
-                statusText.textContent = 'Upload successful!';
-                const msgText = `📁 Shared a file: [${data.name}](${data.url})`;
-                await sendMessage(msgText);
-                setTimeout(() => {
-                    uploadModal.classList.remove('show');
-                    progressContainer.classList.add('hidden');
-                }, 1000);
-            } else {
-                statusText.textContent = 'Upload failed. Try again.';
-            }
-        } catch (err) {
-            console.error('Upload error:', err);
-            statusText.textContent = 'Upload error. Check connection.';
-        }
-    };
-
-    if (uploadDrop) {
-        uploadDrop.onclick = () => fileInput.click();
-        uploadDrop.ondragover = (e) => { e.preventDefault(); uploadDrop.classList.add('active'); };
-        uploadDrop.ondragleave = () => uploadDrop.classList.remove('active');
-        uploadDrop.ondrop = (e) => {
-            e.preventDefault();
-            uploadDrop.classList.remove('active');
-            if (e.dataTransfer.files.length) handleFileUpload(e.dataTransfer.files[0]);
-        };
-        fileInput.onchange = () => {
-            if (fileInput.files.length) handleFileUpload(fileInput.files[0]);
-        };
-    }
-
-    sendBtn.addEventListener('click', () => sendMessage());
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
     });
     const hash = window.location.hash.substring(1);
     const downloadModal = document.getElementById('download-modal');
@@ -864,10 +627,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch(`${API_URL}/presets/${id}`);
                     const data = await res.json();
                     const urls = Array.isArray(data.urls) ? data.urls.filter(u => u.url) : [];
-                    if (urls.length > 1) {
-                        openSwDownloadPicker(urls, data.name);
+                    const softwareArr = Array.isArray(data.software) ? data.software : (data.software ? [data.software] : []);
+                    
+                    if (softwareArr.length === 1 && softwareArr.includes('AM')) {
+                        openAmDownloadPicker(data);
+                    } else if (urls.length > 1) {
+                        openSwDownloadPicker(urls, data.name, data);
                     } else if (urls.length === 1) {
-                        window.open(ensureProtocol(urls[0].url), '_blank');
+                        if (urls[0].sw === 'AM') {
+                            openAmDownloadPicker(data);
+                        } else {
+                            window.open(ensureProtocol(urls[0].url), '_blank');
+                        }
                     } else if (data.url) {
                         window.open(ensureProtocol(data.url), '_blank');
                     }
@@ -893,7 +664,78 @@ document.addEventListener('DOMContentLoaded', () => {
         'Node': 'Node Video'
     };
 
-    const openSwDownloadPicker = (urls, presetName) => {
+    const openAmDownloadPicker = (presetData) => {
+        const picker = document.getElementById('sw-download-picker');
+        const optionsContainer = document.getElementById('sw-download-options');
+        if (!picker || !optionsContainer) return;
+
+        let html = '';
+        
+        if (presetData.amPremiumUrl) {
+            html += `
+                <button class="sw-download-option-btn am-option-btn" data-url="${escapeHtmlAttr(presetData.amPremiumUrl)}">
+                    <img src="assets/icon/Am.png" alt="Alight Motion Premium">
+                    <span>Alight Motion Premium</span>
+                </button>
+            `;
+        }
+        
+        if (presetData.am5MbUrl) {
+            html += `
+                <button class="sw-download-option-btn am-option-btn" data-url="${escapeHtmlAttr(presetData.am5MbUrl)}">
+                    <img src="assets/icon/Am.png" alt="Alight Motion 5MB">
+                    <span>Alight Motion 5MB</span>
+                </button>
+            `;
+        }
+
+        if (presetData.amXmlUrl) {
+            html += `
+                <button class="sw-download-option-btn am-option-btn am-xml-btn" data-url="${escapeHtmlAttr(presetData.amXmlUrl)}">
+                    <span class="material-symbols-rounded" style="font-size: 22px;">code</span>
+                    <span>XML</span>
+                </button>
+            `;
+        }
+
+        if (Array.isArray(presetData.amXmlExtras) && presetData.amXmlExtras.length > 0) {
+            html += `
+                <div class="am-extra-section" style="margin-top: 16px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 12px; width: 100%;">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface); text-align: left; padding-left: 8px;">
+                        Additional Files:
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+            `;
+            presetData.amXmlExtras.forEach(extra => {
+                html += `
+                    <button class="sw-download-option-btn am-extra-btn" data-url="${escapeHtmlAttr(extra.url)}" style="border: 1px dashed var(--md-sys-color-outline); padding: 8px 12px; font-size: 12px; border-radius: 8px; box-shadow: none;">
+                        <span style="flex-grow: 1; text-align: left;">${escapeHtmlAttr(extra.label)}</span>
+                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-on-surface-variant);">download</span>
+                    </button>
+                `;
+            });
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        optionsContainer.innerHTML = html;
+
+        optionsContainer.querySelectorAll('.sw-download-option-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const url = btn.dataset.url;
+                if (url) window.open(ensureProtocol(url), '_blank');
+                if (!btn.classList.contains('am-extra-btn')) {
+                    picker.classList.remove('show');
+                }
+            });
+        });
+
+        picker.classList.add('show');
+    };
+
+    const openSwDownloadPicker = (urls, presetName, presetData) => {
         const picker = document.getElementById('sw-download-picker');
         const optionsContainer = document.getElementById('sw-download-options');
         if (!picker || !optionsContainer) return;
@@ -909,17 +751,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const icon = badgeIcons[entry.sw];
             const label = SOFTWARE_FULL_NAMES[entry.sw] || entry.sw;
             return `
-                <button class="sw-download-option-btn" data-url="${escapeHtmlAttr(entry.url || '')}">
+                <button class="sw-download-option-btn" data-sw="${escapeHtmlAttr(entry.sw)}" data-url="${escapeHtmlAttr(entry.url || '')}">
                     ${icon ? `<img src="${icon}" alt="${label}">` : `<span class="material-symbols-rounded">apps</span>`}
                     <span>${label}</span>
-                    <span class="material-symbols-rounded">download</span>
                 </button>`;
         }).join('');
         optionsContainer.querySelectorAll('.sw-download-option-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const url = btn.dataset.url;
-                if (url) window.open(ensureProtocol(url), '_blank');
-                picker.classList.remove('show');
+                const sw = btn.dataset.sw;
+                if (sw === 'AM') {
+                    openAmDownloadPicker(presetData);
+                } else {
+                    const url = btn.dataset.url;
+                    if (url) window.open(ensureProtocol(url), '_blank');
+                    picker.classList.remove('show');
+                }
             });
         });
         picker.classList.add('show');
@@ -1061,7 +907,11 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = socials.map(s => {
                 const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
                     ? `<img src="${thumbUrl(s.icon, 96)}" class="social-icon-img" alt="${s.name}" loading="lazy">`
-                    : `<span class="material-symbols-rounded social-icon">${s.icon || 'public'}</span>`;
+                    : (s.icon && s.icon.startsWith('bi-'))
+                        ? `<span class="brand-icon ${s.icon} social-icon"></span>`
+                        : (s.icon && s.icon.startsWith('ms-'))
+                            ? `<span class="material-symbols-rounded social-icon">${s.icon.substring(3)}</span>`
+                            : `<span class="material-symbols-rounded social-icon">${s.icon || 'public'}</span>`;
                 
                 return `
                 <a href="${ensureProtocol(s.url)}" class="card social-card" target="_blank">
@@ -1140,8 +990,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${presetMediaInnerHtml(p.media, p.name)}
                     <div class="explore-badges">${badgesHtml}</div>
                     <div class="explore-info">
-                        <span class="material-symbols-rounded" style="${p.liked ? 'color: #ff3b5c; font-variation-settings: \'FILL\' 1;' : ''}">favorite</span>
-                        <span>${p.likes || 0}</span>
+                        <div class="explore-info-title">${escapeHtmlAttr(p.name)}</div>
+                        <div class="explore-info-row">
+                            <span class="material-symbols-rounded" style="${p.liked ? 'color: #ff3b5c; font-variation-settings: \'FILL\' 1;' : ''}">favorite</span>
+                            <span>${p.likes || 0}</span>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1571,16 +1424,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const activeTab = document.querySelector('.nav-item.active')?.dataset.tab;
-            if (activeTab === 'chat') {
-                pollMessages();
-            }
-        } else {
-            stopChatPolling();
-        }
-    });
+
+
 
     // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle-btn');

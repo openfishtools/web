@@ -149,9 +149,7 @@ tr:last-child td {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -377,82 +375,11 @@ tr:last-child td {
     to { transform: translateY(0); opacity: 1; }
 }
 
-.chat-view-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    background-color: var(--md-sys-color-surface);
-}
-
-.chat-list {
-    flex: 1;
-    overflow-y: auto;
-}
-
-.chat-list-item {
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-    transition: var(--transition-standard);
-    border-bottom: 1px solid var(--md-sys-color-outline-variant);
-}
-
-.chat-list-item:hover {
-    background-color: var(--md-sys-color-surface-container-low);
-}
-
-.chat-list-item .avatar {
-    width: 52px;
-    height: 52px;
-    background-color: var(--md-sys-color-primary-container);
-    color: var(--md-sys-color-on-primary-container);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    font-weight: 500;
-}
-
-.chat-list-item .chat-meta {
-    flex: 1;
-    overflow: hidden;
-}
-
-.chat-list-item .chat-name {
-    display: block;
-    font-weight: 600;
-    font-size: 16px;
-    margin-bottom: 2px;
-    color: var(--md-sys-color-on-surface);
-}
-
-.chat-list-item .chat-preview {
-    display: block;
-    font-size: 14px;
-    color: var(--md-sys-color-on-surface-variant);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.chat-list-item .chat-time {
-    font-size: 12px;
-    color: var(--md-sys-color-on-surface-variant);
-}
 
 .hidden {
     display: none !important;
 }
 
-.chat-header-actions {
-    display: flex;
-    gap: 8px;
-    margin-left: auto;
-}
 
 .icon-btn {
     width: 40px;
@@ -482,28 +409,6 @@ tr:last-child td {
     color: var(--md-sys-color-error);
 }
 
-.empty-chats {
-    padding: 32px;
-    text-align: center;
-    opacity: 0.5;
-}
-
-.empty-chats .material-symbols-rounded {
-    font-size: 48px;
-}
-
-.empty-chats p {
-    margin-top: 8px;
-    font-size: 14px;
-}
-
-.empty-messages {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.5;
-}
 
 .status-dot {
     width: 8px;
@@ -570,42 +475,6 @@ tr:last-child td {
 @media (max-width: 599.98px) {
     body, .app-container {
         height: 100dvh;
-    }
-    .section#chat.active {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 80px;
-        height: auto;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    .chat-container {
-        height: 100%;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    .chat-view-container {
-        height: 100%;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    .chat-info {
-        min-width: 0;
-    }
-    .chat-info h3 {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .chat-header-actions {
-        flex-shrink: 0;
     }
 }
 
@@ -855,9 +724,7 @@ tr:last-child td {
 .mini-popup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -992,9 +859,7 @@ tr:last-child td {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.8);
     color: #fff;
     border: none;
     cursor: pointer;
@@ -1054,4 +919,47 @@ tr:last-child td {
     height: 20px;
     object-fit: contain;
 }
+
+/* Icon Source Toggle */
+.icon-source-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.btn-source {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-m);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-source:hover {
+    background: var(--md-sys-color-surface-container-highest);
+}
+
+.btn-source.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+}
+
+/* Brand icon inside admin table / modals */
+.brand-icon {
+    font-size: 28px;
+    color: var(--md-sys-color-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
 

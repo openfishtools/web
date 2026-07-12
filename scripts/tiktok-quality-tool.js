@@ -383,7 +383,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const btnClearCache = document.getElementById('btn-tiktok-clear-cache');
-    const btnHardRefresh = document.getElementById('btn-tiktok-hard-refresh');
 
     if (btnClearCache) {
         btnClearCache.addEventListener('click', () => {
@@ -406,33 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (btnHardRefresh) {
-        btnHardRefresh.addEventListener('click', async () => {
-            if (isProcessing) return;
-            const icon = btnHardRefresh.querySelector('.material-symbols-rounded');
-            if (icon) {
-                icon.style.transition = 'transform 0.5s ease';
-                icon.style.transform = 'rotate(360deg)';
-            }
-            try {
-                if ('caches' in window) {
-                    const keys = await caches.keys();
-                    await Promise.all(keys.map(k => caches.delete(k)));
-                }
-                if ('serviceWorker' in navigator) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(registrations.map(r => r.unregister()));
-                }
-            } catch (e) { /* ignore */ }
-            location.reload(true);
-        });
-        btnHardRefresh.addEventListener('mouseenter', () => {
-            btnHardRefresh.style.background = 'var(--md-sys-color-surface-container-high)';
-        });
-        btnHardRefresh.addEventListener('mouseleave', () => {
-            btnHardRefresh.style.background = 'none';
-        });
-    }
 
 
     function handleFileSelection(file) {

@@ -37,21 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const jsonHeaders = () => adminAuthHeaders({ 'Content-Type': 'application/json' });
 
-    // Returns a proxied + resized Supabase image URL (admin thumbnails)
     const thumbUrl = (url, width = 64) => {
-        if (!url) return url;
-        if (url.includes('supabase.co/storage/v1/object/public')) {
-            const sep = url.includes('?') ? '&' : '?';
-            const supaUrl = `${url}${sep}width=${width}&quality=75&resize=contain`;
-            return `${API_URL}/image-proxy?url=${encodeURIComponent(supaUrl)}`;
-        }
         return url;
     };
 
     let isUnauthorizedAlertShowing = false;
-    let chatListInterval = null;
-    let heartbeatInterval = null;
-    let knownChats = new Map();
 
     let swRegistration = null;
 
@@ -62,35 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     };
 
-    const registerPush = async () => {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        try {
-            swRegistration = await navigator.serviceWorker.register('/sw.js');
-            await navigator.serviceWorker.ready;
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') return;
-            const existing = await swRegistration.pushManager.getSubscription();
-            if (existing) {
-                await fetch(`${API_URL}/push/subscribe`, {
-                    method: 'POST',
-                    headers: jsonHeaders(),
-                    body: JSON.stringify(existing.toJSON())
-                });
-                return;
-            }
-            const keyRes = await fetch(`${API_URL}/push/vapid-key`);
-            const { publicKey } = await keyRes.json();
-            const subscription = await swRegistration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(publicKey)
-            });
-            await fetch(`${API_URL}/push/subscribe`, {
-                method: 'POST',
-                headers: jsonHeaders(),
-                body: JSON.stringify(subscription.toJSON())
-            });
-        } catch (err) {}
-    };
+    const registerPush = async () => {};
 
     const sendNotification = (title, body) => {
         if (swRegistration && Notification.permission === 'granted') {
@@ -103,9 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isUnauthorizedAlertShowing) return;
         isUnauthorizedAlertShowing = true;
         persistToken(null);
-        stopAdminMessagePolling();
-        if (chatListInterval) clearInterval(chatListInterval);
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
         showLoginUI();
         alert('Session expired or unauthorized. Please log in again.');
         isUnauthorizedAlertShowing = false;
@@ -193,9 +152,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 location.hash = `#${target}`;
             }
-            const isChatTab = target === 'chat';
+            const isContactTab = target === 'contact';
         });
     });
+
+    const initIconSourceToggles = () => {
+        // Social Icon Toggles
+        const btnSocialStock = document.getElementById('btn-social-icon-stock');
+        const btnSocialCustom = document.getElementById('btn-social-icon-custom');
+        const socialStockContainer = document.getElementById('social-stock-icon-container');
+        const socialCustomContainer = document.getElementById('social-custom-icon-container');
+
+        if (btnSocialStock && btnSocialCustom) {
+            btnSocialStock.onclick = () => {
+                btnSocialStock.classList.add('active');
+                btnSocialCustom.classList.remove('active');
+                socialStockContainer.classList.remove('d-none');
+                socialCustomContainer.classList.add('d-none');
+            };
+            btnSocialCustom.onclick = () => {
+                btnSocialCustom.classList.add('active');
+                btnSocialStock.classList.remove('active');
+                socialStockContainer.classList.add('d-none');
+                socialCustomContainer.classList.remove('d-none');
+            };
+        }
+
+        // Contact Icon Toggles
+        const btnContactStock = document.getElementById('btn-contact-icon-stock');
+        const btnContactCustom = document.getElementById('btn-contact-icon-custom');
+        const contactStockContainer = document.getElementById('contact-stock-icon-container');
+        const contactCustomContainer = document.getElementById('contact-custom-icon-container');
+
+        if (btnContactStock && btnContactCustom) {
+            btnContactStock.onclick = () => {
+                btnContactStock.classList.add('active');
+                btnContactCustom.classList.remove('active');
+                contactStockContainer.classList.remove('d-none');
+                contactCustomContainer.classList.add('d-none');
+            };
+            btnContactCustom.onclick = () => {
+                btnContactCustom.classList.add('active');
+                btnContactStock.classList.remove('active');
+                contactStockContainer.classList.add('d-none');
+                contactCustomContainer.classList.remove('d-none');
+            };
+        }
+    };
 
     window.addEventListener('hashchange', handleHashNavigation);
 
@@ -203,22 +206,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadSocials();
         await loadPresets();
         await loadResources();
-        await loadChats();
+        await loadContacts();
         initModalTriggers();
-        initDragAndDrop();
         initBadgePickers();
         initCustomBadgePopups();
         initResourceBadgePickers();
+        initIconSourceToggles();
 
         handleHashNavigation();
         registerPush();
-        const adminUploadModal = document.getElementById('chat-upload-modal');
-        const openAdminUploadBtn = document.getElementById('open-chat-upload-modal');
-        const closeAdminUploadBtn = document.getElementById('close-chat-upload-modal');
-        if (openAdminUploadBtn) openAdminUploadBtn.onclick = () => adminUploadModal.classList.add('show');
-        if (closeAdminUploadBtn) closeAdminUploadBtn.onclick = () => adminUploadModal.classList.remove('show');
-        if (chatListInterval) clearInterval(chatListInterval);
-        chatListInterval = setInterval(loadChats, 5000);
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(async () => {
             try {
@@ -233,6 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const initModalTriggers = () => {
         document.getElementById('open-social-modal').onclick = () => openModal('social-modal');
+        document.getElementById('open-contact-modal').onclick = () => openModal('contact-modal');
         document.getElementById('open-preset-modal').onclick = () => {
             resetPresetModal();
             openModal('preset-modal');
@@ -330,130 +327,120 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         const existingUrls = {};
+        let amPremium = '';
+        let am5mb = '';
+        let amXml = '';
+        let amXmlExtras = [];
+
+        const premiumEl = document.getElementById('am-premium-url');
+        if (premiumEl) amPremium = premiumEl.value;
+        const fivembEl = document.getElementById('am-5mb-url');
+        if (fivembEl) am5mb = fivembEl.value;
+        const xmlEl = document.getElementById('am-xml-url');
+        if (xmlEl) amXml = xmlEl.value;
+        
+        document.querySelectorAll('#am-xml-extras-list .am-xml-extra-row').forEach(row => {
+            const label = row.querySelector('.am-xml-extra-label')?.value || '';
+            const url = row.querySelector('.am-xml-extra-url')?.value || '';
+            if (label || url) amXmlExtras.push({ label, url });
+        });
+
         dlContainer.querySelectorAll('.preset-dl-link-row').forEach(row => {
             const key = row.dataset.sw;
-            const val = row.querySelector('input[type="text"]')?.value || '';
-            if (key) existingUrls[key] = val;
+            if (key !== 'AM') {
+                const val = row.querySelector('input[type="text"]')?.value || '';
+                if (key) existingUrls[key] = val;
+            }
         });
         dlContainer.innerHTML = '';
         selected.forEach(badge => {
             const sw = badge.dataset.sw;
             const icon = badge.dataset.icon || '';
             const label = badge.dataset.label || sw;
-            const inputId = `dl-input-${sw}`;
-            const fileInputId = `dl-file-${sw}`;
-            const row = document.createElement('div');
-            row.className = 'preset-dl-link-row';
-            row.dataset.sw = sw;
-            row.innerHTML = `
-                <div class="sw-link-badge">
-                    ${icon ? `<img src="${icon}" alt="${sw}">` : `<span class="material-symbols-rounded" style="font-size:14px;">apps</span>`}
-                    <span>${label}</span>
-                </div>
-                <div class="dl-input-wrap">
-                    <input type="text" id="${inputId}" placeholder="https://... or upload file" value="${existingUrls[sw] || ''}">
-                    <button type="button" class="dl-delete-btn hidden" title="Hapus file yang diupload" data-sw="${sw}">
-                        <span class="material-symbols-rounded">delete</span>
-                    </button>
-                    <button type="button" class="dl-upload-btn" title="Upload file" data-sw="${sw}">
-                        <span class="material-symbols-rounded">upload</span>
-                    </button>
-                    <input type="file" id="${fileInputId}" hidden>
-                </div>
-            `;
-            dlContainer.appendChild(row);
+            
+            if (sw === 'AM') {
+                const row = document.createElement('div');
+                row.className = 'preset-dl-link-row';
+                row.dataset.sw = sw;
+                row.style.flexDirection = 'column';
+                row.style.alignItems = 'stretch';
+                row.style.gap = '8px';
+                row.style.width = '100%';
+                row.style.border = '1px solid var(--md-sys-color-outline-variant)';
+                row.style.padding = '12px';
+                row.style.borderRadius = '8px';
+                row.style.marginTop = '8px';
+                
+                row.innerHTML = `
+                    <div class="sw-link-badge" style="margin-bottom: 8px;">
+                        <img src="${icon}" alt="${sw}">
+                        <span>Alight Motion Links</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="input-field" style="margin-bottom: 4px;">
+                            <label style="font-size: 11px; display: block; margin-bottom: 2px;">Premium Link</label>
+                            <input type="text" id="am-premium-url" placeholder="https://... (Premium Link)" value="${amPremium.replace(/"/g, '&quot;')}" style="width: 100%;">
+                        </div>
+                        <div class="input-field" style="margin-bottom: 4px;">
+                            <label style="font-size: 11px; display: block; margin-bottom: 2px;">5MB Link</label>
+                            <input type="text" id="am-5mb-url" placeholder="https://... (5MB Link)" value="${am5mb.replace(/"/g, '&quot;')}" style="width: 100%;">
+                        </div>
+                        <div class="input-field" style="margin-bottom: 4px;">
+                            <label style="font-size: 11px; display: block; margin-bottom: 2px;">XML Link</label>
+                            <input type="text" id="am-xml-url" placeholder="https://... (XML Link)" value="${amXml.replace(/"/g, '&quot;')}" style="width: 100%;">
+                        </div>
+                        
+                        <div class="xml-extras-container" style="margin-top: 8px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 8px;">
+                            <label style="font-size: 11px; display: block; margin-bottom: 4px; font-weight: bold;">XML Additional Links (Files)</label>
+                            <div id="am-xml-extras-list"></div>
+                            <button type="button" class="btn-text" id="add-am-xml-extra-btn" style="padding: 4px 8px; font-size: 11px; margin-top: 4px;">
+                                <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">add</span> Add Link
+                            </button>
+                        </div>
+                    </div>
+                `;
+                dlContainer.appendChild(row);
 
-            const uploadBtn = row.querySelector('.dl-upload-btn');
-            const deleteBtn = row.querySelector('.dl-delete-btn');
-            const fileInput = row.querySelector(`#${fileInputId}`);
-            const textInput = row.querySelector(`#${inputId}`);
+                const listContainer = row.querySelector('#am-xml-extras-list');
+                const addExtraRow = (labelVal = '', urlVal = '') => {
+                    const extraRow = document.createElement('div');
+                    extraRow.className = 'am-xml-extra-row';
+                    extraRow.style.display = 'flex';
+                    extraRow.style.gap = '8px';
+                    extraRow.style.marginBottom = '4px';
+                    extraRow.style.alignItems = 'center';
+                    extraRow.style.width = '100%';
+                    extraRow.innerHTML = `
+                        <input type="text" class="am-xml-extra-label" placeholder="Label (e.g. Audio)" style="width: 30%;" value="${labelVal.replace(/"/g, '&quot;')}">
+                        <input type="text" class="am-xml-extra-url" placeholder="https://..." style="width: 60%;" value="${urlVal.replace(/"/g, '&quot;')}">
+                        <button type="button" class="remove-extra-btn" style="background: none; border: none; color: var(--md-sys-color-error); cursor: pointer; font-size: 18px; padding: 0 4px;">&times;</button>
+                    `;
+                    extraRow.querySelector('.remove-extra-btn').onclick = () => extraRow.remove();
+                    listContainer.appendChild(extraRow);
+                };
 
-            // Show/hide delete btn based on URL value
-            const updateDeleteBtn = () => {
-                const isSupabase = textInput.value.includes('supabase.co/storage/v1/object/public');
-                deleteBtn.classList.toggle('hidden', !isSupabase);
-            };
-            updateDeleteBtn();
-            textInput.addEventListener('input', updateDeleteBtn);
-
-            // Delete uploaded file
-            deleteBtn.addEventListener('click', async () => {
-                const url = textInput.value.trim();
-                if (!url) return;
-                if (!confirm('Hapus file ini dari server?')) return;
-                try {
-                    await fetch(`${API_URL}/upload`, {
-                        method: 'DELETE',
-                        headers: jsonHeaders(),
-                        body: JSON.stringify({ url })
-                    });
-                    textInput.value = '';
-                    updateDeleteBtn();
-                } catch (e) { alert('Gagal hapus file'); }
-            });
-
-            uploadBtn.addEventListener('click', () => fileInput.click());
-
-            fileInput.addEventListener('change', async () => {
-                if (!fileInput.files.length) return;
-                await uploadDlFile(fileInput.files[0], textInput, sw);
-                fileInput.value = '';
-                updateDeleteBtn();
-            });
-
-            // Drag-drop on the input wrapper
-            const wrap = row.querySelector('.dl-input-wrap');
-            wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
-            wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
-            wrap.addEventListener('drop', async e => {
-                e.preventDefault();
-                wrap.classList.remove('drag-over');
-                if (e.dataTransfer.files.length) {
-                    await uploadDlFile(e.dataTransfer.files[0], textInput, sw);
-                    updateDeleteBtn();
+                if (amXmlExtras.length > 0) {
+                    amXmlExtras.forEach(extra => addExtraRow(extra.label, extra.url));
                 }
-            });
-        });
-    };
 
-    const uploadDlFile = async (file, textInput, sw) => {
-        if (!file) return;
-        if (file.size > 50 * 1024 * 1024) { alert('File too large (Max 50MB)'); return; }
-        const progressContainer = document.getElementById('preset-upload-progress');
-        const progressFill = document.getElementById('preset-progress-fill');
-        const statusText = document.getElementById('preset-upload-status');
-        if (progressContainer) progressContainer.classList.remove('hidden');
-        if (progressFill) progressFill.style.width = '0%';
-        if (statusText) statusText.textContent = `Uploading ${file.name} for ${sw}...`;
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            let progress = 0;
-            const progInterval = setInterval(() => {
-                progress += 5;
-                if (progress <= 90 && progressFill) progressFill.style.width = `${progress}%`;
-            }, 400);
-            const uploadRes = await fetch(`${API_URL}/upload`, {
-                method: 'POST',
-                headers: adminAuthHeaders(),
-                body: formData
-            });
-            clearInterval(progInterval);
-            if (!uploadRes.ok) throw new Error('Upload failed');
-            const uploadData = await uploadRes.json();
-            if (progressFill) progressFill.style.width = '100%';
-            if (statusText) statusText.textContent = `Uploaded: ${file.name}`;
-            if (textInput) textInput.value = uploadData.url;
-            // Auto-fill size if first upload
-            if (uploadData.size) {
-                const sizeInput = document.getElementById('modal-preset-size');
-                if (sizeInput && !sizeInput.value) sizeInput.value = uploadData.size;
+                row.querySelector('#add-am-xml-extra-btn').onclick = () => addExtraRow();
+            } else {
+                const inputId = `dl-input-${sw}`;
+                const row = document.createElement('div');
+                row.className = 'preset-dl-link-row';
+                row.dataset.sw = sw;
+                row.innerHTML = `
+                    <div class="sw-link-badge">
+                        ${icon ? `<img src="${icon}" alt="${sw}">` : `<span class="material-symbols-rounded" style="font-size:14px;">apps</span>`}
+                        <span>${label}</span>
+                    </div>
+                    <div class="dl-input-wrap">
+                        <input type="text" id="${inputId}" placeholder="https://..." value="${existingUrls[sw] || ''}" style="width: 100%;">
+                    </div>
+                `;
+                dlContainer.appendChild(row);
             }
-            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 2000);
-        } catch (err) {
-            if (statusText) statusText.textContent = 'Upload failed!';
-            alert('Upload failed: ' + err.message);
-        }
+        });
     };
 
 
@@ -648,21 +635,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (id === 'social-modal') {
                 document.getElementById('modal-social-name').value = editData.name;
                 document.getElementById('modal-social-url').value = editData.url;
-                const iconInput = document.getElementById('modal-social-icon');
-                iconInput.value = editData.icon || '';
-                checkSupabaseFile(editData.icon, 'social-icon');
+                
+                const iconVal = editData.icon || '';
+                if (iconVal.startsWith('bi-') || iconVal.startsWith('ms-')) {
+                    document.getElementById('btn-social-icon-stock').click();
+                    document.getElementById('modal-social-icon-select').value = iconVal;
+                    document.getElementById('modal-social-icon').value = '';
+                } else {
+                    document.getElementById('btn-social-icon-custom').click();
+                    document.getElementById('modal-social-icon').value = iconVal;
+                }
+                
+                checkSupabaseFile(iconVal, 'social-icon');
                 const preview = document.getElementById('social-icon-preview');
                 const area = document.getElementById('social-icon-drop');
                 const imgPreview = document.getElementById('social-icon-img-preview');
 
-                if (editData.icon && (editData.icon.startsWith('http') || editData.icon.includes('/'))) {
+                if (iconVal && (iconVal.startsWith('http') || iconVal.includes('/'))) {
                     if (area) area.classList.add('has-file');
-                    if (imgPreview) imgPreview.src = editData.icon;
-                    if (preview) preview.innerHTML = `<img src="${editData.icon}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;margin-top:10px;">`;
+                    if (imgPreview) imgPreview.src = iconVal;
+                    if (preview) preview.innerHTML = `<img src="${iconVal}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;margin-top:10px;">`;
                 } else {
                     if (area) area.classList.remove('has-file');
                     if (imgPreview) imgPreview.src = '';
                     if (preview) preview.innerHTML = '';
+                }
+            } else if (id === 'contact-modal') {
+                document.getElementById('modal-contact-name').value = editData.name || '';
+                document.getElementById('modal-contact-url').value = editData.url || '';
+                
+                const iconVal = editData.icon || '';
+                if (iconVal.startsWith('bi-') || iconVal.startsWith('ms-')) {
+                    document.getElementById('btn-contact-icon-stock').click();
+                    document.getElementById('modal-contact-icon-select').value = iconVal;
+                    document.getElementById('modal-contact-icon').value = '';
+                } else {
+                    document.getElementById('btn-contact-icon-custom').click();
+                    document.getElementById('modal-contact-icon').value = iconVal;
                 }
 
 
@@ -681,6 +690,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 syncDownloadLinkRows();
+
+                if (softwareArr.includes('AM')) {
+                    if (document.getElementById('am-premium-url')) document.getElementById('am-premium-url').value = editData.amPremiumUrl || '';
+                    if (document.getElementById('am-5mb-url')) document.getElementById('am-5mb-url').value = editData.am5MbUrl || '';
+                    if (document.getElementById('am-xml-url')) document.getElementById('am-xml-url').value = editData.amXmlUrl || '';
+                    
+                    const listContainer = document.getElementById('am-xml-extras-list');
+                    if (listContainer && Array.isArray(editData.amXmlExtras)) {
+                        listContainer.innerHTML = '';
+                        editData.amXmlExtras.forEach(extra => {
+                            const extraRow = document.createElement('div');
+                            extraRow.className = 'am-xml-extra-row';
+                            extraRow.style.display = 'flex';
+                            extraRow.style.gap = '8px';
+                            extraRow.style.marginBottom = '4px';
+                            extraRow.style.alignItems = 'center';
+                            extraRow.style.width = '100%';
+                            extraRow.innerHTML = `
+                                <input type="text" class="am-xml-extra-label" placeholder="Label (e.g. Audio)" style="width: 30%;" value="${(extra.label || '').replace(/"/g, '&quot;')}">
+                                <input type="text" class="am-xml-extra-url" placeholder="https://..." style="width: 60%;" value="${(extra.url || '').replace(/"/g, '&quot;')}">
+                                <button type="button" class="remove-extra-btn" style="background: none; border: none; color: var(--md-sys-color-error); cursor: pointer; font-size: 18px; padding: 0 4px;">&times;</button>
+                            `;
+                            extraRow.querySelector('.remove-extra-btn').onclick = () => extraRow.remove();
+                            listContainer.appendChild(extraRow);
+                        });
+                    }
+                }
 
                 if (Array.isArray(editData.urls)) {
                     editData.urls.forEach(entry => {
@@ -751,6 +787,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (sDrop) sDrop.classList.remove('has-file');
                 if (sImg) { sImg.src = ''; sImg.removeAttribute('src'); }
                 document.getElementById('modal-social-icon').value = '';
+                document.getElementById('btn-social-icon-stock').click();
+                document.getElementById('modal-social-icon-select').selectedIndex = 0;
+            } else if (id === 'contact-modal') {
+                document.getElementById('btn-contact-icon-stock').click();
+                document.getElementById('modal-contact-icon-select').selectedIndex = 0;
+                document.getElementById('modal-contact-icon').value = '';
             }
         }
     };
@@ -841,7 +883,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const initDragAndDrop = () => {
-        const areas = document.querySelectorAll('.modal-overlay:not(#chat-upload-modal) .drag-drop-area, .integrated-drop-zone');
+        const areas = document.querySelectorAll('.modal-overlay .drag-drop-area, .integrated-drop-zone');
         areas.forEach(area => {
             const type = area.id === 'resource-url-drop' ? 'resource' :
                          (area.id === 'resource-icon-drop' ? 'resource-icon' :
@@ -1001,57 +1043,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         preview.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
     };
 
-    const listView = document.getElementById('admin-chat-list-view');
-    const detailView = document.getElementById('admin-chat-detail-view');
-    const backBtn = document.getElementById('back-to-chat-list');
-    const chatTitle = document.getElementById('current-chat-name');
-    const adminChatInput = document.getElementById('admin-chat-input');
-    const adminSendBtn = document.getElementById('admin-send-btn');
-
-    let activeSupportChatId = null;
-    let adminMessagePollInterval = null;
-
-    const stopAdminMessagePolling = () => {
-        if (adminMessagePollInterval) {
-            clearInterval(adminMessagePollInterval);
-            adminMessagePollInterval = null;
-        }
-    };
-
-    const loadAdminMessages = async (id) => {
-        const container = document.getElementById('admin-message-container');
-        if (!container || !activeSupportChatId) return;
-        try {
-            const res = await fetch(`${API_URL}/messages/${id}`);
-            if (!res.ok) return;
-            const messages = await res.json();
-            const currentCount = container.querySelectorAll('.message-group').length;
-            if (messages.length === currentCount) return;
-            if (messages.length === 0) {
-                container.innerHTML = `<div class="empty-messages"><p>No messages in this conversation yet.</p></div>`;
-            } else {
-                container.innerHTML = messages.map(m => {
-                    const displayType = m.type === 'sent' ? 'received' : 'sent';
-                    return `<div class="message-group ${displayType}"><div class="message">${renderMessageContent(m.text)}</div><div class="timestamp">${m.time}</div></div>`;
-                }).join('');
-            }
-            container.scrollTop = container.scrollHeight;
-        } catch (err) {}
-    };
-
-    const renderMessageContent = (text) => {
-        const fileMatch = text.match(/📁 Shared a file: \[(.*?)\]\((.*?)\)/);
-        if (!fileMatch) return text;
-        const [_, fileName, fileUrl] = fileMatch;
-        const ext = fileName.split('.').pop().toLowerCase();
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-            return `<a href="${fileUrl}" target="_blank" class="message-media"><img src="${fileUrl}" class="message-img" alt="${fileName}"></a>`;
-        }
-        if (['mp4', 'webm', 'ogg'].includes(ext)) {
-            return `<div class="message-media"><video src="${fileUrl}" class="message-video" controls></video></div>`;
-        }
-        return `<a href="${fileUrl}" target="_blank" class="message-file"><div class="file-icon-wrapper"><span class="material-symbols-rounded">description</span></div><div class="file-info"><span class="file-name">${fileName}</span><span class="file-ext">${ext}</span></div></a>`;
-    };
+    // End of chat UI functions
 
     const loadSocials = async () => {
         const res = await fetch(`${API_URL}/socials`);
@@ -1060,7 +1052,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         body.innerHTML = socials.map((s) => {
             const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
                 ? `<img src="${thumbUrl(s.icon, 64)}" class="admin-table-icon" alt="${s.name}" loading="lazy">`
-                : `<span class="material-symbols-rounded">${s.icon || 'public'}</span>`;
+                : (s.icon && s.icon.startsWith('bi-'))
+                    ? `<span class="brand-icon ${s.icon}"></span>`
+                    : (s.icon && s.icon.startsWith('ms-'))
+                        ? `<span class="material-symbols-rounded">${s.icon.substring(3)}</span>`
+                        : `<span class="material-symbols-rounded">${s.icon || 'public'}</span>`;
             
             return `
             <tr data-id="${s._id}">
@@ -1087,7 +1083,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('save-social-btn').onclick = async () => {
         const name = document.getElementById('modal-social-name').value;
         const url = document.getElementById('modal-social-url').value;
-        const icon = document.getElementById('modal-social-icon').value || 'public';
+        
+        let icon = '';
+        const isStockActive = document.getElementById('btn-social-icon-stock').classList.contains('active');
+        if (isStockActive) {
+            icon = document.getElementById('modal-social-icon-select').value || 'bi-website';
+        } else {
+            icon = document.getElementById('modal-social-icon').value || 'public';
+        }
+
         if (name && url) {
             const modal = document.getElementById('social-modal');
             const data = { name, url, icon };
@@ -1099,6 +1103,68 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             loadSocials();
             closeModal('social-modal');
+        }
+    };
+
+    const loadContacts = async () => {
+        const res = await fetch(`${API_URL}/contacts`);
+        const contacts = await res.json();
+        const body = document.getElementById('contact-table-body');
+        if (!body) return;
+        body.innerHTML = contacts.map((c) => {
+            const iconHtml = (c.icon && (c.icon.startsWith('http') || c.icon.includes('/')))
+                ? `<img src="${thumbUrl(c.icon, 64)}" class="admin-table-icon" alt="${c.name}" loading="lazy">`
+                : (c.icon && c.icon.startsWith('bi-'))
+                    ? `<span class="brand-icon ${c.icon}"></span>`
+                    : (c.icon && c.icon.startsWith('ms-'))
+                        ? `<span class="material-symbols-rounded">${c.icon.substring(3)}</span>`
+                        : `<span class="material-symbols-rounded">${c.icon || 'public'}</span>`;
+            
+            return `
+            <tr data-id="${c._id}">
+                <td>${iconHtml}</td>
+                <td>${c.name}</td>
+                <td><a href="${ensureProtocol(c.url)}" target="_blank" class="table-link">${c.url}</a></td>
+                <td class="table-actions">
+                    <span class="material-symbols-rounded action-icon edit-contact">edit</span>
+                    <span class="material-symbols-rounded action-icon delete delete-contact">delete</span>
+                </td>
+            </tr>
+        `}).join('');
+        body.querySelectorAll('.edit-contact').forEach(btn => { btn.onclick = () => editContact(btn.closest('tr').dataset.id); });
+        body.querySelectorAll('.delete-contact').forEach(btn => { btn.onclick = () => deleteItem('contacts', btn.closest('tr').dataset.id, loadContacts); });
+    };
+
+    window.editContact = async (id) => {
+        const res = await fetch(`${API_URL}/contacts`);
+        const contacts = await res.json();
+        const item = contacts.find(c => c._id === id);
+        openModal('contact-modal', { ...item, index: id });
+    };
+
+    document.getElementById('save-contact-btn').onclick = async () => {
+        const name = document.getElementById('modal-contact-name').value;
+        const url = document.getElementById('modal-contact-url').value;
+        
+        let icon = '';
+        const isStockActive = document.getElementById('btn-contact-icon-stock').classList.contains('active');
+        if (isStockActive) {
+            icon = document.getElementById('modal-contact-icon-select').value || 'bi-website';
+        } else {
+            icon = document.getElementById('modal-contact-icon').value || 'public';
+        }
+
+        if (name && url) {
+            const modal = document.getElementById('contact-modal');
+            const data = { name, url, icon };
+            const id = modal.dataset.editIndex;
+            if (id) {
+                await fetch(`${API_URL}/contacts/${id}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) });
+            } else {
+                await fetch(`${API_URL}/contacts`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
+            }
+            loadContacts();
+            closeModal('contact-modal');
         }
     };
 
@@ -1148,6 +1214,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!name) { alert('Please provide a preset name'); return; }
         if (softwareArr.length === 0) { alert('Please select at least one software'); return; }
 
+        let amPremiumUrl = '';
+        let am5MbUrl = '';
+        let amXmlUrl = '';
+        const amXmlExtras = [];
+
+        if (softwareArr.includes('AM')) {
+            amPremiumUrl = document.getElementById('am-premium-url')?.value?.trim() || '';
+            am5MbUrl = document.getElementById('am-5mb-url')?.value?.trim() || '';
+            amXmlUrl = document.getElementById('am-xml-url')?.value?.trim() || '';
+            document.querySelectorAll('#am-xml-extras-list .am-xml-extra-row').forEach(row => {
+                const label = row.querySelector('.am-xml-extra-label')?.value?.trim() || '';
+                const url = row.querySelector('.am-xml-extra-url')?.value?.trim() || '';
+                if (label && url) {
+                    amXmlExtras.push({ label, url });
+                }
+            });
+        }
+
         btn.disabled = true;
         const modal = document.getElementById('preset-modal');
         const data = { 
@@ -1158,7 +1242,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             version: document.getElementById('modal-preset-version')?.value || 'v1.0',
             media: document.getElementById('modal-preset-video')?.value || '',
             plugin: getSelectedPlugins(),
-            size: document.getElementById('modal-preset-size')?.value || 'N/A'
+            size: document.getElementById('modal-preset-size')?.value || 'N/A',
+            amPremiumUrl,
+            am5MbUrl,
+            amXmlUrl,
+            amXmlExtras
         };
         const editId = modal.dataset.editIndex;
         try {
@@ -1307,28 +1395,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 row.innerHTML = `
                     <span class="res-ver-badge-inline">${ver}</span>
                     <div class="dl-input-wrap">
-                        <input type="text" placeholder="https://..." value="${existing[key] || ''}">
-                        <button type="button" class="dl-upload-btn" title="Upload">
-                            <span class="material-symbols-rounded">upload</span>
-                        </button>
-                        <input type="file" hidden>
+                        <input type="text" placeholder="https://..." value="${existing[key] || ''}" style="width: 100%;">
                     </div>`;
-                const uploadBtn = row.querySelector('.dl-upload-btn');
-                const fileHidden = row.querySelector('input[type="file"]');
-                const textIn = row.querySelector('input[type="text"]');
-                uploadBtn.addEventListener('click', () => fileHidden.click());
-                fileHidden.addEventListener('change', async () => {
-                    if (!fileHidden.files.length) return;
-                    await uploadDlFile(fileHidden.files[0], textIn, `${os}-${ver}`);
-                    fileHidden.value = '';
-                });
-                const wrap = row.querySelector('.dl-input-wrap');
-                wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
-                wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
-                wrap.addEventListener('drop', async e => {
-                    e.preventDefault(); wrap.classList.remove('drag-over');
-                    if (e.dataTransfer.files.length) await uploadDlFile(e.dataTransfer.files[0], textIn, `${os}-${ver}`);
-                });
                 osGroup.appendChild(row);
             });
             container.appendChild(osGroup);
@@ -1522,176 +1590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const loadChats = async () => {
-        const res = await fetch(`${API_URL}/chats`, { headers: adminAuthHeaders() });
-        if (check401(res)) return;
-        const chats = await res.json();
-
-        const isFirstLoad = knownChats.size === 0;
-        const detailVisible = detailView && !detailView.classList.contains('hidden');
-        chats.forEach(c => {
-            const prev = knownChats.get(c._id);
-            if (!prev) {
-                knownChats.set(c._id, c.lastMsg);
-                if (!isFirstLoad) {
-                    sendNotification(`New chat from ${c.name}`, c.lastMsg || 'Started a new conversation');
-                }
-            } else if (prev !== c.lastMsg) {
-                knownChats.set(c._id, c.lastMsg);
-                const isViewingThisChat = detailVisible && activeSupportChatId === c._id;
-                if (!isFirstLoad && !isViewingThisChat) {
-                    sendNotification(`Message from ${c.name}`, c.lastMsg || 'Sent a message');
-                }
-            }
-        });
-
-        const list = document.getElementById('active-chats');
-        if (!list) return;
-        if (chats.length === 0) {
-            list.innerHTML = `<div class="empty-chats"><span class="material-symbols-rounded">chat_bubble_outline</span><p>No active conversations</p></div>`;
-            return;
-        }
-        const newListHTML = chats.map(c => `<div class="chat-list-item ${activeSupportChatId === c._id ? 'active' : ''}" data-id="${c._id}" data-name="${c.name}"><div class="avatar">${c.name.charAt(0)}</div><div class="chat-meta"><div class="flex align-center gap-8"><span class="chat-name">${c.name}</span></div><span class="chat-preview">${c.lastMsg}</span></div><div class="chat-time">${c.time}</div></div>`).join('');
-        if (list.innerHTML !== newListHTML) {
-            list.innerHTML = newListHTML;
-            list.querySelectorAll('.chat-list-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const name = item.dataset.name;
-                    const id = item.dataset.id;
-                    openChatDetail(name, id);
-                });
-            });
-        }
-    };
-
-    const openChatDetail = async (name, id) => {
-        activeSupportChatId = id;
-        if (chatTitle) chatTitle.textContent = name;
-        if (listView) listView.classList.add('hidden');
-        if (detailView) detailView.classList.remove('hidden');
-        const resChat = await fetch(`${API_URL}/chats/${id}`, { headers: adminAuthHeaders() });
-        if (check401(resChat)) return;
-        const chatData = await resChat.json();
-        const headerActions = document.querySelector('.chat-header-actions');
-        if (headerActions) {
-            headerActions.innerHTML = `<button class="icon-btn block-toggle-btn ${chatData.blocked ? 'blocked' : ''}"><span class="material-symbols-rounded">${chatData.blocked ? 'block' : 'verified_user'}</span></button><button class="icon-btn delete delete-chat-btn"><span class="material-symbols-rounded">delete</span></button>`;
-            headerActions.querySelector('.block-toggle-btn').onclick = () => window.toggleBlock(id);
-            headerActions.querySelector('.delete-chat-btn').onclick = () => window.deleteChat(id);
-        }
-        await loadAdminMessages(id);
-        stopAdminMessagePolling();
-        adminMessagePollInterval = setInterval(() => loadAdminMessages(id), 3000);
-    };
-
-    const sendAdminReply = async (customText = null) => {
-        const chatId = activeSupportChatId;
-        if (!chatId) return;
-        const text = (typeof customText === 'string') ? customText : (adminChatInput ? adminChatInput.value.trim() : '');
-        if (!text) return;
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        try {
-            const res = await fetch(`${API_URL}/messages`, {
-                method: 'POST',
-                headers: jsonHeaders(),
-                body: JSON.stringify({ chatId: chatId, text, type: 'received', time })
-            });
-            if (res.status === 403) { alert('Chat is blocked or unavailable.'); return; }
-            if (!res.ok) { return; }
-            if (typeof customText !== 'string' && adminChatInput) {
-                adminChatInput.value = '';
-                adminChatInput.focus();
-            }
-            await loadAdminMessages(chatId);
-            loadChats();
-        } catch (err) {}
-    };
-
-    const adminUploadModal = document.getElementById('chat-upload-modal');
-    const adminUploadDrop = document.getElementById('admin-chat-upload-drop');
-    const adminFileInput = document.getElementById('admin-chat-file-input');
-    const adminProgressContainer = document.getElementById('admin-upload-progress-container');
-    const adminProgressFill = document.getElementById('admin-upload-progress-fill');
-    const adminStatusText = document.getElementById('admin-upload-status-text');
-
-    const handleAdminFileUpload = async (file) => {
-        if (!file) return;
-        if (file.size > 50 * 1024 * 1024) { alert('File too large. Max size is 50MB.'); return; }
-        adminProgressContainer.classList.remove('hidden');
-        adminProgressFill.style.width = '0%';
-        adminStatusText.textContent = `Uploading ${file.name}...`;
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            let progress = 0;
-            const progInterval = setInterval(() => {
-                progress += 5;
-                if (progress <= 90) adminProgressFill.style.width = `${progress}%`;
-            }, 1500);
-            const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
-            clearInterval(progInterval);
-            if (res.ok) {
-                const data = await res.json();
-                adminProgressFill.style.width = '100%';
-                adminStatusText.textContent = 'Upload successful!';
-                const msgText = `📁 Shared a file: [${data.name}](${data.url})`;
-                await sendAdminReply(msgText);
-                setTimeout(() => {
-                    adminUploadModal.classList.remove('show');
-                    adminProgressContainer.classList.add('hidden');
-                }, 1000);
-            } else {
-                adminStatusText.textContent = 'Upload failed.';
-            }
-        } catch (err) {
-            adminStatusText.textContent = 'Upload error.';
-        }
-    };
-
-    if (adminUploadDrop) {
-        adminUploadDrop.onclick = () => adminFileInput.click();
-        adminUploadDrop.ondragover = (e) => { e.preventDefault(); adminUploadDrop.classList.add('active'); };
-        adminUploadDrop.ondragleave = () => adminUploadDrop.classList.remove('active');
-        adminUploadDrop.ondrop = (e) => {
-            e.preventDefault();
-            adminUploadDrop.classList.remove('active');
-            if (e.dataTransfer.files.length) handleAdminFileUpload(e.dataTransfer.files[0]);
-        };
-        adminFileInput.onchange = () => {
-            if (adminFileInput.files.length) handleAdminFileUpload(adminFileInput.files[0]);
-        };
-    }
-
-    if (adminSendBtn) adminSendBtn.addEventListener('click', () => sendAdminReply());
-    if (adminChatInput) adminChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendAdminReply(); } });
-
-    window.toggleBlock = async (id) => {
-        const patchRes = await fetch(`${API_URL}/chats/${id}/block`, { method: 'PATCH', headers: adminAuthHeaders() });
-        if (check401(patchRes)) return;
-        const name = chatTitle.textContent;
-        openChatDetail(name, id);
-        loadChats();
-    };
-
-    window.deleteChat = async (id) => {
-        if (confirm('Permanently delete this chat and all messages?')) {
-            const delRes = await fetch(`${API_URL}/chats/${id}`, { method: 'DELETE', headers: adminAuthHeaders() });
-            if (check401(delRes)) return;
-            knownChats.delete(id);
-            activeSupportChatId = null;
-            if (detailView) detailView.classList.add('hidden');
-            if (listView) listView.classList.remove('hidden');
-            loadChats();
-        }
-    };
-
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            activeSupportChatId = null;
-            stopAdminMessagePolling();
-            if (detailView) detailView.classList.add('hidden');
-            if (listView) listView.classList.remove('hidden');
-        });
-    }
+    // Chat functions removed
 
     if (adminToken) {
         const res = await fetch(`${API_URL}/admin/session`, { headers: adminAuthHeaders() });

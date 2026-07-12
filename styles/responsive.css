@@ -205,3 +205,27 @@
 ::-webkit-scrollbar-thumb:hover {
     background: var(--md-sys-color-outline);
 }
+
+@media (max-width: 480px) {
+    .nav-bar {
+        padding: 0 4px;
+        gap: 2px;
+        height: 72px;
+    }
+    .nav-item {
+        padding: 8px 0 10px 0;
+        gap: 2px;
+    }
+    .nav-icon-wrapper {
+        width: 48px;
+        height: 28px;
+        border-radius: 14px;
+    }
+    .nav-label {
+        font-size: 10px;
+    }
+    .main-content {
+        padding-bottom: 72px;
+    }
+}
+

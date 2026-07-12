@@ -19,13 +19,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const webpush = require('web-push');
-
-webpush.setVapidDetails(
-    'mailto:admin@cutefish.my.id',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
+const path = require('path');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
 
@@ -34,6 +28,22 @@ const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Set security headers for WebGPU / SharedArrayBuffer
+app.use((req, res, next) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    next();
+});
+
+// Proxy/redirect /realesrgan requests to target
+app.get('/realesrgan/*', (req, res) => {
+    res.redirect(`https://upscale.chino.icu${req.originalUrl}`);
+});
+
+// Serve static frontend files from root directory
+app.use(express.static(path.join(__dirname, '..')));
+
 
 /** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
@@ -82,6 +92,13 @@ const SocialSchema = new mongoose.Schema({
 });
 const Social = mongoose.models.Social || mongoose.model('Social', SocialSchema);
 
+const ContactSchema = new mongoose.Schema({
+    name: String,
+    url: String,
+    icon: String
+});
+const Contact = mongoose.models.Contact || mongoose.model('Contact', ContactSchema);
+
 const PresetSchema = new mongoose.Schema({
     name: String,
     software: [String],
@@ -92,7 +109,11 @@ const PresetSchema = new mongoose.Schema({
     size: String,
     url: String,
     urls: [{ sw: String, url: String }],
-    likes: { type: Number, default: 0 }
+    likes: { type: Number, default: 0 },
+    amPremiumUrl: String,
+    am5MbUrl: String,
+    amXmlUrl: String,
+    amXmlExtras: [{ label: String, url: String }]
 });
 const Preset = mongoose.models.Preset || mongoose.model('Preset', PresetSchema);
 
@@ -125,54 +146,12 @@ const ResourceSchema = new mongoose.Schema({
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
 
 
-const MessageSchema = new mongoose.Schema({
-    chatId: String,
-    text: String,
-    type: String,
-    time: String,
-    timestamp: { type: Date, default: Date.now }
-});
-const Message = mongoose.models.Message || mongoose.model('Message', MessageSchema);
-
-const ChatSchema = new mongoose.Schema({
-    name: String,
-    ip: String,
-    lastMsg: String,
-    time: String,
-    blocked: { type: Boolean, default: false },
-    lastUpdate: { type: Date, default: Date.now }
-});
-const Chat = mongoose.models.Chat || mongoose.model('Chat', ChatSchema);
-
 const LikeSchema = new mongoose.Schema({
     presetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Preset' },
     ip: String,
     timestamp: { type: Date, default: Date.now }
 });
 const Like = mongoose.models.Like || mongoose.model('Like', LikeSchema);
-
-const PushSubscriptionSchema = new mongoose.Schema({
-    endpoint: { type: String, unique: true },
-    keys: { p256dh: String, auth: String },
-    createdAt: { type: Date, default: Date.now }
-});
-const PushSubscription = mongoose.models.PushSubscription || mongoose.model('PushSubscription', PushSubscriptionSchema);
-
-async function sendPushToAdmins(title, body, tag) {
-    const subs = await PushSubscription.find({});
-    const payload = JSON.stringify({ title, body, tag, url: '/admin.html#chat' });
-    await Promise.allSettled(
-        subs.map(async (sub) => {
-            try {
-                await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
-            } catch (err) {
-                if (err.statusCode === 404 || err.statusCode === 410) {
-                    await PushSubscription.deleteOne({ endpoint: sub.endpoint });
-                }
-            }
-        })
-    );
-}
 
 function normalizeClientIp(raw) {
     if (raw == null) return '';
@@ -567,9 +546,16 @@ app.get('/api/socials', async (req, res) => res.json(await Social.find()));
 app.post('/api/socials', requireAdmin, async (req, res) => res.json(await new Social(req.body).save()));
 app.put('/api/socials/:id', requireAdmin, async (req, res) => res.json(await Social.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
-    const s = await Social.findById(req.params.id);
-    if (s && s.icon) await deleteFileFromSupabase(s.icon);
     await Social.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+});
+
+// Contacts CRUD
+app.get('/api/contacts', async (req, res) => res.json(await Contact.find()));
+app.post('/api/contacts', requireAdmin, async (req, res) => res.json(await new Contact(req.body).save()));
+app.put('/api/contacts/:id', requireAdmin, async (req, res) => res.json(await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true })));
+app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
+    await Contact.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });
 
@@ -577,7 +563,7 @@ app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
 app.get('/api/presets', async (req, res) => {
     try {
         const ip = getClientIp(req);
-        const presets = await Preset.find().lean();
+        const presets = await Preset.find().sort({ _id: -1 }).lean();
         
         // Fetch all likes to calculate counts and user status dynamically
         const allLikes = await Like.find().lean();
@@ -609,15 +595,6 @@ app.get('/api/presets', async (req, res) => {
 app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Preset(req.body).save()));
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
-    const p = await Preset.findById(req.params.id);
-    if (p) {
-        // Delete legacy single url
-        if (p.url) await deleteFileFromSupabase(p.url);
-        // Delete all urls in the urls array
-        if (Array.isArray(p.urls)) {
-            await Promise.all(p.urls.map(entry => deleteFileFromSupabase(entry.url)));
-        }
-    }
     await Preset.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });
@@ -667,8 +644,6 @@ app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
         let r = await Resource.findById(req.params.id).catch(() => null);
         if (!r) r = await Resource.findOne({ _id: req.params.id });
         if (r) {
-            if (r.url) await deleteFileFromSupabase(r.url);
-            if (r.icon) await deleteFileFromSupabase(r.icon);
             await r.deleteOne();
         }
         res.json({ success: true });
@@ -677,187 +652,14 @@ app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/chats', requireAdmin, async (req, res) => {
-    const chats = await Chat.find().sort({ lastUpdate: -1 }).lean();
-    res.json(chats);
-});
-
-app.get('/api/chats/check', async (req, res) => {
-    const variants = ipLookupVariants(req.query.ip);
-    res.json(await Chat.findOne({ ip: { $in: variants } }));
-});
-
-app.post('/api/chats', async (req, res) => {
-    const ip = normalizeClientIp(req.body.ip || '');
-    const variants = ipLookupVariants(req.body.ip || '');
-    let chat = await Chat.findOne({ ip: { $in: variants } });
-    if (chat) {
-        if (chat.blocked) return res.status(403).json({ error: 'Blocked' });
-        if (req.body.name && !req.body.name.includes('Returning User')) chat.name = req.body.name;
-        chat.lastUpdate = Date.now();
-        await chat.save();
-        res.json(chat);
-    } else {
-        chat = await new Chat({ ...req.body, ip, lastUpdate: Date.now() }).save();
-        res.json(chat);
-    }
-});
-
-app.delete('/api/chats/:id', requireAdmin, async (req, res) => {
-    const chatId = req.params.id;
-    const messages = await Message.find({ chatId });
-    const bucket = process.env.SUPABASE_BUCKET;
-    const filesToDelete = [];
-    messages.forEach(msg => {
-        const match = msg.text.match(/\[.*?\]\((https:\/\/.*?supabase\.co\/storage\/v1\/object\/public\/.*?)\)/);
-        if (match) {
-            const fullUrl = match[1];
-            const searchStr = `/public/${bucket}/`;
-            const index = fullUrl.indexOf(searchStr);
-            if (index !== -1) filesToDelete.push(fullUrl.substring(index + searchStr.length));
-        }
-    });
-    if (filesToDelete.length > 0) {
-        await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/${bucket}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prefixes: filesToDelete })
-        });
-    }
-    await Message.deleteMany({ chatId });
-    await Chat.findByIdAndDelete(chatId);
-    res.json({ success: true });
-});
-
-app.get('/api/chats/:id', requireAdmin, async (req, res) => {
-    const chat = await Chat.findById(req.params.id);
-    if (!chat) return res.status(404).json({ error: 'Chat deleted' });
-    res.json(chat);
-});
-
-
-app.patch('/api/chats/:id/block', requireAdmin, async (req, res) => {
-    const chat = await Chat.findById(req.params.id);
-    if (chat) {
-        chat.blocked = !chat.blocked;
-        await chat.save();
-        res.json(chat);
-    } else {
-        res.status(404).json({ error: 'Chat not found' });
-    }
-});
-
-
-
-app.get('/api/messages/:chatId', async (req, res) => {
-    const chat = await Chat.findById(req.params.chatId);
-    if (!chat) return res.status(404).json({ error: 'Chat deleted' });
-    res.json(await Message.find({ chatId: req.params.chatId }).sort({ timestamp: 1 }));
-});
-
-app.post('/api/messages', async (req, res) => {
-    const chat = await Chat.findById(req.body.chatId);
-    if (!chat || chat.blocked) return res.status(403).json({ error: 'Blocked or unavailable' });
-    const msg = await new Message({ ...req.body, timestamp: Date.now() }).save();
-    await Chat.findByIdAndUpdate(req.body.chatId, { lastMsg: req.body.text, time: req.body.time, lastUpdate: Date.now() });
-    if (req.body.type !== 'received') {
-        sendPushToAdmins(
-            `Message from ${chat.name}`,
-            req.body.text && req.body.text.startsWith('📁') ? 'Shared a file' : req.body.text,
-            chat._id.toString()
-        ).catch(() => {});
-    }
-    res.json(msg);
-});
-
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file' });
-    try {
-        const file = req.file;
-        const fileName = `${Date.now()}-${file.originalname}`;
-        const filePath = `uploads/${fileName}`;
-        const uploadUrl = `${process.env.SUPABASE_URL}/storage/v1/object/${process.env.SUPABASE_BUCKET}/${filePath}`;
-        const response = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}`, 'Content-Type': file.mimetype, 'x-upsert': 'true' },
-            body: file.buffer
-        });
-        if (!response.ok) return res.status(500).json({ error: 'Supabase error' });
-        const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${filePath}`;
-        res.json({ url: publicUrl, name: file.originalname, size: (file.size / (1024 * 1024)).toFixed(2) + ' MB' });
-    } catch (err) {
-        res.status(500).json({ error: 'Upload failed' });
-    }
-});
-
-async function deleteFileFromSupabase(url) {
-    if (!url || !url.includes('supabase.co/storage/v1/object/public')) return;
-    try {
-        const bucket = process.env.SUPABASE_BUCKET;
-        const searchStr = `/public/${bucket}/`;
-        const index = url.indexOf(searchStr);
-        if (index === -1) return;
-        const filePath = url.substring(index + searchStr.length);
-        await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/${bucket}/${filePath}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}` }
-        });
-    } catch (e) { /* ignore */ }
-}
-
-app.get('/api/push/vapid-key', (req, res) => {
-    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
-});
-
-app.post('/api/push/subscribe', requireAdmin, async (req, res) => {
-    const { endpoint, keys } = req.body;
-    if (!endpoint || !keys) return res.status(400).json({ error: 'Invalid subscription' });
-    await PushSubscription.findOneAndUpdate(
-        { endpoint },
-        { endpoint, keys },
-        { upsert: true, new: true }
-    );
-    res.json({ success: true });
-});
-
-app.delete('/api/push/subscribe', requireAdmin, async (req, res) => {
-    const { endpoint } = req.body;
-    if (endpoint) await PushSubscription.deleteOne({ endpoint });
-    res.json({ success: true });
-});
-
-app.delete('/api/upload', requireAdmin, async (req, res) => {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ error: 'Missing URL' });
-    await deleteFileFromSupabase(url);
-    res.json({ success: true });
-});
-
-// Image proxy to bypass Supabase CORP headers
-app.get('/api/image-proxy', async (req, res) => {
-    const url = req.query.url;
-    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Missing url' });
-    // Only allow proxying from our own Supabase storage
-    if (!url.includes('supabase.co/storage/v1/object/public')) {
-        return res.status(403).json({ error: 'URL not allowed' });
-    }
-    try {
-        const response = await fetch(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(10000)
-        });
-        if (!response.ok) return res.status(response.status).end();
-        const contentType = response.headers.get('content-type') || 'image/png';
-        const buffer = Buffer.from(await response.arrayBuffer());
-        res.set({
-            'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=86400',
-            'Cross-Origin-Resource-Policy': 'same-origin'
-        });
-        res.send(buffer);
-    } catch (e) {
-        res.status(502).json({ error: 'Proxy fetch failed' });
-    }
-});
+// End of API endpoints
 
 module.exports = app;
+
+if (require.main === module) {
+    const port = process.env.PORT || 5000;
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`🚀 Server running locally at http://localhost:${port}`);
+    });
+}
+

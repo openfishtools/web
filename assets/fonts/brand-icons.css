@@ -1,0 +1,42 @@
+@font-face {
+  font-family: 'brand-icons';
+  src: url('brand-icons.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+.brand-icon {
+  font-family: 'brand-icons' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  vertical-align: -0.125em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+}
+
+.bi-tiktok::before { content: "\f6cc"; }
+.bi-instagram::before { content: "\f437"; }
+.bi-youtube::before { content: "\f62b"; }
+.bi-facebook::before { content: "\f344"; }
+.bi-whatsapp::before { content: "\f618"; }
+.bi-telegram::before { content: "\f5b3"; }
+.bi-discord::before { content: "\f300"; }
+.bi-github::before { content: "\f3ed"; }
+.bi-twitter::before { content: "\f8db"; }
+.bi-playstore::before { content: "\f7f7"; }
+.bi-appstore::before { content: "\f65b"; }
+.bi-website::before { content: "\f3ee"; }
+.bi-spotify::before { content: "\f666"; }
+.bi-twitch::before { content: "\f5ee"; }
+.bi-steam::before { content: "\f6c1"; }
+.bi-snapchat::before { content: "\f665"; }
+.bi-pinterest::before { content: "\f663"; }
+.bi-linkedin::before { content: "\f472"; }
+.bi-reddit::before { content: "\f650"; }
+.bi-threads::before { content: "\f8d9"; }
