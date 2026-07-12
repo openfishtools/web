@@ -10,9 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
-    // Local storage icon cache to prevent overloading Supabase Storage
-    const getCachedIcon = (url) => {
+    const formatIconUrl = (url) => {
         if (!url || typeof url !== 'string') return url;
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('assets/') || url.startsWith('/')) {
+            return url;
+        }
+        if (url.includes('.')) {
+            return `https://${url}`;
+        }
+        return url;
+    };
+
+    // Local storage icon cache to prevent overloading Supabase Storage
+    const getCachedIcon = (rawUrl) => {
+        if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+        const url = formatIconUrl(rawUrl);
         if (url.startsWith('data:') || url.startsWith('assets/') || url.startsWith('blob:')) return url;
         
         const cacheKey = `icon_cache_${url}`;

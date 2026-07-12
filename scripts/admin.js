@@ -37,8 +37,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const jsonHeaders = () => adminAuthHeaders({ 'Content-Type': 'application/json' });
 
-    const thumbUrl = (url, width = 64) => {
+    const formatIconUrl = (url) => {
+        if (!url || typeof url !== 'string') return url;
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('assets/') || url.startsWith('/')) {
+            return url;
+        }
+        if (url.includes('.')) {
+            return `https://${url}`;
+        }
         return url;
+    };
+
+    const thumbUrl = (url, width = 64) => {
+        return formatIconUrl(url);
     };
 
     let isUnauthorizedAlertShowing = false;
