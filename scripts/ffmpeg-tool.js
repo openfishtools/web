@@ -20,59 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_FILE_MB_HARD = 1500;  // Hard-block if file > 1.5 GB
     const MAX_DIMENSION = 3840;     // Auto-downscale if width or height > 4K (3840)
 
-    const presetDescriptions = {
-        'slow': `
-            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
-                </ul>
-                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                    <span>Prioritizes maximum quality and smallest file size at the cost of significantly longer encoding time.</span>
-                </div>
-            </div>
-        `,
-        'medium': `
-            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Medium</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
-                </ul>
-                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                    <span>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</span>
-                </div>
-            </div>
-        `,
-        'fast': `
-            <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                    <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.265 / HEVC (libx265)</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow (Maximum Compression)</li>
-                    <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
-                </ul>
-                <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                    <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                    <span>Utilizes HEVC with a slow encoding preset to achieve incredibly small file sizes while maintaining good quality. Note: May not be supported on older devices.</span>
-                </div>
-            </div>
-        `
-    };
-
     // Preset selection logic
+    if (presetDesc) {
+        presetDesc.innerHTML = window.getTranslation('ffmpeg_preset_' + selectedPreset + '_desc');
+    }
+
     presetChips.forEach(chip => {
         chip.addEventListener('click', () => {
             if (isCompressing) return;
             presetChips.forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             selectedPreset = chip.getAttribute('data-preset');
-            presetDesc.innerHTML = presetDescriptions[selectedPreset];
+            presetDesc.innerHTML = window.getTranslation('ffmpeg_preset_' + selectedPreset + '_desc');
         });
     });
 
@@ -129,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFileSelection(file) {
         if (!file.type.startsWith('video/')) {
-            showStatusError("Please select a valid video file.");
+            showStatusError(window.getTranslation('status_error') + "Video File");
             btnStart.classList.add('hidden');
             return;
         }
@@ -145,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         selectedFile = file;
-        const infoLine = `Selected: ${file.name} (${fileMB.toFixed(2)} MB)`;
+        const infoLine = window.getTranslation('status_selected') + `${file.name} (${fileMB.toFixed(2)} MB)`;
 
         // Soft warning
         if (fileMB > MAX_FILE_MB) {
@@ -196,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Checking video properties...</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
 
@@ -253,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                const statusMsg = needsScale ? 'Compressing (auto-scaled)' : 'Compressing';
+                const statusMsg = window.getTranslation('status_encoding');
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${statusMsg}...</span>`;
             });
 
@@ -266,10 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
             await ffmpeg.writeFile('input.mp4', await fetchFile(file));
 
-            const startMsg = needsScale ? 'Starting compression (downscaling to 4K max)...' : 'Starting compression...';
+            const startMsg = window.getTranslation('status_encoding');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${startMsg}</span>`;
 
             // Determine optimal thread count (capped to 4 to prevent WASM Out of Memory)
@@ -318,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw Object.assign(new Error('OOM'), { _oom: true });
             }
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
             const data = await ffmpeg.readFile('output.mp4');
 
             // OOM check 2: output file is suspiciously small (< 1 KB = definitely failed)
@@ -338,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Compression finished! Download started.</span>`;
+            statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
 
             // Cleanup
             progressContainer.classList.add('hidden');

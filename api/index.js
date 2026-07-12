@@ -36,12 +36,12 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use(express.static(path.join(__dirname, '..')));
+
 // Proxy/redirect /realesrgan requests to target
 app.get('/realesrgan/*', (req, res) => {
     res.redirect(`https://upscale.chino.icu${req.originalUrl}`);
 });
-
-app.use(express.static(path.join(__dirname, '..')));
 
 app.get('/:id([a-f0-9]{24})', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));

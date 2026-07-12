@@ -17,6 +17,7 @@
       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/speed-insights/script.js"></script>
+    <script src="scripts/i18n.js"></script>
 </head>
 
 <body>
@@ -27,31 +28,31 @@
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">public</span>
                 </div>
-                <span class="nav-label">Social</span>
+                <span class="nav-label" data-i18n="nav_social">Social</span>
             </a>
             <a href="#preset" class="nav-item" data-tab="preset">
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">auto_awesome_motion</span>
                 </div>
-                <span class="nav-label">Preset</span>
+                <span class="nav-label" data-i18n="nav_preset">Preset</span>
             </a>
             <a href="#resource" class="nav-item" data-tab="resource">
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">folder_open</span>
                 </div>
-                <span class="nav-label">Resource</span>
+                <span class="nav-label" data-i18n="nav_resource">Resource</span>
             </a>
             <a href="#tools" class="nav-item" data-tab="tools">
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">build</span>
                 </div>
-                <span class="nav-label">Tools</span>
+                <span class="nav-label" data-i18n="nav_tools">Tools</span>
             </a>
             <a href="#contact" class="nav-item" data-tab="contact">
                 <div class="nav-icon-wrapper">
                     <span class="material-symbols-rounded">mail</span>
                 </div>
-                <span class="nav-label">Contact Us</span>
+                <span class="nav-label" data-i18n="nav_about">Contact Us</span>
             </a>
         </nav>
 
@@ -59,7 +60,7 @@
 
             <section id="social" class="section active">
                 <div class="page-header-row">
-                    <h1 class="page-title">My Links</h1>
+                    <h1 class="page-title" data-i18n="social_title">My Links</h1>
                     <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle Theme">
                         <span class="material-symbols-rounded">dark_mode</span>
                     </button>
@@ -94,7 +95,7 @@
 
             <section id="preset" class="section">
                 <div id="preset-explore-view">
-                    <h1 class="page-title">Explore</h1>
+                    <h1 class="page-title" data-i18n="preset_title">Explore</h1>
                     <div class="chip-group" id="preset-categories">
                         <div class="chip active" data-software="All">All</div>
                         <div class="chip" data-software="AE">
@@ -151,10 +152,10 @@
             </section>
 
             <section id="resource" class="section">
-                <h1 class="page-title">Resources</h1>
+                <h1 class="page-title" data-i18n="resource_title">Resources</h1>
                 <div class="search-bar">
                     <span class="material-symbols-rounded">search</span>
-                    <input type="text" id="resource-search" placeholder="Search resources...">
+                    <input type="text" id="resource-search" data-i18n="resource_search_placeholder" placeholder="Search resources...">
                 </div>
                 <div class="chip-group" id="resource-categories">
                 </div>
@@ -196,7 +197,7 @@
 
             <section id="tools" class="section">
                 <div class="page-header-row">
-                    <h1 class="page-title">Tools</h1>
+                    <h1 class="page-title" data-i18n="tools_title">Tools</h1>
                 </div>
                 <div class="grid">
                     <div class="card" id="tiktok-patcher-card"
@@ -219,9 +220,9 @@
                             text-align: center;
                         ">
                             <span class="material-symbols-rounded" style="font-size: 40px; color: #ff6b6b;">block</span>
-                            <div style="font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 0.02em;">Method Patched</div>
-                            <div style="font-size: 13px; color: rgba(255,255,255,0.65); max-width: 240px; line-height: 1.5;">Both V1 and V2 are currently unavailable.</div>
-                            <button id="btn-patched-overlay-ignore" style="
+                            <div style="font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 0.02em;" data-i18n="patcher_overlay_title">Method Patched</div>
+                            <div style="font-size: 13px; color: rgba(255,255,255,0.65); max-width: 240px; line-height: 1.5;" data-i18n="patcher_overlay_desc">Both V1 and V2 are currently unavailable.</div>
+                            <button id="btn-patched-overlay-ignore" data-i18n="patcher_overlay_ignore" style="
                                 margin-top: 4px;
                                 padding: 10px 28px;
                                 border-radius: 100px;
@@ -240,7 +241,7 @@
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">high_quality</span>
                             <div style="flex: 1;">
                                 <h3 style="font-size: 1.25rem; font-weight: 600;">Quality Method</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">TikTok HQ Upload</div>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="patcher_subtitle">TikTok HQ Upload</div>
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center;">
                                 <button id="btn-tiktok-clear-cache" title="Clear cache" aria-label="Clear cache"
@@ -252,7 +253,7 @@
 
                         <div class="drag-drop-area" id="tool-tiktok-drop" style="margin-bottom: 20px;">
                             <span class="material-symbols-rounded">video_file</span>
-                            <span>Drag &amp; drop video here or click to select</span>
+                            <span data-i18n="patcher_drop_label">Drag &amp; drop video here or click to select</span>
                             <input type="file" id="tool-tiktok-input" accept="video/mp4,video/quicktime,video/webm"
                                 hidden>
                         </div>
@@ -323,7 +324,7 @@
                         </style>
  
                         <div style="margin-bottom: 14px;">
-                            <div class="tiktok-switcher-label">Choose version</div>
+                            <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose version</div>
                             <div class="tiktok-switch-track" id="tiktok-version-switch">
                                 <div class="tiktok-switch-indicator" id="tiktok-version-indicator"></div>
                                 <div class="tiktok-switch-option active" data-version="v1">v1</div>
@@ -332,12 +333,12 @@
                         </div>
  
                         <div id="tiktok-compress-toggle-row" class="hidden" style="display: none; margin-bottom: 14px;">
-                            <div class="tiktok-switcher-label">Compress preset</div>
+                            <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress preset</div>
                             <div class="tiktok-switch-track" id="tiktok-compress-mode">
                                 <div class="tiktok-switch-indicator" id="tiktok-mode-indicator"></div>
-                                <div class="tiktok-switch-option" data-mode="off" data-desc="Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.">OFF</div>
-                                <div class="tiktok-switch-option" data-mode="fast" data-desc="720p, 60fps | H.264 VBR 25 Mbps (20M-35M), preset ultrafast | Compresses video to 720p for fast processing and optimal performance. Runs smoothly without lag on all devices.">Compatibility</div>
-                                <div class="tiktok-switch-option active" data-mode="hd" data-desc="1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.">Quality</div>
+                                <div class="tiktok-switch-option" data-mode="off" data-i18n="patcher_mode_off" data-desc="Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.">OFF</div>
+                                <div class="tiktok-switch-option" data-mode="fast" data-i18n="patcher_mode_compatibility" data-desc="720p, 60fps | H.264 VBR 25 Mbps (20M-35M), preset ultrafast | Compresses video to 720p for fast processing and optimal performance. Runs smoothly without lag on all devices.">Compatibility</div>
+                                <div class="tiktok-switch-option active" data-mode="hd" data-i18n="patcher_mode_quality" data-desc="1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.">Quality</div>
                             </div>
                             <div class="tiktok-preset-desc" id="tiktok-mode-desc">1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.</div>
                         </div>
@@ -362,18 +363,18 @@
 
                         <div id="tiktok-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);">Process Logs:</span>
+                                <span style="font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</span>
                                 <button id="btn-copy-logs" title="Copy logs" aria-label="Copy logs"
                                     style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; gap: 4px; color: var(--md-sys-color-on-surface-variant); font-size: 11px; font-family: inherit; transition: background 0.2s ease;">
                                     <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span>
-                                    <span id="btn-copy-logs-label">Copy</span>
+                                    <span id="btn-copy-logs-label" data-i18n="btn_copy">Copy</span>
                                 </button>
                             </div>
                             <pre id="tiktok-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
                         </div>
 
                         <button id="btn-start-tiktok" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;">Process Video</button>
+                            style="margin-top: 16px;" data-i18n="patcher_btn_process">Process Video</button>
                     </div>
 
                     <div class="card">
@@ -381,14 +382,14 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Compressor</h3>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_compressor_title">Video Compressor</h3>
                                 <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FFmpeg
                                     WASM</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-ffmpeg-drop">
                             <span class="material-symbols-rounded">video_file</span>
-                            <span>Drag & drop video here or click to select</span>
+                            <span data-i18n="tool_compressor_drop">Drag & drop video here or click to select</span>
                             <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm"
                                 hidden>
                         </div>
@@ -427,9 +428,9 @@
                         </style>
                         <div class="ffmpeg-preset-container">
                             <div class="preset-switch-group" id="ffmpeg-presets">
-                                <div class="preset-switch" data-preset="slow">Slow</div>
-                                <div class="preset-switch active" data-preset="medium">Medium</div>
-                                <div class="preset-switch" data-preset="fast">Fast</div>
+                                <div class="preset-switch" data-preset="slow" data-i18n="preset_slow">Slow</div>
+                                <div class="preset-switch active" data-preset="medium" data-i18n="preset_medium">Medium</div>
+                                <div class="preset-switch" data-preset="fast" data-i18n="preset_fast">Fast</div>
                             </div>
                         </div>
                         <div id="ffmpeg-preset-desc">
@@ -483,7 +484,129 @@
                         </div>
 
                         <button id="btn-start-compression" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;">Start Compression</button>
+                            style="margin-top: 16px;" data-i18n="tool_compressor_btn">Start Compression</button>
+                    </div>
+
+                    <div class="card" id="img-seq-card">
+                        <style>
+                            #img-seq-card .drag-drop-area {
+                                padding: 12px 16px;
+                                flex-direction: row;
+                                justify-content: center;
+                                align-items: center;
+                                gap: 10px;
+                                border-radius: 16px;
+                                min-height: 56px;
+                                width: 100%;
+                                box-sizing: border-box;
+                            }
+                            #img-seq-card .drag-drop-area span.material-symbols-rounded {
+                                font-size: 24px;
+                            }
+                            #img-seq-card .drag-drop-area span:not(.material-symbols-rounded) {
+                                font-size: 13px;
+                                font-weight: 500;
+                            }
+                        </style>
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">movie_creation</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_seq_title">Image Sequence to Video</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_seq_desc">AM Zip Exporter</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-seq-drop">
+                            <input type="file" id="tool-seq-input" accept=".zip" hidden>
+                            <div class="drag-drop-inner" id="tool-seq-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                                <span class="material-symbols-rounded">folder_zip</span>
+                                <span data-i18n="tool_seq_drop">Drag &amp; drop AM Export .zip here or click to select</span>
+                            </div>
+                        </div>
+
+                        <div class="drag-drop-area" id="tool-seq-audio-drop" style="margin-top: 12px;">
+                            <input type="file" id="tool-seq-audio-input" accept="audio/*,video/*" hidden>
+                            <div class="drag-drop-inner" id="tool-seq-audio-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                                <span class="material-symbols-rounded">audio_file</span>
+                                <span id="tool-seq-audio-label" data-i18n="tool_seq_audio_drop">Drag &amp; drop audio/video here or click to select (Optional)</span>
+                            </div>
+                        </div>
+
+                        <!-- Settings Container -->
+                        <div style="margin-top: 16px; text-align: left; display: flex; flex-direction: column; gap: 12px;">
+                            <div class="input-field" style="margin-bottom: 0;">
+                                <label for="tool-seq-fps" style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;" data-i18n="tool_seq_fps">Framerate (FPS)</label>
+                                <input type="number" id="tool-seq-fps" value="30" min="1" max="120" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                            
+                            <div class="input-field" style="margin-bottom: 0;">
+                                <label for="tool-seq-bitrate" style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;" data-i18n="tool_seq_bitrate">Video Bitrate (Mbps)</label>
+                                <input type="number" id="tool-seq-bitrate" value="30" min="10" max="50" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div id="tool-seq-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        </div>
+
+                        <div id="seq-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="seq-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="seq-progress-text">Processing...</span>
+                                <span id="seq-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <button id="btn-start-seq" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;" data-i18n="tool_seq_btn">Convert to Video</button>
+                    </div>
+
+                    <div class="card" id="fivemb-gen-card">
+                        <style>
+                            #fivemb-gen-card .drag-drop-area {
+                                padding: 12px 16px;
+                                flex-direction: row;
+                                justify-content: center;
+                                align-items: center;
+                                gap: 10px;
+                                border-radius: 16px;
+                                min-height: 56px;
+                                width: 100%;
+                                box-sizing: border-box;
+                            }
+                            #fivemb-gen-card .drag-drop-area span.material-symbols-rounded {
+                                font-size: 24px;
+                            }
+                            #fivemb-gen-card .drag-drop-area span:not(.material-symbols-rounded) {
+                                font-size: 13px;
+                                font-weight: 500;
+                            }
+                        </style>
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">cleaning_services</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_fivemb_title">5MB XML Generator</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_fivemb_desc">Alight Motion</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-fivemb-drop">
+                            <input type="file" id="tool-fivemb-input" accept=".xml" hidden>
+                            <div class="drag-drop-inner" id="tool-fivemb-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                                <span class="material-symbols-rounded">code</span>
+                                <span data-i18n="tool_fivemb_drop">Drag &amp; drop Alight Motion XML here to process</span>
+                            </div>
+                        </div>
+
+                        <div id="tool-fivemb-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        </div>
                     </div>
 
                     <div class="card">
@@ -491,13 +614,13 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">monitoring</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Statistics</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_stats_title">TikTok Statistics</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_stats_desc">
                                     Metadata &amp; Stream Analyser</div>
                             </div>
                         </div>
                         <div class="input-field" style="margin-bottom: 0;">
-                            <label for="tool-tiktok-stats-input">TikTok Video URL</label>
+                            <label for="tool-tiktok-stats-input" data-i18n="tool_stats_url">TikTok Video URL</label>
                             <input type="text" id="tool-tiktok-stats-input"
                                 placeholder="https://www.tiktok.com/@username/video/..."
                                 style="width: 100%; box-sizing: border-box;">
@@ -533,42 +656,40 @@
                                     <span
                                         style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
                                             class="material-symbols-rounded"
-                                            style="font-size: 18px;">aspect_ratio</span>Resolution</span>
+                                            style="font-size: 18px;">aspect_ratio</span><span data-i18n="stats_resolution">Resolution</span></span>
                                     <strong id="stats-resolution"
-                                        style="color: var(--md-sys-color-on-surface);">â€”</strong>
+                                        style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
                                     <span
                                         style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded" style="font-size: 18px;">speed</span>Frame
-                                        Rate (FPS)</span>
-                                    <strong id="stats-fps" style="color: var(--md-sys-color-on-surface);">â€”</strong>
-                                </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px;">equalizer</span>Bitrate</span>
-                                    <strong id="stats-bitrate" style="color: var(--md-sys-color-on-surface);">â€”</strong>
+                                            class="material-symbols-rounded" style="font-size: 18px;">speed</span><span data-i18n="stats_fps">Frame Rate (FPS)</span></span>
+                                    <strong id="stats-fps" style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
                                     <span
                                         style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
                                             class="material-symbols-rounded"
-                                            style="font-size: 18px;">schedule</span>Duration</span>
+                                            style="font-size: 18px;">equalizer</span><span data-i18n="stats_bitrate">Bitrate</span></span>
+                                    <strong id="stats-bitrate" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                                    <span
+                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
+                                            class="material-symbols-rounded"
+                                            style="font-size: 18px;">schedule</span><span data-i18n="stats_duration">Duration</span></span>
                                     <strong id="stats-duration"
-                                        style="color: var(--md-sys-color-on-surface);">â€”</strong>
+                                        style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
                                 <div
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
                                     <span
                                         style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded" style="font-size: 18px;">save</span>File
-                                        Size</span>
-                                    <strong id="stats-size" style="color: var(--md-sys-color-on-surface);">â€”</strong>
+                                            class="material-symbols-rounded" style="font-size: 18px;">save</span><span data-i18n="stats_size">File Size</span></span>
+                                    <strong id="stats-size" style="color: var(--md-sys-color-on-surface);">—</strong>
                                 </div>
                             </div>
                         </div>
@@ -578,7 +699,7 @@
                         </div>
 
                         <button id="btn-analyse-tiktok" class="btn-primary w-full"
-                            style="margin-top: 16px;">Analyse</button>
+                            style="margin-top: 16px;" data-i18n="tool_stats_btn">Analyse</button>
                     </div>
 
                     <div class="card">
@@ -586,13 +707,13 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">download</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">TikTok Downloader</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_downloader_title">TikTok Downloader</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_downloader_desc">
                                     Powered By TikWm</div>
                             </div>
                         </div>
                         <div class="input-field" style="margin-bottom: 0;">
-                            <label for="tool-tiktok-dl-input">TikTok Video URL</label>
+                            <label for="tool-tiktok-dl-input" data-i18n="tool_downloader_url">TikTok Video URL</label>
                             <input type="text" id="tool-tiktok-dl-input"
                                 placeholder="https://www.tiktok.com/@username/video/..."
                                 style="width: 100%; box-sizing: border-box;">
@@ -617,7 +738,7 @@
                         </div>
 
                         <button id="btn-download-tiktok" class="btn-primary w-full"
-                            style="margin-top: 16px;">Download</button>
+                            style="margin-top: 16px;" data-i18n="tool_downloader_btn">Download</button>
                     </div>
 
                     <div class="card" id="upscale-video-card">
@@ -625,14 +746,14 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">hd</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Qualitelio Enhancer</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">Media Upscaler</div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_upscale_title">Qualitelio Enhancer</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_upscale_desc">Media Upscaler</div>
                             </div>
                         </div>
 
                         <div class="drag-drop-area" id="upscale-drop-area">
                             <span class="material-symbols-rounded">perm_media</span>
-                            <span>Drag &amp; drop video or image here or click to select</span>
+                            <span data-i18n="tool_upscale_drop">Drag &amp; drop video or image here or click to select</span>
                             <input type="file" id="upscale-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" hidden>
                         </div>
 
@@ -663,13 +784,13 @@
                                 </div>
 
                                 <div class="upscale-controls">
-                                    <p class="upscale-controls-title">Enhancement Preset</p>
+                                    <p class="upscale-controls-title" data-i18n="upscale_preset_title">Enhancement Preset</p>
                                     <div class="upscale-preset-list" id="upscale-preset-list"></div>
 
-                                    <p class="upscale-controls-title" style="margin-top: 4px;">Enhance Timing</p>
+                                    <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_timing_title">Enhance Timing</p>
                                     <div class="upscale-order-toggle">
-                                        <button type="button" class="upscale-order-btn active" data-order="before">Before Upscale</button>
-                                        <button type="button" class="upscale-order-btn" data-order="after">After Upscale</button>
+                                        <button type="button" class="upscale-order-btn active" data-order="before" data-i18n="upscale_timing_before">Before Upscale</button>
+                                        <button type="button" class="upscale-order-btn" data-order="after" data-i18n="upscale_timing_after">After Upscale</button>
                                     </div>
 
                                     <style>
@@ -726,11 +847,11 @@
                                         }
                                     </style>
 
-                                    <p class="upscale-controls-title" style="margin-top: 4px;">Output</p>
+                                    <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_output_title">Output</p>
                                     <div class="upscale-normalise-row">
                                         <div>
-                                            <div style="font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface);">Normalise Size</div>
-                                            <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;">Crop center to 1080×1920 · Save as JPG</div>
+                                            <div style="font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface);" data-i18n="upscale_normalise_title">Normalise Size</div>
+                                            <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
                                         </div>
                                         <label class="normalise-switch-wrap" for="upscale-normalise-toggle">
                                             <input type="checkbox" id="upscale-normalise-toggle">
@@ -740,7 +861,7 @@
                                     </div>
 
                                     <div id="upscale-duration-container">
-                                        <p class="upscale-controls-title" style="margin-top: 4px;">Duration</p>
+                                        <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_duration_title">Duration</p>
                                         <div class="upscale-timeline">
                                             <div class="upscale-timeline-times">
                                                 <span id="upscale-time-current">0:00</span>
@@ -754,7 +875,7 @@
                                         <button type="button" class="btn-upscale" id="upscale-btn-zoom">Zoom: 1x</button>
                                         <button type="button" class="btn-upscale" id="upscale-btn-preview">
                                             <span class="material-symbols-rounded" style="font-size: 16px;">visibility</span>
-                                            Preview
+                                            <span data-i18n="btn_preview">Preview</span>
                                         </button>
                                     </div>
                                 </div>
@@ -763,7 +884,7 @@
 
                         <!-- System Checking Screen -->
                         <div id="upscale-checking-screen" class="hidden" style="margin-top: 16px; padding: 24px; background: var(--md-sys-color-surface-container); border-radius: 16px; text-align: center;">
-                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);">Checking System Compatibility...</h3>
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);" data-i18n="system_checking_title">Checking System Compatibility...</h3>
                             <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;">
                                 <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
                                     <span id="upscale-engine-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
@@ -781,7 +902,7 @@
                         </div>
 
                         <div id="upscale-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);">Process Logs:</div>
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</div>
                             <pre id="upscale-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
                         </div>
 
@@ -799,7 +920,7 @@
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary w-full hidden" id="upscale-btn-enhance" style="margin-top: 16px;">
+                        <button type="button" class="btn-primary w-full hidden" id="upscale-btn-enhance" style="margin-top: 16px;" data-i18n="tool_upscale_btn">
                             <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 8px;">auto_awesome</span>
                             Enhance Media
                         </button>
@@ -812,8 +933,8 @@
                         </div>
 
                         <div class="upscale-reset-row">
-                            <button type="button" class="btn-primary hidden" id="upscale-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">Cancel</button>
-                            <button type="button" class="btn-primary hidden" id="upscale-btn-download">Upscale Another</button>
+                            <button type="button" class="btn-primary hidden" id="upscale-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);" data-i18n="btn_cancel">Cancel</button>
+                            <button type="button" class="btn-primary hidden" id="upscale-btn-download" data-i18n="btn_upscale_another">Upscale Another</button>
                         </div>
                     </div>
 
@@ -823,14 +944,14 @@
                             <span class="material-symbols-rounded"
                                 style="font-size: 32px; color: var(--md-sys-color-primary);">motion_photos_on</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Video Interpolation</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FPS Upscaler</div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_interp_title">Video Interpolation</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_interp_desc">FPS Upscaler</div>
                             </div>
                         </div>
 
                         <div class="drag-drop-area" id="interp-drop-area">
                             <span class="material-symbols-rounded">video_file</span>
-                            <span>Drag &amp; drop video here or click to select</span>
+                            <span data-i18n="tool_interp_drop">Drag &amp; drop video here or click to select</span>
                             <input type="file" id="interp-file-input" accept="video/mp4,video/quicktime,video/webm" hidden>
                         </div>
 
@@ -838,17 +959,17 @@
                             <!-- Expected vs Target FPS Side-by-side Panel -->
                             <div style="display: flex; gap: 12px; margin-bottom: 16px;">
                                 <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
-                                    <div id="interp-input-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-on-surface);">â€”</div>
-                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">Input</div>
+                                    <div id="interp-input-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-on-surface);">—</div>
+                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;" data-i18n="interp_input_label">Input</div>
                                 </div>
                                 <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
-                                    <div id="interp-target-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-primary);">â€”</div>
-                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;">Output</div>
+                                    <div id="interp-target-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-primary);">—</div>
+                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;" data-i18n="interp_output_label">Output</div>
                                 </div>
                             </div>
 
                             <div id="interp-params-wrapper">
-                                <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface);">FPS Multiplier</p>
+                                <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface);" data-i18n="interp_multiplier_title">FPS Multiplier</p>
                                 <div class="ffmpeg-preset-container" style="margin-top: 0; margin-bottom: 16px;">
                                     <div class="preset-switch-group" id="interp-multipliers">
                                         <div class="preset-switch active" data-mult="2">2x</div>
@@ -861,7 +982,7 @@
 
                         <!-- WebGPU System Checking Screen -->
                         <div id="interp-checking-screen" class="hidden" style="margin-top: 16px; padding: 24px; background: var(--md-sys-color-surface-container); border-radius: 16px; text-align: center;">
-                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);">Checking System Compatibility...</h3>
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);" data-i18n="system_checking_title">Checking System Compatibility...</h3>
                             <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;">
                                 <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
                                     <span id="interp-gpu-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
@@ -871,7 +992,7 @@
                         </div>
 
                         <div id="interp-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);">Process Logs:</div>
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</div>
                             <pre id="interp-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
                         </div>
 
@@ -889,7 +1010,7 @@
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary w-full hidden" id="interp-btn-process" style="margin-top: 16px;">
+                        <button type="button" class="btn-primary w-full hidden" id="interp-btn-process" style="margin-top: 16px;" data-i18n="tool_interp_btn">
                             <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 8px;">speed</span>
                             Interpolate Video
                         </button>
@@ -910,18 +1031,18 @@
                                         
                                         <!-- Slider Line -->
                                         <div id="interp-slider-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--md-sys-color-primary); cursor: col-resize; transform: translateX(-50%); z-index: 10;">
-                                            <div class="upscale-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; pointer-events: none; box-shadow: var(--elevation-1);">&#9664;&#9654;</div>
+                                            <div class="upscale-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; pointer-events: none; box-shadow: var(--elevation-1);">◀▶</div>
                                         </div>
-                                        <div class="upscale-slider-label left" style="position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;">Original</div>
-                                        <div class="upscale-slider-label right" style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;">Interpolated</div>
+                                        <div class="upscale-slider-label left" style="position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;" data-i18n="interp_original_label">Original</div>
+                                        <div class="upscale-slider-label right" style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;" data-i18n="interp_interpolated_label">Interpolated</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="upscale-reset-row" style="margin-top: 16px;">
-                            <button type="button" class="btn-primary hidden" id="interp-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">Cancel</button>
-                            <button type="button" class="btn-primary hidden" id="interp-btn-reset">Interpolate Another</button>
+                            <button type="button" class="btn-primary hidden" id="interp-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);" data-i18n="btn_cancel">Cancel</button>
+                            <button type="button" class="btn-primary hidden" id="interp-btn-reset" data-i18n="btn_interp_another">Interpolate Another</button>
                         </div>
                     </div>
 
@@ -930,7 +1051,7 @@
 
             <section id="contact" class="section">
                 <div class="page-header-row">
-                    <h1 class="page-title">Contact Us</h1>
+                    <h1 class="page-title" data-i18n="contact_title">Contact Us</h1>
                 </div>
                 <div class="grid" id="contact-grid">
                     <!-- Loaded dynamically via scripts/app.js -->
@@ -1516,22 +1637,23 @@
                 <div class="warning-modal-icon">
                     <span class="material-symbols-rounded" style="font-size: 24px;">warning</span>
                 </div>
-                <div class="warning-modal-title">iOS Compatibility Warning</div>
+                <div class="warning-modal-title" data-i18n="ios_warn_title">iOS Compatibility Warning</div>
             </div>
-            <div class="warning-modal-content">
+            <div class="warning-modal-content" data-i18n-html="ios_warn_desc">
                 <p>This V2 method may not run or upload perfectly on iOS, iPadOS, and VisionOS devices. You may encounter errors when attempting to upload the patched video via TikTok Studio.</p>
                 <p>For the best experience, we recommend performing the upload on <strong>macOS, Windows, or Android</strong> using desktop browsers like <strong>Chrome, Firefox, or Edge</strong> (excluding Safari).</p>
                 <p>Alternatively, please use the <strong>V1 method</strong> which has been fully stabilized across all devices.</p>
             </div>
             <div class="warning-modal-footer">
-                <button class="warning-btn warning-btn-cancel" id="btn-ios-warning-cancel">Cancel</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-ios-warning-proceed">Proceed Anyway</button>
+                <button class="warning-btn warning-btn-cancel" id="btn-ios-warning-cancel" data-i18n="ios_warn_cancel">Cancel</button>
+                <button class="warning-btn warning-btn-proceed" id="btn-ios-warning-proceed" data-i18n="ios_warn_proceed">Proceed Anyway</button>
             </div>
         </div>
     </div>
 
     <script src="assets/ffmpeg/ffmpeg.js"></script>
     <script src="assets/ffmpeg/index.js"></script>
+    <script src="assets/jszip/jszip.min.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
@@ -1542,6 +1664,8 @@
     <script src="scripts/upscale-gpu-enhancer.js"></script>
     <script src="scripts/upscale-tool.js"></script>
     <script src="scripts/video-interpolation.js"></script>
+    <script src="scripts/image-sequence-tool.js"></script>
+    <script src="scripts/fivemb-generator.js"></script>
 
 </body>
 

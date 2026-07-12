@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gpuDot.textContent = 'sync';
         gpuDot.style.color = 'var(--md-sys-color-primary)';
         gpuDot.classList.add('upscale-spinner');
-        gpuStatus.textContent = 'WebGPU: Checking...';
+        gpuStatus.textContent = window.getTranslation('interp_checking_gpu');
         
         // Small delay for checking effect
         await new Promise(resolve => setTimeout(resolve, 800));
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gpuDot.textContent = 'check_circle';
             gpuDot.style.color = '#4CAF50';
             gpuDot.classList.remove('upscale-spinner');
-            gpuStatus.textContent = 'WebGPU: Supported';
+            gpuStatus.textContent = window.getTranslation('interp_ready_gpu');
             
             await new Promise(resolve => setTimeout(resolve, 800));
             checkScreen.classList.add('hidden');
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gpuDot.textContent = 'cancel';
             gpuDot.style.color = '#F44336';
             gpuDot.classList.remove('upscale-spinner');
-            gpuStatus.textContent = 'WebGPU: Not Supported (Execution Blocked)';
+            gpuStatus.textContent = window.getTranslation('interp_failed_gpu');
             // Keep workspace and process button hidden to block further action
         }
     }

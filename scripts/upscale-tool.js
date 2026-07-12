@@ -266,13 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSliderLabel() {
         if (isPreviewed) {
-            sliderLabelRight.textContent = 'Enhanced + 4x AI';
+            sliderLabelRight.textContent = window.getTranslation('upscale_label_enhanced_ai');
             if (unprocessedOverlay) unprocessedOverlay.classList.remove('show');
         } else {
             if (enhanceOrder === 'before') {
-                sliderLabelRight.textContent = 'Live Enhanced (1x)';
+                sliderLabelRight.textContent = window.getTranslation('upscale_label_live_enhanced');
             } else {
-                sliderLabelRight.textContent = 'Original (1x)';
+                sliderLabelRight.textContent = window.getTranslation('upscale_label_original');
             }
             if (unprocessedOverlay) unprocessedOverlay.classList.add('show');
         }
@@ -371,21 +371,21 @@ document.addEventListener('DOMContentLoaded', () => {
             engineDot.style.color = 'var(--md-sys-color-primary)';
             engineDot.classList.add('upscale-spinner');
         }
-        if (engineStatus) engineStatus.textContent = 'AI Engine: Checking...';
+        if (engineStatus) engineStatus.textContent = window.getTranslation('upscale_checking_ai');
 
         if (gpuDot) {
             gpuDot.textContent = 'sync';
             gpuDot.style.color = 'var(--md-sys-color-primary)';
             gpuDot.classList.add('upscale-spinner');
         }
-        if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Checking...';
+        if (gpuStatus) gpuStatus.textContent = window.getTranslation('upscale_checking_gpu');
 
         if (webcodecsDot) {
             webcodecsDot.textContent = 'sync';
             webcodecsDot.style.color = 'var(--md-sys-color-primary)';
             webcodecsDot.classList.add('upscale-spinner');
         }
-        if (webcodecsStatus) webcodecsStatus.textContent = 'WebCodecs (VideoEncoder): Checking...';
+        if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_checking_ffmpeg');
 
         let attempts = 0;
         const interval = setInterval(() => {
@@ -398,14 +398,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     gpuDot.style.color = '#4CAF50';
                     gpuDot.classList.remove('upscale-spinner');
                 }
-                if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Ready';
+                if (gpuStatus) gpuStatus.textContent = window.getTranslation('upscale_ready_gpu');
             } else {
                 if (gpuDot) {
                     gpuDot.textContent = 'cancel';
                     gpuDot.style.color = '#F44336';
                     gpuDot.classList.remove('upscale-spinner');
                 }
-                if (gpuStatus) gpuStatus.textContent = 'GPU Canvas: Unavailable';
+                if (gpuStatus) gpuStatus.textContent = window.getTranslation('upscale_failed_gpu');
             }
 
             // Check FFmpeg WASM
@@ -416,14 +416,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     webcodecsDot.style.color = '#4CAF50';
                     webcodecsDot.classList.remove('upscale-spinner');
                 }
-                if (webcodecsStatus) webcodecsStatus.textContent = 'FFmpeg WASM: Ready';
+                if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_ready_ffmpeg');
             } else {
                 if (webcodecsDot) {
                     webcodecsDot.textContent = 'cancel';
                     webcodecsDot.style.color = '#F44336';
                     webcodecsDot.classList.remove('upscale-spinner');
                 }
-                if (webcodecsStatus) webcodecsStatus.textContent = 'FFmpeg WASM: Unavailable';
+                if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_failed_ffmpeg');
             }
 
             // Check AI Engine
@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     engineDot.style.color = '#4CAF50';
                     engineDot.classList.remove('upscale-spinner');
                 }
-                if (engineStatus) engineStatus.textContent = 'AI Engine: Ready';
+                if (engineStatus) engineStatus.textContent = window.getTranslation('upscale_ready_ai');
             } else {
                 if (attempts > 10) {
                     if (engineDot) {
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         engineDot.style.color = '#F44336';
                         engineDot.classList.remove('upscale-spinner');
                     }
-                    if (engineStatus) engineStatus.textContent = 'AI Engine: Timeout/Failed';
+                    if (engineStatus) engineStatus.textContent = window.getTranslation('upscale_failed_ai');
                 }
             }
 

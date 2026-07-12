@@ -10,8 +10,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
-    const thumbUrl = (url, width = 128) => {
+    // Local storage icon cache to prevent overloading Supabase Storage
+    const getCachedIcon = (url) => {
+        if (!url || typeof url !== 'string') return url;
+        if (url.startsWith('data:') || url.startsWith('assets/') || url.startsWith('blob:')) return url;
+        
+        const cacheKey = `icon_cache_${url}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return cached;
+
+        // Fetch cross-origin and cache as base64 in background
+        fetch(url)
+            .then(response => response.blob())
+            .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    try {
+                        localStorage.setItem(cacheKey, reader.result);
+                    } catch (e) {
+                        // Handle localStorage full quota limit gracefully
+                        console.warn('Storage quota limit reached for icon cache:', e);
+                    }
+                };
+                reader.readAsDataURL(blob);
+            })
+            .catch(err => console.debug('Icon caching skipped/cors issue:', err));
+
         return url;
+    };
+
+    const thumbUrl = (url, width = 128) => {
+        return getCachedIcon(url);
     };
 
     const isTikTokLikeUrl = (s) => {
@@ -640,8 +669,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const res = await fetch(`${API_URL}/presets/${id}`);
                     const data = await res.json();
-                    const urls = Array.isArray(data.urls) ? data.urls.filter(u => u.url) : [];
                     const softwareArr = Array.isArray(data.software) ? data.software : (data.software ? [data.software] : []);
+                    let urls = Array.isArray(data.urls) ? data.urls.filter(u => {
+                        if (u.sw === 'AM') {
+                            return !!(data.amPremiumUrl || data.am5MbUrl || data.amXmlUrl);
+                        }
+                        return !!u.url;
+                    }) : [];
+                    
+                    if (softwareArr.includes('AM') && !urls.some(u => u.sw === 'AM')) {
+                        if (data.amPremiumUrl || data.am5MbUrl || data.amXmlUrl) {
+                            urls.push({ sw: 'AM', url: data.amPremiumUrl || data.am5MbUrl || data.amXmlUrl });
+                        }
+                    }
                     
                     if (softwareArr.length === 1 && softwareArr.includes('AM')) {
                         openAmVariantPicker(data, false);
@@ -1083,7 +1123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const categories = ['All', ...allSw];
         
         categoryContainer.innerHTML = categories.map(cat => {
-            if (cat === 'All') return `<div class="chip ${activeCategory === 'All' ? 'active' : ''}" data-software="All">All</div>`;
+            if (cat === 'All') return `<div class="chip ${activeCategory === 'All' ? 'active' : ''}" data-software="All">${window.getTranslation('preset_category_all')}</div>`;
             
             const localBadgeIcons = {
                 'AE': 'assets/icon/Ae.png',

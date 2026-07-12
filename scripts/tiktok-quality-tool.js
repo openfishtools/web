@@ -329,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (descPanel && option) {
             descPanel.style.opacity = '0';
             setTimeout(() => {
-                descPanel.textContent = option.dataset.desc || '';
+                const translationKey = 'patcher_mode_' + mode + '_desc';
+                descPanel.textContent = window.getTranslation(translationKey);
                 descPanel.style.opacity = '1';
             }, 160);
         }
@@ -375,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressContainer.classList.add('hidden');
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
-        progressText.textContent = 'Processing...';
+        progressText.textContent = window.getTranslation('status_processing');
         logsContainer.classList.add('hidden');
         logsEl.textContent = '';
         dropArea.style.borderColor = '';
@@ -855,10 +856,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing FFmpeg...</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
-        progressText.textContent = 'Processing...';
+        progressText.textContent = window.getTranslation('status_processing');
 
         logSection('V1 PROCESS START');
         log(`  File : ${file.name}`);
@@ -877,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Processing quality settings...</span>`;
+                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_encoding')}</span>`;
             });
 
             let warnRepeatCount = 0;
@@ -948,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             logSection('FFmpeg V1 — Output');
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
             const data = await ffmpeg.readFile('output.wmv');
             log(`  Output bytes : ${data ? data.byteLength : 0}`);
             log(`  Output size  : ${data ? (data.byteLength / (1024*1024)).toFixed(2) + ' MB' : 'EMPTY'}`);
@@ -972,7 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
             log(`  Download triggered: ${a.download}`);
             logEnd();
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Process finished! Download started.</span>`;
+            statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
             btnStart.classList.remove('hidden');
@@ -1440,10 +1441,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Initializing${isOff ? '' : ' FFmpeg'}...</span>`;
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
-        progressText.textContent = isOff ? 'Patching...' : 'Compressing...';
+        progressText.textContent = window.getTranslation('status_processing');
         logSection('V2 PROCESS START');
         log(`  File     : ${file.name}`);
         log(`  Mode     : ${modeLabel}`);
@@ -1454,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let dataToPath;
 
             if (isOff) {
-                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Reading file...</span>`;
+                statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
                 progressFill.style.width = '10%';
                 progressPercent.textContent = '10%';
                 logsEl.textContent += 'Compression skipped | reading original file...\n';
@@ -1484,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
                     progressFill.style.width = `${percent}%`;
                     progressPercent.textContent = `${percent}%`;
-                    statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Compressing...</span>`;
+                    statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_encoding')}</span>`;
                 });
 
                 let warnRepeatCount = 0;
@@ -1599,8 +1600,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 dataToPath = compressedData;
             }
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Applying patch...</span>`;
-            progressText.textContent = 'Patching...';
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
+            progressText.textContent = window.getTranslation('status_processing');
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
 
@@ -1622,7 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
             progressFill.style.width = '98%';
             progressPercent.textContent = '98%';
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Saving output...</span>`;
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
 
             const blob = new Blob([patchResult.output], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
@@ -1641,10 +1642,10 @@ document.addEventListener('DOMContentLoaded', () => {
             log(`  Download triggered ✓`);
             logEnd();
 
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">&#10003; Patch applied! Download started.</span>`;
+            statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
-            progressText.textContent = 'Complete!';
+            progressText.textContent = window.getTranslation('status_completed');
             btnStart.classList.remove('hidden');
 
         } catch (error) {
