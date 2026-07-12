@@ -2798,11 +2798,67 @@ body {
     margin-bottom: 12px;
 }
 /* OS / Version chips */
-.res-popup-os-chips,
+/* OS / Version chips */
+.res-popup-os-chips {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
 .res-popup-ver-chips {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
+}
+.os-chip-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    border: 2px solid var(--md-sys-color-outline-variant) !important;
+    background: var(--md-sys-color-surface-container-high) !important;
+    color: var(--md-sys-color-on-surface) !important;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.os-chip-btn .os-icon-svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+.os-chip-btn span {
+    display: none !important;
+}
+.os-chip-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--md-sys-color-primary) !important;
+    background: var(--md-sys-color-surface-container-highest) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+/* Active state for OS buttons matching download button style */
+.os-chip-btn.active {
+    background: var(--md-sys-color-primary) !important;
+    border-color: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+/* Force white icon on active state */
+.os-chip-btn.active .os-icon-svg {
+    filter: brightness(0) invert(1) !important;
+}
+.res-popup-ver-chips .res-popup-chip {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 42px !important;
+    border-radius: 10px !important;
+    padding: 0 4px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+    box-sizing: border-box;
 }
 .res-popup-chip {
     display: inline-flex;
