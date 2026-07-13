@@ -487,6 +487,45 @@
                             style="margin-top: 16px;" data-i18n="tool_compressor_btn">Start Compression</button>
                     </div>
 
+                    <!-- Audio Extractor Card -->
+                    <div class="card" id="audio-extractor-card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">audiotrack</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_audio_extractor_title">Audio Extractor</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_audio_extractor_desc">Extract audio from video to MP3</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-audio-drop">
+                            <span class="material-symbols-rounded">video_file</span>
+                            <span data-i18n="tool_audio_extractor_drop">Drag &amp; drop video here or click to select</span>
+                            <input type="file" id="tool-audio-input" accept="video/mp4,video/quicktime,video/webm,video/*"
+                                hidden>
+                        </div>
+
+                        <div id="tool-audio-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        </div>
+
+                        <div id="audio-progress-container" class="hidden" style="margin-top: 16px;">
+                            <div class="progress-bar-bg"
+                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="audio-progress-fill"
+                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                                <span id="audio-progress-text">Extracting...</span>
+                                <span id="audio-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <button id="btn-start-audio" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;" data-i18n="tool_audio_extractor_btn">Extract Audio</button>
+                    </div>
+
                     <div class="card" id="img-seq-card">
                         <style>
                             #img-seq-card .drag-drop-area {
@@ -1656,6 +1695,7 @@
     <script src="assets/jszip/jszip.min.js"></script>
     <script src="scripts/app.js"></script>
     <script src="scripts/ffmpeg-tool.js"></script>
+    <script src="scripts/audio-extractor-tool.js"></script>
     <script src="scripts/tiktok-quality-tool.js"></script>
 
     <script src="scripts/tiktok-stats-tool.js"></script>

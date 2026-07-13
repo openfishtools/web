@@ -27,6 +27,11 @@
             "tool_compressor_size": "Target Ukuran File (MB)",
             "tool_compressor_btn": "Mulai Kompresi",
 
+            "tool_audio_extractor_title": "Audio Extractor",
+            "tool_audio_extractor_desc": "Ekstrak audio dari video ke MP3",
+            "tool_audio_extractor_drop": "Drag & drop video di sini atau klik untuk memilih",
+            "tool_audio_extractor_btn": "Ekstrak Audio",
+
             "tool_seq_title": "Image Sequence to Video",
             "tool_seq_desc": "AM Zip Exporter",
             "tool_seq_drop": "Drag & drop AM Export .zip di sini atau klik untuk memilih",
@@ -247,6 +252,11 @@
             "tool_compressor_drop": "Drag & drop video here or click to select",
             "tool_compressor_size": "Target File Size (MB)",
             "tool_compressor_btn": "Start Compression",
+
+            "tool_audio_extractor_title": "Audio Extractor",
+            "tool_audio_extractor_desc": "Extract audio from video to MP3",
+            "tool_audio_extractor_drop": "Drag & drop video here or click to select",
+            "tool_audio_extractor_btn": "Extract Audio",
 
             "tool_seq_title": "Image Sequence to Video",
             "tool_seq_desc": "AM Zip Exporter",
