@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (errResEl) errResEl.textContent = 'Exceeds 1080p limit (max 1080x1920). Must be compressed.';
         }
 
-        let hasFail = false;
+        hasFail = false;
         let hasHardFail = false;
         if (fpsFail || resFail) {
             hasFail = true;
