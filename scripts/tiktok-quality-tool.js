@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFileBuffer = null;
     let isProcessing = false;
     let currentVersion = 'v1';
-    let compressMode = 'hd';
+    let compressMode = 'off';
 
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
@@ -443,6 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setCheckState(tktk.iconRes, tktk.checkRes, 'loading', 'Analyzing...');
         setCheckState(tktk.iconSize, tktk.checkSize, 'loading', 'Analyzing...');
         tktk.btnProceed.disabled = true;
+        tktk.btnProceed.style.display = '';
         tktk.btnCompress.disabled = true;
         analysisModal.classList.add('visible');
     }
@@ -491,16 +492,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        const fpsFail = false;
+        const fpsFail = fps !== null && fps > 120;
         const fpsLabel = fps !== null ? `${fps} fps` : 'Unable to detect';
-        setCheckState(tktk.iconFps, tktk.checkFps, fps === null ? 'pass' : 'pass', fpsLabel);
+        setCheckState(tktk.iconFps, tktk.checkFps, fpsFail ? 'fail' : 'pass', fpsLabel);
+        if (fpsFail) {
+            const errFpsEl = document.getElementById('tktk-err-fps');
+            if (errFpsEl) errFpsEl.textContent = 'Exceeds 120 fps limit (max 120fps). Must be compressed.';
+        }
 
         const shortSide = Math.min(w, h);
         const longSide = Math.max(w, h);
         const resFail = w > 0 && (shortSide > 1080 || longSide > 1920);
         const resLabel = w > 0 ? `${w}x${h}` : 'Unable to detect';
-        setCheckState(tktk.iconRes, tktk.checkRes, w === 0 ? 'pass' : (resFail ? 'warn' : 'pass'), resLabel);
-        if (resFail) hasFail = true;
+        setCheckState(tktk.iconRes, tktk.checkRes, w === 0 ? 'pass' : (resFail ? 'fail' : 'pass'), resLabel);
+        if (resFail) {
+            const errResEl = document.getElementById('tktk-err-res');
+            if (errResEl) errResEl.textContent = 'Exceeds 1080p limit (max 1080x1920). Must be compressed.';
+        }
+
+        let hasFail = false;
+        let hasHardFail = false;
+        if (fpsFail || resFail) {
+            hasFail = true;
+            hasHardFail = true;
+        }
 
         const sizeFail = fileMB > COMPRESS_WARN_MB;
         setCheckState(tktk.iconSize, tktk.checkSize, sizeFail ? 'warn' : 'pass', `${fileMB.toFixed(1)} MB`);
@@ -512,7 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        tktk.btnProceed.disabled = false;
+        tktk.btnProceed.disabled = hasHardFail;
+        tktk.btnProceed.style.display = hasHardFail ? 'none' : '';
         tktk.btnCompress.disabled = false;
     }
 
@@ -1527,14 +1543,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         '-threads', threads,
                         '-vf', "scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)',fps=60",
                         '-c:v', 'libx264',
-                        '-preset', 'ultrafast',
+                        '-preset', 'veryslow',
                         '-pix_fmt', 'yuv420p',
                         '-bf', '0',
                         '-video_track_timescale', '90000',
-                        '-b:v', '25M',
-                        '-minrate', '20M',
-                        '-maxrate', '35M',
-                        '-bufsize', '35M',
+                        '-b:v', '16M',
+                        '-minrate', '10M',
+                        '-maxrate', '22M',
+                        '-bufsize', '22M',
                         '-c:a', 'aac',
                         '-b:a', '320k',
                         '-movflags', '+faststart',
@@ -1546,14 +1562,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         '-threads', threads,
                         '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
                         '-c:v', 'libx264',
-                        '-preset', 'fast',
+                        '-preset', 'veryslow',
                         '-pix_fmt', 'yuv420p',
                         '-bf', '0',
                         '-video_track_timescale', '90000',
-                        '-b:v', '35M',
-                        '-minrate', '25M',
-                        '-maxrate', '50M',
-                        '-bufsize', '50M',
+                        '-b:v', '19M',
+                        '-minrate', '12M',
+                        '-maxrate', '26M',
+                        '-bufsize', '26M',
                         '-c:a', 'aac',
                         '-b:a', '320k',
                         '-movflags', '+faststart',

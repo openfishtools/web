@@ -116,8 +116,8 @@
             "patcher_mode_compatibility": "Kompatibilitas",
             "patcher_mode_quality": "Kualitas",
             "patcher_mode_off_desc": "Patch Langsung | Mem-patch video asli secara langsung tanpa kompresi. Mempertahankan kualitas asli, tetapi mungkin menyebabkan lag atau kegagalan pemutaran pada perangkat yang tidak mendukung resolusi/framerate tersebut.",
-            "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 25 Mbps (20M-35M), preset ultrafast | Mengompresi video ke 720p untuk pemrosesan cepat dan performa optimal. Berjalan lancar tanpa lag di semua perangkat.",
-            "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Mengompresi video ke 1080p untuk mempertahankan kualitas premium dan ketajaman. Mungkin menyebabkan lag atau tersendat pada beberapa perangkat.",
+            "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 16 Mbps (10M-22M), preset veryslow | Mengompresi video ke 720p untuk kualitas maksimal dan kepatuhan. Berjalan lancar tanpa lag di semua perangkat.",
+            "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 19 Mbps (12M-26M), preset veryslow | Mengompresi video ke 1080p untuk mempertahankan kualitas premium dan ketajaman. Mungkin menyebabkan lag atau tersendat pada beberapa perangkat.",
 
             // Ffmpeg presets
             "preset_slow": "Lambat",
@@ -342,8 +342,8 @@
             "patcher_mode_compatibility": "Compatibility",
             "patcher_mode_quality": "Quality",
             "patcher_mode_off_desc": "Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.",
-            "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 25 Mbps (20M-35M), preset ultrafast | Compresses video to 720p for fast processing and optimal performance. Runs smoothly without lag on all devices.",
-            "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 35 Mbps (25M-50M), preset fast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.",
+            "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 16 Mbps (10M-22M), preset veryslow | Compresses video to 720p for optimal quality and compliance. Runs smoothly without lag on all devices.",
+            "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 19 Mbps (12M-26M), preset veryslow | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.",
 
             // Ffmpeg presets
             "preset_slow": "Slow",
