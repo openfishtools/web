@@ -626,6 +626,135 @@
                                 font-size: 13px;
                                 font-weight: 500;
                             }
+                            #tool-fivemb-layers-list {
+                                scrollbar-width: thin;
+                                scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+                            }
+                            #tool-fivemb-layers-list::-webkit-scrollbar {
+                                width: 6px;
+                            }
+                            #tool-fivemb-layers-list::-webkit-scrollbar-track {
+                                background: transparent;
+                            }
+                            #tool-fivemb-layers-list::-webkit-scrollbar-thumb {
+                                background-color: var(--md-sys-color-outline-variant);
+                                border-radius: 10px;
+                            }
+                            .fivemb-layer-item {
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                padding: 10px 14px;
+                                border-radius: 12px;
+                                background: var(--md-sys-color-surface-container-high);
+                                border: 1.5px solid transparent;
+                                cursor: pointer;
+                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                            }
+                            .fivemb-layer-item:hover {
+                                background: var(--md-sys-color-surface-container-highest);
+                                transform: translateY(-1px);
+                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                            }
+                            .fivemb-layer-item.selected {
+                                border-color: var(--md-sys-color-primary);
+                                background: var(--md-sys-color-surface-container-highest);
+                            }
+                            .fivemb-layer-badge {
+                                font-size: 11px;
+                                font-weight: 600;
+                                padding: 4px 10px;
+                                border-radius: 20px;
+                                flex-shrink: 0;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                            }
+                            .fivemb-layer-badge.photo {
+                                background: rgba(147, 143, 153, 0.16);
+                                color: var(--md-sys-color-on-surface-variant);
+                            }
+                            .fivemb-layer-badge.video {
+                                background: rgba(103, 80, 164, 0.16);
+                                color: var(--md-sys-color-primary);
+                            }
+                            .fivemb-layer-badge.audio {
+                                background: rgba(76, 175, 80, 0.16);
+                                color: #4caf50;
+                            }
+                            .btn-fivemb-secondary {
+                                background-color: var(--md-sys-color-surface-container-highest);
+                                color: var(--md-sys-color-on-surface);
+                                border: 1.5px solid var(--md-sys-color-outline-variant);
+                                padding: 8px 16px;
+                                border-radius: 100px;
+                                font-weight: 600;
+                                font-size: 13px;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                outline: none;
+                            }
+                            .btn-fivemb-secondary:hover {
+                                background-color: var(--md-sys-color-primary-container);
+                                color: var(--md-sys-color-on-primary-container);
+                                border-color: var(--md-sys-color-primary);
+                            }
+                            .btn-fivemb-secondary:active {
+                                transform: scale(0.97);
+                            }
+                            .fivemb-checkbox-wrapper {
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                position: relative;
+                                width: 20px;
+                                height: 20px;
+                                flex-shrink: 0;
+                            }
+                            .fivemb-checkbox-wrapper input[type="checkbox"] {
+                                position: absolute;
+                                opacity: 0;
+                                cursor: pointer;
+                                height: 0;
+                                width: 0;
+                            }
+                            .fivemb-checkbox-custom {
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                height: 20px;
+                                width: 20px;
+                                background-color: transparent;
+                                border: 2px solid var(--md-sys-color-outline);
+                                border-radius: 6px;
+                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            }
+                            .fivemb-checkbox-wrapper input[type="checkbox"]:checked ~ .fivemb-checkbox-custom {
+                                background-color: var(--md-sys-color-primary);
+                                border-color: var(--md-sys-color-primary);
+                            }
+                            .fivemb-checkbox-custom:after {
+                                content: "";
+                                position: absolute;
+                                display: none;
+                            }
+                            .fivemb-checkbox-wrapper input[type="checkbox"]:checked ~ .fivemb-checkbox-custom:after {
+                                display: block;
+                            }
+                            .fivemb-checkbox-wrapper .fivemb-checkbox-custom:after {
+                                left: 6px;
+                                top: 2px;
+                                width: 5px;
+                                height: 10px;
+                                border: solid var(--md-sys-color-on-primary);
+                                border-width: 0 2px 2px 0;
+                                transform: rotate(45deg);
+                            }
                         </style>
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
                             <span class="material-symbols-rounded"
@@ -641,6 +770,29 @@
                                 <span class="material-symbols-rounded">code</span>
                                 <span data-i18n="tool_fivemb_drop">Drag &amp; drop Alight Motion XML here to process</span>
                             </div>
+                        </div>
+
+                        <!-- Layers Container (Initially hidden) -->
+                        <div id="tool-fivemb-layers-container" style="display: none; margin-top: 20px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; width: 100%;">
+                            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--md-sys-color-on-surface);">
+                                <span class="material-symbols-rounded" style="font-size: 20px;">list</span>
+                                <span data-i18n="tool_fivemb_layer_list_title">Select Layers to Replace with Placeholders:</span>
+                            </h4>
+                            
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                <button type="button" id="tool-fivemb-select-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_select_all">Select All</button>
+                                <button type="button" id="tool-fivemb-deselect-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_deselect_all">Deselect All</button>
+                            </div>
+
+                            <!-- List Scroll Area -->
+                            <div id="tool-fivemb-layers-list" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; padding: 4px; display: flex; flex-direction: column; gap: 4px; background: var(--md-sys-color-surface-container-low); margin-bottom: 16px;">
+                                <!-- Dynamic Layer Items will be injected here -->
+                            </div>
+
+                            <button type="button" id="tool-fivemb-btn-export" class="btn-primary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600;">
+                                <span class="material-symbols-rounded">download</span>
+                                <span data-i18n="tool_fivemb_btn_export">Process</span>
+                            </button>
                         </div>
 
                         <div id="tool-fivemb-status"

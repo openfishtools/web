@@ -96,6 +96,15 @@
             "status_empty_zip": "No valid frames found in ZIP.",
             "status_download_success": "Video berhasil diunduh!",
             "status_xml_success": "XML diproses dan diunduh otomatis!",
+            "tool_fivemb_select_all": "Pilih Semua",
+            "tool_fivemb_deselect_all": "Hapus Semua Pilihan",
+            "tool_fivemb_layer_list_title": "Pilih Layer untuk Diganti Placeholder:",
+            "tool_fivemb_btn_export": "Proses",
+            "tool_fivemb_type_photo": "Foto",
+            "tool_fivemb_type_video": "Video",
+            "tool_fivemb_type_audio": "Suara",
+            "tool_fivemb_no_layers": "Tidak ditemukan layer foto, video, atau suara.",
+
 
             // Section Titles
             "social_title": "Link Saya",
@@ -322,6 +331,15 @@
             "status_empty_zip": "No valid frames found in ZIP.",
             "status_download_success": "Video successfully downloaded!",
             "status_xml_success": "XML processed and downloaded successfully!",
+            "tool_fivemb_select_all": "Select All",
+            "tool_fivemb_deselect_all": "Deselect All",
+            "tool_fivemb_layer_list_title": "Select Layers to Replace with Placeholders:",
+            "tool_fivemb_btn_export": "Process",
+            "tool_fivemb_type_photo": "Photo",
+            "tool_fivemb_type_video": "Video",
+            "tool_fivemb_type_audio": "Sound",
+            "tool_fivemb_no_layers": "No photo, video, or sound layers found.",
+
 
             // Section Titles
             "social_title": "My Links",
