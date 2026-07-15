@@ -1390,6 +1390,17 @@ body {
     z-index: 15;
 }
 
+.tiktok-slide:has(.post-media-container.am-xml-active) .tiktok-bottom {
+    background: linear-gradient(to top, rgba(10, 14, 8, 0.98) 0%, rgba(10, 14, 8, 0.85) 60%, rgba(10, 14, 8, 0) 100%);
+    padding: 24px 16px 16px 16px;
+    margin-left: -16px;
+    margin-right: -16px;
+    margin-bottom: 0px;
+    bottom: 0px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 20px));
+    border-radius: 0 0 16px 16px;
+}
+
 .tiktok-plugin-bar {
     pointer-events: auto;
     width: 100%;
@@ -2209,7 +2220,7 @@ body {
 }
 
 .phone-notch {
-    display: none;
+    display: none !important;
 }
 
 .admin-table-icon {
@@ -3536,3 +3547,526 @@ body {
     display: inline-block;
     animation: upscale-spin 1.2s linear infinite;
 }
+
+.ae-am-config {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 16px;
+    text-align: left;
+}
+
+.ae-am-config-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.ae-am-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.ae-am-form-grid .input-field {
+    margin-bottom: 0;
+}
+
+.ae-am-form-full {
+    grid-column: span 2;
+}
+
+.ae-am-beat-summary {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--md-sys-color-surface-container-high);
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.ae-am-beat-count {
+    display: block;
+    color: var(--md-sys-color-primary);
+    font-weight: 500;
+}
+
+.ae-am-beat-meta {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.ae-am-beat-warn {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AM XML INTERACTIVE PREVIEW OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+
+.am-xml-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.am-xml-overlay.visible {
+    opacity: 1;
+}
+
+.am-xml-overlay.exiting-down .am-xml-canvas,
+.am-xml-overlay.exiting-up .am-xml-canvas {
+    transition: height 0.38s cubic-bezier(0.4, 0, 1, 1),
+                width 0.38s cubic-bezier(0.4, 0, 1, 1),
+                border-radius 0.38s cubic-bezier(0.4, 0, 1, 1),
+                border-color 0.38s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.am-xml-overlay.exiting-down .am-xml-canvas,
+.am-xml-overlay.exiting-up .am-xml-canvas,
+.am-xml-overlay.entering .am-xml-canvas {
+    height: calc(100dvh - max(12px, env(safe-area-inset-top, 12px)) - 44px);
+    width: 100%;
+    aspect-ratio: unset;
+    border-radius: 0;
+    border-color: transparent;
+}
+
+.am-xml-overlay.exiting-down .am-xml-transport,
+.am-xml-overlay.exiting-down .am-xml-timeline,
+.am-xml-overlay.exiting-up .am-xml-transport,
+.am-xml-overlay.exiting-up .am-xml-timeline,
+.am-xml-overlay.entering .am-xml-transport,
+.am-xml-overlay.entering .am-xml-timeline {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+.am-xml-topbar {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top, 12px));
+    left: 60px;
+    right: 60px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    z-index: 11;
+    pointer-events: none;
+}
+
+.am-xml-topbar .am-xml-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #E4EBDA;
+    letter-spacing: 0.01em;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+}
+
+.am-xml-editor {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-top: calc(max(12px, env(safe-area-inset-top, 12px)) + 44px + 4px);
+    pointer-events: auto;
+}
+
+.am-xml-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    border: none;
+    background: transparent;
+    color: #E4EBDA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.am-xml-icon-btn:hover {
+    background: rgba(168, 208, 141, 0.12);
+}
+
+.am-xml-icon-btn:active {
+    background: rgba(168, 208, 141, 0.22);
+}
+
+.am-xml-preview-area {
+    flex-shrink: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    padding: 8px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.am-xml-canvas {
+    position: relative;
+    height: 44vh;
+    width: auto;
+    aspect-ratio: 9 / 16;
+    background: transparent;
+    overflow: visible;
+    flex-shrink: 0;
+    border-radius: 12px;
+    border: 1.5px solid #A8D08D;
+    transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                border-radius 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.post-media-container.am-xml-active video {
+    position: absolute;
+    object-fit: cover;
+    z-index: 1;
+}
+
+.am-xml-wireframe {
+    position: absolute;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s;
+    z-index: 2;
+}
+
+.am-xml-rect-outline {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 1.5px solid currentColor;
+    border-radius: 2px;
+}
+
+.am-xml-oval-outline {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.am-xml-embed-outline {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 1px dashed currentColor;
+    border-radius: 3px;
+}
+
+.am-xml-handle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #fff;
+    border: 1px solid currentColor;
+    box-sizing: border-box;
+    z-index: 3;
+}
+.handle-tl { top: -3px; left: -3px; }
+.handle-tc { top: -3px; left: calc(50% - 3px); }
+.handle-tr { top: -3px; right: -3px; }
+.handle-rc { top: calc(50% - 3px); right: -3px; }
+.handle-br { bottom: -3px; right: -3px; }
+.handle-bc { bottom: -3px; left: calc(50% - 3px); }
+.handle-bl { bottom: -3px; left: -3px; }
+.handle-lc { top: calc(50% - 3px); left: -3px; }
+
+/* ── Transport bar ── */
+.am-xml-transport {
+    flex-shrink: 0;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 36px;
+    background: rgba(10, 14, 8, 0.92);
+    border-top: 1px solid rgba(58, 69, 48, 0.5);
+    border-bottom: 1px solid rgba(58, 69, 48, 0.5);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.am-xml-play-btn {
+    color: #A8D08D !important;
+}
+
+.am-xml-timeline {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(22, 28, 18, 0.95);
+    border-top: 1px solid rgba(58, 69, 48, 0.4);
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.am-xml-timeline-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Left rail (eye icons) */
+.am-xml-rail {
+    width: 44px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba(22, 28, 18, 0.95);
+    z-index: 4;
+    overflow: hidden;
+    border-right: 1px solid rgba(58, 69, 48, 0.3);
+    padding-bottom: 180px;
+}
+
+.am-xml-rail-spacer {
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.am-xml-rail-row {
+    height: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    color: #8FBFAE;
+}
+
+/* Track viewport — horizontal scrub when paused */
+.am-xml-track-viewport {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+}
+
+.am-xml-track-viewport.scrub-mode {
+    cursor: ew-resize;
+}
+
+/* Ruler strip */
+.am-xml-ruler-strip {
+    height: 22px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: visible;
+    z-index: 5;
+    background: rgba(22, 28, 18, 0.95);
+    border-bottom: 1px solid rgba(58, 69, 48, 0.4);
+    will-change: transform;
+}
+
+.am-xml-ruler-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Playhead */
+.am-xml-playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #A8D08D;
+    pointer-events: none;
+    z-index: 10;
+    left: 50%;
+}
+
+.am-xml-playhead.at-beat {
+    background: #E24C4C;
+}
+
+.am-xml-timecode {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 22px;
+    background: #A8D08D;
+    color: #16260C;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0 12px;
+    clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.am-xml-timecode.at-beat {
+    background: #E24C4C;
+    color: #fff;
+}
+
+/* Scrollable layer area */
+.am-xml-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    min-height: 0;
+    scrollbar-width: none;
+}
+
+.am-xml-scroll-area::-webkit-scrollbar {
+    display: none;
+}
+
+.am-xml-track-content {
+    position: relative;
+    width: 600px;
+    will-change: transform;
+    min-height: 100%;
+    padding-bottom: 180px;
+}
+
+/* Beat marks */
+.am-xml-beat-mark {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    min-height: 500px;
+    background-color: rgba(226, 76, 76, 0.3);
+    pointer-events: none;
+    z-index: 4;
+}
+
+/* Layer chip rows */
+.am-xml-chip-row {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    position: relative;
+}
+
+.am-xml-layer-chip {
+    position: relative;
+    height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #0C160A;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: ellipsis;
+}
+
+.am-xml-layer-chip.audio-chip {
+    opacity: 0.65;
+    font-style: italic;
+    background: transparent !important;
+    color: #8FBFAE;
+}
+
+.am-xml-kf-icon {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #ffffff;
+    border: 1px solid #16260c;
+    transform: translate(-50%, -50%) rotate(45deg);
+    top: 50%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* "AM Preview" badge shown on video (before XML loads) */
+.am-xml-loading-badge {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top, 14px));
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    background: rgba(10, 14, 8, 0.88);
+    border: 1px solid rgba(168, 208, 141, 0.4);
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #A8D08D;
+    pointer-events: none;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    white-space: nowrap;
+}
+
+.am-xml-loading-badge.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.am-xml-loading-badge.badge-warn {
+    border-color: rgba(226, 76, 76, 0.5);
+    color: #E24C4C;
+}
+
+.am-xml-loading-badge .spin {
+    animation: amXmlSpin 1s linear infinite;
+    font-size: 16px !important;
+}
+
+@keyframes amXmlSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Layer chip color variables */
+.am-xml-layer-chip { --chip-1: #6FBF8B; --chip-2: #5FB0A6; --chip-3: #8FBF6F; --chip-4: #4E9E7A; --chip-5: #79C9A4; }

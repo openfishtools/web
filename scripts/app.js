@@ -75,7 +75,833 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastClickedId = null;
     let lastClickedRect = null;
 
+    /* ═══════════════════════════════════════════════════════
+       AM XML INTERACTIVE PREVIEW ENGINE
+    ═══════════════════════════════════════════════════════ */
+
+    // Per-slide parsed XML state cache
+    const amXmlCache = new Map(); // presetId → { layers, beats, durationMs, fps, sceneW, sceneH }
+
+    // Cubic bezier evaluator (ported from AM XML PREVIEW.html)
+    const amCubicBezier = (p1x, p1y, p2x, p2y, t) => {
+        const bezier = (t, p0, p1, p2, p3) =>
+            (1-t)**3*p0 + 3*(1-t)**2*t*p1 + 3*(1-t)*t**2*p2 + t**3*p3;
+        let lo = 0, hi = 1, mid;
+        for (let i = 0; i < 20; i++) {
+            mid = (lo + hi) / 2;
+            const x = bezier(mid, 0, p1x, p2x, 1);
+            if (Math.abs(x - t) < 0.0001) break;
+            if (x < t) lo = mid; else hi = mid;
+        }
+        return bezier(mid, 0, p1y, p2y, 1);
+    };
+
+    const amParseEasing = (eStr) => {
+        if (!eStr || !eStr.startsWith('cubicBezier')) return null;
+        const parts = eStr.split(/\s+/);
+        if (parts.length < 5) return null;
+        return [Number(parts[1]), Number(parts[2]), Number(parts[3]), Number(parts[4])];
+    };
+
+    const amInterpolateKf = (keyframes, t) => {
+        if (!keyframes.length) return '';
+        if (keyframes.length === 1) return keyframes[0].value;
+        const sorted = [...keyframes].sort((a, b) => a.time - b.time);
+        if (t <= sorted[0].time) return sorted[0].value;
+        if (t >= sorted[sorted.length - 1].time) return sorted[sorted.length - 1].value;
+        for (let i = 0; i < sorted.length - 1; i++) {
+            const kfA = sorted[i], kfB = sorted[i + 1];
+            if (t >= kfA.time && t <= kfB.time) {
+                const range = kfB.time - kfA.time;
+                let factor = range === 0 ? 0 : (t - kfA.time) / range;
+                const easing = amParseEasing(kfB.easing);
+                if (easing) factor = amCubicBezier(easing[0], easing[1], easing[2], easing[3], factor);
+                const sv = kfA.value.split(',').map(Number);
+                const ev = kfB.value.split(',').map(Number);
+                if (sv.every(v => !isNaN(v)) && ev.every(v => !isNaN(v)) && sv.length === ev.length)
+                    return sv.map((v, idx) => v + (ev[idx] - v) * factor).join(',');
+                return factor < 0.5 ? kfA.value : kfB.value;
+            }
+        }
+        return sorted[0].value;
+    };
+
+    const amGetLayerTransform = (layer, elapsedMs, allLayers, visited = new Set()) => {
+        if (visited.has(layer.id)) return { posX: layer.sceneW / 2, posY: layer.sceneH / 2, scaleX: 1, scaleY: 1, rot: 0 };
+        visited.add(layer.id);
+        const SCENE_W = layer.sceneW, SCENE_H = layer.sceneH;
+        const layerDur = (layer.endTime - layer.startTime) || 1;
+        const layerProgress = (elapsedMs - layer.startTime) / layerDur;
+        let posX = layer.parentId ? 0 : SCENE_W / 2;
+        let posY = layer.parentId ? 0 : SCENE_H / 2;
+        let scaleX = 1, scaleY = 1, rot = 0;
+        if (layer.keyframes.location.length) {
+            const lv = amInterpolateKf(layer.keyframes.location, layerProgress).split(',').map(Number);
+            if (lv.length >= 2 && !isNaN(lv[0])) { posX = lv[0]; posY = lv[1]; }
+        }
+        if (layer.keyframes.scale.length) {
+            const sv = amInterpolateKf(layer.keyframes.scale, layerProgress).split(',').map(Number);
+            if (!isNaN(sv[0])) { scaleX = sv[0]; scaleY = sv[1] !== undefined && !isNaN(sv[1]) ? sv[1] : sv[0]; }
+        }
+        if (layer.keyframes.rotation.length) {
+            const r = Number(amInterpolateKf(layer.keyframes.rotation, layerProgress));
+            if (!isNaN(r)) rot = r;
+        }
+        // Oscillate effects
+        if (layer.oscillates && layer.oscillates.length && elapsedMs >= layer.startTime) {
+            const t_sec = (elapsedMs - layer.startTime) / 1000;
+            layer.oscillates.forEach(eff => {
+                const mag = Number(amInterpolateKf(eff.magKeyframes, layerProgress)) || 0;
+                const disp = mag * Math.sin(2 * Math.PI * eff.freq * t_sec);
+                const rad = (eff.angle + 90) * Math.PI / 180;
+                posX += disp * Math.cos(rad);
+                posY += disp * Math.sin(rad);
+            });
+        }
+        if (layer.parentId) {
+            const parentLayer = allLayers.find(l => l.id === layer.parentId);
+            if (parentLayer) {
+                const pt = amGetLayerTransform(parentLayer, elapsedMs, allLayers, visited);
+                const rad = pt.rot * Math.PI / 180;
+                const cos = Math.cos(rad), sin = Math.sin(rad);
+                const sx = posX * pt.scaleX, sy = posY * pt.scaleY;
+                posX = pt.posX + (sx * cos - sy * sin);
+                posY = pt.posY + (sx * sin + sy * cos);
+                scaleX *= pt.scaleX; scaleY *= pt.scaleY; rot += pt.rot;
+            }
+        }
+        return { posX, posY, scaleX, scaleY, rot };
+    };
+
+    const amSanitizeXmlText = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        const trimmed = text.trim();
+        const head = trimmed.slice(0, 20).toLowerCase();
+        if (head.startsWith('<scene') || head.startsWith('<?xml')) return trimmed;
+        const sceneMatch = trimmed.match(/<scene[\s>/]/i);
+        if (sceneMatch) return trimmed.slice(sceneMatch.index);
+        const xmlIdx = trimmed.indexOf('<?xml');
+        if (xmlIdx !== -1) return trimmed.slice(xmlIdx);
+        return trimmed;
+    };
+
+    const parseAmXml = (xmlText) => {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(amSanitizeXmlText(xmlText), 'text/xml');
+        const scene = xmlDoc.documentElement.tagName.toLowerCase() === 'scene'
+            ? xmlDoc.documentElement
+            : xmlDoc.querySelector('scene');
+        if (!scene) throw new Error('Scene not found.');
+
+        const durationMs = Number(scene.getAttribute('totalTime')) || 3000;
+        const fps = Number(scene.getAttribute('fps')) || 30;
+        const sceneW = Number(scene.getAttribute('width')) || 1080;
+        const sceneH = Number(scene.getAttribute('height')) || 1920;
+        const title = scene.getAttribute('title') || 'Untitled';
+
+        const beats = [];
+        scene.querySelectorAll(':scope > bookmark').forEach(bm => {
+            const t = Number(bm.getAttribute('t'));
+            if (!isNaN(t)) beats.push(t);
+        });
+
+        const CHIP_COLORS = ['#6FBF8B','#5FB0A6','#8FBF6F','#4E9E7A','#79C9A4'];
+        const layerNodes = Array.from(scene.children).filter(n =>
+            ['audio','shape','embedscene','nullobj'].includes(n.tagName.toLowerCase())
+        ).reverse();
+
+        const layers = layerNodes.map((node, idx) => {
+            const tag = node.tagName.toLowerCase();
+            const id = node.getAttribute('id') || `layer-${idx}`;
+            const label = node.getAttribute('label') || node.getAttribute('title') || (tag === 'audio' ? '🎵 Audio' : `${tag} ${id}`);
+            const startTime = Number(node.getAttribute('startTime')) || 0;
+            const endTime = Number(node.getAttribute('endTime')) || Number(node.getAttribute('outTime')) || durationMs;
+            const shapeType = node.getAttribute('s') || '';
+
+            let width = sceneW, height = sceneH;
+            const sizeProp = node.querySelector(':scope > property[name="size"]');
+            if (sizeProp) {
+                const val = sizeProp.getAttribute('value');
+                if (val) {
+                    const sz = val.split(',').map(Number);
+                    const mult = tag === 'shape' ? 2 : 1;
+                    if (!isNaN(sz[0]) && sz[0] > 0) width = sz[0] * mult;
+                    if (!isNaN(sz[1]) && sz[1] > 0) height = sz[1] * mult;
+                }
+            } else if (tag === 'audio') { width = sceneW; height = 0; }
+
+            const keyframes = { location: [], scale: [], rotation: [] };
+            const transform = node.querySelector(':scope > transform');
+            if (transform) {
+                ['location','scale','rotation'].forEach(type => {
+                    const prop = transform.querySelector(type);
+                    if (prop) {
+                        const staticVal = prop.getAttribute('value');
+                        if (staticVal) {
+                            keyframes[type].push({ time: 0, value: staticVal, easing: null });
+                            keyframes[type].push({ time: 999999, value: staticVal, easing: null });
+                        }
+                        prop.querySelectorAll('kf').forEach(kf => {
+                            keyframes[type].push({
+                                time: Number(kf.getAttribute('t')) || 0,
+                                value: kf.getAttribute('v') || '',
+                                easing: kf.getAttribute('e') || null
+                            });
+                        });
+                    }
+                });
+            }
+
+            const parentId = node.getAttribute('parent') || null;
+            const oscillates = [];
+            Array.from(node.children).forEach(child => {
+                if (child.tagName.toLowerCase() === 'effect' && child.getAttribute('id') === 'com.alightcreative.effects.oscillate') {
+                    let angle = 0, freq = 1;
+                    const magKeyframes = [];
+                    const angleProp = Array.from(child.children).find(p => p.tagName.toLowerCase() === 'property' && p.getAttribute('name') === 'angle');
+                    if (angleProp) angle = Number(angleProp.getAttribute('value')) || 0;
+                    const freqProp = Array.from(child.children).find(p => p.tagName.toLowerCase() === 'property' && p.getAttribute('name') === 'freq');
+                    if (freqProp) freq = Number(freqProp.getAttribute('value')) || 0;
+                    const magProp = Array.from(child.children).find(p => p.tagName.toLowerCase() === 'property' && p.getAttribute('name') === 'mag');
+                    if (magProp) {
+                        const val = magProp.getAttribute('value');
+                        if (val !== null) {
+                            magKeyframes.push({ time: 0, value: val, easing: null });
+                            magKeyframes.push({ time: 999999, value: val, easing: null });
+                        }
+                        magProp.querySelectorAll('kf').forEach(kf => {
+                            magKeyframes.push({ time: Number(kf.getAttribute('t')) || 0, value: kf.getAttribute('v') || '', easing: kf.getAttribute('e') || null });
+                        });
+                    }
+                    oscillates.push({ angle, freq, magKeyframes });
+                }
+            });
+
+            return { id, label, startTime, endTime, type: tag, shapeType, size: { width, height }, color: CHIP_COLORS[idx % CHIP_COLORS.length], keyframes, parentId, oscillates, sceneW, sceneH };
+        });
+
+        return { layers, beats, durationMs, fps, sceneW, sceneH, title };
+    };
+
+    const amDrawRuler = (canvas, durationMs, pxPerMs = 0.2) => {
+        if (!canvas) return;
+        const width = durationMs * pxPerMs;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = 22 * dpr;
+        canvas.style.width = width + 'px';
+        canvas.style.height = '22px';
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, width, 22);
+        ctx.strokeStyle = '#3A4530';
+        ctx.fillStyle = '#B6C0A8';
+        ctx.font = 'bold 8px "Segoe UI", sans-serif';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(0, 21.5); ctx.lineTo(width, 21.5); ctx.stroke();
+        for (let ms = 0; ms <= durationMs; ms += 100) {
+            const x = ms * pxPerMs;
+            let th = 3;
+            if (ms % 5000 === 0) { th = 13; const s = ms / 1000; ctx.fillText(String(s).padStart(2,'0') + ':00', x + 3, 12); }
+            else if (ms % 1000 === 0) th = 8;
+            else if (ms % 500 === 0) th = 5;
+            ctx.beginPath(); ctx.moveTo(x, 22); ctx.lineTo(x, 22 - th); ctx.stroke();
+        }
+    };
+
+    const amFormatTimecode = (ms, fps) => {
+        const totalFrames = Math.floor(ms / 1000 * fps);
+        const frames = totalFrames % fps;
+        const totalSec = Math.floor(ms / 1000);
+        const sec = totalSec % 60;
+        const min = Math.floor(totalSec / 60) % 60;
+        const pad = n => String(n).padStart(2, '0');
+        return pad(min) + ':' + pad(sec) + ':' + pad(frames);
+    };
+
+    const amResetVideoFrame = (slide) => {
+        const container = slide?.querySelector('.post-media-container');
+        const video = container?.querySelector('video');
+        if (container) container.classList.remove('am-xml-active');
+        if (video) {
+            video.style.clipPath = '';
+            video.style.transition = '';
+            video.style.top = '';
+            video.style.left = '';
+            video.style.width = '';
+            video.style.height = '';
+            video.style.borderRadius = '';
+        }
+    };
+
+    const amApplyVideoFrame = (slide, animate = false) => {
+        const container = slide?.querySelector('.post-media-container');
+        const canvas = slide?.querySelector('.am-xml-canvas');
+        const video = container?.querySelector('video');
+        if (!container || !canvas || !video) return;
+
+        const overlay = slide.querySelector('.am-xml-overlay');
+        const wasEntering = overlay?.classList.contains('entering');
+        const wasExitingDown = overlay?.classList.contains('exiting-down');
+        const wasExitingUp = overlay?.classList.contains('exiting-up');
+
+        // Temporarily remove classes that alter canvas size to measure target position
+        if (overlay) {
+            overlay.classList.remove('entering', 'exiting-down', 'exiting-up');
+        }
+
+        container.classList.add('am-xml-active');
+        const cRect = container.getBoundingClientRect();
+        const kRect = canvas.getBoundingClientRect();
+
+        // Restore classes
+        if (overlay) {
+            if (wasEntering) overlay.classList.add('entering');
+            if (wasExitingDown) overlay.classList.add('exiting-down');
+            if (wasExitingUp) overlay.classList.add('exiting-up');
+        }
+
+        const top = Math.max(0, kRect.top - cRect.top);
+        const left = Math.max(0, kRect.left - cRect.left);
+        const radius = 12;
+
+        video.style.transition = animate ? 'top 0.55s cubic-bezier(0.22, 1, 0.36, 1), left 0.55s cubic-bezier(0.22, 1, 0.36, 1), width 0.55s cubic-bezier(0.22, 1, 0.36, 1), height 0.55s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.55s cubic-bezier(0.22, 1, 0.36, 1)' : '';
+        video.style.position = 'absolute';
+        video.style.top = `${top}px`;
+        video.style.left = `${left}px`;
+        video.style.width = `${kRect.width}px`;
+        video.style.height = `${kRect.height}px`;
+        video.style.borderRadius = `${radius}px`;
+        video.style.clipPath = '';
+    };
+
+    // Build the entire AM XML overlay DOM inside a slide
+    const buildAmXmlOverlay = (slide, parsed) => {
+        const { layers, beats, durationMs, fps, sceneW, sceneH, title } = parsed;
+        const PX_PER_MS = 0.2;
+
+        const overlay = slide.querySelector('.am-xml-overlay');
+        if (!overlay) return;
+
+        overlay.innerHTML = `
+        <div class="am-xml-topbar">
+            <span class="am-xml-title">${title || slide.dataset.name || 'Preview'}</span>
+        </div>
+        <div class="am-xml-editor">
+        <div class="am-xml-preview-area">
+            <div class="am-xml-canvas" id="am-canvas-${slide.dataset.id}"></div>
+        </div>
+        <div class="am-xml-transport">
+            <button class="am-xml-icon-btn am-xml-prev-btn" aria-label="Previous">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6L10 12l10 6V6z"/></svg>
+            </button>
+            <button class="am-xml-icon-btn am-xml-play-btn" aria-label="Play">
+                <svg class="am-xml-icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="am-xml-icon-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+            </button>
+            <button class="am-xml-icon-btn am-xml-next-btn" aria-label="Next">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l10 6-10 6V6z"/></svg>
+            </button>
+        </div>
+        <div class="am-xml-timeline">
+            <div class="am-xml-timeline-body">
+                <div class="am-xml-rail">
+                    <div class="am-xml-rail-spacer"></div>
+                </div>
+                <div class="am-xml-track-viewport">
+                    <div class="am-xml-playhead">
+                        <div class="am-xml-timecode">00:00:00</div>
+                    </div>
+                    <div class="am-xml-ruler-strip">
+                        <canvas class="am-xml-ruler-canvas"></canvas>
+                    </div>
+                    <div class="am-xml-scroll-area">
+                        <div class="am-xml-track-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>`;
+
+        // ── Wiring ──────────────────────────────────
+        const previewCanvas = overlay.querySelector('.am-xml-canvas');
+        const railEl = overlay.querySelector('.am-xml-rail');
+        const trackViewport = overlay.querySelector('.am-xml-track-viewport');
+        const scrollArea = overlay.querySelector('.am-xml-scroll-area');
+        const trackContent = overlay.querySelector('.am-xml-track-content');
+        const rulerCanvas = overlay.querySelector('.am-xml-ruler-canvas');
+        const rulerStrip = overlay.querySelector('.am-xml-ruler-strip');
+        const playhead = overlay.querySelector('.am-xml-playhead');
+        const timecodeEl = overlay.querySelector('.am-xml-timecode');
+        const playBtn = overlay.querySelector('.am-xml-play-btn');
+        const prevBtn = overlay.querySelector('.am-xml-prev-btn');
+        const nextBtn = overlay.querySelector('.am-xml-next-btn');
+        const iconPlay = overlay.querySelector('.am-xml-icon-play');
+        const iconPause = overlay.querySelector('.am-xml-icon-pause');
+
+        const totalWidth = durationMs * PX_PER_MS;
+        trackContent.style.width = `${totalWidth}px`;
+        if (rulerStrip) rulerStrip.style.width = `${totalWidth}px`;
+
+        // Draw ruler
+        amDrawRuler(rulerCanvas, durationMs, PX_PER_MS);
+
+        // Beat marks
+        beats.forEach(beat => {
+            const bm = document.createElement('div');
+            bm.className = 'am-xml-beat-mark';
+            bm.style.left = `${beat * PX_PER_MS}px`;
+            trackContent.appendChild(bm);
+        });
+
+        // Layer rows (rail + chips)
+        layers.forEach(layer => {
+            const railRow = document.createElement('div');
+            railRow.className = 'am-xml-rail-row';
+            const isAudio = layer.type === 'audio';
+            railRow.innerHTML = isAudio
+                ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="opacity:.4"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`
+                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.6"/></svg>`;
+            railEl.appendChild(railRow);
+
+            const chipW = (layer.endTime - layer.startTime) * PX_PER_MS;
+            const chipL = layer.startTime * PX_PER_MS;
+            const row = document.createElement('div');
+            row.className = 'am-xml-chip-row';
+            row.dataset.id = layer.id;
+            const chip = document.createElement('div');
+            chip.className = 'am-xml-layer-chip' + (isAudio ? ' audio-chip' : '');
+            chip.style.width = `${chipW}px`;
+            chip.style.marginLeft = `${chipL}px`;
+            if (!isAudio) chip.style.background = layer.color;
+            chip.textContent = layer.label;
+
+            // Render keyframe diamonds inside the chip
+            if (layer.keyframes) {
+                const uniqueKfTimes = new Set();
+                ['location', 'scale', 'rotation'].forEach(type => {
+                    const list = layer.keyframes[type] || [];
+                    // Skip if it only contains the static default full-duration keyframes
+                    if (list.length === 2 && list[1].time === 999999) return;
+
+                    list.forEach(kf => {
+                        if (kf.time === 999999) return;
+                        // kf.time is a progress value between 0 and 1
+                        if (kf.time >= 0 && kf.time <= 1) {
+                            uniqueKfTimes.add(kf.time);
+                        }
+                    });
+                });
+
+                uniqueKfTimes.forEach(time => {
+                    const kfLeft = time * chipW;
+                    const kfIcon = document.createElement('div');
+                    kfIcon.className = 'am-xml-kf-icon';
+                    kfIcon.style.left = `${kfLeft}px`;
+                    chip.appendChild(kfIcon);
+                });
+            }
+
+            row.appendChild(chip);
+            trackContent.appendChild(row);
+        });
+
+        // Wireframe elements in canvas
+        layers.forEach((layer, idx) => {
+            if (layer.type === 'audio' || layer.type === 'nullobj') return;
+            const div = document.createElement('div');
+            div.className = 'am-xml-wireframe';
+            div.id = `am-wf-${slide.dataset.id}-${layer.id}`;
+            div.style.color = layer.color;
+            div.style.display = 'none';
+            div.style.position = 'absolute';
+            div.style.zIndex = layers.length - idx;
+            const lowerShape = layer.shapeType.toLowerCase();
+            const isCircle = lowerShape.includes('circle') || lowerShape.includes('oval') || lowerShape.includes('ellipse');
+            const isEmbed = layer.type === 'embedscene';
+            let outlineHtml = '';
+            if (isCircle) {
+                outlineHtml = `<svg class="am-xml-oval-outline" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="49" ry="49" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
+            } else if (isEmbed) {
+                outlineHtml = `<div class="am-xml-embed-outline"></div>`;
+            } else {
+                outlineHtml = `<div class="am-xml-rect-outline"></div>`;
+            }
+
+            const handlesHtml = `
+                <div class="am-xml-handle handle-tl"></div>
+                <div class="am-xml-handle handle-tc"></div>
+                <div class="am-xml-handle handle-tr"></div>
+                <div class="am-xml-handle handle-rc"></div>
+                <div class="am-xml-handle handle-br"></div>
+                <div class="am-xml-handle handle-bc"></div>
+                <div class="am-xml-handle handle-bl"></div>
+                <div class="am-xml-handle handle-lc"></div>
+            `;
+            div.innerHTML = outlineHtml + handlesHtml;
+            previewCanvas.appendChild(div);
+        });
+
+        // ── Playhead x position ──
+        const getPlayheadX = () => {
+            const vpRect = trackViewport.getBoundingClientRect();
+            const oRect = overlay.getBoundingClientRect();
+            return (oRect.left + oRect.width / 2) - vpRect.left;
+        };
+
+        // ── Render frame ──
+        const amRender = (elapsedMs) => {
+            const playheadX = getPlayheadX();
+            if (playhead) playhead.style.left = `${playheadX}px`;
+            const shift = playheadX - (elapsedMs * PX_PER_MS);
+            trackContent.style.transform = `translateX(${shift}px)`;
+            if (rulerStrip) rulerStrip.style.transform = `translateX(${shift}px)`;
+            timecodeEl.textContent = amFormatTimecode(elapsedMs, fps);
+
+            const isOnBeat = beats.some(b => Math.abs(elapsedMs - b) < 25);
+            playhead.classList.toggle('at-beat', isOnBeat);
+            timecodeEl.classList.toggle('at-beat', isOnBeat);
+
+            layers.forEach(layer => {
+                if (layer.type === 'audio' || layer.type === 'nullobj') return;
+                const wf = document.getElementById(`am-wf-${slide.dataset.id}-${layer.id}`);
+                if (!wf) return;
+                if (elapsedMs >= layer.startTime && elapsedMs <= layer.endTime) {
+                    wf.style.display = 'flex';
+                    const t = amGetLayerTransform(layer, elapsedMs, layers);
+                    const pctX = (t.posX / sceneW) * 100;
+                    const pctY = (t.posY / sceneH) * 100;
+                    const sizeW = ((layer.size.width * Math.abs(t.scaleX)) / sceneW) * 100;
+                    const sizeH = ((layer.size.height * Math.abs(t.scaleY)) / sceneH) * 100;
+                    wf.style.width = `${sizeW}%`;
+                    wf.style.height = `${sizeH}%`;
+                    wf.style.left = `${pctX}%`;
+                    wf.style.top = `${pctY}%`;
+                    const fx = t.scaleX < 0 ? -1 : 1, fy = t.scaleY < 0 ? -1 : 1;
+                    wf.style.transform = `translate(-50%,-50%) scale(${fx},${fy}) rotate(${t.rot}deg)`;
+                } else {
+                    wf.style.display = 'none';
+                }
+            });
+        };
+
+        // ── State ──
+        let xmlPlaying = false;
+        let xmlScrubbing = false;
+        let scrubStartX = 0, scrubStartY = 0, scrubStartElapsed = 0, scrubStartScrollTop = 0;
+
+        const setPlayIcons = (playing) => {
+            iconPlay.style.display = playing ? 'none' : '';
+            iconPause.style.display = playing ? '' : 'none';
+        };
+
+        // ── Sync loop with video ──
+        const video = slide.querySelector('video') || slide.querySelector('.tiktok-media-host video');
+        let lastVideoTime = -1;
+        let syncRafId = null;
+
+        const syncLoop = () => {
+            if (!video) return;
+            let vtMs = video.currentTime * 1000;
+            if (vtMs >= durationMs || video.ended) {
+                video.currentTime = 0;
+                vtMs = 0;
+            }
+            // Detect loop: video.currentTime reset to near 0 from something > 0
+            if (lastVideoTime > 200 && vtMs < 50) {
+                // looped
+            }
+            lastVideoTime = vtMs;
+            const elapsed = vtMs % (durationMs || 1);
+            amRender(elapsed);
+            xmlPlaying = !video.paused;
+            setPlayIcons(xmlPlaying);
+            syncRafId = requestAnimationFrame(syncLoop);
+        };
+
+        const startSync = () => {
+            if (syncRafId) cancelAnimationFrame(syncRafId);
+            syncLoop();
+        };
+
+        const stopSync = () => {
+            if (syncRafId) cancelAnimationFrame(syncRafId);
+            syncRafId = null;
+        };
+
+        overlay._startSync = startSync;
+        overlay._stopSync = stopSync;
+        overlay._amRender = amRender;
+        overlay._scrollArea = scrollArea;
+        overlay._video = video;
+
+        // ── Play / Pause buttons ──
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!video) return;
+            if (video.paused) {
+                video.play().catch(() => {});
+                startSync();
+            } else {
+                video.pause();
+                // keep sync running at 1 frame so UI stays updated
+            }
+        });
+
+        // Prev / Next beat buttons
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!video) return;
+            const cur = video.currentTime * 1000;
+            const prevBeats = beats.filter(b => b < cur - 5);
+            const target = prevBeats.length ? prevBeats[prevBeats.length - 1] : 0;
+            video.currentTime = target / 1000;
+            amRender(target);
+        });
+
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!video) return;
+            const cur = video.currentTime * 1000;
+            const nextBeats = beats.filter(b => b > cur + 5);
+            const target = nextBeats.length ? nextBeats[0] : durationMs;
+            video.currentTime = target / 1000;
+            amRender(target);
+        });
+
+        const frameObserver = new ResizeObserver(() => {
+            if (overlay.dataset.shown === 'true' && !overlay.classList.contains('entering')) {
+                amApplyVideoFrame(slide, false);
+            }
+        });
+        frameObserver.observe(overlay);
+        overlay._frameObserver = frameObserver;
+
+        // ── Scrubbing: only when video is paused ──
+        trackViewport.addEventListener('pointerdown', (e) => {
+            if (!video || !video.paused) return; // scrub only when paused
+            xmlScrubbing = true;
+            scrubStartX = e.clientX;
+            scrubStartY = e.clientY;
+            scrubStartElapsed = video.currentTime * 1000;
+            scrubStartScrollTop = scrollArea ? scrollArea.scrollTop : 0;
+            trackViewport.setPointerCapture(e.pointerId);
+            e.stopPropagation();
+        });
+
+        trackViewport.addEventListener('pointermove', (e) => {
+            if (!xmlScrubbing) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const deltaX = e.clientX - scrubStartX;
+            let newElapsed = scrubStartElapsed - (deltaX / PX_PER_MS);
+            newElapsed = Math.min(Math.max(newElapsed, 0), durationMs);
+            if (video) video.currentTime = newElapsed / 1000;
+            amRender(newElapsed);
+            // vertical scroll of layers
+            if (scrollArea) {
+                const dy = e.clientY - scrubStartY;
+                scrollArea.scrollTop = scrubStartScrollTop - dy;
+                railEl.scrollTop = scrollArea.scrollTop;
+            }
+        });
+
+        trackViewport.addEventListener('pointerup', (e) => {
+            if (!xmlScrubbing) return;
+            xmlScrubbing = false;
+            try { trackViewport.releasePointerCapture(e.pointerId); } catch (_) {}
+        });
+
+        trackViewport.addEventListener('pointercancel', () => { xmlScrubbing = false; });
+
+        // Sync rail scroll with scroll area
+        scrollArea.addEventListener('scroll', () => {
+            railEl.scrollTop = scrollArea.scrollTop;
+        }, { passive: true });
+
+        // ── Scroll behavior: in-frame area ──
+        // When paused, scroll area handles layer scroll; when at bottom, navigate slide
+        // When playing, any scroll inside overlay navigates to next/prev slide
+        const feed = slide.closest('.tiktok-feed');
+
+        const editorEl = overlay.querySelector('.am-xml-editor');
+
+        const navigateSlide = (direction) => {
+            stopSync();
+            const exitClass = direction === 'down' ? 'exiting-down' : 'exiting-up';
+            overlay.classList.remove('visible','entering');
+            overlay.classList.add(exitClass);
+            const exitVideo = slide.querySelector('.post-media-container video');
+            if (exitVideo) {
+                exitVideo.style.transition = 'top 0.38s cubic-bezier(0.4, 0, 1, 1), left 0.38s cubic-bezier(0.4, 0, 1, 1), width 0.38s cubic-bezier(0.4, 0, 1, 1), height 0.38s cubic-bezier(0.4, 0, 1, 1), border-radius 0.38s cubic-bezier(0.4, 0, 1, 1)';
+                exitVideo.style.top = '0px';
+                exitVideo.style.left = '0px';
+                exitVideo.style.width = '100%';
+                exitVideo.style.height = '100%';
+                exitVideo.style.borderRadius = '0px';
+            }
+            setTimeout(() => {
+                overlay.classList.remove(exitClass);
+                overlay.dataset.shown = '';
+                amResetVideoFrame(slide);
+                if (feed) {
+                    const slides = Array.from(feed.querySelectorAll('.tiktok-slide'));
+                    const currentIndex = slides.indexOf(slide);
+                    if (currentIndex !== -1) {
+                        const targetIndex = direction === 'down' ? currentIndex + 1 : currentIndex - 1;
+                        if (targetIndex >= 0 && targetIndex < slides.length) {
+                            slides[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
+                }
+            }, 380);
+        };
+
+        // Wheel on the scrollArea (layer region)
+        scrollArea.addEventListener('wheel', (e) => {
+            e.stopPropagation();
+            // Let native scroll happen, detect boundary
+            const atBottom = scrollArea.scrollTop >= scrollArea.scrollHeight - scrollArea.clientHeight - 2;
+            const atTop = scrollArea.scrollTop <= 2;
+            if (e.deltaY > 0 && atBottom) {
+                e.preventDefault();
+                navigateSlide('down');
+            } else if (e.deltaY < 0 && atTop) {
+                e.preventDefault();
+                navigateSlide('up');
+            }
+        }, { passive: false });
+
+        // Touch swipe on scrollArea
+        let touchStartY = 0;
+        scrollArea.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+        scrollArea.addEventListener('touchend', (e) => {
+            const deltaY = touchStartY - e.changedTouches[0].clientY;
+            const atBottom = scrollArea.scrollTop >= scrollArea.scrollHeight - scrollArea.clientHeight - 2;
+            const atTop = scrollArea.scrollTop <= 2;
+            if (deltaY > 30 && atBottom) navigateSlide('down');
+            else if (deltaY < -30 && atTop) navigateSlide('up');
+        }, { passive: true });
+
+        // Wheel / touch on areas OUTSIDE the scroll-area but inside overlay → navigate directly
+        const scrollTarget = editorEl || overlay;
+        scrollTarget.addEventListener('wheel', (e) => {
+            if (scrollArea.contains(e.target)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            navigateSlide(e.deltaY > 0 ? 'down' : 'up');
+        }, { passive: false });
+
+        let outerTouchY = 0;
+        scrollTarget.addEventListener('touchstart', (e) => {
+            if (!scrollArea.contains(e.target)) outerTouchY = e.touches[0].clientY;
+        }, { passive: true });
+        scrollTarget.addEventListener('touchend', (e) => {
+            if (!scrollArea.contains(e.target)) {
+                const dy = outerTouchY - e.changedTouches[0].clientY;
+                if (Math.abs(dy) > 30) navigateSlide(dy > 0 ? 'down' : 'up');
+            }
+        }, { passive: true });
+
+        // Start sync immediately if video is already playing
+        if (video && !video.paused) startSync();
+        else if (video) {
+            const onPlay = () => startSync();
+            video.addEventListener('play', onPlay);
+            video.addEventListener('pause', () => setPlayIcons(false));
+        }
+    };
+
+    // Trigger XML overlay: fetch → parse → build → animate in
+    const triggerAmXmlPreview = async (slide) => {
+        const xmlUrl = slide.dataset.amXmlUrl;
+        if (!xmlUrl) return;
+        const id = slide.dataset.id;
+        const overlay = slide.querySelector('.am-xml-overlay');
+        if (!overlay) return;
+        if (overlay.dataset.shown === 'true') return; // already shown
+
+        // Show loading badge
+        const badge = slide.querySelector('.am-xml-loading-badge');
+        if (badge) badge.classList.add('show');
+
+        let parsed = amXmlCache.get(id);
+        if (!parsed) {
+            try {
+                const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(xmlUrl)}`;
+                const resp = await fetch(proxyUrl);
+                if (!resp.ok) throw new Error('fetch failed');
+                const text = await resp.text();
+                parsed = parseAmXml(text);
+                amXmlCache.set(id, parsed);
+            } catch (err) {
+                console.warn('[AM XML] Failed to load XML:', err);
+                if (badge) {
+                    badge.querySelector('span:last-child').textContent = 'Skipping XML Preview';
+                    const spin = badge.querySelector('.spin');
+                    if (spin) { spin.textContent = 'warning'; spin.classList.remove('spin'); }
+                    badge.classList.add('show', 'badge-warn');
+                    setTimeout(() => badge.classList.remove('show', 'badge-warn'), 3000);
+                }
+                return;
+            }
+        }
+
+        if (badge) badge.classList.remove('show');
+
+        // Build DOM if not yet built
+        if (!overlay.dataset.built) {
+            buildAmXmlOverlay(slide, parsed);
+            overlay.dataset.built = 'true';
+        }
+
+        const mediaContainer = slide.querySelector('.post-media-container');
+        const video = mediaContainer?.querySelector('video');
+        if (mediaContainer) mediaContainer.classList.add('am-xml-active');
+        if (video) {
+            video.style.transition = '';
+            video.style.position = 'absolute';
+            video.style.top = '0px';
+            video.style.left = '0px';
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.borderRadius = '0px';
+            video.style.clipPath = '';
+        }
+
+        overlay.dataset.shown = 'true';
+        overlay.classList.remove('exiting-down','exiting-up');
+        overlay.classList.add('visible','entering');
+        void overlay.offsetWidth;
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                overlay.classList.remove('entering');
+                amApplyVideoFrame(slide, true);
+            });
+        });
+
+        setTimeout(() => {
+            amApplyVideoFrame(slide, false);
+        }, 600);
+
+        if (overlay._startSync) overlay._startSync();
+    };
+
+    /* END AM XML ENGINE */
+
     const showExplore = () => {
+        // Reset any active XML overlay
+        document.querySelectorAll('.am-xml-overlay[data-shown="true"]').forEach(overlay => {
+            const slide = overlay.closest('.tiktok-slide');
+            if (slide) {
+                if (overlay._stopSync) overlay._stopSync();
+                overlay.classList.remove('visible', 'entering', 'exiting-up', 'exiting-down');
+                overlay.dataset.shown = '';
+                amResetVideoFrame(slide);
+            }
+        });
+
         const presetExploreView = document.getElementById('preset-explore-view');
         const presetFeedView = document.getElementById('preset-feed-view');
         
@@ -172,14 +998,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPost = document.querySelector(`.preset-post[data-id="${targetId}"]`);
         if (targetPost) {
             targetPost.scrollIntoView({ behavior: 'auto', block: 'start' });
-            const video = targetPost.querySelector('video');
+            const video = targetPost.querySelector('video') || targetPost.querySelector('.tiktok-media-host video');
             if (video) {
                 video.muted = globalMuted;
+                const onPlay = () => {
+                    if (targetPost.dataset.amXmlUrl) triggerAmXmlPreview(targetPost);
+                    video.removeEventListener('playing', onPlay);
+                };
+                video.addEventListener('playing', onPlay);
                 video.play().catch((err) => {
                     console.warn('Autoplay blocked in showFeed, retrying muted:', err);
                     video.muted = true;
                     video.play().catch(e => console.error('Final play attempt failed:', e));
                 });
+                if (video.readyState >= 2 && !video.paused && targetPost.dataset.amXmlUrl) {
+                    triggerAmXmlPreview(targetPost);
+                }
+            } else if (targetPost.dataset.amXmlUrl) {
+                let checkAttempts = 0;
+                const checkInterval = setInterval(() => {
+                    checkAttempts++;
+                    const loadedVideo = targetPost.querySelector('video');
+                    if (loadedVideo) {
+                        clearInterval(checkInterval);
+                        if (!loadedVideo.paused) {
+                            triggerAmXmlPreview(targetPost);
+                        } else {
+                            loadedVideo.addEventListener('playing', () => triggerAmXmlPreview(targetPost), { once: true });
+                        }
+                    }
+                    if (checkAttempts > 30) clearInterval(checkInterval);
+                }, 100);
             }
         }
     };
@@ -189,6 +1038,10 @@ document.addEventListener('DOMContentLoaded', () => {
         containers.forEach(container => {
             if (container.dataset.interactionsSet) return;
             container.dataset.interactionsSet = 'true';
+
+            // Check if this slide has AM XML — if so, skip native tap handling
+            const slide = container.closest('.tiktok-slide');
+            const hasAmXml = !!(slide && slide.dataset.amXmlUrl);
             
             const muteBtn = container.querySelector('.video-mute-btn');
             if (muteBtn) {
@@ -203,6 +1056,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
+
+            // For AM XML slides: single tap does nothing (pause handled in XML UI)
+            // double tap does nothing (like disabled while XML preview is active)
+            if (hasAmXml) return;
 
             let lastTap = 0;
             let tapTimeout;
@@ -429,6 +1286,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (icon) icon.textContent = v.muted ? 'volume_off' : 'volume_up';
                                 }
 
+                                if (slide && slide.dataset.amXmlUrl) {
+                                    const onPlay = () => {
+                                        triggerAmXmlPreview(slide);
+                                        v.removeEventListener('playing', onPlay);
+                                    };
+                                    v.addEventListener('playing', onPlay);
+                                    if (!v.paused) {
+                                        triggerAmXmlPreview(slide);
+                                    }
+                                }
+
                                 v.onerror = () => {
                                     if (retryCount < 1) {
                                         el.innerHTML = '';
@@ -532,17 +1400,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         const icon = muteBtn.querySelector('.material-symbols-rounded');
                         if (icon) icon.textContent = v.muted ? 'volume_off' : 'volume_up';
                     }
+
+                    // ── Trigger AM XML preview after video starts (if applicable) ──
+                    if (bestSlide.dataset.amXmlUrl) {
+                        const overlay = bestSlide.querySelector('.am-xml-overlay');
+                        // Stop sync on all other overlays first
+                        slides.forEach(s => {
+                            if (s !== bestSlide) {
+                                const ov = s.querySelector('.am-xml-overlay');
+                                if (ov && ov._stopSync) ov._stopSync();
+                            }
+                        });
+                        // Trigger XML preview for this slide
+                        if (v.readyState >= 2 && !v.paused) {
+                            triggerAmXmlPreview(bestSlide);
+                        } else {
+                            const onPlay = () => {
+                                triggerAmXmlPreview(bestSlide);
+                                v.removeEventListener('playing', onPlay);
+                            };
+                            v.addEventListener('playing', onPlay);
+                        }
+                    }
                 }
                 
                 const slideId = bestSlide.dataset.id;
                 if (slideId) {
-                    // Update lastClickedId so close animation targets the current card
                     lastClickedId = slideId;
-                    // Find matching grid item and update its rect for the close animation
                     const gridItem = document.querySelector(`.explore-item[data-id="${slideId}"]`);
-                    if (gridItem) {
-                        lastClickedRect = gridItem.getBoundingClientRect();
-                    }
+                    if (gridItem) lastClickedRect = gridItem.getBoundingClientRect();
                     history.pushState(null, null, `/${slideId}`);
                 }
             }
@@ -552,6 +1438,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const onScroll = () => {
             clearTimeout(scrollTimer);
             getAllVideos().forEach(v => v.pause());
+            // Stop all XML syncs during scroll
+            scrollRoot.querySelectorAll('.am-xml-overlay').forEach(ov => {
+                if (ov._stopSync) ov._stopSync();
+            });
             scrollTimer = setTimeout(playVisible, 150);
         };
 
@@ -819,7 +1709,24 @@ document.addEventListener('DOMContentLoaded', () => {
         optionsContainer.querySelectorAll('.sw-download-option-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const url = btn.dataset.url;
-                if (url) window.open(ensureProtocol(url), '_blank');
+                if (url) {
+                    if (btn.classList.contains('am-xml-btn')) {
+                        // Direct XML download via proxy
+                        const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(url)}`;
+                        fetch(proxyUrl)
+                            .then(r => r.ok ? r.blob() : Promise.reject())
+                            .then(blob => {
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = (presetData.name || 'preset') + '.xml';
+                                a.click();
+                                URL.revokeObjectURL(a.href);
+                            })
+                            .catch(() => window.open(ensureProtocol(url), '_blank'));
+                    } else {
+                        window.open(ensureProtocol(url), '_blank');
+                    }
+                }
                 if (!btn.classList.contains('am-extra-btn')) {
                     picker.classList.remove('show');
                     picker.classList.remove('transparent-bg');
@@ -1099,6 +2006,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const res = await fetch(`${API_URL}/socials`);
         const socials = await res.json();
+        if (!Array.isArray(socials)) {
+            console.warn('[Socials] API returned non-array:', socials);
+            container.innerHTML = '';
+            return;
+        }
         if (socials.length > 0) {
             container.innerHTML = socials.map(s => {
                 const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
@@ -1159,6 +2071,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const res = await fetch(`${API_URL}/presets`);
         const allPresets = await res.json();
+        if (!Array.isArray(allPresets)) {
+            console.warn('[Presets] API returned non-array:', allPresets);
+            exploreGrid.innerHTML = `<div class="empty-state">Failed to load presets. Is the server running?</div>`;
+            return;
+        }
         
         renderPresetCategories(allPresets);
         
@@ -1205,6 +2122,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const icon = badgeIcons[sw];
                     return icon ? `<img src="${icon}" class="tiktok-title-icon" alt="${sw}">` : '';
                 }).join('');
+                // Check if this preset has AM XML
+                const swArr2 = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+                const hasAmXml = swArr2.includes('AM') && !!p.amXmlUrl;
+                const xmlAttr = hasAmXml ? `data-am-xml-url="${dsa(p.amXmlUrl)}"` : '';
+
                 return `
                 <article class="tiktok-slide preset-post"
                     data-id="${p._id}"
@@ -1212,17 +2134,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     data-size="${dsa(p.size)}"
                     data-type="${dsa(p.type)}"
                     data-version="${dsa(p.version)}"
-                    data-software="${dsa(Array.isArray(p.software) ? p.software.join(',') : (p.software || ''))}">
+                    data-software="${dsa(Array.isArray(p.software) ? p.software.join(',') : (p.software || ''))}"
+                    ${xmlAttr}>
                     <div class="tiktok-slide-media post-media-container">
                         ${presetMediaInnerHtml(p.media, p.name)}
                         <div class="tiktok-slide-gradient" aria-hidden="true"></div>
                         <button type="button" class="video-mute-btn" aria-label="Toggle mute" style="position: absolute; top: max(12px, env(safe-area-inset-top, 12px)); right: 12px; z-index: 160; background: rgba(0, 0, 0, 0.45); border: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;">
                             <span class="material-symbols-rounded" style="font-size: 24px;">volume_off</span>
                         </button>
-                        <div class="video-interaction-overlay">
-                            <span class="material-symbols-rounded overlay-pause">pause</span>
-                        </div>
+                        ${!hasAmXml ? `<div class="video-interaction-overlay"><span class="material-symbols-rounded overlay-pause">pause</span></div>` : ''}
                     </div>
+                    ${hasAmXml ? `<div class="am-xml-loading-badge">
+                        <span class="material-symbols-rounded spin" style="font-size:16px">sync</span>
+                        <span class="am-xml-badge-text">Loading AM Preview...</span>
+                    </div>` : ''}
+                    ${hasAmXml ? '<div class="am-xml-overlay"></div>' : ''}
                     <div class="tiktok-slide-ui">
                         <div class="tiktok-rail">
                             <button type="button" class="tiktok-rail-btn action-btn ${p.liked ? 'liked' : ''}" data-action="like">
@@ -1323,6 +2249,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const res = await fetch(`${API_URL}/resources`);
         allResources = await res.json();
+        if (!Array.isArray(allResources)) {
+            console.warn('[Resources] API returned non-array:', allResources);
+            container.innerHTML = `<div class="empty-state">Failed to load resources. Is the server running?</div>`;
+            allResources = [];
+            return;
+        }
 
         renderResourceCategories(allResources);
 

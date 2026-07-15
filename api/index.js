@@ -519,6 +519,29 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     }
 });
 
+app.get('/api/proxy', async (req, res) => {
+    const targetUrl = req.query.url;
+    if (!targetUrl || typeof targetUrl !== 'string') {
+        return res.status(400).json({ error: 'Missing url query parameter' });
+    }
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) {
+            return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
+        }
+        const text = await response.text();
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(text);
+    } catch (err) {
+        res.status(500).json({ error: 'Proxy request failed', details: err.message });
+    }
+});
+
 
 
 app.post('/api/admin/login', async (req, res) => {

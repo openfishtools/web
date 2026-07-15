@@ -44,6 +44,25 @@
             "tool_fivemb_desc": "Alight Motion",
             "tool_fivemb_drop": "Drag & drop Alight Motion XML di sini untuk diproses",
 
+            "tool_ae_am_title": "AE to AM",
+            "tool_ae_am_desc": "Beatmark Converter",
+            "tool_ae_am_drop": "Drag & drop AE XML (.xml/.aepx) di sini atau klik untuk memilih",
+            "tool_ae_am_config_title": "Pengaturan Proyek Alight Motion",
+            "tool_ae_am_comp": "Komposisi",
+            "tool_ae_am_title_input": "Judul Proyek",
+            "tool_ae_am_width": "Lebar",
+            "tool_ae_am_height": "Tinggi",
+            "tool_ae_am_fps": "Frame Rate (FPS)",
+            "tool_ae_am_duration": "Durasi Total (ms)",
+            "tool_ae_am_btn": "Konversi & Unduh XML",
+            "tool_ae_am_analyzing": "Menganalisa berkas AE...",
+            "tool_ae_am_success": "Konversi selesai. XML telah diunduh.",
+            "tool_ae_am_no_beats": "Tidak ada beatmark di komposisi ini.",
+            "tool_ae_am_beats_loaded": "{count} beatmark dimuat.",
+            "tool_ae_am_no_beats_alert": "Komposisi terpilih tidak memiliki beatmark.",
+            "tool_ae_am_error_invalid": "Berkas bukan After Effects XML.",
+            "tool_ae_am_error_no_comp": "Tidak ditemukan komposisi dalam berkas ini.",
+
             "tool_stats_title": "TikTok Statistics",
             "tool_stats_desc": "Metadata & Stream Analyser",
             "tool_stats_url": "TikTok Video URL",
@@ -104,6 +123,10 @@
             "tool_fivemb_type_video": "Video",
             "tool_fivemb_type_audio": "Suara",
             "tool_fivemb_no_layers": "Tidak ditemukan layer foto, video, atau suara.",
+            "tool_fivemb_filter_all": "Semua",
+            "tool_fivemb_filter_photo": "Foto",
+            "tool_fivemb_filter_video": "Video",
+            "tool_fivemb_filter_audio": "Suara",
 
 
             // Section Titles
@@ -279,6 +302,25 @@
             "tool_fivemb_desc": "Alight Motion",
             "tool_fivemb_drop": "Drag & drop Alight Motion XML here to process",
 
+            "tool_ae_am_title": "AE to AM",
+            "tool_ae_am_desc": "Beatmark Converter",
+            "tool_ae_am_drop": "Drag & drop AE XML (.xml/.aepx) here or click to select",
+            "tool_ae_am_config_title": "Alight Motion Project Settings",
+            "tool_ae_am_comp": "Composition",
+            "tool_ae_am_title_input": "Project Title",
+            "tool_ae_am_width": "Width",
+            "tool_ae_am_height": "Height",
+            "tool_ae_am_fps": "Frame Rate (FPS)",
+            "tool_ae_am_duration": "Total Duration (ms)",
+            "tool_ae_am_btn": "Convert & Download XML",
+            "tool_ae_am_analyzing": "Analyzing AE file...",
+            "tool_ae_am_success": "Conversion complete. XML downloaded.",
+            "tool_ae_am_no_beats": "No beatmarks detected in this composition.",
+            "tool_ae_am_beats_loaded": "{count} beatmarks loaded.",
+            "tool_ae_am_no_beats_alert": "Selected composition has no beatmarks.",
+            "tool_ae_am_error_invalid": "File is not a valid After Effects XML.",
+            "tool_ae_am_error_no_comp": "No compositions found in this file.",
+
             "tool_stats_title": "TikTok Statistics",
             "tool_stats_desc": "Metadata & Stream Analyser",
             "tool_stats_url": "TikTok Video URL",
@@ -339,6 +381,10 @@
             "tool_fivemb_type_video": "Video",
             "tool_fivemb_type_audio": "Sound",
             "tool_fivemb_no_layers": "No photo, video, or sound layers found.",
+            "tool_fivemb_filter_all": "All",
+            "tool_fivemb_filter_photo": "Photo",
+            "tool_fivemb_filter_video": "Video",
+            "tool_fivemb_filter_audio": "Audio",
 
 
             // Section Titles
@@ -474,20 +520,13 @@
 
     let userLang = 'en';
     
-    // Check primary browser language
+    // Check primary browser language only — do NOT use timezone as a fallback
+    // so users with English browser language always get English
     const matchesPrimaryLang = navigator.language && navigator.language.startsWith('id');
     // Check secondary browser languages
     const hasIndonesianLang = navigator.languages && navigator.languages.some(lang => lang.toLowerCase().startsWith('id'));
-    // Check timezone region
-    let isIndoTimeZone = false;
-    try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (tz && (tz.includes('Jakarta') || tz.includes('Pontianak') || tz.includes('Makassar') || tz.includes('Jayapura') || tz.includes('Jakarta'))) {
-            isIndoTimeZone = true;
-        }
-    } catch (e) {}
 
-    if (matchesPrimaryLang || hasIndonesianLang || isIndoTimeZone) {
+    if (matchesPrimaryLang || hasIndonesianLang) {
         userLang = 'id';
     }
 

@@ -755,6 +755,49 @@
                                 border-width: 0 2px 2px 0;
                                 transform: rotate(45deg);
                             }
+                            /* Filter tabs */
+                            #tool-fivemb-filter-tabs {
+                                display: flex;
+                                gap: 6px;
+                                flex-wrap: wrap;
+                                margin-bottom: 10px;
+                            }
+                            .fivemb-filter-tab {
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 5px;
+                                padding: 6px 14px;
+                                border-radius: 100px;
+                                border: 1.5px solid var(--md-sys-color-outline-variant);
+                                background: var(--md-sys-color-surface-container-highest);
+                                color: var(--md-sys-color-on-surface-variant);
+                                font-size: 12px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                                white-space: nowrap;
+                            }
+                            .fivemb-filter-tab:hover {
+                                background: var(--md-sys-color-primary-container);
+                                color: var(--md-sys-color-on-primary-container);
+                                border-color: var(--md-sys-color-primary);
+                            }
+                            .fivemb-filter-tab.active {
+                                background: var(--md-sys-color-primary);
+                                color: var(--md-sys-color-on-primary);
+                                border-color: var(--md-sys-color-primary);
+                            }
+                            .fivemb-filter-count {
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 100px;
+                                padding: 1px 7px;
+                                font-size: 11px;
+                                font-weight: 700;
+                            }
+                            .fivemb-filter-tab:not(.active) .fivemb-filter-count {
+                                background: var(--md-sys-color-surface-container);
+                                color: var(--md-sys-color-on-surface-variant);
+                            }
                         </style>
                         <div class="flex align-center gap-16" style="margin-bottom: 16px;">
                             <span class="material-symbols-rounded"
@@ -779,9 +822,12 @@
                                 <span data-i18n="tool_fivemb_layer_list_title">Select Layers to Replace with Placeholders:</span>
                             </h4>
                             
-                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                <button type="button" id="tool-fivemb-select-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_select_all">Select All</button>
-                                <button type="button" id="tool-fivemb-deselect-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_deselect_all">Deselect All</button>
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                                <div id="tool-fivemb-filter-tabs" style="display:none; gap: 6px; flex-wrap: wrap; flex-grow: 1;"></div>
+                                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                                    <button type="button" id="tool-fivemb-select-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_select_all">Select All</button>
+                                    <button type="button" id="tool-fivemb-deselect-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_deselect_all">Deselect All</button>
+                                </div>
                             </div>
 
                             <!-- List Scroll Area -->
@@ -798,6 +844,60 @@
                         <div id="tool-fivemb-status"
                             style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
                         </div>
+                    </div>
+
+                    <div class="card" id="ae-to-am-card">
+                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
+                            <span class="material-symbols-rounded"
+                                style="font-size: 32px; color: var(--md-sys-color-primary);">swap_horiz</span>
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_ae_am_title">AE to AM</h3>
+                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_ae_am_desc">Beatmark Converter</div>
+                            </div>
+                        </div>
+                        <div class="drag-drop-area" id="tool-ae-am-drop">
+                            <input type="file" id="tool-ae-am-input" accept=".xml,.aepx" hidden>
+                            <span class="material-symbols-rounded">upload_file</span>
+                            <span data-i18n="tool_ae_am_drop">Drag &amp; drop AE XML (.xml/.aepx) here or click to select</span>
+                        </div>
+
+                        <div id="tool-ae-am-config" class="ae-am-config hidden">
+                            <div class="ae-am-config-title" data-i18n="tool_ae_am_config_title">Alight Motion Project Settings</div>
+                            <div class="ae-am-form-grid">
+                                <div class="input-field ae-am-form-full">
+                                    <label for="tool-ae-am-comp" data-i18n="tool_ae_am_comp">Composition</label>
+                                    <select id="tool-ae-am-comp"></select>
+                                </div>
+                                <div class="input-field ae-am-form-full">
+                                    <label for="tool-ae-am-title" data-i18n="tool_ae_am_title_input">Project Title</label>
+                                    <input type="text" id="tool-ae-am-title" placeholder="Project name">
+                                </div>
+                                <div class="input-field">
+                                    <label for="tool-ae-am-width" data-i18n="tool_ae_am_width">Width</label>
+                                    <input type="number" id="tool-ae-am-width" value="1080">
+                                </div>
+                                <div class="input-field">
+                                    <label for="tool-ae-am-height" data-i18n="tool_ae_am_height">Height</label>
+                                    <input type="number" id="tool-ae-am-height" value="1920">
+                                </div>
+                                <div class="input-field">
+                                    <label for="tool-ae-am-fps" data-i18n="tool_ae_am_fps">Frame Rate (FPS)</label>
+                                    <input type="number" id="tool-ae-am-fps" value="30">
+                                </div>
+                                <div class="input-field">
+                                    <label for="tool-ae-am-duration" data-i18n="tool_ae_am_duration">Total Duration (ms)</label>
+                                    <input type="number" id="tool-ae-am-duration" value="5000">
+                                </div>
+                            </div>
+                            <div id="tool-ae-am-beat-summary" class="ae-am-beat-summary"></div>
+                        </div>
+
+                        <div id="tool-ae-am-status"
+                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        </div>
+
+                        <button id="btn-ae-am-convert" class="btn-primary w-full hidden"
+                            style="margin-top: 16px;" data-i18n="tool_ae_am_btn">Convert &amp; Download XML</button>
                     </div>
 
                     <div class="card">
@@ -1858,6 +1958,7 @@
     <script src="scripts/video-interpolation.js"></script>
     <script src="scripts/image-sequence-tool.js"></script>
     <script src="scripts/fivemb-generator.js"></script>
+    <script src="scripts/ae-to-am-beatmark-tool.js"></script>
 
 </body>
 

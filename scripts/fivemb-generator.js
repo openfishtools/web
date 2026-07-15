@@ -10,9 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAllBtn = document.getElementById('tool-fivemb-select-all');
     const deselectAllBtn = document.getElementById('tool-fivemb-deselect-all');
     const exportBtn = document.getElementById('tool-fivemb-btn-export');
+    const filterTabsContainer = document.getElementById('tool-fivemb-filter-tabs');
 
     let selectedFile = null;
     let loadedXmlText = null;
+    let currentFilter = 'all'; // 'all' | 'photo' | 'video' | 'audio'
+
+    // Predefined pleasant random colors for audio placeholders
+    const AUDIO_COLORS = [
+        '#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c',
+        '#4dabf7', '#748ffc', '#da77f2', '#f783ac',
+        '#63e6be', '#a9e34b', '#74c0fc', '#e599f7',
+    ];
+    let audioColorIndex = 0;
+    function nextAudioColor() {
+        const color = AUDIO_COLORS[audioColorIndex % AUDIO_COLORS.length];
+        audioColorIndex++;
+        return color;
+    }
 
     // File input selection
     fileInput.addEventListener('change', (e) => {
@@ -46,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.innerHTML = `<span style="color: var(--md-sys-color-error);">${msg}</span>`;
     }
 
-    // Green styling for success status
     function showStatusSuccess(msg) {
         statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">${msg}</span>`;
     }
@@ -68,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedFile = null;
         loadedXmlText = null;
         fileInput.value = '';
+        audioColorIndex = 0;
+        currentFilter = 'all';
         dropInner.innerHTML = `
             <span class="material-symbols-rounded">code</span>
             <span>${window.getTranslation('tool_fivemb_drop')}</span>
@@ -114,7 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                audioColorIndex = 0;
                 const { layers } = extractLayers(xmlDoc);
+
+                renderFilterTabs(layers);
 
                 if (layers.length === 0) {
                     layersList.innerHTML = `
@@ -135,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 statusText.innerHTML = '';
 
-                // Translate any newly rendered HTML element with data-i18n
+                // Translate any newly rendered elements
                 if (typeof window.translateUI === 'function') {
                     window.translateUI();
                 }
@@ -146,6 +165,59 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsText(file);
     }
+
+    // ── Filter tabs ──────────────────────────────────────────────────────────
+
+    function renderFilterTabs(layers) {
+        if (!filterTabsContainer) return;
+
+        const counts = { all: layers.length, photo: 0, video: 0, audio: 0 };
+        layers.forEach(l => { if (counts[l.type] !== undefined) counts[l.type]++; });
+
+        const tabs = [
+            { key: 'all',   labelKey: 'tool_fivemb_filter_all',   icon: 'layers' },
+            { key: 'photo', labelKey: 'tool_fivemb_filter_photo', icon: 'image' },
+            { key: 'video', labelKey: 'tool_fivemb_filter_video', icon: 'movie' },
+            { key: 'audio', labelKey: 'tool_fivemb_filter_audio', icon: 'audiotrack' },
+        ];
+
+        filterTabsContainer.innerHTML = '';
+        filterTabsContainer.style.display = 'flex';
+
+        tabs.forEach(tab => {
+            if (tab.key !== 'all' && counts[tab.key] === 0) return; // hide empty types
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fivemb-filter-tab' + (currentFilter === tab.key ? ' active' : '');
+            btn.dataset.filter = tab.key;
+            btn.innerHTML = `
+                <span class="material-symbols-rounded" style="font-size:16px;">${tab.icon}</span>
+                ${window.getTranslation(tab.labelKey)}
+                <span class="fivemb-filter-count">${counts[tab.key]}</span>
+            `;
+            btn.addEventListener('click', () => {
+                currentFilter = tab.key;
+                applyFilter();
+                // Update active state
+                filterTabsContainer.querySelectorAll('.fivemb-filter-tab').forEach(b => {
+                    b.classList.toggle('active', b.dataset.filter === currentFilter);
+                });
+            });
+            filterTabsContainer.appendChild(btn);
+        });
+    }
+
+    function applyFilter() {
+        const items = layersList.querySelectorAll('.fivemb-layer-item');
+        items.forEach(item => {
+            const type = item.dataset.type;
+            const visible = currentFilter === 'all' || type === currentFilter;
+            item.style.display = visible ? '' : 'none';
+        });
+    }
+
+    // ── Layer list items ─────────────────────────────────────────────────────
 
     function formatDuration(startTime, endTime) {
         if (startTime === null || endTime === null) return "";
@@ -159,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function extractLayers(xmlDoc) {
         const layers = [];
         const mediaMap = {};
-        
+
         const mediaTags = xmlDoc.getElementsByTagName("media");
         for (let i = 0; i < mediaTags.length; i++) {
             const m = mediaTags[i];
@@ -238,7 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 label: label || `Audio ${id}`,
                 type: "audio",
                 fileInfo: fileInfo || label,
-                duration: duration
+                duration: duration,
+                audioColor: nextAudioColor()  // assign a random color for audio
             });
         }
 
@@ -265,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const item = document.createElement("div");
         item.className = "fivemb-layer-item";
+        item.dataset.type = layer.type;
+        item.dataset.id = layer.id;
 
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex-grow: 1;">
@@ -305,11 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return item;
     }
 
-    // Toggle bulk selections
+    // ── Bulk selection (scoped to visible items only) ─────────────────────────
+
     if (selectAllBtn) {
         selectAllBtn.addEventListener('click', () => {
-            const checkboxes = layersList.querySelectorAll('.layer-checkbox');
-            checkboxes.forEach(cb => {
+            const visibleCheckboxes = getVisibleCheckboxes();
+            visibleCheckboxes.forEach(cb => {
                 if (!cb.checked) {
                     cb.checked = true;
                     cb.dispatchEvent(new Event('change'));
@@ -320,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (deselectAllBtn) {
         deselectAllBtn.addEventListener('click', () => {
-            const checkboxes = layersList.querySelectorAll('.layer-checkbox');
-            checkboxes.forEach(cb => {
+            const visibleCheckboxes = getVisibleCheckboxes();
+            visibleCheckboxes.forEach(cb => {
                 if (cb.checked) {
                     cb.checked = false;
                     cb.dispatchEvent(new Event('change'));
@@ -330,7 +406,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Export handler
+    function getVisibleCheckboxes() {
+        const items = layersList.querySelectorAll('.fivemb-layer-item');
+        const visible = [];
+        items.forEach(item => {
+            if (item.style.display !== 'none') {
+                const cb = item.querySelector('.layer-checkbox');
+                if (cb) visible.push(cb);
+            }
+        });
+        return visible;
+    }
+
+    // ── Export handler ────────────────────────────────────────────────────────
+
+    // Realistic placeholder filenames by type
+    function getPlaceholderFilename(type, originalLabel) {
+        if (type === 'video') {
+            if (/\.mov$/i.test(originalLabel)) return 'placeholder.mov';
+            if (/\.3gp$/i.test(originalLabel)) return 'placeholder.3gp';
+            if (/\.mkv$/i.test(originalLabel)) return 'placeholder.mkv';
+            if (/\.webm$/i.test(originalLabel)) return 'placeholder.webm';
+            return 'placeholder.mp4';
+        }
+        if (type === 'photo') {
+            if (/\.jpe?g$/i.test(originalLabel)) return 'placeholder.jpg';
+            if (/\.webp$/i.test(originalLabel)) return 'placeholder.webp';
+            if (/\.gif$/i.test(originalLabel)) return 'placeholder.gif';
+            return 'placeholder.png';
+        }
+        if (type === 'audio') {
+            if (/\.wav$/i.test(originalLabel)) return 'placeholder.wav';
+            if (/\.ogg$/i.test(originalLabel)) return 'placeholder.ogg';
+            if (/\.aac$/i.test(originalLabel)) return 'placeholder.aac';
+            return 'placeholder.mp3';
+        }
+        return 'placeholder';
+    }
+
+    // Convert hex color (#rrggbb) -> AM-style ARGB hex (#ffrrggbb)
+    function hexToArgb(hex) {
+        const r = hex.slice(1, 3);
+        const g = hex.slice(3, 5);
+        const b = hex.slice(5, 7);
+        return `#ff${r}${g}${b}`;
+    }
+
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             if (!selectedFile || !loadedXmlText) return;
@@ -342,12 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedIds.add(cb.getAttribute('data-id'));
                 });
 
+                // Build a map of layer audio colors from the rendered items
+                const audioColorMap = {};
+                layersList.querySelectorAll('.fivemb-layer-item[data-type="audio"]').forEach(item => {
+                    audioColorMap[item.dataset.id] = item.dataset.audioColor;
+                });
+
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(loadedXmlText, "text/xml");
 
                 const activeMediaUris = new Set();
 
-                // 1. Process shapes
+                // 1. Process shapes (photos & videos)
                 const shapes = xmlDoc.getElementsByTagName("shape");
                 for (let i = 0; i < shapes.length; i++) {
                     const shape = shapes[i];
@@ -362,25 +489,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (isMediaFill || hasMediaLabel) {
                         if (selectedIds.has(id)) {
-                            let isVideo = fillVideo || /\.(mp4|mov|3gp|mkv|webm)$/i.test(label);
+                            const isVideo = fillVideo || /\.(mp4|mov|3gp|mkv|webm)$/i.test(label);
+                            const layerType = isVideo ? 'video' : 'photo';
+                            const placeholder = getPlaceholderFilename(layerType, label);
 
-                            shape.setAttribute("fillType", "color");
-                            shape.removeAttribute("fillVideo");
-                            shape.removeAttribute("fillImage");
+                            // Replace with a fake-file media fill (fillType stays "media")
+                            // but point to a placeholder filename so Alight Motion treats it as missing media
+                            shape.setAttribute("fillType", "media");
 
                             if (isVideo) {
-                                shape.setAttribute("label", "Placeholder Video");
+                                shape.setAttribute("fillVideo", placeholder);
+                                shape.removeAttribute("fillImage");
+                                shape.setAttribute("label", placeholder);
                             } else {
-                                shape.setAttribute("label", "Placeholder Photo");
+                                shape.setAttribute("fillImage", placeholder);
+                                shape.removeAttribute("fillVideo");
+                                shape.setAttribute("label", placeholder);
                             }
 
-                            // Set fillColor to solid gray (#ff222222 for video, #ff444444 for photo)
-                            let fillColor = shape.getElementsByTagName("fillColor")[0];
-                            if (!fillColor) {
-                                fillColor = xmlDoc.createElement("fillColor");
-                                shape.appendChild(fillColor);
+                            // Remove existing fillColor to avoid conflicts
+                            const existingFillColor = shape.getElementsByTagName("fillColor")[0];
+                            if (existingFillColor) {
+                                existingFillColor.parentNode.removeChild(existingFillColor);
                             }
-                            fillColor.setAttribute("value", isVideo ? "#ff222222" : "#ff444444");
                         } else {
                             if (fillImage) activeMediaUris.add(fillImage);
                             if (fillVideo) activeMediaUris.add(fillVideo);
@@ -394,16 +525,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const audio = audios[i];
                     const id = audio.getAttribute("id");
                     const src = audio.getAttribute("src") || audio.getAttribute("audio") || "";
+                    const label = audio.getAttribute("label") || audio.getAttribute("name") || "";
+                    const placeholder = getPlaceholderFilename('audio', label);
 
                     if (selectedIds.has(id)) {
-                        audio.setAttribute("name", "audio.mp3");
-                        audio.setAttribute("audio", "audio.mp3");
-                        audio.setAttribute("audioVideo", "audio.mp3");
-                        audio.setAttribute("sound", "audio.mp3");
+                        audio.setAttribute("name", placeholder);
+                        audio.setAttribute("audio", placeholder);
+                        audio.setAttribute("audioVideo", placeholder);
+                        audio.setAttribute("sound", placeholder);
                         audio.setAttribute("enabled", "false");
 
                         if (audio.hasAttribute("src")) {
-                            audio.setAttribute("src", "audio.mp3");
+                            audio.setAttribute("src", placeholder);
                         }
                     } else {
                         if (src) activeMediaUris.add(src);
@@ -421,9 +554,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (type.includes("video")) {
                             media.parentNode.removeChild(media);
                         } else if (type.includes("audio")) {
-                            media.setAttribute("url", "audio.mp3");
-                            media.setAttribute("src", "audio.mp3");
-                            media.setAttribute("path", "audio.mp3");
+                            media.setAttribute("url", "placeholder.mp3");
+                            media.setAttribute("src", "placeholder.mp3");
+                            media.setAttribute("path", "placeholder.mp3");
                         } else if (type.includes("image")) {
                             media.parentNode.removeChild(media);
                         }
