@@ -2360,7 +2360,7 @@ body {
     width: 100%;
     max-width: 100%;
     transform: translateY(100%);
-    transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
     border-bottom: none;
     border-left: none;
     border-right: none;
@@ -2373,7 +2373,7 @@ body {
     transform: translateY(-24px) scale(0.92) !important;
     opacity: 0.6;
     pointer-events: none;
-    transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease;
 }
 
 .mini-popup-overlay.transparent-bg {
@@ -3626,10 +3626,10 @@ body {
 
 .am-xml-overlay.exiting-down .am-xml-canvas,
 .am-xml-overlay.exiting-up .am-xml-canvas {
-    transition: height 0.38s cubic-bezier(0.4, 0, 1, 1),
-                width 0.38s cubic-bezier(0.4, 0, 1, 1),
-                border-radius 0.38s cubic-bezier(0.4, 0, 1, 1),
-                border-color 0.38s cubic-bezier(0.4, 0, 1, 1);
+    transition: height 0.2s cubic-bezier(0.4, 0, 1, 1),
+                width 0.2s cubic-bezier(0.4, 0, 1, 1),
+                border-radius 0.2s cubic-bezier(0.4, 0, 1, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .am-xml-overlay.exiting-down .am-xml-canvas,
@@ -3880,6 +3880,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    touch-action: none;
     -webkit-mask-image: linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
 }
@@ -3888,7 +3889,7 @@ body {
     cursor: ew-resize;
 }
 
-/* Ruler strip */
+/* Ruler strip — allow horizontal scrub */
 .am-xml-ruler-strip {
     height: 22px;
     flex-shrink: 0;
@@ -3898,6 +3899,7 @@ body {
     background: rgba(22, 28, 18, 0.95);
     border-bottom: 1px solid rgba(58, 69, 48, 0.4);
     will-change: transform;
+    touch-action: none;
 }
 
 .am-xml-ruler-canvas {
@@ -3956,6 +3958,8 @@ body {
     position: relative;
     min-height: 0;
     scrollbar-width: none;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .am-xml-scroll-area::-webkit-scrollbar {

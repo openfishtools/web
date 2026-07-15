@@ -677,9 +677,12 @@ document.addEventListener('DOMContentLoaded', () => {
         frameObserver.observe(overlay);
         overlay._frameObserver = frameObserver;
 
-        // ── Scrubbing: only when video is paused ──
+        // ── Scrubbing ──
         trackViewport.addEventListener('pointerdown', (e) => {
-            if (!video || !video.paused) return; // scrub only when paused
+            if (!video) return;
+            if (!video.paused) {
+                video.pause();
+            }
             xmlScrubbing = true;
             scrubStartX = e.clientX;
             scrubStartY = e.clientY;
@@ -720,10 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
 
         // ── Scroll behavior: in-frame area ──
-        // When paused, scroll area handles layer scroll; when at bottom, navigate slide
-        // When playing, any scroll inside overlay navigates to next/prev slide
         const feed = slide.closest('.tiktok-feed');
-
         const editorEl = overlay.querySelector('.am-xml-editor');
 
         const navigateSlide = (direction) => {
@@ -733,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
             overlay.classList.add(exitClass);
             const exitVideo = slide.querySelector('.post-media-container video');
             if (exitVideo) {
-                exitVideo.style.transition = 'top 0.38s cubic-bezier(0.4, 0, 1, 1), left 0.38s cubic-bezier(0.4, 0, 1, 1), width 0.38s cubic-bezier(0.4, 0, 1, 1), height 0.38s cubic-bezier(0.4, 0, 1, 1), border-radius 0.38s cubic-bezier(0.4, 0, 1, 1)';
+                exitVideo.style.transition = 'top 0.2s cubic-bezier(0.4, 0, 1, 1), left 0.2s cubic-bezier(0.4, 0, 1, 1), width 0.2s cubic-bezier(0.4, 0, 1, 1), height 0.2s cubic-bezier(0.4, 0, 1, 1), border-radius 0.2s cubic-bezier(0.4, 0, 1, 1)';
                 exitVideo.style.top = '0px';
                 exitVideo.style.left = '0px';
                 exitVideo.style.width = '100%';
@@ -754,53 +754,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
-            }, 380);
+            }, 200);
         };
 
-        // Wheel on the scrollArea (layer region)
+        // Stop propagation of wheel and touch inside scroll area
         scrollArea.addEventListener('wheel', (e) => {
             e.stopPropagation();
-            // Let native scroll happen, detect boundary
-            const atBottom = scrollArea.scrollTop >= scrollArea.scrollHeight - scrollArea.clientHeight - 2;
-            const atTop = scrollArea.scrollTop <= 2;
-            if (e.deltaY > 0 && atBottom) {
-                e.preventDefault();
-                navigateSlide('down');
-            } else if (e.deltaY < 0 && atTop) {
-                e.preventDefault();
-                navigateSlide('up');
-            }
-        }, { passive: false });
-
-        // Touch swipe on scrollArea
-        let touchStartY = 0;
-        scrollArea.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
-        scrollArea.addEventListener('touchend', (e) => {
-            const deltaY = touchStartY - e.changedTouches[0].clientY;
-            const atBottom = scrollArea.scrollTop >= scrollArea.scrollHeight - scrollArea.clientHeight - 2;
-            const atTop = scrollArea.scrollTop <= 2;
-            if (deltaY > 30 && atBottom) navigateSlide('down');
-            else if (deltaY < -30 && atTop) navigateSlide('up');
         }, { passive: true });
-
-        // Wheel / touch on areas OUTSIDE the scroll-area but inside overlay → navigate directly
-        const scrollTarget = editorEl || overlay;
-        scrollTarget.addEventListener('wheel', (e) => {
-            if (scrollArea.contains(e.target)) return;
-            e.preventDefault();
+        scrollArea.addEventListener('touchmove', (e) => {
             e.stopPropagation();
-            navigateSlide(e.deltaY > 0 ? 'down' : 'up');
-        }, { passive: false });
-
-        let outerTouchY = 0;
-        scrollTarget.addEventListener('touchstart', (e) => {
-            if (!scrollArea.contains(e.target)) outerTouchY = e.touches[0].clientY;
-        }, { passive: true });
-        scrollTarget.addEventListener('touchend', (e) => {
-            if (!scrollArea.contains(e.target)) {
-                const dy = outerTouchY - e.changedTouches[0].clientY;
-                if (Math.abs(dy) > 30) navigateSlide(dy > 0 ? 'down' : 'up');
-            }
         }, { passive: true });
 
         // Start sync immediately if video is already playing
@@ -892,12 +854,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showExplore = () => {
         // Reset any active XML overlay
-        document.querySelectorAll('.am-xml-overlay[data-shown="true"]').forEach(overlay => {
+        document.querySelectorAll('.am-xml-overlay').forEach(overlay => {
             const slide = overlay.closest('.tiktok-slide');
+            if (overlay._stopSync) overlay._stopSync();
+            overlay.classList.remove('visible', 'entering', 'exiting-up', 'exiting-down');
+            overlay.dataset.shown = '';
             if (slide) {
-                if (overlay._stopSync) overlay._stopSync();
-                overlay.classList.remove('visible', 'entering', 'exiting-up', 'exiting-down');
-                overlay.dataset.shown = '';
                 amResetVideoFrame(slide);
             }
         });
@@ -909,14 +871,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (presetFeedView && !presetFeedView.classList.contains('hidden')) {
             // Slide down + fade out animation — works regardless of grid scroll position
-            presetFeedView.style.transition = 'transform 0.28s cubic-bezier(0.4, 0, 1, 1), opacity 0.22s ease';
+            presetFeedView.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 1, 1), opacity 0.12s ease';
             presetFeedView.style.transform = 'translateY(6%)';
             presetFeedView.style.opacity = '0';
 
             if (presetExploreView) {
                 presetExploreView.classList.remove('hidden');
                 presetExploreView.style.opacity = '0';
-                presetExploreView.style.transition = 'opacity 0.2s ease';
+                presetExploreView.style.transition = 'opacity 0.1s ease';
                 requestAnimationFrame(() => {
                     presetExploreView.style.opacity = '1';
                 });
@@ -927,7 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 presetFeedView.style.transform = '';
                 presetFeedView.style.transition = '';
                 presetFeedView.style.opacity = '';
-            }, 300);
+            }, 150);
         } else {
             if (presetFeedView) {
                 presetFeedView.classList.add('hidden');
@@ -942,7 +904,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (presetFeedView) {
             presetFeedView.querySelectorAll('.tiktok-media-host').forEach(host => {
                 const v = host.querySelector('video');
-                if (v) v.pause();
+                if (v) {
+                    v.pause();
+                    v.src = '';
+                    try { v.load(); } catch(e){}
+                }
                 host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
                 delete host.dataset.tiktokState;
             });
@@ -977,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
         void feedView.offsetWidth;
 
         requestAnimationFrame(() => {
-            feedView.style.transition = 'transform 0.28s cubic-bezier(0, 0, 0.2, 1), opacity 0.22s ease';
+            feedView.style.transition = 'transform 0.15s cubic-bezier(0, 0, 0.2, 1), opacity 0.12s ease';
             feedView.style.transform = 'translateY(0)';
             feedView.style.opacity = '1';
         });
@@ -987,7 +953,7 @@ document.addEventListener('DOMContentLoaded', () => {
             feedView.style.transform = '';
             feedView.style.transition = '';
             feedView.style.opacity = '';
-        }, 300);
+        }, 150);
 
         if (feedContainer) {
             hydrateTikTokHosts(feedContainer, 'video');
@@ -1358,6 +1324,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const resetAmXmlSlide = (slide) => {
+        if (!slide) return;
+        const overlay = slide.querySelector('.am-xml-overlay');
+        if (overlay) {
+            if (typeof overlay._stopSync === 'function') overlay._stopSync();
+            if (overlay._frameObserver) {
+                try { overlay._frameObserver.disconnect(); } catch (_) {}
+                overlay._frameObserver = null;
+            }
+            overlay.classList.remove('visible', 'entering', 'exiting-up', 'exiting-down');
+            overlay.dataset.shown = '';
+            delete overlay.dataset.built;
+            overlay.innerHTML = '';
+            overlay._startSync = null;
+            overlay._stopSync = null;
+            overlay._amRender = null;
+            overlay._scrollArea = null;
+            overlay._video = null;
+        }
+        const badge = slide.querySelector('.am-xml-loading-badge');
+        if (badge) badge.classList.remove('show', 'badge-warn');
+        amResetVideoFrame(slide);
+    };
+
+    const unloadSlideVideo = (slide) => {
+        if (!slide) return;
+        slide.querySelectorAll('video').forEach(v => {
+            try {
+                v.pause();
+                if (v.src) v.dataset.originalSrc = v.src;
+                v.removeAttribute('src');
+                v.load();
+            } catch (_) {}
+        });
+        const host = slide.querySelector('.tiktok-media-host');
+        if (host) {
+            host.removeAttribute('data-tiktok-state');
+            host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
+        }
+        const pauseIcon = slide.querySelector('.overlay-pause');
+        if (pauseIcon) pauseIcon.textContent = 'pause';
+    };
+
+    const ensureSlideVideoLoaded = (slide) => {
+        if (!slide) return;
+        const host = slide.querySelector('.tiktok-media-host');
+        if (host && !host.dataset.tiktokState) {
+            hydrateTikTokHosts(slide, 'video');
+            return;
+        }
+        slide.querySelectorAll('video').forEach(v => {
+            if (!v.getAttribute('src') && v.dataset.originalSrc) {
+                v.src = v.dataset.originalSrc;
+                try { v.load(); } catch (_) {}
+            }
+        });
+    };
+
     const setupScrollLinkedVideoPlayback = (scrollRoot, slideSelector, attachEl) => {
         if (!scrollRoot) return;
         const tag = attachEl || scrollRoot;
@@ -1377,10 +1401,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dist < bestDist) { bestDist = dist; bestSlide = slide; }
             });
 
+            slides.forEach(slide => {
+                if (slide === bestSlide) return;
+                resetAmXmlSlide(slide);
+                unloadSlideVideo(slide);
+            });
+
             getAllVideos().forEach(v => v.pause());
 
             if (bestSlide) {
+                const slideId = bestSlide.dataset.id;
+                if (slideId) {
+                    lastClickedId = slideId;
+                    const gridItem = document.querySelector(`.explore-item[data-id="${slideId}"]`);
+                    if (gridItem) lastClickedRect = gridItem.getBoundingClientRect();
+                    history.pushState(null, null, `/${slideId}`);
+                }
+
                 const host = bestSlide.querySelector('.tiktok-media-host');
+                if (host && !host.dataset.tiktokState) {
+                    ensureSlideVideoLoaded(bestSlide);
+                    return;
+                }
+                ensureSlideVideoLoaded(bestSlide);
+
                 const v = (host && host.querySelector('video')) || bestSlide.querySelector('video');
                 if (v) {
                     v.muted = globalMuted;
@@ -1422,14 +1466,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             v.addEventListener('playing', onPlay);
                         }
                     }
-                }
-                
-                const slideId = bestSlide.dataset.id;
-                if (slideId) {
-                    lastClickedId = slideId;
-                    const gridItem = document.querySelector(`.explore-item[data-id="${slideId}"]`);
-                    if (gridItem) lastClickedRect = gridItem.getBoundingClientRect();
-                    history.pushState(null, null, `/${slideId}`);
                 }
             }
         };
@@ -1494,16 +1530,18 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const targetTab = item.getAttribute('data-tab');
 
-            // Stop any playing video if switching away from the feed
+            // Stop any playing video and clear state if switching away from the feed
             const feedView = document.getElementById('preset-feed-view');
             const feedContainer = document.getElementById('preset-feed');
             if (feedView && !feedView.classList.contains('hidden')) {
-                feedView.querySelectorAll('video').forEach(v => v.pause());
-                // If on a direct-link preset URL and switching tab, hide the feed
                 if (targetTab !== 'preset') {
-                    feedView.classList.add('hidden');
-                    feedView.style.opacity = '0';
-                    feedView.style.transform = '';
+                    showExplore();
+                } else {
+                    feedView.querySelectorAll('video').forEach(v => {
+                        v.pause();
+                        v.src = '';
+                        try { v.load(); } catch(e){}
+                    });
                 }
             }
 
