@@ -80,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ═══════════════════════════════════════════════════════ */
 
     // Per-slide parsed XML state cache
-    const amXmlCache = new Map(); // presetId → { layers, beats, durationMs, fps, sceneW, sceneH }
+    const amXmlCache = new Map();
+    const AM_XML_CACHE_MAX = 20;
 
     // Cubic bezier evaluator (ported from AM XML PREVIEW.html)
     const amCubicBezier = (p1x, p1y, p2x, p2y, t) => {
@@ -795,6 +796,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!resp.ok) throw new Error('fetch failed');
                 const text = await resp.text();
                 parsed = parseAmXml(text);
+                if (amXmlCache.size >= AM_XML_CACHE_MAX) {
+                    const firstKey = amXmlCache.keys().next().value;
+                    amXmlCache.delete(firstKey);
+                }
                 amXmlCache.set(id, parsed);
             } catch (err) {
                 console.warn('[AM XML] Failed to load XML:', err);
@@ -853,24 +858,37 @@ document.addEventListener('DOMContentLoaded', () => {
     /* END AM XML ENGINE */
 
     const showExplore = () => {
-        // Reset any active XML overlay
-        document.querySelectorAll('.am-xml-overlay').forEach(overlay => {
-            const slide = overlay.closest('.tiktok-slide');
-            if (overlay._stopSync) overlay._stopSync();
-            overlay.classList.remove('visible', 'entering', 'exiting-up', 'exiting-down');
-            overlay.dataset.shown = '';
-            if (slide) {
-                amResetVideoFrame(slide);
+        amXmlCache.clear();
+        const presetFeedView = document.getElementById('preset-feed-view');
+        if (presetFeedView) {
+            presetFeedView.querySelectorAll('.tiktok-slide').forEach(slide => {
+                resetAmXmlSlide(slide);
+                unloadSlideVideo(slide);
+            });
+            presetFeedView.querySelectorAll('.tiktok-media-host').forEach(host => {
+                const v = host.querySelector('video');
+                if (v) {
+                    v.pause();
+                    v.src = '';
+                    try { v.load(); } catch(e){}
+                }
+                const iframe = host.querySelector('iframe');
+                if (iframe) iframe.src = '';
+                host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
+                delete host.dataset.tiktokState;
+            });
+            const feedContainer = document.getElementById('preset-feed');
+            if (feedContainer && feedContainer._scrollVideoIo) {
+                feedContainer._scrollVideoIo.disconnect();
+                feedContainer._scrollVideoIo = null;
             }
-        });
+        }
 
         const presetExploreView = document.getElementById('preset-explore-view');
-        const presetFeedView = document.getElementById('preset-feed-view');
         
         history.pushState(null, null, '/#preset');
 
         if (presetFeedView && !presetFeedView.classList.contains('hidden')) {
-            // Slide down + fade out animation — works regardless of grid scroll position
             presetFeedView.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 1, 1), opacity 0.12s ease';
             presetFeedView.style.transform = 'translateY(6%)';
             presetFeedView.style.opacity = '0';
@@ -900,19 +918,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 presetExploreView.style.opacity = '1';
             }
         }
-
-        if (presetFeedView) {
-            presetFeedView.querySelectorAll('.tiktok-media-host').forEach(host => {
-                const v = host.querySelector('video');
-                if (v) {
-                    v.pause();
-                    v.src = '';
-                    try { v.load(); } catch(e){}
-                }
-                host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
-                delete host.dataset.tiktokState;
-            });
-        }
     };
 
     const showFeed = async (targetId, clickedEl = null) => {
@@ -939,13 +944,12 @@ document.addEventListener('DOMContentLoaded', () => {
             exploreView.style.opacity = '0';
         }
 
-        // Trigger reflow to apply starting styles before transition starts
-        void feedView.offsetWidth;
-
         requestAnimationFrame(() => {
-            feedView.style.transition = 'transform 0.15s cubic-bezier(0, 0, 0.2, 1), opacity 0.12s ease';
-            feedView.style.transform = 'translateY(0)';
-            feedView.style.opacity = '1';
+            requestAnimationFrame(() => {
+                feedView.style.transition = 'transform 0.15s cubic-bezier(0, 0, 0.2, 1), opacity 0.12s ease';
+                feedView.style.transform = 'translateY(0)';
+                feedView.style.opacity = '1';
+            });
         });
 
         setTimeout(() => {
@@ -1061,16 +1065,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pauseIcon) {
                 pauseIcon.textContent = 'play_arrow';
                 pauseIcon.classList.remove('animate-pause');
-                void pauseIcon.offsetWidth; // trigger reflow
-                pauseIcon.classList.add('animate-pause');
+                requestAnimationFrame(() => pauseIcon.classList.add('animate-pause'));
             }
         } else {
             video.pause();
             if (pauseIcon) {
                 pauseIcon.textContent = 'pause';
                 pauseIcon.classList.remove('animate-pause');
-                void pauseIcon.offsetWidth; // trigger reflow
-                pauseIcon.classList.add('animate-pause');
+                requestAnimationFrame(() => pauseIcon.classList.add('animate-pause'));
             }
         }
     };
@@ -1114,34 +1116,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateScrollingTitles = (root) => {
         if (!root) return;
-        // Wait a bit for layout to settle
         setTimeout(() => {
-            root.querySelectorAll('.tiktok-title').forEach(title => {
-                const wrapper = title.parentElement;
-                if (!wrapper) return;
-                
-                title.classList.remove('scroll');
-                void title.offsetWidth; // reflow
-                
-                if (title.scrollWidth > wrapper.clientWidth + 1) {
-                    const dist = (title.scrollWidth - wrapper.clientWidth) + 30;
-                    title.style.setProperty('--scroll-dist', `${dist}px`);
-                    title.classList.add('scroll');
-                }
-            });
-            
-            root.querySelectorAll('.plugin-tag-v2').forEach(tag => {
-                const wrapper = tag.parentElement;
-                if (!wrapper) return;
-                
-                tag.classList.remove('scroll');
-                void tag.offsetWidth;
-                
-                if (tag.scrollWidth > wrapper.clientWidth + 1) {
-                    const dist = (tag.scrollWidth - wrapper.clientWidth) + 30;
-                    tag.style.setProperty('--scroll-dist', `${dist}px`);
-                    tag.classList.add('scroll');
-                }
+            const titles = root.querySelectorAll('.tiktok-title');
+            const tags = root.querySelectorAll('.plugin-tag-v2');
+            requestAnimationFrame(() => {
+                titles.forEach(title => {
+                    const wrapper = title.parentElement;
+                    if (!wrapper) return;
+                    title.classList.remove('scroll');
+                    if (title.scrollWidth > wrapper.clientWidth + 1) {
+                        const dist = (title.scrollWidth - wrapper.clientWidth) + 30;
+                        title.style.setProperty('--scroll-dist', `${dist}px`);
+                        title.classList.add('scroll');
+                    }
+                });
+                tags.forEach(tag => {
+                    const wrapper = tag.parentElement;
+                    if (!wrapper) return;
+                    tag.classList.remove('scroll');
+                    if (tag.scrollWidth > wrapper.clientWidth + 1) {
+                        const dist = (tag.scrollWidth - wrapper.clientWidth) + 30;
+                        tag.style.setProperty('--scroll-dist', `${dist}px`);
+                        tag.classList.add('scroll');
+                    }
+                });
             });
         }, 500);
     };
@@ -1387,35 +1385,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const tag = attachEl || scrollRoot;
         disconnectScrollVideoIo(tag);
 
-        const getAllVideos = () => [...scrollRoot.querySelectorAll(`${slideSelector} video`)];
+        let lastBestSlide = null;
 
         const playVisible = () => {
-            const slides = [...scrollRoot.querySelectorAll(slideSelector)];
+            const slides = scrollRoot.querySelectorAll(slideSelector);
             const rootRect = scrollRoot.getBoundingClientRect();
             const rootCenter = rootRect.top + rootRect.height / 2;
 
             let bestSlide = null, bestDist = Infinity;
-            slides.forEach(slide => {
-                const r = slide.getBoundingClientRect();
+            for (let i = 0; i < slides.length; i++) {
+                const r = slides[i].getBoundingClientRect();
                 const dist = Math.abs((r.top + r.height / 2) - rootCenter);
-                if (dist < bestDist) { bestDist = dist; bestSlide = slide; }
-            });
+                if (dist < bestDist) { bestDist = dist; bestSlide = slides[i]; }
+            }
 
-            slides.forEach(slide => {
-                if (slide === bestSlide) return;
-                resetAmXmlSlide(slide);
-                unloadSlideVideo(slide);
-            });
+            if (bestSlide === lastBestSlide) return;
+            lastBestSlide = bestSlide;
 
-            getAllVideos().forEach(v => v.pause());
+            for (let i = 0; i < slides.length; i++) {
+                const s = slides[i];
+                if (s === bestSlide) continue;
+                if (s.dataset.id) resetAmXmlSlide(s);
+                unloadSlideVideo(s);
+            }
+
+            scrollRoot.querySelectorAll(`${slideSelector} video`).forEach(v => {
+                if (!v.paused) v.pause();
+            });
 
             if (bestSlide) {
                 const slideId = bestSlide.dataset.id;
                 if (slideId) {
                     lastClickedId = slideId;
-                    const gridItem = document.querySelector(`.explore-item[data-id="${slideId}"]`);
-                    if (gridItem) lastClickedRect = gridItem.getBoundingClientRect();
-                    history.pushState(null, null, `/${slideId}`);
+                    history.replaceState(null, null, `/${slideId}`);
                 }
 
                 const host = bestSlide.querySelector('.tiktok-media-host');
@@ -1426,7 +1428,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ensureSlideVideoLoaded(bestSlide);
 
                 const v = (host && host.querySelector('video')) || bestSlide.querySelector('video');
-                if (v) {
+                if (v && v.paused) {
                     v.muted = globalMuted;
                     if (!globalMuted) v.volume = 1;
                     v.play().catch(() => { 
@@ -1445,18 +1447,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (icon) icon.textContent = v.muted ? 'volume_off' : 'volume_up';
                     }
 
-                    // ── Trigger AM XML preview after video starts (if applicable) ──
                     if (bestSlide.dataset.amXmlUrl) {
-                        const overlay = bestSlide.querySelector('.am-xml-overlay');
-                        // Stop sync on all other overlays first
-                        slides.forEach(s => {
-                            if (s !== bestSlide) {
-                                const ov = s.querySelector('.am-xml-overlay');
-                                if (ov && ov._stopSync) ov._stopSync();
-                            }
+                        scrollRoot.querySelectorAll(`${slideSelector} .am-xml-overlay`).forEach(ov => {
+                            if (ov !== bestSlide.querySelector('.am-xml-overlay') && ov._stopSync) ov._stopSync();
                         });
-                        // Trigger XML preview for this slide
-                        if (v.readyState >= 2 && !v.paused) {
+                        if (v.readyState >= 2) {
                             triggerAmXmlPreview(bestSlide);
                         } else {
                             const onPlay = () => {
@@ -1473,11 +1468,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let scrollTimer = null;
         const onScroll = () => {
             clearTimeout(scrollTimer);
-            getAllVideos().forEach(v => v.pause());
-            // Stop all XML syncs during scroll
-            scrollRoot.querySelectorAll('.am-xml-overlay').forEach(ov => {
-                if (ov._stopSync) ov._stopSync();
-            });
             scrollTimer = setTimeout(playVisible, 150);
         };
 
@@ -1486,6 +1476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             disconnect: () => {
                 scrollRoot.removeEventListener('scroll', onScroll);
                 clearTimeout(scrollTimer);
+                lastBestSlide = null;
             }
         };
     };
@@ -1927,32 +1918,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleLike = async (id, btn, onlyLike = false) => {
         const isLiked = btn.classList.contains('liked');
-        if (onlyLike && isLiked) return; // For double tap, only allow liking
+        if (onlyLike && isLiked) return;
+
+        const label = btn.querySelector('.action-label');
+        const icon = btn.querySelector('.material-symbols-rounded');
+        const currentCount = label ? parseInt(label.textContent) || 0 : 0;
+
+        if (isLiked) {
+            btn.classList.remove('liked');
+            if (icon) icon.textContent = 'favorite_border';
+            if (label) label.textContent = Math.max(0, currentCount - 1);
+        } else {
+            btn.classList.add('liked');
+            if (icon) icon.textContent = 'favorite';
+            if (label) label.textContent = currentCount + 1;
+            btn.classList.add('like-pop');
+            setTimeout(() => btn.classList.remove('like-pop'), 400);
+        }
 
         try {
-            const res = await fetch(`${API_URL}/presets/${id}/like`, {
-                method: 'POST'
-            });
-            
+            const res = await fetch(`${API_URL}/presets/${id}/like`, { method: 'POST' });
             const data = await res.json();
-            
-            if (res.ok) {
+            if (res.ok && label) {
+                label.textContent = data.likes;
                 if (data.liked) {
                     btn.classList.add('liked');
-                    const icon = btn.querySelector('.material-symbols-rounded');
                     if (icon) icon.textContent = 'favorite';
-                    btn.classList.add('like-pop');
-                    setTimeout(() => btn.classList.remove('like-pop'), 400);
                 } else {
                     btn.classList.remove('liked');
-                    const icon = btn.querySelector('.material-symbols-rounded');
                     if (icon) icon.textContent = 'favorite_border';
                 }
-                
-                const label = btn.querySelector('.action-label');
-                if (label) label.textContent = data.likes;
-            } else {
-                alert('Failed to like: ' + data.error);
             }
         } catch (err) {
             console.error('Like error:', err);

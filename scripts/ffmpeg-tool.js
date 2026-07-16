@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (preset === 'fast') {
                 command = ['-i', 'input.mp4', '-threads', threads,
                     ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx265', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                    '-c:v', 'libx265', '-preset', 'veryfast', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
             } else {
                 command = ['-i', 'input.mp4', '-threads', threads,
                     ...(needsScale ? ['-vf', scaleFilter] : []),

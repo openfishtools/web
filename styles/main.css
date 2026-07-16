@@ -1068,6 +1068,7 @@ body {
     scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    contain: layout style;
 }
 
 
@@ -1082,6 +1083,7 @@ body {
     width: 100%;
     height: 100%;
     background-color: #000;
+    contain: layout paint;
 }
 
 .post-media-container video,
@@ -1090,6 +1092,7 @@ body {
     height: 100%;
     object-fit: cover;
     pointer-events: none;
+    will-change: transform;
 }
 
 .video-interaction-overlay {
@@ -1273,6 +1276,7 @@ body {
     margin: 0 auto;
     background: #000;
     flex-shrink: 0;
+    contain: layout style paint;
 }
 
 .tiktok-slide-media {
@@ -1621,6 +1625,7 @@ body {
     overflow: hidden;
     cursor: pointer;
     border-radius: 12px;
+    contain: layout paint;
 }
 
 .explore-item img,
@@ -3765,8 +3770,8 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    border: 1.5px solid currentColor;
-    border-radius: 2px;
+    border: 1px solid currentColor;
+    border-radius: 1px;
 }
 
 .am-xml-oval-outline {
@@ -3783,26 +3788,26 @@ body {
     top: 0;
     left: 0;
     border: 1px dashed currentColor;
-    border-radius: 3px;
+    border-radius: 2px;
 }
 
 .am-xml-handle {
     position: absolute;
-    width: 6px;
-    height: 6px;
-    background-color: #fff;
-    border: 1px solid currentColor;
+    width: 5px;
+    height: 5px;
+    background-color: currentColor;
+    border: none;
     box-sizing: border-box;
     z-index: 3;
 }
-.handle-tl { top: -3px; left: -3px; }
-.handle-tc { top: -3px; left: calc(50% - 3px); }
-.handle-tr { top: -3px; right: -3px; }
-.handle-rc { top: calc(50% - 3px); right: -3px; }
-.handle-br { bottom: -3px; right: -3px; }
-.handle-bc { bottom: -3px; left: calc(50% - 3px); }
-.handle-bl { bottom: -3px; left: -3px; }
-.handle-lc { top: calc(50% - 3px); left: -3px; }
+.handle-tl { top: -2.5px; left: -2.5px; }
+.handle-tc { top: -2.5px; left: calc(50% - 2.5px); }
+.handle-tr { top: -2.5px; right: -2.5px; }
+.handle-rc { top: calc(50% - 2.5px); right: -2.5px; }
+.handle-br { bottom: -2.5px; right: -2.5px; }
+.handle-bc { bottom: -2.5px; left: calc(50% - 2.5px); }
+.handle-bl { bottom: -2.5px; left: -2.5px; }
+.handle-lc { top: calc(50% - 2.5px); left: -2.5px; }
 
 /* ── Transport bar ── */
 .am-xml-transport {
