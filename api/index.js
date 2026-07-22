@@ -519,24 +519,43 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     }
 });
 
+function normalizeProxyUrl(raw) {
+    try {
+        const u = new URL(raw);
+        if (u.hostname === 'github.com') {
+            const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+            if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
+        }
+        if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
+            const m = u.pathname.match(/^\/([^/]+)$/);
+            if (m) return `https://pastebin.com/raw${u.pathname}`;
+        }
+    } catch (e) {}
+    return raw;
+}
+
 app.get('/api/proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl || typeof targetUrl !== 'string') {
         return res.status(400).json({ error: 'Missing url query parameter' });
     }
+    const resolvedUrl = normalizeProxyUrl(targetUrl);
     try {
-        const response = await fetch(targetUrl, {
+        const response = await fetch(resolvedUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*'
             },
-            signal: AbortSignal.timeout(8000)
+            signal: AbortSignal.timeout(15000)
         });
         if (!response.ok) {
             return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
         }
-        const text = await response.text();
-        res.setHeader('Content-Type', 'text/plain');
-        res.send(text);
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.send(Buffer.from(buffer));
     } catch (err) {
         res.status(500).json({ error: 'Proxy request failed', details: err.message });
     }

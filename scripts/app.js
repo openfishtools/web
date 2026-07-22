@@ -10,6 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return `https://${url}`;
     };
 
+    const normalizeXmlUrl = (url) => {
+        try {
+            const u = new URL(url);
+            if (u.hostname === 'github.com') {
+                const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+                if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
+            }
+            if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
+                const m = u.pathname.match(/^\/([^/]+)$/);
+                if (m) return `https://pastebin.com/raw${u.pathname}`;
+            }
+        } catch (e) {}
+        return url;
+    };
+
     const formatIconUrl = (url) => {
         if (!url || typeof url !== 'string') return url;
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('assets/') || url.startsWith('/')) {
@@ -1740,18 +1755,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = btn.dataset.url;
                 if (url) {
                     if (btn.classList.contains('am-xml-btn')) {
-                        // Direct XML download via proxy
-                        const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(url)}`;
+                        const rawUrl = normalizeXmlUrl(url);
+                        const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(rawUrl)}`;
                         fetch(proxyUrl)
-                            .then(r => r.ok ? r.blob() : Promise.reject())
+                            .then(r => r.ok ? r.blob() : Promise.reject(new Error(`HTTP ${r.status}`)))
                             .then(blob => {
+                                const xmlBlob = blob.type && blob.type !== 'application/octet-stream'
+                                    ? blob
+                                    : new Blob([blob], { type: 'application/xml' });
                                 const a = document.createElement('a');
-                                a.href = URL.createObjectURL(blob);
+                                a.href = URL.createObjectURL(xmlBlob);
                                 a.download = (presetData.name || 'preset') + '.xml';
+                                document.body.appendChild(a);
                                 a.click();
-                                URL.revokeObjectURL(a.href);
+                                setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
                             })
-                            .catch(() => window.open(ensureProtocol(url), '_blank'));
+                            .catch(() => {
+                                const a = document.createElement('a');
+                                a.href = rawUrl;
+                                a.download = (presetData.name || 'preset') + '.xml';
+                                a.target = '_blank';
+                                a.rel = 'noopener noreferrer';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            });
                     } else {
                         window.open(ensureProtocol(url), '_blank');
                     }
