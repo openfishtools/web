@@ -1760,9 +1760,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fetch(proxyUrl)
                             .then(r => r.ok ? r.blob() : Promise.reject(new Error(`HTTP ${r.status}`)))
                             .then(blob => {
-                                const xmlBlob = blob.type && blob.type !== 'application/octet-stream'
-                                    ? blob
-                                    : new Blob([blob], { type: 'application/xml' });
+                                const xmlBlob = new Blob([blob], { type: 'application/xml' });
                                 const a = document.createElement('a');
                                 a.href = URL.createObjectURL(xmlBlob);
                                 a.download = (presetData.name || 'preset') + '.xml';
