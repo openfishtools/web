@@ -48,8 +48,8 @@ app.get('/:id([a-f0-9]{24})', (req, res) => {
 });
 
 
-/** Note: Vercel (Serverless) memory is transient, so sessions are stored in MongoDB. */
-const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
+/** Note: Admin session expires after 5 seconds of inactivity. Only 1 active session allowed. */
+const ADMIN_SESSION_MS = 5000;
 
 async function requireAdmin(req, res, next) {
     const h = req.headers.authorization;
@@ -63,6 +63,8 @@ async function requireAdmin(req, res, next) {
             if (session) await Session.deleteOne({ token });
             return res.status(401).json({ error: 'Unauthorized' });
         }
+        // Extend session expiration on activity by 5 seconds
+        await Session.updateOne({ token }, { expiresAt: new Date(Date.now() + ADMIN_SESSION_MS) });
         next();
     } catch (err) {
         res.status(500).json({ error: 'Auth check failed' });
@@ -91,14 +93,18 @@ app.use(async (req, res, next) => {
 const SocialSchema = new mongoose.Schema({
     name: String,
     url: String,
-    icon: String
+    icon: String,
+    order: { type: Number, default: 0 },
+    hidden: { type: Boolean, default: false }
 });
 const Social = mongoose.models.Social || mongoose.model('Social', SocialSchema);
 
 const ContactSchema = new mongoose.Schema({
     name: String,
     url: String,
-    icon: String
+    icon: String,
+    order: { type: Number, default: 0 },
+    hidden: { type: Boolean, default: false }
 });
 const Contact = mongoose.models.Contact || mongoose.model('Contact', ContactSchema);
 
@@ -116,7 +122,9 @@ const PresetSchema = new mongoose.Schema({
     amPremiumUrl: String,
     am5MbUrl: String,
     amXmlUrl: String,
-    amXmlExtras: [{ label: String, url: String }]
+    amXmlExtras: [{ label: String, url: String }],
+    order: { type: Number, default: 0 },
+    hidden: { type: Boolean, default: false }
 });
 const Preset = mongoose.models.Preset || mongoose.model('Preset', PresetSchema);
 
@@ -145,6 +153,8 @@ const ResourceSchema = new mongoose.Schema({
     // Legacy fallback fields
     version: String,
     url: String,
+    order: { type: Number, default: 0 },
+    hidden: { type: Boolean, default: false }
 });
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
 
@@ -571,6 +581,10 @@ app.post('/api/admin/login', async (req, res) => {
         if (!admin || !await bcrypt.compare(password, admin.passwordHash)) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+        
+        // Single active session enforcement: delete any previous active sessions
+        await Session.deleteMany({});
+
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + ADMIN_SESSION_MS);
         
@@ -584,6 +598,8 @@ app.post('/api/admin/login', async (req, res) => {
 
 app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true }));
 
+app.post('/api/admin/heartbeat', requireAdmin, (req, res) => res.json({ ok: true }));
+
 app.post('/api/admin/logout', requireAdmin, async (req, res) => {
     const h = req.headers.authorization;
     if (h && h.startsWith('Bearer ')) {
@@ -593,8 +609,21 @@ app.post('/api/admin/logout', requireAdmin, async (req, res) => {
     res.json({ ok: true });
 });
 
-app.get('/api/socials', async (req, res) => res.json(await Social.find()));
+app.get('/api/socials', async (req, res) => res.json(await Social.find().sort({ order: 1, _id: 1 })));
 app.post('/api/socials', requireAdmin, async (req, res) => res.json(await new Social(req.body).save()));
+app.put('/api/socials/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Social.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.put('/api/socials/:id', requireAdmin, async (req, res) => res.json(await Social.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
     await Social.findByIdAndDelete(req.params.id);
@@ -602,8 +631,21 @@ app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
 });
 
 // Contacts CRUD
-app.get('/api/contacts', async (req, res) => res.json(await Contact.find()));
+app.get('/api/contacts', async (req, res) => res.json(await Contact.find().sort({ order: 1, _id: 1 })));
 app.post('/api/contacts', requireAdmin, async (req, res) => res.json(await new Contact(req.body).save()));
+app.put('/api/contacts/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Contact.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.put('/api/contacts/:id', requireAdmin, async (req, res) => res.json(await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
     await Contact.findByIdAndDelete(req.params.id);
@@ -614,7 +656,7 @@ app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
 app.get('/api/presets', async (req, res) => {
     try {
         const ip = getClientIp(req);
-        const presets = await Preset.find().sort({ _id: -1 }).lean();
+        const presets = await Preset.find().sort({ order: 1, _id: -1 }).lean();
         
         // Fetch all likes to calculate counts and user status dynamically
         const allLikes = await Like.find().lean();
@@ -644,6 +686,19 @@ app.get('/api/presets', async (req, res) => {
     }
 });
 app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Preset(req.body).save()));
+app.put('/api/presets/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Preset.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
     await Preset.findByIdAndDelete(req.params.id);
@@ -676,8 +731,21 @@ app.post('/api/presets/:id/like', async (req, res) => {
     }
 });
 
-app.get('/api/resources', async (req, res) => res.json(await Resource.find()));
+app.get('/api/resources', async (req, res) => res.json(await Resource.find().sort({ order: 1, _id: 1 })));
 app.post('/api/resources', requireAdmin, async (req, res) => res.json(await new Resource(req.body).save()));
+app.put('/api/resources/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Resource.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.put('/api/resources/:id', requireAdmin, async (req, res) => {
     try {
         // Try ObjectId match first (admin-created), fallback to string _id (manually inserted)

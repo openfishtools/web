@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const showLoginUI = () => {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
         adminLogin.classList.remove('d-none');
         adminLogin.dataset.loading = 'false';
         adminApp.classList.add('d-none');
@@ -219,6 +220,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    let heartbeatInterval = null;
+    let lastActivityTime = Date.now();
+
+    const resetActivityTimer = () => {
+        lastActivityTime = Date.now();
+    };
+
+    ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+        window.addEventListener(evt, resetActivityTimer, { passive: true });
+    });
+
+    const startHeartbeat = () => {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        lastActivityTime = Date.now();
+
+        heartbeatInterval = setInterval(async () => {
+            if (!adminToken) {
+                clearInterval(heartbeatInterval);
+                return;
+            }
+
+            const idleMs = Date.now() - lastActivityTime;
+            if (idleMs >= 5000) {
+                clearInterval(heartbeatInterval);
+                persistToken(null);
+                showLoginUI();
+                alert('Session expired due to 5 seconds of inactivity.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/admin/heartbeat`, {
+                    method: 'POST',
+                    headers: adminAuthHeaders()
+                });
+                if (res.status === 401) {
+                    clearInterval(heartbeatInterval);
+                    onUnauthorized();
+                }
+            } catch (e) {}
+        }, 1500);
+    };
+
     window.addEventListener('hashchange', handleHashNavigation);
 
     const verifySession = async () => {
@@ -254,16 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         handleHashNavigation();
         registerPush();
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
-        heartbeatInterval = setInterval(async () => {
-            try {
-                const res = await fetch(`${API_URL}/admin/heartbeat`, { 
-                    method: 'POST',
-                    headers: adminAuthHeaders()
-                });
-                check401(res);
-            } catch (e) {}
-        }, 5000);
+        startHeartbeat();
     };
 
     const initModalTriggers = () => {
@@ -1084,12 +1119,52 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // End of chat UI functions
 
+    // Helper for reordering items (move up / down)
+    const reorderItem = async (type, list, index, direction, reloadFn) => {
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= list.length) return;
+
+        const updatedList = [...list];
+        const temp = updatedList[index];
+        updatedList[index] = updatedList[targetIndex];
+        updatedList[targetIndex] = temp;
+
+        const itemsToUpdate = updatedList.map((item, idx) => ({ id: item._id, order: idx }));
+
+        try {
+            const res = await fetch(`${API_URL}/${type}/reorder`, {
+                method: 'PUT',
+                headers: jsonHeaders(),
+                body: JSON.stringify({ items: itemsToUpdate })
+            });
+            if (!res.ok) throw new Error('Reorder failed');
+            reloadFn();
+        } catch (err) {
+            alert('Failed to update order: ' + err.message);
+        }
+    };
+
+    // Helper for toggling item visibility (hide / show)
+    const toggleHideItem = async (type, id, currentHiddenStatus, reloadFn) => {
+        try {
+            const res = await fetch(`${API_URL}/${type}/${id}`, {
+                method: 'PUT',
+                headers: jsonHeaders(),
+                body: JSON.stringify({ hidden: !currentHiddenStatus })
+            });
+            if (!res.ok) throw new Error('Visibility update failed');
+            reloadFn();
+        } catch (err) {
+            alert('Failed to update visibility: ' + err.message);
+        }
+    };
+
     const loadSocials = async () => {
         if (!adminToken) return;
         const res = await fetch(`${API_URL}/socials`);
         const socials = await res.json();
         const body = document.getElementById('social-table-body');
-        body.innerHTML = socials.map((s) => {
+        body.innerHTML = socials.map((s, idx) => {
             const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
                 ? `<img src="${thumbUrl(s.icon, 64)}" class="admin-table-icon" alt="${s.name}" loading="lazy">`
                 : (s.icon && s.icon.startsWith('bi-'))
@@ -1098,17 +1173,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `<span class="material-symbols-rounded">${s.icon.substring(3)}</span>`
                         : `<span class="material-symbols-rounded">${s.icon || 'public'}</span>`;
             
+            const isHidden = !!s.hidden;
+            const hiddenBadge = isHidden ? `<span class="badge-hidden"><span class="material-symbols-rounded" style="font-size:12px">visibility_off</span>Hidden</span>` : '';
+            const hideIcon = isHidden ? 'visibility_off' : 'visibility';
+            const hideTitle = isHidden ? 'Show item' : 'Hide item';
+
             return `
-            <tr data-id="${s._id}">
+            <tr data-id="${s._id}" class="${isHidden ? 'table-row-hidden' : ''}">
                 <td>${iconHtml}</td>
-                <td>${s.name}</td>
+                <td>${s.name}${hiddenBadge}</td>
                 <td><a href="${ensureProtocol(s.url)}" target="_blank" class="table-link">${s.url}</a></td>
                 <td class="table-actions">
+                    <span class="material-symbols-rounded action-icon move-up ${idx === 0 ? 'disabled' : ''}" title="Move Up">arrow_upward</span>
+                    <span class="material-symbols-rounded action-icon move-down ${idx === socials.length - 1 ? 'disabled' : ''}" title="Move Down">arrow_downward</span>
+                    <span class="material-symbols-rounded action-icon toggle-hide" title="${hideTitle}">${hideIcon}</span>
                     <span class="material-symbols-rounded action-icon edit-social">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-social">delete</span>
                 </td>
             </tr>
         `}).join('');
+        body.querySelectorAll('.move-up:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = socials.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('socials', socials, i, -1, loadSocials);
+            };
+        });
+        body.querySelectorAll('.move-down:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = socials.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('socials', socials, i, 1, loadSocials);
+            };
+        });
+        body.querySelectorAll('.toggle-hide').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const item = socials.find(s => s._id === tr.dataset.id);
+                if (item) toggleHideItem('socials', item._id, item.hidden, loadSocials);
+            };
+        });
         body.querySelectorAll('.edit-social').forEach(btn => { btn.onclick = () => editSocial(btn.closest('tr').dataset.id); });
         body.querySelectorAll('.delete-social').forEach(btn => { btn.onclick = () => deleteItem('socials', btn.closest('tr').dataset.id, loadSocials); });
     };
@@ -1152,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const contacts = await res.json();
         const body = document.getElementById('contact-table-body');
         if (!body) return;
-        body.innerHTML = contacts.map((c) => {
+        body.innerHTML = contacts.map((c, idx) => {
             const iconHtml = (c.icon && (c.icon.startsWith('http') || c.icon.includes('/')))
                 ? `<img src="${thumbUrl(c.icon, 64)}" class="admin-table-icon" alt="${c.name}" loading="lazy">`
                 : (c.icon && c.icon.startsWith('bi-'))
@@ -1161,17 +1265,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `<span class="material-symbols-rounded">${c.icon.substring(3)}</span>`
                         : `<span class="material-symbols-rounded">${c.icon || 'public'}</span>`;
             
+            const isHidden = !!c.hidden;
+            const hiddenBadge = isHidden ? `<span class="badge-hidden"><span class="material-symbols-rounded" style="font-size:12px">visibility_off</span>Hidden</span>` : '';
+            const hideIcon = isHidden ? 'visibility_off' : 'visibility';
+            const hideTitle = isHidden ? 'Show item' : 'Hide item';
+
             return `
-            <tr data-id="${c._id}">
+            <tr data-id="${c._id}" class="${isHidden ? 'table-row-hidden' : ''}">
                 <td>${iconHtml}</td>
-                <td>${c.name}</td>
+                <td>${c.name}${hiddenBadge}</td>
                 <td><a href="${ensureProtocol(c.url)}" target="_blank" class="table-link">${c.url}</a></td>
                 <td class="table-actions">
+                    <span class="material-symbols-rounded action-icon move-up ${idx === 0 ? 'disabled' : ''}" title="Move Up">arrow_upward</span>
+                    <span class="material-symbols-rounded action-icon move-down ${idx === contacts.length - 1 ? 'disabled' : ''}" title="Move Down">arrow_downward</span>
+                    <span class="material-symbols-rounded action-icon toggle-hide" title="${hideTitle}">${hideIcon}</span>
                     <span class="material-symbols-rounded action-icon edit-contact">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-contact">delete</span>
                 </td>
             </tr>
         `}).join('');
+        body.querySelectorAll('.move-up:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = contacts.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('contacts', contacts, i, -1, loadContacts);
+            };
+        });
+        body.querySelectorAll('.move-down:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = contacts.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('contacts', contacts, i, 1, loadContacts);
+            };
+        });
+        body.querySelectorAll('.toggle-hide').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const item = contacts.find(c => c._id === tr.dataset.id);
+                if (item) toggleHideItem('contacts', item._id, item.hidden, loadContacts);
+            };
+        });
         body.querySelectorAll('.edit-contact').forEach(btn => { btn.onclick = () => editContact(btn.closest('tr').dataset.id); });
         body.querySelectorAll('.delete-contact').forEach(btn => { btn.onclick = () => deleteItem('contacts', btn.closest('tr').dataset.id, loadContacts); });
     };
@@ -1214,14 +1347,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${API_URL}/presets`);
         const presets = await res.json();
         const body = document.getElementById('preset-table-body');
-        body.innerHTML = presets.map((p) => {
+        body.innerHTML = presets.map((p, idx) => {
             const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
             const swDisplay = swArr.join(', ');
             const urlsArr = Array.isArray(p.urls) ? p.urls : (p.url ? [{ sw: swArr[0] || 'N/A', url: p.url }] : []);
             const urlDisplay = urlsArr.map(u => `<a href="${ensureProtocol(u.url)}" target="_blank" class="table-link">${u.sw}</a>`).join(' ');
+            
+            const isHidden = !!p.hidden;
+            const hiddenBadge = isHidden ? `<span class="badge-hidden"><span class="material-symbols-rounded" style="font-size:12px">visibility_off</span>Hidden</span>` : '';
+            const hideIcon = isHidden ? 'visibility_off' : 'visibility';
+            const hideTitle = isHidden ? 'Show item' : 'Hide item';
+
             return `
-            <tr data-id="${p._id}">
-                <td>${p.name}</td>
+            <tr data-id="${p._id}" class="${isHidden ? 'table-row-hidden' : ''}">
+                <td>${p.name}${hiddenBadge}</td>
                 <td>${swDisplay}</td>
                 <td>${p.version}</td>
                 <td>${p.size || 'N/A'}</td>
@@ -1229,12 +1368,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${urlDisplay || 'N/A'}</td>
                 <td>${p.likes || 0}</td>
                 <td class="table-actions">
+                    <span class="material-symbols-rounded action-icon move-up ${idx === 0 ? 'disabled' : ''}" title="Move Up">arrow_upward</span>
+                    <span class="material-symbols-rounded action-icon move-down ${idx === presets.length - 1 ? 'disabled' : ''}" title="Move Down">arrow_downward</span>
+                    <span class="material-symbols-rounded action-icon toggle-hide" title="${hideTitle}">${hideIcon}</span>
                     <span class="material-symbols-rounded action-icon edit-preset">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-preset">delete</span>
                 </td>
             </tr>
         `;
         }).join('');
+        body.querySelectorAll('.move-up:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = presets.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('presets', presets, i, -1, loadPresets);
+            };
+        });
+        body.querySelectorAll('.move-down:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = presets.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('presets', presets, i, 1, loadPresets);
+            };
+        });
+        body.querySelectorAll('.toggle-hide').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const item = presets.find(p => p._id === tr.dataset.id);
+                if (item) toggleHideItem('presets', item._id, item.hidden, loadPresets);
+            };
+        });
         body.querySelectorAll('.edit-preset').forEach(btn => { btn.onclick = () => editPreset(btn.closest('tr').dataset.id); });
         body.querySelectorAll('.delete-preset').forEach(btn => { btn.onclick = () => deleteItem('presets', btn.closest('tr').dataset.id, loadPresets); });
     };
@@ -1459,7 +1622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch(`${API_URL}/resources`);
         const resources = await res.json();
         const body = document.getElementById('resource-table-body');
-        body.innerHTML = resources.map((r) => {
+        body.innerHTML = resources.map((r, idx) => {
             const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
                 ? `<img src="${thumbUrl(r.icon, 64)}" class="admin-table-icon" alt="${r.title}" loading="lazy">`
                 : `<span class="material-symbols-rounded">${r.icon || 'shop'}</span>`;
@@ -1474,21 +1637,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const instruction = r.instruction ? `<span class="material-symbols-rounded" style="color:var(--md-sys-color-primary);font-size:18px" title="${r.instruction.substring(0,50)}...">info</span>` : '—';
 
+            const isHidden = !!r.hidden;
+            const hiddenBadge = isHidden ? `<span class="badge-hidden"><span class="material-symbols-rounded" style="font-size:12px">visibility_off</span>Hidden</span>` : '';
+            const hideIcon = isHidden ? 'visibility_off' : 'visibility';
+            const hideTitle = isHidden ? 'Show item' : 'Hide item';
+
             return `
-            <tr data-id="${r._id}">
+            <tr data-id="${r._id}" class="${isHidden ? 'table-row-hidden' : ''}">
                 <td>${iconHtml}</td>
-                <td>${r.title}</td>
+                <td>${r.title}${hiddenBadge}</td>
                 <td>${cats.join(', ') || '—'}</td>
                 <td>${r.dev || ''}</td>
                 <td>${osIcons || '—'}</td>
                 <td>${r.info || ''}</td>
                 <td>${instruction}</td>
                 <td class="table-actions">
+                    <span class="material-symbols-rounded action-icon move-up ${idx === 0 ? 'disabled' : ''}" title="Move Up">arrow_upward</span>
+                    <span class="material-symbols-rounded action-icon move-down ${idx === resources.length - 1 ? 'disabled' : ''}" title="Move Down">arrow_downward</span>
+                    <span class="material-symbols-rounded action-icon toggle-hide" title="${hideTitle}">${hideIcon}</span>
                     <span class="material-symbols-rounded action-icon edit-resource">edit</span>
                     <span class="material-symbols-rounded action-icon delete delete-resource">delete</span>
                 </td>
             </tr>
         `}).join('');
+        body.querySelectorAll('.move-up:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = resources.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('resources', resources, i, -1, loadResources);
+            };
+        });
+        body.querySelectorAll('.move-down:not(.disabled)').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const i = resources.findIndex(item => item._id === tr.dataset.id);
+                reorderItem('resources', resources, i, 1, loadResources);
+            };
+        });
+        body.querySelectorAll('.toggle-hide').forEach(btn => {
+            btn.onclick = () => {
+                const tr = btn.closest('tr');
+                const item = resources.find(r => r._id === tr.dataset.id);
+                if (item) toggleHideItem('resources', item._id, item.hidden, loadResources);
+            };
+        });
         body.querySelectorAll('.edit-resource').forEach(btn => { btn.onclick = () => editResource(btn.closest('tr').dataset.id); });
         body.querySelectorAll('.delete-resource').forEach(btn => { btn.onclick = () => deleteItem('resources', btn.closest('tr').dataset.id, loadResources); });
     };

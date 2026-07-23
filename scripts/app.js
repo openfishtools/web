@@ -1502,7 +1502,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             grid.innerHTML = Array(6).fill('<div class="skeleton-social-card"><div class="skeleton-social-icon"></div><div class="skeleton-social-name"></div></div>').join('');
             const res = await fetch(`${API_URL}/contacts`);
-            const contacts = await res.json();
+            const rawContacts = await res.json();
+            const contacts = Array.isArray(rawContacts) ? rawContacts.filter(c => !c.hidden) : [];
             if (contacts.length === 0) {
                 grid.innerHTML = '<div class="empty-state">No contact links found.</div>';
                 return;
@@ -2064,12 +2065,13 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         const res = await fetch(`${API_URL}/socials`);
-        const socials = await res.json();
-        if (!Array.isArray(socials)) {
-            console.warn('[Socials] API returned non-array:', socials);
+        const rawSocials = await res.json();
+        if (!Array.isArray(rawSocials)) {
+            console.warn('[Socials] API returned non-array:', rawSocials);
             container.innerHTML = '';
             return;
         }
+        const socials = rawSocials.filter(s => !s.hidden);
         if (socials.length > 0) {
             container.innerHTML = socials.map(s => {
                 const iconHtml = (s.icon && (s.icon.startsWith('http') || s.icon.includes('/')))
@@ -2129,12 +2131,13 @@ document.addEventListener('DOMContentLoaded', () => {
         exploreGrid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
         
         const res = await fetch(`${API_URL}/presets`);
-        const allPresets = await res.json();
-        if (!Array.isArray(allPresets)) {
-            console.warn('[Presets] API returned non-array:', allPresets);
+        const rawPresets = await res.json();
+        if (!Array.isArray(rawPresets)) {
+            console.warn('[Presets] API returned non-array:', rawPresets);
             exploreGrid.innerHTML = `<div class="empty-state">Failed to load presets. Is the server running?</div>`;
             return;
         }
+        const allPresets = rawPresets.filter(p => !p.hidden);
         
         renderPresetCategories(allPresets);
         
@@ -2307,13 +2310,14 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         const res = await fetch(`${API_URL}/resources`);
-        allResources = await res.json();
-        if (!Array.isArray(allResources)) {
-            console.warn('[Resources] API returned non-array:', allResources);
+        const rawResources = await res.json();
+        if (!Array.isArray(rawResources)) {
+            console.warn('[Resources] API returned non-array:', rawResources);
             container.innerHTML = `<div class="empty-state">Failed to load resources. Is the server running?</div>`;
             allResources = [];
             return;
         }
+        allResources = rawResources.filter(r => !r.hidden);
 
         renderResourceCategories(allResources);
 
