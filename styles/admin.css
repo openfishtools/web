@@ -12,6 +12,24 @@
     padding: 24px;
 }
 
+.admin-login-overlay[data-loading="true"] .login-card {
+    display: none;
+}
+
+.admin-login-overlay[data-loading="true"]::after {
+    content: "";
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--md-sys-color-primary-container);
+    border-top-color: var(--md-sys-color-primary);
+    border-radius: 50%;
+    animation: admin-spin 1s linear infinite;
+}
+
+@keyframes admin-spin {
+    to { transform: rotate(360deg); }
+}
+
 .login-card {
     max-width: 400px;
     width: 100%;

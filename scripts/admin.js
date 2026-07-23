@@ -22,11 +22,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const showLoginUI = () => {
         adminLogin.classList.remove('d-none');
+        adminLogin.dataset.loading = 'false';
+        adminApp.classList.add('d-none');
+    };
+
+    const showLoadingUI = () => {
+        adminLogin.classList.remove('d-none');
+        adminLogin.dataset.loading = 'true';
         adminApp.classList.add('d-none');
     };
 
     const showAppUI = () => {
         adminLogin.classList.add('d-none');
+        adminLogin.dataset.loading = 'false';
         adminApp.classList.remove('d-none');
     };
 
@@ -213,7 +221,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('hashchange', handleHashNavigation);
 
+    const verifySession = async () => {
+        if (!adminToken) return false;
+        try {
+            const res = await fetch(`${API_URL}/admin/session`, { headers: adminAuthHeaders() });
+            if (!res.ok) {
+                persistToken(null);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+
     const initAdmin = async () => {
+        const valid = await verifySession();
+        if (!valid) {
+            persistToken(null);
+            showLoginUI();
+            return;
+        }
         await loadSocials();
         await loadPresets();
         await loadResources();
@@ -1057,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // End of chat UI functions
 
     const loadSocials = async () => {
+        if (!adminToken) return;
         const res = await fetch(`${API_URL}/socials`);
         const socials = await res.json();
         const body = document.getElementById('social-table-body');
@@ -1118,6 +1147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const loadContacts = async () => {
+        if (!adminToken) return;
         const res = await fetch(`${API_URL}/contacts`);
         const contacts = await res.json();
         const body = document.getElementById('contact-table-body');
@@ -1180,6 +1210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const loadPresets = async () => {
+        if (!adminToken) return;
         const res = await fetch(`${API_URL}/presets`);
         const presets = await res.json();
         const body = document.getElementById('preset-table-body');
@@ -1424,6 +1455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const loadResources = async () => {
+        if (!adminToken) return;
         const res = await fetch(`${API_URL}/resources`);
         const resources = await res.json();
         const body = document.getElementById('resource-table-body');
@@ -1603,13 +1635,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Chat functions removed
 
+    showLoadingUI();
     if (adminToken) {
-        const res = await fetch(`${API_URL}/admin/session`, { headers: adminAuthHeaders() });
-        if (res.ok) {
-            showAppUI();
-            await initAdmin();
-        } else {
+        try {
+            const res = await fetch(`${API_URL}/admin/session`, { headers: adminAuthHeaders() });
+            if (res.ok) {
+                showAppUI();
+                await initAdmin();
+            } else {
+                persistToken(null);
+                showLoginUI();
+            }
+        } catch (e) {
             persistToken(null);
+            showLoginUI();
         }
+    } else {
+        showLoginUI();
     }
 });
