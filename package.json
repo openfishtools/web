@@ -17,13 +17,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "javascript-obfuscator": "^5.5.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.3.2",
     "multer": "^2.1.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "javascript-obfuscator": "^5.5.0",
     "nodemon": "^3.1.14"
   }
 }
