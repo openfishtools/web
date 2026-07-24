@@ -39,6 +39,12 @@ npm install
 
 echo ""
 echo "=========================================="
+echo "🔒 Obfuscating JavaScript files..."
+echo "=========================================="
+npm run obfuscate
+
+echo ""
+echo "=========================================="
 echo "🚀 Starting CHROS Local Node.js Server..."
 echo "=========================================="
 # Run the node server in the background

@@ -5,7 +5,9 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "dev": "nodemon api/index.js"
+    "dev": "nodemon api/index.js",
+    "obfuscate": "javascript-obfuscator ./scripts --output ./dist/scripts --compact true --control-flow-flattening false",
+    "build": "npm run obfuscate"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
@@ -21,6 +23,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "javascript-obfuscator": "^5.5.0",
     "nodemon": "^3.1.14"
   }
 }

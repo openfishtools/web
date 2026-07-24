@@ -27,6 +27,7 @@ const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
 
 const app = express();
 app.use(cors());
+const fs = require('fs');
 app.use(express.json());
 
 // Set security headers for WebGPU / SharedArrayBuffer
@@ -36,6 +37,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// Priority: serve obfuscated frontend scripts from dist/scripts if built
+const distScriptsPath = path.join(__dirname, '..', 'dist', 'scripts');
+if (fs.existsSync(distScriptsPath)) {
+    app.use('/scripts', express.static(distScriptsPath));
+}
 app.use(express.static(path.join(__dirname, '..')));
 
 // Proxy/redirect /realesrgan requests to target

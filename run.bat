@@ -24,6 +24,12 @@ call npm install
 
 echo.
 echo ==========================================
+echo 🔒 Obfuscating JavaScript files...
+echo ==========================================
+call npm run obfuscate
+
+echo.
+echo ==========================================
 echo 🚀 Starting CHROS Local Node.js Server...
 echo ==========================================
 start "CHROS Node.js Server" cmd /k "npm start"

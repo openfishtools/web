@@ -137,4 +137,6 @@ MANIFEST
 cloudflared*
 .npm-local-cache/
 backend/
+dist/
+
 
