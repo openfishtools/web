@@ -10,7 +10,7 @@ CHROS (chros-web) adalah "The Ultimate Resource Hub for Video Editor" - aplikasi
 - **Framework**: Express 4.19
 - **Database**: MongoDB (via Mongoose 8.3)
 - **Auth**: Bearer token + MongoDB sessions
-- **File Storage**: Supabase Storage
+- **File Storage**: None (manual URL input)
 - **Deployment**: Vercel (serverless)
 
 ### Frontend
@@ -153,11 +153,6 @@ Semua tools berjalan di browser (tidak ada server processing):
 
 ```
 MONGODB_URI          # MongoDB connection string
-SUPABASE_URL         # Supabase project URL
-SUPABASE_KEY         # Supabase API key
-SUPABASE_BUCKET      # Storage bucket name
-VAPID_PUBLIC_KEY     # Web push public key
-VAPID_PRIVATE_KEY    # Web push private key
 ```
 
 ## Deployment

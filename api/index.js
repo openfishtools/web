@@ -18,12 +18,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const multer = require('multer');
 const path = require('path');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
-
-const upload = multer({ limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB limit
 
 const app = express();
 app.use(cors());
@@ -54,8 +51,7 @@ app.get('/:id([a-f0-9]{24})', (req, res) => {
 });
 
 
-/** Note: Admin session expires after 5 seconds of inactivity. Only 1 active session allowed. */
-const ADMIN_SESSION_MS = 5000;
+const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
 
 async function requireAdmin(req, res, next) {
     const h = req.headers.authorization;
@@ -69,7 +65,6 @@ async function requireAdmin(req, res, next) {
             if (session) await Session.deleteOne({ token });
             return res.status(401).json({ error: 'Unauthorized' });
         }
-        // Extend session expiration on activity by 5 seconds
         await Session.updateOne({ token }, { expiresAt: new Date(Date.now() + ADMIN_SESSION_MS) });
         next();
     } catch (err) {

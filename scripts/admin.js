@@ -63,22 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let isUnauthorizedAlertShowing = false;
 
-    let swRegistration = null;
-
-    const urlBase64ToUint8Array = (base64String) => {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = atob(base64);
-        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-    };
-
-    const registerPush = async () => {};
-
-    const sendNotification = (title, body) => {
-        if (swRegistration && Notification.permission === 'granted') {
-            swRegistration.showNotification(title, { body, icon: '/favicon.ico', badge: '/favicon.ico' });
-        }
-    };
 
 
     const onUnauthorized = () => {
@@ -242,11 +226,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const idleMs = Date.now() - lastActivityTime;
-            if (idleMs >= 5000) {
+            if (idleMs >= 28800000) {
                 clearInterval(heartbeatInterval);
                 persistToken(null);
                 showLoginUI();
-                alert('Session expired due to 5 seconds of inactivity.');
+                alert('Session expired due to inactivity.');
                 return;
             }
 
@@ -259,8 +243,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     clearInterval(heartbeatInterval);
                     onUnauthorized();
                 }
-            } catch (e) {}
-        }, 1500);
+            } catch (err) {}
+        }, 60000);
     };
 
     window.addEventListener('hashchange', handleHashNavigation);
@@ -297,7 +281,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         initIconSourceToggles();
 
         handleHashNavigation();
-        registerPush();
         startHeartbeat();
     };
 
@@ -360,14 +343,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 badge.classList.remove('selected');
                 if (isSoftware) syncDownloadLinkRows();
                 return;
-            }
-            const icon = badge.dataset.icon;
-            if (icon && icon.includes('supabase.co/storage/v1/object/public')) {
-                fetch(`${API_URL}/upload`, {
-                    method: 'DELETE',
-                    headers: jsonHeaders(),
-                    body: JSON.stringify({ url: icon })
-                }).catch(() => {});
             }
             badge.remove();
             if (isSoftware) syncDownloadLinkRows();
@@ -551,90 +526,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const resetCustomBadgeIcon = () => {
             customBadgeIconUrl = '';
-            const drop = document.getElementById('custom-badge-icon-drop');
-            const img = document.getElementById('custom-badge-icon-img-preview');
-            if (drop) drop.classList.remove('has-file');
-            if (img) { img.src = ''; img.removeAttribute('src'); }
             const urlInput = document.getElementById('custom-badge-icon-url');
             if (urlInput) urlInput.value = '';
-            const fileInput = document.getElementById('custom-badge-icon-file-input');
-            if (fileInput) fileInput.value = '';
-        };
-
-        const iconDrop = document.getElementById('custom-badge-icon-drop');
-        const iconFileInput = document.getElementById('custom-badge-icon-file-input');
-        const iconRemoveBtn = document.getElementById('remove-custom-badge-icon-btn');
-
-        if (iconDrop && iconFileInput) {
-            iconDrop.onclick = (e) => {
-                if (e.target === iconRemoveBtn || iconRemoveBtn?.contains(e.target)) return;
-                iconFileInput.click();
-            };
-            iconDrop.ondragover = (e) => { e.preventDefault(); iconDrop.classList.add('active'); };
-            iconDrop.ondragleave = () => iconDrop.classList.remove('active');
-            iconDrop.ondrop = (e) => {
-                e.preventDefault();
-                iconDrop.classList.remove('active');
-                if (e.dataTransfer.files.length) handleCustomBadgeIconUpload(e.dataTransfer.files[0]);
-            };
-            iconFileInput.onchange = () => {
-                if (iconFileInput.files.length) handleCustomBadgeIconUpload(iconFileInput.files[0]);
-            };
-        }
-
-        if (iconRemoveBtn) {
-            iconRemoveBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (customBadgeIconUrl && customBadgeIconUrl.includes('supabase.co/storage/v1/object/public')) {
-                    fetch(`${API_URL}/upload`, {
-                        method: 'DELETE',
-                        headers: jsonHeaders(),
-                        body: JSON.stringify({ url: customBadgeIconUrl })
-                    }).catch(() => {});
-                }
-                resetCustomBadgeIcon();
-            };
-        }
-
-        const handleCustomBadgeIconUpload = async (file) => {
-            if (!file) return;
-            if (file.size > 10 * 1024 * 1024) { alert('File too large (Max 10MB)'); return; }
-            const drop = document.getElementById('custom-badge-icon-drop');
-            const img = document.getElementById('custom-badge-icon-img-preview');
-            if (drop) drop.classList.add('active');
-            const formData = new FormData();
-            formData.append('file', file);
-            try {
-                const res = await fetch(`${API_URL}/upload`, {
-                    method: 'POST',
-                    headers: adminAuthHeaders(),
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Upload failed');
-                const data = await res.json();
-                customBadgeIconUrl = data.url;
-                if (drop) { drop.classList.remove('active'); drop.classList.add('has-file'); }
-                if (img) { img.src = data.url; }
-                const urlInput = document.getElementById('custom-badge-icon-url');
-                if (urlInput) urlInput.value = data.url;
-            } catch (err) {
-                alert('Icon upload failed: ' + err.message);
-                if (drop) drop.classList.remove('active');
-            }
         };
 
         document.getElementById('custom-badge-icon-url')?.addEventListener('input', (e) => {
             customBadgeIconUrl = e.target.value.trim();
-            const img = document.getElementById('custom-badge-icon-img-preview');
-            const drop = document.getElementById('custom-badge-icon-drop');
-            if (customBadgeIconUrl) {
-                if (img) img.src = customBadgeIconUrl;
-                if (drop) drop.classList.add('has-file');
-            } else {
-                if (img) { img.src = ''; img.removeAttribute('src'); }
-                if (drop) drop.classList.remove('has-file');
-            }
         });
 
         document.getElementById('open-custom-badge-popup')?.addEventListener('click', (e) => {
@@ -720,7 +617,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('modal-social-icon').value = iconVal;
                 }
                 
-                checkSupabaseFile(iconVal, 'social-icon');
                 const preview = document.getElementById('social-icon-preview');
                 const area = document.getElementById('social-icon-drop');
                 const imgPreview = document.getElementById('social-icon-img-preview');
@@ -813,7 +709,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('modal-resource-info').value = editData.info || '';
                 const iconInput = document.getElementById('modal-resource-icon');
                 iconInput.value = editData.icon || '';
-                checkSupabaseFile(editData.icon, 'resource-icon');
                 const preview = document.getElementById('resource-icon-preview');
                 const area = document.getElementById('resource-icon-drop');
                 const imgPreview = document.getElementById('resource-icon-img-preview');
@@ -832,7 +727,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const urlInput = document.getElementById('modal-resource-url');
                 urlInput.value = editData.url || '';
-                checkSupabaseFile(editData.url, 'resource');
                 
                 const descEl = document.getElementById('modal-resource-desc');
                 if (descEl) descEl.value = editData.desc || '';
@@ -871,250 +765,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const checkSupabaseFile = (url, type = 'preset') => {
-        let btnId = `delete-uploaded-${type}-btn`;
-        if (type === 'resource-icon') btnId = 'delete-uploaded-resource-icon-btn';
-        if (type === 'social-icon') btnId = 'delete-uploaded-social-icon-btn';
-        
-        const deleteBtn = document.getElementById(btnId);
-        if (!deleteBtn) return;
-        const isSupabase = url && url.includes('supabase.co/storage/v1/object/public');
-        if (isSupabase) deleteBtn.classList.remove('hidden');
-        else deleteBtn.classList.add('hidden');
-    };
-
-    document.getElementById('modal-resource-url')?.addEventListener('input', (e) => {
-        checkSupabaseFile(e.target.value, 'resource');
-    });
-    document.getElementById('modal-resource-icon')?.addEventListener('input', (e) => {
-        checkSupabaseFile(e.target.value, 'resource-icon');
-    });
-    document.getElementById('modal-social-icon')?.addEventListener('input', (e) => {
-        checkSupabaseFile(e.target.value, 'social-icon');
-    });
-
-    const initDeleteHandlers = () => {
-        ['resource', 'resource-icon', 'social-icon'].forEach(type => {
-            let btnId = `delete-uploaded-${type}-btn`;
-            if (type === 'resource-icon') btnId = 'delete-uploaded-resource-icon-btn';
-            if (type === 'social-icon') btnId = 'delete-uploaded-social-icon-btn';
-            
-            document.getElementById(btnId)?.addEventListener('click', async () => {
-                const urlInput = document.getElementById(`modal-${type.includes('icon') ? type : type + '-url'}`);
-                const url = urlInput.value;
-                if (!url) return;
-                
-                if (!confirm('Are you sure you want to delete this file from the server?')) return;
-                
-                try {
-                    const res = await fetch(`${API_URL}/upload`, {
-                        method: 'DELETE',
-                        headers: jsonHeaders(),
-                        body: JSON.stringify({ url })
-                    });
-                    if (res.ok) {
-                        urlInput.value = '';
-                        checkSupabaseFile('', type);
-                        const preview = document.getElementById(`${type}-preview`) || document.getElementById(`${type}-file-preview`);
-                        if (preview) preview.textContent = '';
-                        alert('File deleted successfully');
-                    } else {
-                        const data = await res.json();
-                        alert('Delete failed: ' + (data.error || 'Unknown error'));
-                    }
-                } catch (err) {
-                    alert('Connection error');
-                }
-            });
-        });
-    };
-    initDeleteHandlers();
-
-    window.closeModal = async (id, skipCleanup = false) => {
-        // Auto-delete orphan Supabase uploads in dl rows when cancelling a NEW preset
-        if (id === 'preset-modal' && !skipCleanup) {
-            const modal = document.getElementById('preset-modal');
-            const isEdit = !!modal.dataset.editIndex;
-            if (!isEdit) {
-                const rows = document.querySelectorAll('#preset-download-links-container .preset-dl-link-row');
-                const deletePromises = [];
-                rows.forEach(row => {
-                    const url = row.querySelector('input[type="text"]')?.value?.trim();
-                    if (url && url.includes('supabase.co/storage/v1/object/public')) {
-                        deletePromises.push(
-                            fetch(`${API_URL}/upload`, {
-                                method: 'DELETE',
-                                headers: jsonHeaders(),
-                                body: JSON.stringify({ url })
-                            }).catch(() => {})
-                        );
-                    }
-                });
-                await Promise.all(deletePromises);
-            }
-        }
+    window.closeModal = async (id) => {
         document.getElementById(id).classList.remove('show');
-    };
-
-    const initDragAndDrop = () => {
-        const areas = document.querySelectorAll('.modal-overlay .drag-drop-area, .integrated-drop-zone');
-        areas.forEach(area => {
-            const type = area.id === 'resource-url-drop' ? 'resource' :
-                         (area.id === 'resource-icon-drop' ? 'resource-icon' :
-                          (area.id === 'social-icon-drop' ? 'social-icon' : null));
-            if (!type) return;
-            
-            const isIntegrated = area.classList.contains('integrated-drop-zone') || area.classList.contains('drag-drop-area');
-            const input = document.getElementById(`${type}-file-input`) || area.querySelector('input');
-            const preview = document.getElementById(`${type}-file-preview`) || document.getElementById(`${type}-preview`) || area.querySelector('.file-preview');
-
-            const removeBtn = document.getElementById(`remove-${type}-btn`);
-            if (removeBtn) {
-                removeBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const targetId = type.includes('icon') ? `modal-${type}` : `modal-${type}-url`;
-                    const urlInput = document.getElementById(targetId);
-                    const url = urlInput?.value?.trim();
-                    if (url && url.includes('supabase.co/storage/v1/object/public')) {
-                        fetch(`${API_URL}/upload`, {
-                            method: 'DELETE',
-                            headers: jsonHeaders(),
-                            body: JSON.stringify({ url })
-                        }).catch(() => {});
-                    }
-                    if (urlInput) urlInput.value = '';
-                    checkSupabaseFile('', type);
-                    area.classList.remove('has-file');
-                    const imgPreview = document.getElementById(`${type}-img-preview`);
-                    if (imgPreview) {
-                        imgPreview.src = '';
-                        imgPreview.removeAttribute('src');
-                    }
-                    if (preview) {
-                        preview.textContent = '';
-                        preview.innerHTML = '';
-                    }
-                    const isResource = type.includes('resource');
-                    const isSocial = type.includes('social');
-                    const prefix = isResource ? 'resource' : (isSocial ? 'social' : 'preset');
-                    const statusText = document.getElementById(`${prefix}-upload-status`);
-                    if (statusText) statusText.textContent = 'Upload removed';
-                };
-            }
-
-            area.onclick = () => input?.click();
-
-            area.ondragover = (e) => { e.preventDefault(); area.classList.add('active'); };
-            area.ondragleave = () => area.classList.remove('active');
-            area.ondrop = (e) => {
-                e.preventDefault();
-                area.classList.remove('active');
-                if (e.dataTransfer.files.length) {
-                    if (isIntegrated) handleIntegratedUpload(e.dataTransfer.files[0], type);
-                    else handleFile(e.dataTransfer.files[0], preview);
-                }
-            };
-            if (input) {
-                input.onchange = () => {
-                    if (input.files.length) {
-                        if (isIntegrated) handleIntegratedUpload(input.files[0], type);
-                        else handleFile(input.files[0], preview);
-                    }
-                };
-            }
-        });
-    };
-
-    const handleIntegratedUpload = async (file, type) => {
-        if (!file) return;
-        if (file.size > 50 * 1024 * 1024) { alert('File too large (Max 50MB)'); return; }
-        
-        const isResource = type.includes('resource');
-        const isSocial = type.includes('social');
-        const prefix = isResource ? 'resource' : (isSocial ? 'social' : 'preset');
-        
-        const progressContainer = document.getElementById(`${prefix}-upload-progress`);
-        const progressFill = document.getElementById(`${prefix}-progress-fill`);
-        const statusText = document.getElementById(`${prefix}-upload-status`);
-        
-        // Correctly target the hidden icon input or the url input
-        let targetId = `modal-${type}`;
-        if (!type.includes('icon')) targetId += '-url';
-        const urlInput = document.getElementById(targetId);
-        
-        const preview = document.getElementById(`${type}-file-preview`) || document.getElementById(`${type}-preview`);
-        
-        if (progressContainer) progressContainer.classList.remove('hidden');
-        if (progressFill) progressFill.style.width = '0%';
-        if (statusText) statusText.textContent = `Uploading ${file.name}...`;
-        if (preview) preview.textContent = `Selected: ${file.name}`;
-
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        try {
-            let progress = 0;
-            const progInterval = setInterval(() => {
-                progress += 5;
-                if (progress <= 90 && progressFill) progressFill.style.width = `${progress}%`;
-            }, 500);
-
-            const uploadRes = await fetch(`${API_URL}/upload`, {
-                method: 'POST',
-                headers: adminAuthHeaders(),
-                body: formData
-            });
-            
-            clearInterval(progInterval);
-            if (!uploadRes.ok) throw new Error('Upload failed');
-            
-            const uploadData = await uploadRes.json();
-            if (progressFill) progressFill.style.width = '100%';
-            if (statusText) statusText.textContent = 'Upload successful!';
-            
-            if (urlInput) urlInput.value = uploadData.url;
-
-            // Backup: also store on drop zone data attribute for resilience
-            if (type.includes('icon')) {
-                const dropZone = document.getElementById(`${type}-drop`);
-                if (dropZone) dropZone.dataset.uploadedUrl = uploadData.url;
-            }
-            
-            if (type === 'preset' && uploadData.size) {
-                const sizeInput = document.getElementById('modal-preset-size');
-                if (sizeInput) sizeInput.value = uploadData.size;
-            }
-            
-            checkSupabaseFile(uploadData.url, type);
-            if (preview) {
-                if (type.includes('icon')) {
-                    const area = document.getElementById(`${type}-drop`);
-                    const imgPreview = document.getElementById(`${type}-img-preview`);
-                    if (area) area.classList.add('has-file');
-                    if (imgPreview) {
-                        imgPreview.src = uploadData.url;
-                        imgPreview.style.display = 'block';
-                    }
-                    preview.innerHTML = `<img src="${uploadData.url}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;margin-top:10px;">`;
-                } else {
-                    preview.textContent = `Uploaded: ${file.name}`;
-                }
-            }
-            
-            setTimeout(() => {
-                if (progressContainer) progressContainer.classList.add('hidden');
-            }, 2000);
-        } catch (err) {
-            console.error('Upload Error:', err);
-            if (statusText) statusText.textContent = 'Upload failed!';
-            alert('Upload failed: ' + err.message);
-        }
-    };
-
-    const handleFile = (file, preview) => {
-        if (file.size > 50 * 1024 * 1024) { alert('File too large (Max 50MB)'); return; }
-        preview.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
     };
 
     // End of chat UI functions

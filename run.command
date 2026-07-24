@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Title: CHROS Local Server + Cloudflare Tunnel for macOS (Catalina Intel)
+cd "$(dirname "$0")"
+
 echo "=================================================="
 echo "CHROS Local Server + Cloudflare Tunnel for macOS"
 echo "=================================================="

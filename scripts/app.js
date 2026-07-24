@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return url;
     };
 
-    // Local storage icon cache to prevent overloading Supabase Storage
     const getCachedIcon = (rawUrl) => {
         if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
         const url = formatIconUrl(rawUrl);
