@@ -42,6 +42,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetList = document.getElementById('upscale-preset-list');
     const unprocessedOverlay = document.getElementById('upscale-unprocessed-overlay');
     const normaliseToggle = document.getElementById('upscale-normalise-toggle');
+    const batchWorkspace = document.getElementById('upscale-batch-workspace');
+    const batchStep1 = document.getElementById('upscale-batch-step1');
+    const batchStep2 = document.getElementById('upscale-batch-step2');
+    const batchResults = document.getElementById('upscale-batch-results');
+    const batchStepTitle = document.getElementById('upscale-batch-step-title');
+    const batchList = document.getElementById('upscale-batch-list');
+    const batchCountInfo = document.getElementById('upscale-batch-count-info');
+    const batchBtnNext = document.getElementById('upscale-batch-btn-next');
+    const batchBtnCancelStep1 = document.getElementById('upscale-batch-btn-cancel-step1');
+    const batchBtnBack = document.getElementById('upscale-batch-btn-back');
+    const batchBtnStart = document.getElementById('upscale-batch-btn-start');
+    const batchBtnZip = document.getElementById('upscale-batch-btn-zip');
+    const batchBtnReset = document.getElementById('upscale-batch-btn-reset');
+    const batchPresetList = document.getElementById('upscale-batch-preset-list');
+    const batchOrderToggle = document.getElementById('upscale-batch-order-toggle');
+
+    function isNormaliseEnabled() {
+        if (appState === 'batch') {
+            const batchToggle = document.getElementById('upscale-batch-normalise-toggle');
+            return batchToggle ? batchToggle.checked : false;
+        }
+        return normaliseToggle ? normaliseToggle.checked : false;
+    }
 
     const PRESETS = [
         { id: 'cartoonist', name: 'Cartoonist', sharpen: 14, unsharpAmount: 107, unsharpRadius: 5.1, denoise: 2.9, shadows: 2, saturation: 1 },
@@ -77,13 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let initialPinchDist = 0;
     let initialZoom = 1;
     let cancelRender = false;
-    let normaliseSize = false;
     let enhanceCanvas = null;
     let gpuEnhancer = null;
     let gpuReady = false;
     let currentVideoFile = null;
     let currentImageFile = null;
     let ffmpegInstance = null;
+    let batchQueue = [];
 
     class UpscaleEngine {
         constructor(videoEl, canvasEl) {
@@ -306,12 +329,62 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSliderLabel();
     }
 
+    function updateActionButtons(state) {
+        if (btnEnhance) btnEnhance.classList.add('hidden');
+        if (btnDownload) btnDownload.classList.add('hidden');
+        if (btnCancel) btnCancel.classList.add('hidden');
+        if (batchBtnNext) batchBtnNext.classList.add('hidden');
+        if (batchBtnStart) batchBtnStart.classList.add('hidden');
+        if (batchBtnBack) batchBtnBack.classList.add('hidden');
+        if (batchBtnZip) batchBtnZip.classList.add('hidden');
+        if (batchBtnReset) batchBtnReset.classList.add('hidden');
+
+        if (state === 'single_ready') {
+            if (btnEnhance) {
+                btnEnhance.classList.remove('hidden');
+                btnEnhance.removeAttribute('disabled');
+            }
+        } else if (state === 'single_completed') {
+            if (btnDownload) {
+                btnDownload.classList.remove('hidden');
+                btnDownload.removeAttribute('disabled');
+            }
+        } else if (state === 'processing') {
+            if (btnCancel) {
+                btnCancel.classList.remove('hidden');
+                btnCancel.removeAttribute('disabled');
+            }
+        } else if (state === 'batch_step1') {
+            if (batchBtnNext) {
+                batchBtnNext.classList.remove('hidden');
+                batchBtnNext.removeAttribute('disabled');
+            }
+        } else if (state === 'batch_step2') {
+            if (batchBtnStart) {
+                batchBtnStart.classList.remove('hidden');
+                batchBtnStart.removeAttribute('disabled');
+            }
+            if (batchBtnBack) {
+                batchBtnBack.classList.remove('hidden');
+                batchBtnBack.removeAttribute('disabled');
+            }
+        } else if (state === 'batch_completed') {
+            if (batchBtnZip) {
+                batchBtnZip.classList.remove('hidden');
+                batchBtnZip.removeAttribute('disabled');
+            }
+            if (batchBtnReset) {
+                batchBtnReset.classList.remove('hidden');
+                batchBtnReset.removeAttribute('disabled');
+            }
+        }
+    }
+
     function showWorkspace() {
         dropArea.classList.add('hidden');
         workspace.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        if (btnReset) btnReset.classList.remove('hidden');
-        if (btnEnhance) btnEnhance.classList.remove('hidden');
+        updateActionButtons('single_ready');
         // Show/hide duration controls based on media type
         if (durationContainer) {
             durationContainer.classList.toggle('hidden', isImageMode);
@@ -329,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setCardControlsEnabled(enabled) {
         card.querySelectorAll('button, input, select').forEach(el => {
-            if (el.id === 'upscale-btn-cancel') return;
+            if (el.id === 'upscale-btn-cancel' || el.id === 'upscale-batch-btn-cancel-step1' || el.id === 'upscale-batch-btn-next' || el.id === 'upscale-batch-btn-back') return;
             if (enabled) {
                 el.removeAttribute('disabled');
                 el.classList.remove('disabled');
@@ -617,9 +690,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function handleMultipleFiles(files) {
+        if (!files || files.length === 0) return;
+        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+        if (validFiles.length === 0) return;
+        if (validFiles.length === 1) {
+            handleFileInput(validFiles[0]);
+        } else {
+            loadBatchFiles(validFiles);
+        }
+    }
+
     dropArea.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files[0]) handleFileInput(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleMultipleFiles(e.target.files);
+        }
     });
 
     ['dragenter', 'dragover'].forEach(evt => {
@@ -635,8 +721,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     dropArea.addEventListener('drop', (e) => {
-        const file = e.dataTransfer.files[0];
-        if (file) handleFileInput(file);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            handleMultipleFiles(files);
+        }
     });
 
     video.addEventListener('loadedmetadata', async () => {
@@ -869,6 +957,19 @@ document.addEventListener('DOMContentLoaded', () => {
         isImageMode = false;
         currentVideoFile = null;
         currentImageFile = null;
+
+        if (batchWorkspace) batchWorkspace.classList.add('hidden');
+        if (batchStep1) batchStep1.classList.remove('hidden');
+        if (batchStep2) batchStep2.classList.add('hidden');
+        if (batchResults) batchResults.classList.add('hidden');
+        if (batchQueue && batchQueue.length > 0) {
+            batchQueue.forEach(item => {
+                if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+            });
+            batchQueue = [];
+        }
+        if (batchList) batchList.innerHTML = '';
+
         if (ffmpegInstance) {
             try {
                 ffmpegInstance.deleteFile('input.mp4').catch(()=>{});
@@ -884,11 +985,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setProgress(0, '');
         logsContainer.classList.add('hidden');
         logsEl.textContent = '';
-        btnCancel.classList.add('hidden');
-        btnDownload.classList.add('hidden');
-        if (btnEnhance) btnEnhance.classList.add('hidden');
         if (durationContainer) durationContainer.classList.remove('hidden');
         fileInput.value = '';
+        updateActionButtons('import');
     }
 
     if (btnReset) {
@@ -931,8 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setProgress(0, 'Preparing...');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
-        btnCancel.classList.remove('hidden');
-        if (btnEnhance) btnEnhance.classList.add('hidden');
+        updateActionButtons('processing');
         setCardControlsEnabled(false);
 
         const dims = getMediaDimensions();
@@ -963,7 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setProgress(97, 'Generating output...');
             // Apply normalise crop if enabled
             let outCanvas = canvas;
-            if (normaliseSize) {
+            if (isNormaliseEnabled()) {
                 addLog('[Normalise] Cropping to 1080×1920 (center crop)...');
                 outCanvas = applyCropTo1080x1920(canvas);
             }
@@ -979,12 +1077,10 @@ document.addEventListener('DOMContentLoaded', () => {
             completedImage.classList.remove('hidden');
             completedVideo.classList.add('hidden');
             completedPanel.classList.remove('hidden');
-            btnDownload.classList.remove('hidden');
-            btnCancel.classList.add('hidden');
             workspace.classList.add('hidden');
             logsContainer.classList.add('hidden');
             progressContainer.classList.add('hidden');
-            if (btnEnhance) btnEnhance.classList.add('hidden');
+            updateActionButtons('single_completed');
 
             // Auto download
             const baseName = currentImageFile.name.replace(/\.[^.]+$/, '');
@@ -1003,8 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appState = 'ready';
             progressContainer.classList.add('hidden');
             setProgress(0, '');
-            btnCancel.classList.add('hidden');
-            if (btnEnhance) btnEnhance.classList.remove('hidden');
+            updateActionButtons('single_ready');
         } finally {
             setCardControlsEnabled(true);
         }
@@ -1213,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Apply normalise crop per-frame if enabled
                 let frameCanvas = canvas;
-                if (normaliseSize) {
+                if (isNormaliseEnabled()) {
                     frameCanvas = applyCropTo1080x1920(canvas);
                 }
                 const outBlob = await new Promise(res => frameCanvas.toBlob(res, 'image/jpeg', 0.92));
@@ -1353,6 +1448,462 @@ document.addEventListener('DOMContentLoaded', () => {
             setCardControlsEnabled(true);
         }
     }
+
+    function loadBatchFiles(files) {
+        appState = 'batch';
+        batchQueue = Array.from(files).map((file, idx) => ({
+            id: idx,
+            file,
+            name: file.name,
+            size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+            isImage: file.type.startsWith('image/'),
+            status: 'queued',
+            progress: 0,
+            outBlob: null,
+            outUrl: null,
+            outFilename: null
+        }));
+
+        dropArea.classList.add('hidden');
+        workspace.classList.add('hidden');
+        completedPanel.classList.add('hidden');
+        setCardControlsEnabled(true);
+        if (batchWorkspace) batchWorkspace.classList.remove('hidden');
+        if (batchStep1) batchStep1.classList.remove('hidden');
+        if (batchStep2) batchStep2.classList.add('hidden');
+        if (logsContainer) logsContainer.classList.add('hidden');
+        updateActionButtons('batch_step1');
+
+        if (batchStepTitle) {
+            batchStepTitle.textContent = window.getTranslation('upscale_batch_step1_title') || 'Selected Media Files';
+        }
+
+        if (batchCountInfo) {
+            batchCountInfo.textContent = `${batchQueue.length} files selected`;
+        }
+
+        renderBatchList();
+        logsEl.textContent = `[Batch] Loaded ${batchQueue.length} media files. Click Next to configure settings.`;
+    }
+
+    function renderBatchList() {
+        if (!batchList) return;
+        batchList.innerHTML = '';
+        batchQueue.forEach((item) => {
+            const div = document.createElement('div');
+            div.className = `upscale-batch-item ${item.status}${item.active ? ' active' : ''}`;
+            div.id = `batch-item-${item.id}`;
+
+            const iconName = item.isImage ? 'image' : 'movie';
+            const statusClass = item.status;
+            let statusLabel = 'Queued';
+            if (item.status === 'processing') statusLabel = window.getTranslation('status_processing') || 'Processing...';
+            else if (item.status === 'completed') statusLabel = window.getTranslation('status_completed') || 'Completed';
+            else if (item.status === 'error') statusLabel = window.getTranslation('status_error') || 'Error';
+            else statusLabel = window.getTranslation('status_queued') || 'Queued';
+
+            const metaStr = `${item.size} • ${item.isImage ? 'Image' : 'Video'}`;
+            const isStep1Active = batchStep2 && batchStep2.classList.contains('hidden') && batchResults && batchResults.classList.contains('hidden');
+
+            div.innerHTML = `
+                <div class="upscale-batch-icon">
+                    <span class="material-symbols-rounded">${iconName}</span>
+                </div>
+                <div class="upscale-batch-info">
+                    <div class="upscale-batch-filename">${item.name}</div>
+                    <div class="upscale-batch-meta">${metaStr}</div>
+                    ${item.status === 'processing' ? `
+                        <div class="upscale-batch-item-progress">
+                            <div class="upscale-batch-item-progress-fill" style="width: ${item.progress}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+                <span class="upscale-batch-status-badge ${statusClass}">${statusLabel}</span>
+                ${(item.status === 'queued' && isStep1Active) ? `
+                    <button type="button" class="remove-batch-item-btn" data-id="${item.id}" title="Remove file">
+                        <span class="material-symbols-rounded font-18 text-danger">delete</span>
+                    </button>
+                ` : ''}
+                ${item.status === 'completed' && item.outUrl ? `
+                    <a href="${item.outUrl}" download="${item.outFilename}" class="btn-upscale p-8 flex align-center justify-center" title="Download">
+                        <span class="material-symbols-rounded font-18">download</span>
+                    </a>
+                ` : ''}
+            `;
+
+            const removeBtn = div.querySelector('.remove-batch-item-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    batchQueue = batchQueue.filter(b => b.id !== item.id);
+                    if (batchQueue.length === 0) {
+                        resetTool();
+                    } else if (batchQueue.length === 1) {
+                        // Switch to single file mode if 1 file left
+                        const singleFile = batchQueue[0].file;
+                        resetTool();
+                        handleFileInput(singleFile);
+                    } else {
+                        if (batchCountInfo) batchCountInfo.textContent = `${batchQueue.length} files selected`;
+                        renderBatchList();
+                    }
+                });
+            }
+
+            batchList.appendChild(div);
+        });
+    }
+
+    async function processBatchImage(item, onProgress) {
+        const img = new Image();
+        const url = URL.createObjectURL(item.file);
+        await new Promise((res, rej) => {
+            img.onload = res;
+            img.onerror = () => rej(new Error('Failed to load image file.'));
+            img.src = url;
+        });
+
+        const params = getPresetParams(activePreset);
+        if (enhanceOrder === 'before') {
+            if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+            gpuEnhancer.process(img, params, enhanceCanvas);
+            await engine.renderFrame(enhanceCanvas, onProgress);
+        } else {
+            await engine.renderFrame(img, onProgress);
+            if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+            gpuEnhancer.process(canvas, params, enhanceCanvas);
+            canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+        }
+
+        let outCanvas = canvas;
+        if (isNormaliseEnabled()) {
+            addLog(`[Batch] Normalising crop 1080×1920 for ${item.name}`);
+            outCanvas = applyCropTo1080x1920(canvas);
+        }
+
+        const outBlob = await new Promise(res => outCanvas.toBlob(res, 'image/jpeg', 0.92));
+        URL.revokeObjectURL(url);
+        const baseName = item.name.replace(/\.[^.]+$/, '');
+        const outFilename = `enhanced_${baseName}.jpg`;
+        return { blob: outBlob, filename: outFilename };
+    }
+
+    async function processBatchVideo(item, onProgress) {
+        const vid = document.createElement('video');
+        vid.muted = true;
+        vid.playsInline = true;
+        const url = URL.createObjectURL(item.file);
+        vid.src = url;
+        await new Promise((res, rej) => {
+            vid.onloadedmetadata = res;
+            vid.onerror = () => rej(new Error('Failed to load video file.'));
+        });
+
+        const scale = 4;
+        const upscaledWidth = vid.videoWidth * scale;
+        const upscaledHeight = vid.videoHeight * scale;
+        if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+
+        let ffmpeg = await getFFmpeg();
+        const finalWidth = upscaledWidth % 2 === 0 ? upscaledWidth : upscaledWidth + 1;
+        const finalHeight = upscaledHeight % 2 === 0 ? upscaledHeight : upscaledHeight + 1;
+        canvas.width = finalWidth;
+        canvas.height = finalHeight;
+
+        const params = getPresetParams(activePreset);
+        const orderBefore = enhanceOrder === 'before';
+        const enhancedFrames = [];
+        const enhancedFrameBlobs = [];
+
+        const seekCanvas = document.createElement('canvas');
+        seekCanvas.width = vid.videoWidth;
+        seekCanvas.height = vid.videoHeight;
+        const seekCtx = seekCanvas.getContext('2d');
+
+        const { fetchFile } = window.FFmpegUtil;
+        await ffmpeg.writeFile('input.mp4', await fetchFile(item.file));
+
+        const videoFps = await detectVideoFps(vid, ffmpeg);
+        ffmpegInstance = null;
+        ffmpeg = await getFFmpeg();
+        await ffmpeg.writeFile('input.mp4', await fetchFile(item.file));
+
+        const totalFrames = Math.round(vid.duration * videoFps);
+        const outputFps = videoFps.toFixed(2);
+
+        for (let i = 0; i < totalFrames; i++) {
+            if (cancelRender) throw new Error('Cancelled');
+            const frameNum = i + 1;
+            const timestamp = i / videoFps;
+            await seekVideoToTime(vid, timestamp);
+            seekCtx.drawImage(vid, 0, 0, seekCanvas.width, seekCanvas.height);
+
+            const finalW = (seekCanvas.width * scale) % 2 === 0 ? (seekCanvas.width * scale) : (seekCanvas.width * scale) + 1;
+            const finalH = (seekCanvas.height * scale) % 2 === 0 ? (seekCanvas.height * scale) : (seekCanvas.height * scale) + 1;
+            if (canvas.width !== finalW || canvas.height !== finalH) {
+                canvas.width = finalW;
+                canvas.height = finalH;
+            }
+
+            const onFrameProgress = (frameProgress) => {
+                const overallPct = Math.min(85, Math.round(((i + (frameProgress / 100)) / totalFrames) * 85));
+                if (onProgress) onProgress(overallPct);
+            };
+
+            if (orderBefore) {
+                gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
+                await engine.renderFrame(enhanceCanvas, onFrameProgress);
+            } else {
+                await engine.renderFrame(seekCanvas, onFrameProgress);
+                gpuEnhancer.process(canvas, params, enhanceCanvas);
+                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+            }
+
+            let frameCanvas = canvas;
+            if (isNormaliseEnabled()) {
+                frameCanvas = applyCropTo1080x1920(canvas);
+            }
+
+            const outBlob = await new Promise(res => frameCanvas.toBlob(res, 'image/jpeg', 0.92));
+            const outArrayBuffer = await outBlob.arrayBuffer();
+            const outFilename = `enhanced_${frameNum.toString().padStart(4, '0')}.jpg`;
+            await ffmpeg.writeFile(outFilename, new Uint8Array(outArrayBuffer));
+            enhancedFrames.push(outFilename);
+            enhancedFrameBlobs.push(outBlob);
+
+            if (onProgress) onProgress(Math.min(85, Math.round((frameNum / totalFrames) * 85)));
+            if (frameNum % 5 === 0) await new Promise(r => setTimeout(r, 0));
+        }
+
+        if (onProgress) onProgress(88);
+        const encodeArgs = [
+            '-r', String(outputFps),
+            '-i', 'enhanced_%04d.jpg',
+            '-i', 'input.mp4',
+            '-map', '0:v',
+            '-map', '1:a?',
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-preset', 'ultrafast',
+            '-shortest',
+            'output.mp4'
+        ];
+
+        const runEncode = async (ff) => {
+            try { await ff.exec(encodeArgs); } catch (execErr) {}
+            return await ff.readFile('output.mp4');
+        };
+
+        let outputData;
+        try {
+            outputData = await runEncode(ffmpeg);
+        } catch (err) {
+            ffmpegInstance = null;
+            const freshFfmpeg = await getFFmpeg();
+            const { fetchFile: fetchFile2 } = window.FFmpegUtil;
+            await freshFfmpeg.writeFile('input.mp4', await fetchFile2(item.file));
+            for (let fi = 0; fi < enhancedFrameBlobs.length; fi++) {
+                const fn = `enhanced_${(fi + 1).toString().padStart(4, '0')}.jpg`;
+                const ab = await enhancedFrameBlobs[fi].arrayBuffer();
+                await freshFfmpeg.writeFile(fn, new Uint8Array(ab));
+            }
+            ffmpeg = freshFfmpeg;
+            outputData = await runEncode(freshFfmpeg);
+        }
+
+        if (onProgress) onProgress(98);
+        const outputBlob = new Blob([outputData.buffer], { type: 'video/mp4' });
+
+        for (const file of enhancedFrames) {
+            try { await ffmpeg.deleteFile(file); } catch (e) {}
+        }
+        try { await ffmpeg.deleteFile('input.mp4'); } catch (e) {}
+        try { await ffmpeg.deleteFile('output.mp4'); } catch (e) {}
+
+        URL.revokeObjectURL(url);
+        const baseName = item.name.replace(/\.[^.]+$/, '');
+        const outFilename = `enhanced_${baseName}.mp4`;
+        return { blob: outputBlob, filename: outFilename };
+    }
+
+    async function handleBatchProcessing() {
+        if (!engine || !engine.isReady || batchQueue.length === 0) return;
+
+        cancelRender = false;
+        setCardControlsEnabled(false);
+
+        // Switch to Step 1 so progress list is visible
+        if (batchStep2) batchStep2.classList.add('hidden');
+        if (batchStep1) batchStep1.classList.remove('hidden');
+        if (batchStepTitle) {
+            batchStepTitle.textContent = window.getTranslation('upscale_batch_title') || 'Batch Processing';
+        }
+        if (logsContainer) logsContainer.classList.remove('hidden');
+        if (progressContainer) progressContainer.classList.remove('hidden');
+        updateActionButtons('processing');
+
+        let successCount = 0;
+        const total = batchQueue.length;
+
+        for (let i = 0; i < total; i++) {
+            if (cancelRender) break;
+
+            const item = batchQueue[i];
+            item.status = 'processing';
+            item.progress = 0;
+            item.active = true;
+            renderBatchList();
+
+            const el = document.getElementById(`batch-item-${item.id}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            const overallText = `Batch: File ${i + 1}/${total} (${item.name})`;
+            setProgress(0, overallText);
+            addLog(`[Batch ${i + 1}/${total}] Processing ${item.name}...`);
+
+            const onProgress = (pct) => {
+                item.progress = Math.round(pct);
+                const overallBatchPct = Math.round(((i + (pct / 100)) / total) * 100);
+                setProgress(overallBatchPct, overallText);
+                const pFill = document.querySelector(`#batch-item-${item.id} .upscale-batch-item-progress-fill`);
+                if (pFill) pFill.style.width = `${item.progress}%`;
+            };
+
+            try {
+                let res;
+                if (item.isImage) {
+                    res = await processBatchImage(item, onProgress);
+                } else {
+                    res = await processBatchVideo(item, onProgress);
+                }
+                item.outBlob = res.blob;
+                item.outFilename = res.filename;
+                item.outUrl = URL.createObjectURL(res.blob);
+                item.status = 'completed';
+                item.progress = 100;
+                item.active = false;
+                successCount++;
+                addLog(`[Batch ${i + 1}/${total}] Finished: ${res.filename}`);
+            } catch (err) {
+                item.status = 'error';
+                item.active = false;
+                addLog(`[Batch ${i + 1}/${total} Error] ${item.name}: ${err.message}`);
+            }
+            renderBatchList();
+        }
+
+        setProgress(100, `Batch complete (${successCount}/${total} successful)`);
+        addLog(`[Batch] Completed processing batch. ${successCount}/${total} files successful.`);
+
+        updateActionButtons('batch_completed');
+        setCardControlsEnabled(true);
+    }
+
+    async function downloadBatchZip() {
+        if (!window.JSZip) {
+            addLog('[Error] JSZip library not loaded.');
+            return;
+        }
+        const zip = new window.JSZip();
+        let count = 0;
+        batchQueue.forEach(item => {
+            if (item.status === 'completed' && item.outBlob) {
+                zip.file(item.outFilename, item.outBlob);
+                count++;
+            }
+        });
+
+        if (count === 0) return;
+
+        if (progressContainer) {
+            setProgress(50, 'Generating ZIP package...');
+            progressContainer.classList.remove('hidden');
+        }
+
+        const zipContent = await zip.generateAsync({ type: 'blob' });
+        const zipUrl = URL.createObjectURL(zipContent);
+
+        const a = document.createElement('a');
+        a.href = zipUrl;
+        a.download = `enhanced_batch_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+        if (progressContainer) progressContainer.classList.add('hidden');
+        addLog(`[Batch] Downloaded ZIP package containing ${count} files.`);
+    }
+
+    if (batchBtnNext) {
+        batchBtnNext.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (batchQueue.length === 0) return;
+            if (batchStep1) batchStep1.classList.add('hidden');
+            if (batchStep2) batchStep2.classList.remove('hidden');
+            if (batchStepTitle) {
+                batchStepTitle.textContent = window.getTranslation('upscale_batch_step2_title') || 'Batch Enhancement Settings';
+            }
+            updateActionButtons('batch_step2');
+        });
+    }
+
+    if (batchBtnBack) {
+        batchBtnBack.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (batchStep2) batchStep2.classList.add('hidden');
+            if (batchStep1) batchStep1.classList.remove('hidden');
+            if (batchStepTitle) {
+                batchStepTitle.textContent = window.getTranslation('upscale_batch_step1_title') || 'Selected Media Files';
+            }
+            updateActionButtons('batch_step1');
+        });
+    }
+
+    if (batchBtnCancelStep1) {
+        batchBtnCancelStep1.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            resetTool();
+        });
+    }
+
+    if (batchPresetList) {
+        PRESETS.forEach(p => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `upscale-preset-btn${p.id === activePreset ? ' active' : ''}`;
+            btn.textContent = p.name;
+            btn.dataset.preset = p.id;
+            btn.addEventListener('click', () => {
+                if (appState === 'rendering') return;
+                activePreset = p.id;
+                presetList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
+                batchPresetList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const singleBtn = presetList.querySelector(`[data-preset="${p.id}"]`);
+                if (singleBtn) singleBtn.classList.add('active');
+            });
+            batchPresetList.appendChild(btn);
+        });
+    }
+
+    if (batchOrderToggle) {
+        batchOrderToggle.querySelectorAll('.upscale-order-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (appState === 'rendering') return;
+                enhanceOrder = btn.dataset.order;
+                card.querySelectorAll('.upscale-order-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    }
+
+    if (batchBtnStart) batchBtnStart.addEventListener('click', handleBatchProcessing);
+    if (batchBtnZip) batchBtnZip.addEventListener('click', downloadBatchZip);
+    if (batchBtnReset) batchBtnReset.addEventListener('click', resetTool);
 
     gpuEnhancer = new UpscaleGpuEnhancer();
     gpuReady = gpuEnhancer.init();

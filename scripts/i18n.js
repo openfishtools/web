@@ -81,7 +81,7 @@
 
             "tool_upscale_title": "Qualitelio Enhancer",
             "tool_upscale_desc": "Media Upscaler",
-            "tool_upscale_drop": "Drag & drop video di sini atau klik untuk memilih",
+            "tool_upscale_drop": "Drag & drop foto / video di sini (bisa pilih beberapa file) atau klik untuk memilih",
             "tool_upscale_scale": "Faktor Skala",
             "tool_upscale_btn": "Mulai Proses",
 
@@ -233,6 +233,16 @@
             "upscale_label_enhanced_ai": "Ditingkatkan + 4x AI",
             "upscale_label_live_enhanced": "Peningkatan Instan (1x)",
             "upscale_label_original": "Asli (1x)",
+            "btn_start_batch": "Mulai Batch Processing",
+            "btn_next_settings": "Next",
+            "btn_back_files": "Kembali ke Daftar File",
+            "btn_download_all_zip": "Unduh Semua (.zip)",
+            "btn_upscale_another_batch": "Proses Batch Lain",
+            "upscale_batch_title": "Batch Processing",
+            "upscale_batch_step1_title": "Daftar File Dipilih",
+            "upscale_batch_step2_title": "Pengaturan Batch Upscale",
+            "upscale_batch_desc": "Memproses beberapa file media secara berurutan",
+            "status_queued": "Mengantri",
 
             // Video Interpolation Panel
             "interp_input_label": "Input",
@@ -339,7 +349,7 @@
 
             "tool_upscale_title": "Qualitelio Enhancer",
             "tool_upscale_desc": "Media Upscaler",
-            "tool_upscale_drop": "Drag & drop video here or click to select",
+            "tool_upscale_drop": "Drag & drop photos / videos here (multiple files supported) or click to select",
             "tool_upscale_scale": "Scale Factor",
             "tool_upscale_btn": "Start Processing",
 
@@ -491,6 +501,16 @@
             "upscale_label_enhanced_ai": "Enhanced + 4x AI",
             "upscale_label_live_enhanced": "Live Enhanced (1x)",
             "upscale_label_original": "Original (1x)",
+            "btn_start_batch": "Start Batch Processing",
+            "btn_next_settings": "Next",
+            "btn_back_files": "Back to Selected Files",
+            "btn_download_all_zip": "Download All (.zip)",
+            "btn_upscale_another_batch": "Process Another Batch",
+            "upscale_batch_title": "Batch Processing",
+            "upscale_batch_step1_title": "Selected Media Files",
+            "upscale_batch_step2_title": "Batch Enhancement Settings",
+            "upscale_batch_desc": "Processing multiple media files sequentially",
+            "status_queued": "Queued",
 
             // Video Interpolation Panel
             "interp_input_label": "Input",

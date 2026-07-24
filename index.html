@@ -640,7 +640,52 @@
                         <div class="drag-drop-area" id="upscale-drop-area">
                             <span class="material-symbols-rounded">perm_media</span>
                             <span data-i18n="tool_upscale_drop">Drag &amp; drop video or image here or click to select</span>
-                            <input type="file" id="upscale-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" hidden>
+                            <input type="file" id="upscale-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" multiple hidden>
+                        </div>
+
+                        <!-- Batch Processing Workspace -->
+                        <div id="upscale-batch-workspace" class="upscale-batch-workspace hidden">
+                            <div class="upscale-batch-header">
+                                <div class="flex align-center justify-between mb-8">
+                                    <div>
+                                        <div class="font-14 font-600 text-on-surface" id="upscale-batch-step-title" data-i18n="upscale_batch_step1_title">Selected Media Files</div>
+                                        <div class="font-11 text-on-surface-variant" id="upscale-batch-count-info">0 files selected</div>
+                                    </div>
+                                    <span class="res-ver-badge-inline">Batch Mode</span>
+                                </div>
+                            </div>
+
+                            <!-- Step 1: File List View -->
+                            <div id="upscale-batch-step1" class="upscale-batch-step">
+                                <div class="upscale-batch-list" id="upscale-batch-list"></div>
+                            </div>
+
+                            <!-- Step 2: Settings View -->
+                            <div id="upscale-batch-step2" class="upscale-batch-step hidden">
+                                <div class="upscale-controls">
+                                    <p class="upscale-controls-title" data-i18n="upscale_preset_title">Enhancement Preset</p>
+                                    <div class="upscale-preset-list" id="upscale-batch-preset-list"></div>
+
+                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_timing_title">Enhance Timing</p>
+                                    <div class="upscale-order-toggle" id="upscale-batch-order-toggle">
+                                        <button type="button" class="upscale-order-btn active" data-order="before" data-i18n="upscale_timing_before">Before Upscale</button>
+                                        <button type="button" class="upscale-order-btn" data-order="after" data-i18n="upscale_timing_after">After Upscale</button>
+                                    </div>
+
+                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_output_title">Output</p>
+                                    <div class="upscale-normalise-row">
+                                        <div>
+                                            <div class="font-13 font-600 text-on-surface" data-i18n="upscale_normalise_title">Normalise Size</div>
+                                            <div class="font-11 text-on-surface-variant mt-2" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
+                                        </div>
+                                        <label class="normalise-switch-wrap" for="upscale-batch-normalise-toggle">
+                                            <input type="checkbox" id="upscale-batch-normalise-toggle">
+                                            <span class="normalise-track"></span>
+                                            <span class="normalise-thumb"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="upscale-workspace" class="upscale-workspace hidden">
@@ -740,19 +785,13 @@
 
                         <div id="upscale-progress-container" class="hidden mt-16">
                             <div class="progress-bar-bg progress-track">
-                                <div id="upscale-progress-fill" class="progress-fill">
-                                </div>
+                                <div id="upscale-progress-fill" class="progress-fill"></div>
                             </div>
                             <div class="progress-labels">
                                 <span id="upscale-progress-text">Processing...</span>
                                 <span id="upscale-progress-percent">0%</span>
                             </div>
                         </div>
-
-                        <button type="button" class="btn-primary w-full hidden mt-16" id="upscale-btn-enhance" data-i18n="tool_upscale_btn">
-                            <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
-                            Enhance Media
-                        </button>
 
                         <div id="upscale-completed-panel" class="hidden">
                             <div class="upscale-completed-player">
@@ -761,9 +800,31 @@
                             </div>
                         </div>
 
-                        <div class="upscale-reset-row">
-                            <button type="button" class="btn-primary hidden btn-danger-container" id="upscale-btn-cancel" data-i18n="btn_cancel">Cancel</button>
-                            <button type="button" class="btn-primary hidden" id="upscale-btn-download" data-i18n="btn_upscale_another">Upscale Another</button>
+                        <!-- UNIFIED ACTION BUTTONS CONTAINER -->
+                        <div class="upscale-action-buttons mt-16">
+                            <button type="button" class="btn-primary w-full hidden" id="upscale-btn-enhance" data-i18n="tool_upscale_btn">
+                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
+                                Enhance Media
+                            </button>
+                            <button type="button" class="btn-primary w-full hidden" id="upscale-btn-download" data-i18n="btn_upscale_another">Upscale Another</button>
+                            <button type="button" class="btn-primary w-full hidden" id="upscale-batch-btn-next" data-i18n="btn_next_settings">Next</button>
+                            <button type="button" class="btn-primary w-full hidden" id="upscale-batch-btn-start" data-i18n="btn_start_batch">
+                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
+                                Start Batch Processing
+                            </button>
+                            <button type="button" class="btn-primary w-full hidden mt-8" id="upscale-batch-btn-back" data-i18n="btn_back_files">
+                                <span class="material-symbols-rounded font-16 mr-8">arrow_back</span>
+                                Back to Selected Files
+                            </button>
+                            <button type="button" class="btn-primary w-full hidden btn-danger-container" id="upscale-btn-cancel" data-i18n="btn_cancel">Cancel</button>
+                            <button type="button" class="btn-primary w-full hidden btn-success" id="upscale-batch-btn-zip" data-i18n="btn_download_all_zip">
+                                <span class="material-symbols-rounded font-16 mr-8">folder_zip</span>
+                                Download All (.zip)
+                            </button>
+                            <button type="button" class="btn-primary w-full hidden mt-8" id="upscale-batch-btn-reset" data-i18n="btn_upscale_another_batch">
+                                <span class="material-symbols-rounded font-16 mr-8">refresh</span>
+                                Process Another Batch
+                            </button>
                         </div>
                     </div>
 
