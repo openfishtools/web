@@ -1,6 +1,12 @@
 {
   "version": 2,
-  "outputDirectory": ".",
+  "framework": null,
+  "functions": {
+    "api/index.js": {
+      "memory": 1024,
+      "maxDuration": 15
+    }
+  },
   "rewrites": [
     {
       "source": "/scripts/:path*",
