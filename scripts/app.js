@@ -4,6 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
     let globalMuted = false;
 
+    const safeFetchJson = async (url, options) => {
+        try {
+            const res = await fetch(url, options);
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.warn(`[API] ${url} non-JSON response:`, text.substring(0, 80));
+                return null;
+            }
+        } catch (err) {
+            console.error(`[API] ${url} network error:`, err);
+            return null;
+        }
+    };
+
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) return url;
@@ -1501,8 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!grid) return;
         try {
             grid.innerHTML = Array(6).fill('<div class="skeleton-social-card"><div class="skeleton-social-icon"></div><div class="skeleton-social-name"></div></div>').join('');
-            const res = await fetch(`${API_URL}/contacts`);
-            const rawContacts = await res.json();
+            const rawContacts = await safeFetchJson(`${API_URL}/contacts`);
             const contacts = Array.isArray(rawContacts) ? rawContacts.filter(c => !c.hidden) : [];
             if (contacts.length === 0) {
                 grid.innerHTML = '<div class="empty-state">No contact links found.</div>';
@@ -2064,8 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        const res = await fetch(`${API_URL}/socials`);
-        const rawSocials = await res.json();
+        const rawSocials = await safeFetchJson(`${API_URL}/socials`);
         if (!Array.isArray(rawSocials)) {
             console.warn('[Socials] API returned non-array:', rawSocials);
             container.innerHTML = '';
@@ -2130,8 +2144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         exploreGrid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
         
-        const res = await fetch(`${API_URL}/presets`);
-        const rawPresets = await res.json();
+        const rawPresets = await safeFetchJson(`${API_URL}/presets`);
         if (!Array.isArray(rawPresets)) {
             console.warn('[Presets] API returned non-array:', rawPresets);
             exploreGrid.innerHTML = `<div class="empty-state">Failed to load presets. Is the server running?</div>`;
@@ -2309,8 +2322,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
-        const res = await fetch(`${API_URL}/resources`);
-        const rawResources = await res.json();
+        const rawResources = await safeFetchJson(`${API_URL}/resources`);
         if (!Array.isArray(rawResources)) {
             console.warn('[Resources] API returned non-array:', rawResources);
             container.innerHTML = `<div class="empty-state">Failed to load resources. Is the server running?</div>`;
