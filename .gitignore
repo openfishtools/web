@@ -134,6 +134,7 @@ MANIFEST
 .vercel
 
 # Other local tool files
-cloudflared.exe
+cloudflared*
 .npm-local-cache/
 backend/
+

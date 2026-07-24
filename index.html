@@ -200,130 +200,39 @@
                     <h1 class="page-title" data-i18n="tools_title">Tools</h1>
                 </div>
                 <div class="grid">
-                    <div class="card" id="tiktok-patcher-card"
+                    <div class="card pos-relative overflow-hidden" id="tiktok-patcher-card"
                         data-v1-patched="false"
-                        data-v2-patched="false"
-                        style="position: relative; overflow: hidden;">
+                        data-v2-patched="false">
 
                         <!-- Both-patched overlay (shown when both v1+v2 are patched) -->
-                        <div id="tiktok-patched-overlay" style="
-                            display: none;
-                            position: absolute;
-                            inset: 0;
-                            background: rgba(0, 0, 0, 0.72);
-                            z-index: 50;
-                            border-radius: inherit;
-                            align-items: center;
-                            justify-content: center;
-                            flex-direction: column;
-                            gap: 16px;
-                            text-align: center;
-                        ">
-                            <span class="material-symbols-rounded" style="font-size: 40px; color: #ff6b6b;">block</span>
-                            <div style="font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 0.02em;" data-i18n="patcher_overlay_title">Method Patched</div>
-                            <div style="font-size: 13px; color: rgba(255,255,255,0.65); max-width: 240px; line-height: 1.5;" data-i18n="patcher_overlay_desc">Both V1 and V2 are currently unavailable.</div>
-                            <button id="btn-patched-overlay-ignore" data-i18n="patcher_overlay_ignore" style="
-                                margin-top: 4px;
-                                padding: 10px 28px;
-                                border-radius: 100px;
-                                border: 1.5px solid rgba(255,255,255,0.3);
-                                background: rgba(255,255,255,0.1);
-                                color: #fff;
-                                font-size: 14px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: background 0.2s;
-                            ">Ignore</button>
+                        <div id="tiktok-patched-overlay">
+                            <span class="material-symbols-rounded block-icon-danger">block</span>
+                            <div class="overlay-patched-title" data-i18n="patcher_overlay_title">Method Patched</div>
+                            <div class="overlay-patched-desc" data-i18n="patcher_overlay_desc">Both V1 and V2 are currently unavailable.</div>
+                            <button id="btn-patched-overlay-ignore" data-i18n="patcher_overlay_ignore" class="btn-patched-ignore">Ignore</button>
                         </div>
 
-                        <div class="flex align-center gap-16" style="margin-bottom: 20px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">high_quality</span>
-                            <div style="flex: 1;">
-                                <h3 style="font-size: 1.25rem; font-weight: 600;">Quality Method</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="patcher_subtitle">TikTok HQ Upload</div>
+                        <div class="flex align-center gap-16 mb-20">
+                            <span class="material-symbols-rounded tool-header-icon">high_quality</span>
+                            <div class="flex-1">
+                                <h3 class="tool-title">Quality Method</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="patcher_subtitle">TikTok HQ Upload</div>
                             </div>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                                <button id="btn-tiktok-clear-cache" title="Clear cache" aria-label="Clear cache"
-                                    style="background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease;">
-                                    <span class="material-symbols-rounded" style="font-size: 22px;">cleaning_services</span>
+                            <div class="flex gap-6 align-center">
+                                <button id="btn-tiktok-clear-cache" title="Clear cache" aria-label="Clear cache" class="btn-icon-ghost">
+                                    <span class="material-symbols-rounded icon-22">cleaning_services</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="drag-drop-area" id="tool-tiktok-drop" style="margin-bottom: 20px;">
+                        <div class="drag-drop-area mb-20" id="tool-tiktok-drop">
                             <span class="material-symbols-rounded">video_file</span>
                             <span data-i18n="patcher_drop_label">Drag &amp; drop video here or click to select</span>
                             <input type="file" id="tool-tiktok-input" accept="video/mp4,video/quicktime,video/webm"
                                 hidden>
                         </div>
-
-                        <style>
-                            .tiktok-switcher-label {
-                                font-size: 11px;
-                                font-weight: 600;
-                                letter-spacing: 0.06em;
-                                text-transform: uppercase;
-                                color: var(--md-sys-color-on-surface-variant);
-                                margin-bottom: 6px;
-                            }
-                            .tiktok-switch-track {
-                                position: relative;
-                                display: flex;
-                                background: var(--md-sys-color-surface-container-highest);
-                                border-radius: 100px;
-                                padding: 4px;
-                            }
-                            .tiktok-switch-indicator {
-                                position: absolute;
-                                top: 4px;
-                                height: calc(100% - 8px);
-                                border-radius: 100px;
-                                background: var(--md-sys-color-primary);
-                                transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-                                            width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-                                pointer-events: none;
-                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                            }
-                            .tiktok-switch-option {
-                                flex: 1;
-                                position: relative;
-                                z-index: 1;
-                                text-align: center;
-                                padding: 8px 16px;
-                                border-radius: 100px;
-                                cursor: pointer;
-                                font-size: 14px;
-                                font-weight: 600;
-                                color: var(--md-sys-color-on-surface-variant);
-                                transition: color 0.22s ease;
-                                user-select: none;
-                                white-space: nowrap;
-                            }
-                            .tiktok-switch-option.active {
-                                color: var(--md-sys-color-on-primary);
-                            }
-                            .tiktok-preset-desc {
-                                margin-top: 8px;
-                                padding: 8px 12px;
-                                background: var(--md-sys-color-surface-container);
-                                border: 1px solid var(--md-sys-color-outline-variant);
-                                border-radius: 10px;
-                                font-size: 11px;
-                                color: var(--md-sys-color-on-surface-variant);
-                                text-align: center;
-                                line-height: 1.5;
-                                min-height: 32px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                transition: opacity 0.18s ease;
-                                user-select: none;
-                                cursor: default;
-                            }
-                        </style>
  
-                        <div style="margin-bottom: 14px;">
+                        <div class="mb-14">
                             <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose version</div>
                             <div class="tiktok-switch-track" id="tiktok-version-switch">
                                 <div class="tiktok-switch-indicator" id="tiktok-version-indicator"></div>
@@ -331,8 +240,8 @@
                                 <div class="tiktok-switch-option" data-version="v2">v2</div>
                             </div>
                         </div>
- 
-                        <div id="tiktok-compress-toggle-row" class="hidden" style="display: none; margin-bottom: 14px;">
+
+                        <div id="tiktok-compress-toggle-row" class="hidden mb-14">
                             <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress preset</div>
                             <div class="tiktok-switch-track" id="tiktok-compress-mode">
                                 <div class="tiktok-switch-indicator" id="tiktok-mode-indicator"></div>
@@ -343,48 +252,40 @@
                             <div class="tiktok-preset-desc" id="tiktok-mode-desc">Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.</div>
                         </div>
 
-                        <div id="tool-tiktok-status"
-                            style="margin-top: 4px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        <div id="tool-tiktok-status" class="mt-4 text-center font-14 font-500 text-primary">
                         </div>
 
-                        <div id="tiktok-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="tiktok-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="tiktok-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="tiktok-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="tiktok-progress-text">Processing...</span>
                                 <span id="tiktok-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <div id="tiktok-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                                <span style="font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</span>
-                                <button id="btn-copy-logs" title="Copy logs" aria-label="Copy logs"
-                                    style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; gap: 4px; color: var(--md-sys-color-on-surface-variant); font-size: 11px; font-family: inherit; transition: background 0.2s ease;">
-                                    <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span>
+                        <div id="tiktok-logs-container" class="hidden process-logs-wrap">
+                            <div class="process-logs-header">
+                                <span class="process-logs-title" data-i18n="process_logs_title">Process Logs:</span>
+                                <button id="btn-copy-logs" title="Copy logs" aria-label="Copy logs" class="btn-copy-logs">
+                                    <span class="material-symbols-rounded font-16">content_copy</span>
                                     <span id="btn-copy-logs-label" data-i18n="btn_copy">Copy</span>
                                 </button>
                             </div>
-                            <pre id="tiktok-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                            <pre id="tiktok-logs" class="process-logs-pre"></pre>
                         </div>
 
-                        <button id="btn-start-tiktok" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;" data-i18n="patcher_btn_process">Process Video</button>
+                        <button id="btn-start-tiktok" class="btn-primary w-full hidden mt-16" data-i18n="patcher_btn_process">Process Video</button>
                     </div>
 
                     <div class="card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">compress</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">compress</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_compressor_title">Video Compressor</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;">FFmpeg
-                                    WASM</div>
+                                <h3 class="tool-title" data-i18n="tool_compressor_title">Video Compressor</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap">FFmpeg WASM</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-ffmpeg-drop">
@@ -394,38 +295,6 @@
                                 hidden>
                         </div>
 
-                        <style>
-                            .ffmpeg-preset-container {
-                                display: flex;
-                                justify-content: center;
-                                margin-top: 16px;
-                                margin-bottom: 16px;
-                            }
-
-                            .preset-switch-group {
-                                display: inline-flex;
-                                background: var(--md-sys-color-surface-container-highest);
-                                padding: 4px;
-                                border-radius: 24px;
-                                gap: 4px;
-                            }
-
-                            .preset-switch {
-                                padding: 8px 24px;
-                                border-radius: 20px;
-                                font-size: 14px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                color: var(--md-sys-color-on-surface-variant);
-                                transition: all 0.2s ease;
-                            }
-
-                            .preset-switch.active {
-                                background: var(--md-sys-color-primary);
-                                color: var(--md-sys-color-on-primary);
-                                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                            }
-                        </style>
                         <div class="ffmpeg-preset-container">
                             <div class="preset-switch-group" id="ffmpeg-presets">
                                 <div class="preset-switch" data-preset="slow" data-i18n="preset_slow">Slow</div>
@@ -434,67 +303,54 @@
                             </div>
                         </div>
                         <div id="ffmpeg-preset-desc">
-                            <div
-                                style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                                <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                                    <li style="display: flex; align-items: center;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong
-                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong>
+                            <div class="tool-settings-card">
+                                <ul class="tool-settings-list">
+                                    <li class="tool-settings-item"><span
+                                            class="material-symbols-rounded tool-settings-icon">memory</span><strong
+                                            class="tool-settings-label">Codec:</strong>
                                         H.264 (libx264)</li>
-                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong
-                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong>
+                                    <li class="tool-settings-item mt-4"><span
+                                            class="material-symbols-rounded tool-settings-icon">speed</span><strong
+                                            class="tool-settings-label">Preset:</strong>
                                         Medium</li>
-                                    <li style="display: flex; align-items: center; margin-top: 4px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong
-                                            style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong>
+                                    <li class="tool-settings-item mt-4"><span
+                                            class="material-symbols-rounded tool-settings-icon">high_quality</span><strong
+                                            class="tool-settings-label">CRF:</strong>
                                         20 (High Quality)</li>
                                 </ul>
-                                <hr
-                                    style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                                <div
-                                    style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                                    <span class="material-symbols-rounded"
-                                        style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
+                                <hr class="tool-settings-divider">
+                                <div class="tool-settings-info">
+                                    <span class="material-symbols-rounded tool-settings-icon flex-shrink-0 mt-2">info</span>
                                     <span>Offers a balanced trade-off between encoding speed, file size, and visual
                                         quality. Recommended for general use.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="tool-ffmpeg-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        <div id="tool-ffmpeg-status" class="mt-16 text-center text-primary font-500 font-14">
                         </div>
 
-                        <div id="ffmpeg-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="ffmpeg-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="ffmpeg-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="ffmpeg-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="ffmpeg-progress-text">Compressing...</span>
                                 <span id="ffmpeg-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button id="btn-start-compression" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;" data-i18n="tool_compressor_btn">Start Compression</button>
+                        <button id="btn-start-compression" class="btn-primary w-full hidden mt-16" data-i18n="tool_compressor_btn">Start Compression</button>
                     </div>
 
                     <!-- Audio Extractor Card -->
                     <div class="card" id="audio-extractor-card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">audiotrack</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">audiotrack</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_audio_extractor_title">Audio Extractor</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_audio_extractor_desc">Extract audio from video to MP3</div>
+                                <h3 class="tool-title" data-i18n="tool_audio_extractor_title">Audio Extractor</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_audio_extractor_desc">Extract audio from video to MP3</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-audio-drop">
@@ -504,355 +360,129 @@
                                 hidden>
                         </div>
 
-                        <div id="tool-audio-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        <div id="tool-audio-status" class="mt-16 text-center text-primary font-500 font-14 word-break-all">
                         </div>
 
-                        <div id="audio-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="audio-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="audio-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="audio-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="audio-progress-text">Extracting...</span>
                                 <span id="audio-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button id="btn-start-audio" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;" data-i18n="tool_audio_extractor_btn">Extract Audio</button>
+                        <button id="btn-start-audio" class="btn-primary w-full hidden mt-16" data-i18n="tool_audio_extractor_btn">Extract Audio</button>
                     </div>
 
                     <div class="card" id="img-seq-card">
-                        <style>
-                            #img-seq-card .drag-drop-area {
-                                padding: 12px 16px;
-                                flex-direction: row;
-                                justify-content: center;
-                                align-items: center;
-                                gap: 10px;
-                                border-radius: 16px;
-                                min-height: 56px;
-                                width: 100%;
-                                box-sizing: border-box;
-                            }
-                            #img-seq-card .drag-drop-area span.material-symbols-rounded {
-                                font-size: 24px;
-                            }
-                            #img-seq-card .drag-drop-area span:not(.material-symbols-rounded) {
-                                font-size: 13px;
-                                font-weight: 500;
-                            }
-                        </style>
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">movie_creation</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">movie_creation</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_seq_title">Image Sequence to Video</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_seq_desc">AM Zip Exporter</div>
+                                <h3 class="tool-title" data-i18n="tool_seq_title">Image Sequence to Video</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_seq_desc">AM Zip Exporter</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-seq-drop">
                             <input type="file" id="tool-seq-input" accept=".zip" hidden>
-                            <div class="drag-drop-inner" id="tool-seq-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-seq-inner">
                                 <span class="material-symbols-rounded">folder_zip</span>
                                 <span data-i18n="tool_seq_drop">Drag &amp; drop AM Export .zip here or click to select</span>
                             </div>
                         </div>
 
-                        <div class="drag-drop-area" id="tool-seq-audio-drop" style="margin-top: 12px;">
+                        <div class="drag-drop-area mt-12" id="tool-seq-audio-drop">
                             <input type="file" id="tool-seq-audio-input" accept="audio/*,video/*" hidden>
-                            <div class="drag-drop-inner" id="tool-seq-audio-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-seq-audio-inner">
                                 <span class="material-symbols-rounded">audio_file</span>
                                 <span id="tool-seq-audio-label" data-i18n="tool_seq_audio_drop">Drag &amp; drop audio/video here or click to select (Optional)</span>
                             </div>
                         </div>
 
                         <!-- Settings Container -->
-                        <div style="margin-top: 16px; text-align: left; display: flex; flex-direction: column; gap: 12px;">
-                            <div class="input-field" style="margin-bottom: 0;">
-                                <label for="tool-seq-fps" style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;" data-i18n="tool_seq_fps">Framerate (FPS)</label>
-                                <input type="number" id="tool-seq-fps" value="30" min="1" max="120" style="width: 100%; box-sizing: border-box;">
+                        <div class="mt-16 text-left flex flex-col gap-12">
+                            <div class="input-field mb-0">
+                                <label for="tool-seq-fps" class="font-13 font-600 block mb-4" data-i18n="tool_seq_fps">Framerate (FPS)</label>
+                                <input type="number" id="tool-seq-fps" value="30" min="1" max="120" class="w-full box-border">
                             </div>
                             
-                            <div class="input-field" style="margin-bottom: 0;">
-                                <label for="tool-seq-bitrate" style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;" data-i18n="tool_seq_bitrate">Video Bitrate (Mbps)</label>
-                                <input type="number" id="tool-seq-bitrate" value="30" min="10" max="50" style="width: 100%; box-sizing: border-box;">
+                            <div class="input-field mb-0">
+                                <label for="tool-seq-bitrate" class="font-13 font-600 block mb-4" data-i18n="tool_seq_bitrate">Video Bitrate (Mbps)</label>
+                                <input type="number" id="tool-seq-bitrate" value="30" min="10" max="50" class="w-full box-border">
                             </div>
                         </div>
 
-                        <div id="tool-seq-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        <div id="tool-seq-status" class="mt-16 text-center font-14 font-500 text-primary word-break-all">
                         </div>
 
-                        <div id="seq-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="seq-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="seq-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="seq-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="seq-progress-text">Processing...</span>
                                 <span id="seq-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button id="btn-start-seq" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;" data-i18n="tool_seq_btn">Convert to Video</button>
+                        <button id="btn-start-seq" class="btn-primary w-full hidden mt-16" data-i18n="tool_seq_btn">Convert to Video</button>
                     </div>
 
                     <div class="card" id="fivemb-gen-card">
-                        <style>
-                            #fivemb-gen-card .drag-drop-area {
-                                padding: 12px 16px;
-                                flex-direction: row;
-                                justify-content: center;
-                                align-items: center;
-                                gap: 10px;
-                                border-radius: 16px;
-                                min-height: 56px;
-                                width: 100%;
-                                box-sizing: border-box;
-                            }
-                            #fivemb-gen-card .drag-drop-area span.material-symbols-rounded {
-                                font-size: 24px;
-                            }
-                            #fivemb-gen-card .drag-drop-area span:not(.material-symbols-rounded) {
-                                font-size: 13px;
-                                font-weight: 500;
-                            }
-                            #tool-fivemb-layers-list {
-                                scrollbar-width: thin;
-                                scrollbar-color: var(--md-sys-color-outline-variant) transparent;
-                            }
-                            #tool-fivemb-layers-list::-webkit-scrollbar {
-                                width: 6px;
-                            }
-                            #tool-fivemb-layers-list::-webkit-scrollbar-track {
-                                background: transparent;
-                            }
-                            #tool-fivemb-layers-list::-webkit-scrollbar-thumb {
-                                background-color: var(--md-sys-color-outline-variant);
-                                border-radius: 10px;
-                            }
-                            .fivemb-layer-item {
-                                display: flex;
-                                align-items: center;
-                                justify-content: space-between;
-                                padding: 10px 14px;
-                                border-radius: 12px;
-                                background: var(--md-sys-color-surface-container-high);
-                                border: 1.5px solid transparent;
-                                cursor: pointer;
-                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                            }
-                            .fivemb-layer-item:hover {
-                                background: var(--md-sys-color-surface-container-highest);
-                                transform: translateY(-1px);
-                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-                            }
-                            .fivemb-layer-item.selected {
-                                border-color: var(--md-sys-color-primary);
-                                background: var(--md-sys-color-surface-container-highest);
-                            }
-                            .fivemb-layer-badge {
-                                font-size: 11px;
-                                font-weight: 600;
-                                padding: 4px 10px;
-                                border-radius: 20px;
-                                flex-shrink: 0;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                            }
-                            .fivemb-layer-badge.photo {
-                                background: rgba(147, 143, 153, 0.16);
-                                color: var(--md-sys-color-on-surface-variant);
-                            }
-                            .fivemb-layer-badge.video {
-                                background: rgba(103, 80, 164, 0.16);
-                                color: var(--md-sys-color-primary);
-                            }
-                            .fivemb-layer-badge.audio {
-                                background: rgba(76, 175, 80, 0.16);
-                                color: #4caf50;
-                            }
-                            .btn-fivemb-secondary {
-                                background-color: var(--md-sys-color-surface-container-highest);
-                                color: var(--md-sys-color-on-surface);
-                                border: 1.5px solid var(--md-sys-color-outline-variant);
-                                padding: 8px 16px;
-                                border-radius: 100px;
-                                font-weight: 600;
-                                font-size: 13px;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                                display: inline-flex;
-                                align-items: center;
-                                justify-content: center;
-                                outline: none;
-                            }
-                            .btn-fivemb-secondary:hover {
-                                background-color: var(--md-sys-color-primary-container);
-                                color: var(--md-sys-color-on-primary-container);
-                                border-color: var(--md-sys-color-primary);
-                            }
-                            .btn-fivemb-secondary:active {
-                                transform: scale(0.97);
-                            }
-                            .fivemb-checkbox-wrapper {
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                position: relative;
-                                width: 20px;
-                                height: 20px;
-                                flex-shrink: 0;
-                            }
-                            .fivemb-checkbox-wrapper input[type="checkbox"] {
-                                position: absolute;
-                                opacity: 0;
-                                cursor: pointer;
-                                height: 0;
-                                width: 0;
-                            }
-                            .fivemb-checkbox-custom {
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                height: 20px;
-                                width: 20px;
-                                background-color: transparent;
-                                border: 2px solid var(--md-sys-color-outline);
-                                border-radius: 6px;
-                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            }
-                            .fivemb-checkbox-wrapper input[type="checkbox"]:checked ~ .fivemb-checkbox-custom {
-                                background-color: var(--md-sys-color-primary);
-                                border-color: var(--md-sys-color-primary);
-                            }
-                            .fivemb-checkbox-custom:after {
-                                content: "";
-                                position: absolute;
-                                display: none;
-                            }
-                            .fivemb-checkbox-wrapper input[type="checkbox"]:checked ~ .fivemb-checkbox-custom:after {
-                                display: block;
-                            }
-                            .fivemb-checkbox-wrapper .fivemb-checkbox-custom:after {
-                                left: 6px;
-                                top: 2px;
-                                width: 5px;
-                                height: 10px;
-                                border: solid var(--md-sys-color-on-primary);
-                                border-width: 0 2px 2px 0;
-                                transform: rotate(45deg);
-                            }
-                            /* Filter tabs */
-                            #tool-fivemb-filter-tabs {
-                                display: flex;
-                                gap: 6px;
-                                flex-wrap: wrap;
-                                margin-bottom: 10px;
-                            }
-                            .fivemb-filter-tab {
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 5px;
-                                padding: 6px 14px;
-                                border-radius: 100px;
-                                border: 1.5px solid var(--md-sys-color-outline-variant);
-                                background: var(--md-sys-color-surface-container-highest);
-                                color: var(--md-sys-color-on-surface-variant);
-                                font-size: 12px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                                white-space: nowrap;
-                            }
-                            .fivemb-filter-tab:hover {
-                                background: var(--md-sys-color-primary-container);
-                                color: var(--md-sys-color-on-primary-container);
-                                border-color: var(--md-sys-color-primary);
-                            }
-                            .fivemb-filter-tab.active {
-                                background: var(--md-sys-color-primary);
-                                color: var(--md-sys-color-on-primary);
-                                border-color: var(--md-sys-color-primary);
-                            }
-                            .fivemb-filter-count {
-                                background: rgba(255,255,255,0.2);
-                                border-radius: 100px;
-                                padding: 1px 7px;
-                                font-size: 11px;
-                                font-weight: 700;
-                            }
-                            .fivemb-filter-tab:not(.active) .fivemb-filter-count {
-                                background: var(--md-sys-color-surface-container);
-                                color: var(--md-sys-color-on-surface-variant);
-                            }
-                        </style>
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">cleaning_services</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">cleaning_services</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_fivemb_title">5MB XML Generator</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_fivemb_desc">Alight Motion</div>
+                                <h3 class="tool-title" data-i18n="tool_fivemb_title">5MB XML Generator</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_fivemb_desc">Alight Motion</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-fivemb-drop">
                             <input type="file" id="tool-fivemb-input" accept=".xml" hidden>
-                            <div class="drag-drop-inner" id="tool-fivemb-inner" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0;">
+                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-fivemb-inner">
                                 <span class="material-symbols-rounded">code</span>
                                 <span data-i18n="tool_fivemb_drop">Drag &amp; drop Alight Motion XML here to process</span>
                             </div>
                         </div>
 
                         <!-- Layers Container (Initially hidden) -->
-                        <div id="tool-fivemb-layers-container" style="display: none; margin-top: 20px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; width: 100%;">
-                            <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--md-sys-color-on-surface);">
-                                <span class="material-symbols-rounded" style="font-size: 20px;">list</span>
+                        <div id="tool-fivemb-layers-container" class="d-none mt-20 border-top-outline pt-16 w-full">
+                            <h4 class="font-15 font-600 mb-12 flex align-center gap-8 text-on-surface">
+                                <span class="material-symbols-rounded font-20">list</span>
                                 <span data-i18n="tool_fivemb_layer_list_title">Select Layers to Replace with Placeholders:</span>
                             </h4>
                             
-                            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-                                <div id="tool-fivemb-filter-tabs" style="display:none; gap: 6px; flex-wrap: wrap; flex-grow: 1;"></div>
-                                <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                            <div class="flex gap-8 mb-12 flex-wrap align-center">
+                                <div id="tool-fivemb-filter-tabs" class="d-none gap-6 flex-wrap flex-grow-1"></div>
+                                <div class="flex gap-6 flex-shrink-0">
                                     <button type="button" id="tool-fivemb-select-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_select_all">Select All</button>
                                     <button type="button" id="tool-fivemb-deselect-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_deselect_all">Deselect All</button>
                                 </div>
                             </div>
 
                             <!-- List Scroll Area -->
-                            <div id="tool-fivemb-layers-list" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; padding: 4px; display: flex; flex-direction: column; gap: 4px; background: var(--md-sys-color-surface-container-low); margin-bottom: 16px;">
+                            <div id="tool-fivemb-layers-list" class="max-h-250 overflow-y-auto border-outline rounded-8 p-4 flex flex-col gap-4 bg-surface-low mb-16">
                                 <!-- Dynamic Layer Items will be injected here -->
                             </div>
 
-                            <button type="button" id="tool-fivemb-btn-export" class="btn-primary w-full" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600;">
+                            <button type="button" id="tool-fivemb-btn-export" class="btn-primary w-full flex align-center justify-center gap-8 font-600">
                                 <span class="material-symbols-rounded">download</span>
                                 <span data-i18n="tool_fivemb_btn_export">Process</span>
                             </button>
                         </div>
 
-                        <div id="tool-fivemb-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary); word-break: break-all;">
+                        <div id="tool-fivemb-status" class="mt-16 text-center font-14 font-500 text-primary word-break-all">
                         </div>
                     </div>
 
                     <div class="card" id="ae-to-am-card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">swap_horiz</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">swap_horiz</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_ae_am_title">AE to AM</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_ae_am_desc">Beatmark Converter</div>
+                                <h3 class="tool-title" data-i18n="tool_ae_am_title">AE to AM</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_ae_am_desc">Beatmark Converter</div>
                             </div>
                         </div>
                         <div class="drag-drop-area" id="tool-ae-am-drop">
@@ -892,153 +522,118 @@
                             <div id="tool-ae-am-beat-summary" class="ae-am-beat-summary"></div>
                         </div>
 
-                        <div id="tool-ae-am-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        <div id="tool-ae-am-status" class="mt-16 text-center font-14 font-500 text-primary">
                         </div>
 
-                        <button id="btn-ae-am-convert" class="btn-primary w-full hidden"
-                            style="margin-top: 16px;" data-i18n="tool_ae_am_btn">Convert &amp; Download XML</button>
+                        <button id="btn-ae-am-convert" class="btn-primary w-full hidden mt-16" data-i18n="tool_ae_am_btn">Convert &amp; Download XML</button>
                     </div>
 
                     <div class="card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">monitoring</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">monitoring</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_stats_title">TikTok Statistics</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_stats_desc">
+                                <h3 class="tool-title" data-i18n="tool_stats_title">TikTok Statistics</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_stats_desc">
                                     Metadata &amp; Stream Analyser</div>
                             </div>
                         </div>
-                        <div class="input-field" style="margin-bottom: 0;">
+                        <div class="input-field mb-0">
                             <label for="tool-tiktok-stats-input" data-i18n="tool_stats_url">TikTok Video URL</label>
                             <input type="text" id="tool-tiktok-stats-input"
                                 placeholder="https://www.tiktok.com/@username/video/..."
-                                style="width: 100%; box-sizing: border-box;">
+                                class="w-full box-border">
                         </div>
 
                         <!-- Analysis Results Container -->
-                        <div id="tiktok-stats-results" class="hidden"
-                            style="margin-top: 20px; border-top: 1px dashed var(--md-sys-color-outline-variant); padding-top: 16px;">
-                            <div class="stats-preview-container"
-                                style="display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start;">
-                                <div class="stats-video-cover-wrapper"
-                                    style="width: 90px; height: 120px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-container); flex-shrink: 0; position: relative; border: 1px solid var(--md-sys-color-outline-variant);">
-                                    <img id="stats-video-cover" src="" alt="Cover"
-                                        style="width: 100%; height: 100%; object-fit: cover;">
+                        <div id="tiktok-stats-results" class="hidden mt-20 border-top-dashed pt-16">
+                            <div class="stats-preview-container">
+                                <div class="stats-video-cover-wrapper">
+                                    <img id="stats-video-cover" src="" alt="Cover" class="stats-video-cover">
                                 </div>
-                                <div style="flex-grow: 1; min-width: 0;">
-                                    <div id="stats-creator-name"
-                                        style="font-weight: 700; font-size: 15px; color: var(--md-sys-color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <div class="flex-grow-1 min-w-0">
+                                    <div id="stats-creator-name" class="stats-creator-name">
                                         Creator</div>
-                                    <div id="stats-creator-handle"
-                                        style="font-size: 13px; color: var(--md-sys-color-primary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <div id="stats-creator-handle" class="stats-creator-handle">
                                         @username</div>
-                                    <div id="stats-caption"
-                                        style="font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                    <div id="stats-caption" class="stats-caption">
                                         Caption goes here...</div>
                                 </div>
                             </div>
 
-                            <div
-                                style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); display: flex; flex-direction: column; gap: 10px;">
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px;">aspect_ratio</span><span data-i18n="stats_resolution">Resolution</span></span>
-                                    <strong id="stats-resolution"
-                                        style="color: var(--md-sys-color-on-surface);">—</strong>
+                            <div class="stats-details-card">
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">aspect_ratio</span><span data-i18n="stats_resolution">Resolution</span></span>
+                                    <strong id="stats-resolution" class="text-on-surface">—</strong>
                                 </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded" style="font-size: 18px;">speed</span><span data-i18n="stats_fps">Frame Rate (FPS)</span></span>
-                                    <strong id="stats-fps" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">speed</span><span data-i18n="stats_fps">Frame Rate (FPS)</span></span>
+                                    <strong id="stats-fps" class="text-on-surface">—</strong>
                                 </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px;">equalizer</span><span data-i18n="stats_bitrate">Bitrate</span></span>
-                                    <strong id="stats-bitrate" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">equalizer</span><span data-i18n="stats_bitrate">Bitrate</span></span>
+                                    <strong id="stats-bitrate" class="text-on-surface">—</strong>
                                 </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded"
-                                            style="font-size: 18px;">schedule</span><span data-i18n="stats_duration">Duration</span></span>
-                                    <strong id="stats-duration"
-                                        style="color: var(--md-sys-color-on-surface);">—</strong>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">schedule</span><span data-i18n="stats_duration">Duration</span></span>
+                                    <strong id="stats-duration" class="text-on-surface">—</strong>
                                 </div>
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                                    <span
-                                        style="color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 8px;"><span
-                                            class="material-symbols-rounded" style="font-size: 18px;">save</span><span data-i18n="stats_size">File Size</span></span>
-                                    <strong id="stats-size" style="color: var(--md-sys-color-on-surface);">—</strong>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">save</span><span data-i18n="stats_size">File Size</span></span>
+                                    <strong id="stats-size" class="text-on-surface">—</strong>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="tool-tiktok-stats-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        <div id="tool-tiktok-stats-status" class="mt-16 text-center font-14 font-500 text-primary">
                         </div>
 
-                        <button id="btn-analyse-tiktok" class="btn-primary w-full"
-                            style="margin-top: 16px;" data-i18n="tool_stats_btn">Analyse</button>
+                        <button id="btn-analyse-tiktok" class="btn-primary w-full mt-16" data-i18n="tool_stats_btn">Analyse</button>
                     </div>
 
                     <div class="card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">download</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">download</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_downloader_title">TikTok Downloader</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_downloader_desc">
+                                <h3 class="tool-title" data-i18n="tool_downloader_title">TikTok Downloader</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_downloader_desc">
                                     Powered By TikWm</div>
                             </div>
                         </div>
-                        <div class="input-field" style="margin-bottom: 0;">
+                        <div class="input-field mb-0">
                             <label for="tool-tiktok-dl-input" data-i18n="tool_downloader_url">TikTok Video URL</label>
                             <input type="text" id="tool-tiktok-dl-input"
                                 placeholder="https://www.tiktok.com/@username/video/..."
-                                style="width: 100%; box-sizing: border-box;">
+                                class="w-full box-border">
                         </div>
 
-                        <div id="tiktok-dl-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="tiktok-dl-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="tiktok-dl-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="tiktok-dl-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="tiktok-dl-progress-text">Downloading...</span>
                                 <span id="tiktok-dl-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <div id="tool-tiktok-dl-status"
-                            style="margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; color: var(--md-sys-color-primary);">
+                        <div id="tool-tiktok-dl-status" class="mt-16 text-center font-14 font-500 text-primary">
                         </div>
 
-                        <button id="btn-download-tiktok" class="btn-primary w-full"
-                            style="margin-top: 16px;" data-i18n="tool_downloader_btn">Download</button>
+                        <button id="btn-download-tiktok" class="btn-primary w-full mt-16" data-i18n="tool_downloader_btn">Download</button>
                     </div>
 
                     <div class="card" id="upscale-video-card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">hd</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">hd</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_upscale_title">Qualitelio Enhancer</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_upscale_desc">Media Upscaler</div>
+                                <h3 class="tool-title" data-i18n="tool_upscale_title">Qualitelio Enhancer</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_upscale_desc">Media Upscaler</div>
                             </div>
                         </div>
 
@@ -1054,7 +649,7 @@
                                     <div class="upscale-comparison-wrapper">
                                         <div class="upscale-transform-layer">
                                             <video id="upscale-video" loop crossorigin="anonymous" muted playsinline></video>
-                                            <img id="upscale-image" class="hidden" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none;" crossorigin="anonymous">
+                                            <img id="upscale-image" class="hidden w-full h-full obj-contain pointer-none" crossorigin="anonymous">
                                         </div>
                                         <div class="upscale-canvas-clip" id="upscale-canvas-clip">
                                             <div class="upscale-transform-layer">
@@ -1078,71 +673,17 @@
                                     <p class="upscale-controls-title" data-i18n="upscale_preset_title">Enhancement Preset</p>
                                     <div class="upscale-preset-list" id="upscale-preset-list"></div>
 
-                                    <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_timing_title">Enhance Timing</p>
+                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_timing_title">Enhance Timing</p>
                                     <div class="upscale-order-toggle">
                                         <button type="button" class="upscale-order-btn active" data-order="before" data-i18n="upscale_timing_before">Before Upscale</button>
                                         <button type="button" class="upscale-order-btn" data-order="after" data-i18n="upscale_timing_after">After Upscale</button>
                                     </div>
 
-                                    <style>
-                                        .upscale-normalise-row {
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: space-between;
-                                            padding: 10px 14px;
-                                            background: var(--md-sys-color-surface-container);
-                                            border-radius: 12px;
-                                            border: 1px solid var(--md-sys-color-outline-variant);
-                                            margin-bottom: 12px;
-                                        }
-                                        .normalise-switch-wrap {
-                                            position: relative;
-                                            display: inline-block;
-                                            width: 48px;
-                                            height: 26px;
-                                            cursor: pointer;
-                                            flex-shrink: 0;
-                                        }
-                                        .normalise-switch-wrap input {
-                                            opacity: 0;
-                                            width: 0;
-                                            height: 0;
-                                            position: absolute;
-                                        }
-                                        .normalise-track {
-                                            position: absolute;
-                                            inset: 0;
-                                            background: var(--md-sys-color-surface-container-highest);
-                                            border-radius: 13px;
-                                            transition: background 0.25s, border-color 0.25s;
-                                            border: 2px solid var(--md-sys-color-outline-variant);
-                                        }
-                                        .normalise-thumb {
-                                            position: absolute;
-                                            left: 3px;
-                                            top: 50%;
-                                            transform: translateY(-50%);
-                                            width: 16px;
-                                            height: 16px;
-                                            background: var(--md-sys-color-outline);
-                                            border-radius: 50%;
-                                            transition: left 0.25s cubic-bezier(.4,0,.2,1), background 0.25s, width 0.1s;
-                                        }
-                                        .normalise-switch-wrap input:checked ~ .normalise-track {
-                                            background: var(--md-sys-color-primary);
-                                            border-color: var(--md-sys-color-primary);
-                                        }
-                                        .normalise-switch-wrap input:checked ~ .normalise-thumb {
-                                            left: 26px;
-                                            background: var(--md-sys-color-on-primary);
-                                        }
-                                    </style>
-
-                                    <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_output_title">Output</p>
+                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_output_title">Output</p>
                                     <div class="upscale-normalise-row">
                                         <div>
-                                            <div style="font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface);" data-i18n="upscale_normalise_title">Normalise Size</div>
-                                            <div style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px;" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
+                                            <div class="font-13 font-600 text-on-surface" data-i18n="upscale_normalise_title">Normalise Size</div>
+                                            <div class="font-11 text-on-surface-variant mt-2" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
                                         </div>
                                         <label class="normalise-switch-wrap" for="upscale-normalise-toggle">
                                             <input type="checkbox" id="upscale-normalise-toggle">
@@ -1152,7 +693,7 @@
                                     </div>
 
                                     <div id="upscale-duration-container">
-                                        <p class="upscale-controls-title" style="margin-top: 4px;" data-i18n="upscale_duration_title">Duration</p>
+                                        <p class="upscale-controls-title mt-4" data-i18n="upscale_duration_title">Duration</p>
                                         <div class="upscale-timeline">
                                             <div class="upscale-timeline-times">
                                                 <span id="upscale-time-current">0:00</span>
@@ -1165,7 +706,7 @@
                                     <div class="upscale-action-row">
                                         <button type="button" class="btn-upscale" id="upscale-btn-zoom">Zoom: 1x</button>
                                         <button type="button" class="btn-upscale" id="upscale-btn-preview">
-                                            <span class="material-symbols-rounded" style="font-size: 16px;">visibility</span>
+                                            <span class="material-symbols-rounded font-16">visibility</span>
                                             <span data-i18n="btn_preview">Preview</span>
                                         </button>
                                     </div>
@@ -1174,69 +715,65 @@
                         </div>
 
                         <!-- System Checking Screen -->
-                        <div id="upscale-checking-screen" class="hidden" style="margin-top: 16px; padding: 24px; background: var(--md-sys-color-surface-container); border-radius: 16px; text-align: center;">
-                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);" data-i18n="system_checking_title">Checking System Compatibility...</h3>
-                            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;">
-                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
-                                    <span id="upscale-engine-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
+                        <div id="upscale-checking-screen" class="hidden system-checking-card">
+                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
+                            <div class="system-checking-list">
+                                <div class="system-checking-item">
+                                    <span id="upscale-engine-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
                                     <span id="upscale-engine-status">AI Engine: Checking...</span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
-                                    <span id="upscale-gpu-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
+                                <div class="system-checking-item">
+                                    <span id="upscale-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
                                     <span id="upscale-gpu-status">GPU Canvas: Checking...</span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
-                                    <span id="upscale-webcodecs-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
+                                <div class="system-checking-item">
+                                    <span id="upscale-webcodecs-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
                                     <span id="upscale-webcodecs-status">FFmpeg WASM: Checking...</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="upscale-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</div>
-                            <pre id="upscale-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                        <div id="upscale-logs-container" class="hidden process-logs-wrap">
+                            <div class="process-logs-title mb-8" data-i18n="process_logs_title">Process Logs:</div>
+                            <pre id="upscale-logs" class="process-logs-pre max-h-120"></pre>
                         </div>
 
-                        <div id="upscale-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="upscale-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="upscale-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="upscale-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="upscale-progress-text">Processing...</span>
                                 <span id="upscale-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary w-full hidden" id="upscale-btn-enhance" style="margin-top: 16px;" data-i18n="tool_upscale_btn">
-                            <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 8px;">auto_awesome</span>
+                        <button type="button" class="btn-primary w-full hidden mt-16" id="upscale-btn-enhance" data-i18n="tool_upscale_btn">
+                            <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
                             Enhance Media
                         </button>
 
                         <div id="upscale-completed-panel" class="hidden">
                             <div class="upscale-completed-player">
                                 <video id="upscale-completed-video" controls loop playsinline class="hidden"></video>
-                                <img id="upscale-completed-image" class="hidden" style="width: 100%; max-height: 360px; object-fit: contain;">
+                                <img id="upscale-completed-image" class="hidden w-full max-h-360 obj-contain">
                             </div>
                         </div>
 
                         <div class="upscale-reset-row">
-                            <button type="button" class="btn-primary hidden" id="upscale-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);" data-i18n="btn_cancel">Cancel</button>
+                            <button type="button" class="btn-primary hidden btn-danger-container" id="upscale-btn-cancel" data-i18n="btn_cancel">Cancel</button>
                             <button type="button" class="btn-primary hidden" id="upscale-btn-download" data-i18n="btn_upscale_another">Upscale Another</button>
                         </div>
                     </div>
 
                     <!-- Video Interpolation Card -->
                     <div class="card" id="interpolation-video-card">
-                        <div class="flex align-center gap-16" style="margin-bottom: 16px;">
-                            <span class="material-symbols-rounded"
-                                style="font-size: 32px; color: var(--md-sys-color-primary);">motion_photos_on</span>
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">motion_photos_on</span>
                             <div>
-                                <h3 style="font-size: 1.25rem; font-weight: 600;" data-i18n="tool_interp_title">Video Interpolation</h3>
-                                <div class="res-ver-badge-inline" style="margin-top: 4px; display: inline-block;" data-i18n="tool_interp_desc">FPS Upscaler</div>
+                                <h3 class="tool-title" data-i18n="tool_interp_title">Video Interpolation</h3>
+                                <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="tool_interp_desc">FPS Upscaler</div>
                             </div>
                         </div>
 
@@ -1246,22 +783,22 @@
                             <input type="file" id="interp-file-input" accept="video/mp4,video/quicktime,video/webm" hidden>
                         </div>
 
-                        <div id="interp-workspace" class="hidden" style="margin-top: 16px;">
+                        <div id="interp-workspace" class="hidden mt-16">
                             <!-- Expected vs Target FPS Side-by-side Panel -->
-                            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                                <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
-                                    <div id="interp-input-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-on-surface);">—</div>
-                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;" data-i18n="interp_input_label">Input</div>
+                            <div class="flex gap-12 mb-16">
+                                <div class="interp-metric-card">
+                                    <div id="interp-input-fps" class="interp-metric-val">—</div>
+                                    <div class="interp-metric-label" data-i18n="interp_input_label">Input</div>
                                 </div>
-                                <div style="flex: 1; background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); text-align: center;">
-                                    <div id="interp-target-fps" style="font-size: 24px; font-weight: 700; color: var(--md-sys-color-primary);">—</div>
-                                    <div style="font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 4px;" data-i18n="interp_output_label">Output</div>
+                                <div class="interp-metric-card">
+                                    <div id="interp-target-fps" class="interp-metric-val primary">—</div>
+                                    <div class="interp-metric-label" data-i18n="interp_output_label">Output</div>
                                 </div>
                             </div>
 
                             <div id="interp-params-wrapper">
-                                <p style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface);" data-i18n="interp_multiplier_title">FPS Multiplier</p>
-                                <div class="ffmpeg-preset-container" style="margin-top: 0; margin-bottom: 16px;">
+                                <p class="font-14 font-600 mb-8 text-on-surface" data-i18n="interp_multiplier_title">FPS Multiplier</p>
+                                <div class="ffmpeg-preset-container mt-0 mb-16">
                                     <div class="preset-switch-group" id="interp-multipliers">
                                         <div class="preset-switch active" data-mult="2">2x</div>
                                         <div class="preset-switch" data-mult="4">4x</div>
@@ -1272,67 +809,64 @@
                         </div>
 
                         <!-- WebGPU System Checking Screen -->
-                        <div id="interp-checking-screen" class="hidden" style="margin-top: 16px; padding: 24px; background: var(--md-sys-color-surface-container); border-radius: 16px; text-align: center;">
-                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--md-sys-color-on-surface);" data-i18n="system_checking_title">Checking System Compatibility...</h3>
-                            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;">
-                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--md-sys-color-on-surface-variant);">
-                                    <span id="interp-gpu-dot" class="material-symbols-rounded" style="font-size: 20px;">hourglass_empty</span>
+                        <div id="interp-checking-screen" class="hidden system-checking-card">
+                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
+                            <div class="system-checking-list">
+                                <div class="system-checking-item">
+                                    <span id="interp-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
                                     <span id="interp-gpu-status">WebGPU: Checking...</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="interp-logs-container" class="hidden" style="margin-top: 16px; text-align: left;">
-                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-on-surface-variant);" data-i18n="process_logs_title">Process Logs:</div>
-                            <pre id="interp-logs" style="background: var(--md-sys-color-surface-container-low); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant);"></pre>
+                        <div id="interp-logs-container" class="hidden process-logs-wrap">
+                            <div class="process-logs-title mb-8" data-i18n="process_logs_title">Process Logs:</div>
+                            <pre id="interp-logs" class="process-logs-pre max-h-120"></pre>
                         </div>
 
-                        <div id="interp-progress-container" class="hidden" style="margin-top: 16px;">
-                            <div class="progress-bar-bg"
-                                style="background: var(--md-sys-color-surface-variant); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="interp-progress-fill"
-                                    style="background: var(--md-sys-color-primary); height: 100%; width: 0%; transition: width 0.3s ease;">
+                        <div id="interp-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="interp-progress-fill" class="progress-fill">
                                 </div>
                             </div>
-                            <div
-                                style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);">
+                            <div class="progress-labels">
                                 <span id="interp-progress-text">Processing...</span>
                                 <span id="interp-progress-percent">0%</span>
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary w-full hidden" id="interp-btn-process" style="margin-top: 16px;" data-i18n="tool_interp_btn">
-                            <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 8px;">speed</span>
+                        <button type="button" class="btn-primary w-full hidden mt-16" id="interp-btn-process" data-i18n="tool_interp_btn">
+                            <span class="material-symbols-rounded font-16 mr-8">speed</span>
                             Interpolate Video
                         </button>
 
-                        <div id="interp-completed-panel" class="hidden" style="margin-top: 16px;">
-                            <div class="upscale-completed-player" style="position: relative; border-radius: 12px; overflow: hidden; background: #000;">
-                                <div class="upscale-comparison-container" id="interp-comparison-container" style="height: 300px; max-height: 300px; width: 100%; position: relative; overflow: hidden;">
-                                    <div class="upscale-comparison-wrapper" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+                        <div id="interp-completed-panel" class="hidden mt-16">
+                            <div class="upscale-completed-player pos-relative rounded-12 overflow-hidden bg-black">
+                                <div class="upscale-comparison-container interp-comparison-h w-full pos-relative overflow-hidden" id="interp-comparison-container">
+                                    <div class="upscale-comparison-wrapper pos-absolute inset-0 w-full h-full">
                                         <!-- Interpolated Output Video (Bottom Layer) -->
-                                        <div style="position: absolute; inset: 0; width: 100%; height: 100%;">
-                                            <video id="interp-video-output" loop crossorigin="anonymous" muted playsinline style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block;"></video>
+                                        <div class="pos-absolute inset-0 w-full h-full">
+                                            <video id="interp-video-output" loop crossorigin="anonymous" muted playsinline class="w-full h-full obj-contain pointer-none block"></video>
                                         </div>
                                         
                                         <!-- Original Video (Top Clip Layer) -->
-                                        <div id="interp-video-clip" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);">
-                                            <video id="interp-video-original" loop crossorigin="anonymous" muted playsinline style="width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block;"></video>
+                                        <div id="interp-video-clip" class="interp-clip-layer">
+                                            <video id="interp-video-original" loop crossorigin="anonymous" muted playsinline class="w-full h-full obj-contain pointer-none block"></video>
                                         </div>
                                         
                                         <!-- Slider Line -->
-                                        <div id="interp-slider-line" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--md-sys-color-primary); cursor: col-resize; transform: translateX(-50%); z-index: 10;">
-                                            <div class="upscale-slider-handle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; pointer-events: none; box-shadow: var(--elevation-1);">◀▶</div>
+                                        <div id="interp-slider-line" class="interp-slider-line">
+                                            <div class="upscale-slider-handle interp-slider-handle">◀▶</div>
                                         </div>
-                                        <div class="upscale-slider-label left" style="position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;" data-i18n="interp_original_label">Original</div>
-                                        <div class="upscale-slider-label right" style="position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 12;" data-i18n="interp_interpolated_label">Interpolated</div>
+                                        <div class="upscale-slider-label left interp-slider-label-left" data-i18n="interp_original_label">Original</div>
+                                        <div class="upscale-slider-label right interp-slider-label-right" data-i18n="interp_interpolated_label">Interpolated</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="upscale-reset-row" style="margin-top: 16px;">
-                            <button type="button" class="btn-primary hidden" id="interp-btn-cancel" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);" data-i18n="btn_cancel">Cancel</button>
+                        <div class="upscale-reset-row mt-16">
+                            <button type="button" class="btn-primary hidden btn-danger-container" id="interp-btn-cancel" data-i18n="btn_cancel">Cancel</button>
                             <button type="button" class="btn-primary hidden" id="interp-btn-reset" data-i18n="btn_interp_another">Interpolate Another</button>
                         </div>
                     </div>
@@ -1354,7 +888,7 @@
     <div id="sw-download-picker" class="mini-popup-overlay">
         <div class="mini-popup">
             <div class="mini-popup-header-row">
-                <h3 class="mini-popup-title" style="margin: 0; display: flex; align-items: center; gap: 10px; flex-grow: 1;">
+                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1">
                     <span class="material-symbols-rounded">download</span>
                     <span>Choose Version</span>
                 </h3>
@@ -1362,29 +896,29 @@
                     <span class="material-symbols-rounded">close</span>
                 </button>
             </div>
-            <p class="mini-popup-desc" style="margin-top: 10px; margin-bottom: 16px;">Select the software you want to download for:</p>
+            <p class="mini-popup-desc mt-10 mb-16">Select the software you want to download for:</p>
             <div class="mini-popup-body" id="sw-download-options"></div>
         </div>
     </div>
 
     <div id="sw-detail-picker" class="mini-popup-overlay">
         <div class="mini-popup">
-            <div class="mini-popup-header-row" style="gap: 12px;">
-                <h3 class="mini-popup-title" id="sw-detail-title-text-wrap" style="margin: 0; flex-grow: 1;">
-                    <img id="sw-detail-icon" src="" alt="" style="width: 24px; height: 24px; border-radius: 6px; display: none;">
+            <div class="mini-popup-header-row gap-12">
+                <h3 class="mini-popup-title m-0 flex-grow-1" id="sw-detail-title-text-wrap">
+                    <img id="sw-detail-icon" src="" alt="" class="popup-icon-hidden">
                     <span id="sw-detail-title-text">Preset Info</span>
                 </h3>
                 <button class="mini-popup-close-btn" id="back-sw-detail" aria-label="Back">
                     <span class="material-symbols-rounded">arrow_back</span>
                 </button>
             </div>
-            <div class="mini-popup-body" style="margin-top: 16px;">
-                <div id="sw-detail-plugin-section" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; width: 100%;">
+            <div class="mini-popup-body mt-16">
+                <div id="sw-detail-plugin-section" class="d-none flex-col gap-8 mb-16 w-full">
                     <div class="plugin-section-title">Required Plugins:</div>
                     <div id="sw-detail-plugins" class="plugin-badges-container"></div>
                 </div>
-                <button class="sw-download-option-btn" id="sw-detail-download-btn" style="justify-content: center; font-weight: 600; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none;">
-                    <span class="material-symbols-rounded" style="color: inherit; margin-left: 0; margin-right: 8px;">download</span>
+                <button class="sw-download-option-btn btn-primary-ghost" id="sw-detail-download-btn">
+                    <span class="material-symbols-rounded color-inherit ml-0 mr-8">download</span>
                     <span>Download Preset</span>
                 </button>
             </div>
@@ -1393,17 +927,17 @@
 
     <div id="am-variant-picker" class="mini-popup-overlay">
         <div class="mini-popup">
-            <div class="mini-popup-header-row" style="gap: 12px;">
-                <h3 class="mini-popup-title" style="margin: 0; display: flex; align-items: center; gap: 10px; flex-grow: 1; font-size: 20px;">
-                    <img src="assets/icon/Am.png" alt="Alight Motion" style="width: 24px; height: 24px; border-radius: 6px;">
+            <div class="mini-popup-header-row gap-12">
+                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1 font-20">
+                    <img src="assets/icon/Am.png" alt="Alight Motion" class="popup-icon-sm">
                     <span>Choose Variant</span>
                 </h3>
                 <button class="mini-popup-close-btn" id="back-am-variant" aria-label="Back">
                     <span class="material-symbols-rounded">arrow_back</span>
                 </button>
             </div>
-            <p class="mini-popup-desc" style="margin-top: 10px; margin-bottom: 16px;">Select the variant you want to download:</p>
-            <div class="mini-popup-body" id="am-variant-options" style="margin-top: 16px;"></div>
+            <p class="mini-popup-desc mt-10 mb-16">Select the variant you want to download:</p>
+            <div class="mini-popup-body mt-16" id="am-variant-options"></div>
         </div>
     </div>
 
@@ -1433,17 +967,17 @@
                 <!-- Rating-style metadata row -->
                 <div class="res-popup-meta-row">
                     <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-info">â€”</span>
+                        <span class="res-popup-meta-val" id="res-popup-info">—</span>
                         <span class="res-popup-meta-label">Size</span>
                     </div>
                     <div class="res-popup-meta-divider"></div>
                     <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-os-count">â€”</span>
+                        <span class="res-popup-meta-val" id="res-popup-os-count">—</span>
                         <span class="res-popup-meta-label">Platforms</span>
                     </div>
                     <div class="res-popup-meta-divider"></div>
                     <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-ver-count">â€”</span>
+                        <span class="res-popup-meta-val" id="res-popup-ver-count">—</span>
                         <span class="res-popup-meta-label">Versions</span>
                     </div>
                 </div>
@@ -1451,22 +985,22 @@
 
             <!-- OS Picker -->
             <div class="res-popup-section" id="res-popup-os-section">
-                <h3 class="res-popup-section-title" style="margin-bottom: 4px;">Platform</h3>
-                <p style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 12px 0; font-weight: 400; opacity: 0.75;">Select your operating system:</p>
+                <h3 class="res-popup-section-title mb-4">Platform</h3>
+                <p class="font-11 text-on-surface-variant m-0 mb-12 font-400 opacity-75">Select your operating system:</p>
                 <div class="res-popup-os-chips" id="res-popup-os-chips"></div>
             </div>
 
             <!-- Version Picker -->
             <div class="res-popup-section hidden" id="res-popup-ver-section">
-                <h3 class="res-popup-section-title" style="margin-bottom: 4px;">Version</h3>
-                <p style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 12px 0; font-weight: 400; opacity: 0.75;">Select your preferred version:</p>
+                <h3 class="res-popup-section-title mb-4">Version</h3>
+                <p class="font-11 text-on-surface-variant m-0 mb-12 font-400 opacity-75">Select your preferred version:</p>
                 <div class="res-popup-ver-chips" id="res-popup-ver-chips"></div>
             </div>
 
             <!-- Instruction Section -->
             <div class="res-popup-section hidden" id="res-popup-instruction-section">
                 <h3 class="res-popup-section-title">
-                    <span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle">info</span>
+                    <span class="material-symbols-rounded font-18 v-middle">info</span>
                     Instructions
                 </h3>
                 <div class="res-popup-instruction" id="res-popup-instruction"></div>
@@ -1475,11 +1009,10 @@
             <!-- Password Section -->
             <div class="res-popup-section res-popup-password-section hidden" id="res-popup-password-section">
                 <div class="res-popup-password-row">
-                    <span class="material-symbols-rounded"
-                        style="color:var(--md-sys-color-primary);font-size:20px">lock</span>
+                    <span class="material-symbols-rounded text-primary font-20">lock</span>
                     <div class="res-popup-password-info">
                         <span class="res-popup-password-label">Password</span>
-                        <span class="res-popup-password-val" id="res-popup-password">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</span>
+                        <span class="res-popup-password-val" id="res-popup-password">••••••••••••</span>
                     </div>
                     <button class="res-popup-copy-btn" id="res-popup-copy-btn" title="Copy password">
                         <span class="material-symbols-rounded">content_copy</span>
@@ -1491,200 +1024,13 @@
             <div class="res-popup-section hidden" id="res-popup-download-section">
                 <button class="res-popup-download-btn" id="res-popup-download-btn" disabled>
                     <div class="download-text-group">
-                        <span class="download-main-text" style="display:none">Download</span>
+                        <span class="download-main-text d-none">Download</span>
                         <span id="res-popup-download-label">Select OS & Version</span>
                     </div>
                 </button>
             </div>
         </div>
     </div>
-
-    <style>
-        #tiktok-analysis-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(6px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
-        #tiktok-analysis-modal.visible {
-            display: flex;
-        }
-        .tktk-modal-card {
-            background: var(--md-sys-color-surface-container-high);
-            border-radius: 20px;
-            padding: 24px 22px 20px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 8px 48px rgba(0, 0, 0, 0.35);
-            border: 1px solid var(--md-sys-color-outline-variant);
-        }
-        .tktk-modal-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-        .tktk-modal-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            background: var(--md-sys-color-primary-container);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        .tktk-modal-icon .material-symbols-rounded {
-            font-size: 22px;
-            color: var(--md-sys-color-primary);
-        }
-        .tktk-modal-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--md-sys-color-on-surface);
-            line-height: 1.3;
-        }
-        .tktk-modal-subtitle {
-            font-size: 12px;
-            color: var(--md-sys-color-on-surface-variant);
-            margin-top: 2px;
-        }
-        .tktk-check-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 18px;
-        }
-        .tktk-check-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 10px 12px;
-            border-radius: 12px;
-            background: var(--md-sys-color-surface-container);
-            border: 1px solid var(--md-sys-color-outline-variant);
-            transition: border-color 0.2s;
-        }
-        .tktk-check-item.fail {
-            border-color: var(--md-sys-color-error, #ba1a1a);
-            background: color-mix(in srgb, var(--md-sys-color-error, #ba1a1a) 8%, var(--md-sys-color-surface-container));
-        }
-        .tktk-check-item.warn {
-            border-color: #f4a21e;
-            background: color-mix(in srgb, #f4a21e 8%, var(--md-sys-color-surface-container));
-        }
-        .tktk-check-item.pass {
-            border-color: var(--md-sys-color-primary);
-            background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container));
-        }
-        .tktk-check-icon {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-        .tktk-check-icon.loading {
-            background: var(--md-sys-color-surface-variant);
-        }
-        .tktk-check-icon.pass {
-            background: var(--md-sys-color-primary);
-        }
-        .tktk-check-icon.fail {
-            background: var(--md-sys-color-error, #ba1a1a);
-        }
-        .tktk-check-icon.warn {
-            background: #f4a21e;
-        }
-        .tktk-check-icon .material-symbols-rounded {
-            font-size: 14px;
-            color: var(--md-sys-color-on-primary);
-        }
-        .tktk-check-icon.loading .material-symbols-rounded {
-            font-size: 14px;
-            color: var(--md-sys-color-on-surface-variant);
-            animation: tktk-spin 1s linear infinite;
-        }
-        .tktk-check-icon.fail .material-symbols-rounded,
-        .tktk-check-icon.warn .material-symbols-rounded {
-            color: #fff;
-        }
-        @keyframes tktk-spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .tktk-check-body {
-            flex: 1;
-            min-width: 0;
-        }
-        .tktk-check-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--md-sys-color-on-surface);
-            line-height: 1.2;
-        }
-        .tktk-check-value {
-            font-size: 12px;
-            color: var(--md-sys-color-on-surface-variant);
-            margin-top: 2px;
-        }
-        .tktk-check-error {
-            font-size: 11px;
-            margin-top: 3px;
-            display: none;
-        }
-        .tktk-check-item.fail .tktk-check-error {
-            display: block;
-            color: var(--md-sys-color-error, #ba1a1a);
-        }
-        .tktk-check-item.warn .tktk-check-error {
-            display: block;
-            color: #f4a21e;
-        }
-        .tktk-modal-footer {
-            display: flex;
-            gap: 8px;
-        }
-        .tktk-btn {
-            flex: 1;
-            padding: 11px 8px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.15s, background 0.15s;
-            border: none;
-            white-space: nowrap;
-        }
-        .tktk-btn-cancel {
-            border: 1px solid var(--md-sys-color-outline-variant);
-            background: transparent;
-            color: var(--md-sys-color-on-surface);
-        }
-        .tktk-btn-cancel:hover { background: var(--md-sys-color-surface-container-highest); }
-        .tktk-btn-proceed {
-            background: #f4a21e;
-            color: #fff;
-        }
-        .tktk-btn-proceed:hover { opacity: 0.86; }
-        .tktk-btn-compress {
-            background: var(--md-sys-color-primary);
-            color: var(--md-sys-color-on-primary);
-        }
-        .tktk-btn-compress:hover { opacity: 0.86; }
-        .tktk-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-    </style>
 
     <div id="tiktok-analysis-modal">
         <div class="tktk-modal-card">
@@ -1741,91 +1087,10 @@
 
     <!-- Version-patched notice popup -->
     <div id="tiktok-version-patched-modal" class="hidden">
-        <style>
-            #tiktok-version-patched-modal {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.6);
-                z-index: 10001;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.25s ease;
-            }
-            #tiktok-version-patched-modal.visible {
-                opacity: 1;
-                pointer-events: auto;
-            }
-            .vp-modal-card {
-                background: var(--md-sys-color-surface-container-high);
-                border: 1px solid var(--md-sys-color-outline-variant);
-                border-radius: 24px;
-                padding: 24px;
-                max-width: 420px;
-                width: 90%;
-                box-shadow: var(--elevation-3);
-            }
-            .vp-modal-header {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                margin-bottom: 14px;
-            }
-            .vp-modal-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 12px;
-                background: var(--md-sys-color-error-container);
-                color: var(--md-sys-color-on-error-container);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-            }
-            .vp-modal-title {
-                font-size: 1.1rem;
-                font-weight: 700;
-                color: var(--md-sys-color-on-surface);
-            }
-            .vp-modal-body {
-                font-size: 14px;
-                line-height: 1.65;
-                color: var(--md-sys-color-on-surface-variant);
-                margin-bottom: 22px;
-            }
-            .vp-modal-body strong {
-                color: var(--md-sys-color-on-surface);
-            }
-            .vp-modal-footer {
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-            }
-            .vp-btn {
-                padding: 10px 22px;
-                border-radius: 100px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                border: none;
-                transition: opacity 0.2s ease;
-            }
-            .vp-btn:hover { opacity: 0.88; }
-            .vp-btn-proceed {
-                background: var(--md-sys-color-surface-container-highest);
-                color: var(--md-sys-color-on-surface);
-            }
-            .vp-btn-use-v1 {
-                background: var(--md-sys-color-primary);
-                color: var(--md-sys-color-on-primary);
-            }
-        </style>
         <div class="vp-modal-card">
             <div class="vp-modal-header">
                 <div class="vp-modal-icon">
-                    <span class="material-symbols-rounded" style="font-size: 22px;">error</span>
+                    <span class="material-symbols-rounded icon-22">error</span>
                 </div>
                 <div class="vp-modal-title" id="vp-modal-title">Method Patched</div>
             </div>
@@ -1838,95 +1103,10 @@
     </div>
 
     <div id="tiktok-ios-warning-modal" class="hidden">
-        <style>
-            #tiktok-ios-warning-modal {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.6);
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.25s ease;
-            }
-            #tiktok-ios-warning-modal.visible {
-                opacity: 1;
-                pointer-events: auto;
-            }
-            .warning-modal-card {
-                background: var(--md-sys-color-surface-container-high);
-                border: 1px solid var(--md-sys-color-outline-variant);
-                border-radius: 24px;
-                padding: 24px;
-                max-width: 440px;
-                width: 90%;
-                box-shadow: var(--elevation-3);
-            }
-            .warning-modal-header {
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                margin-bottom: 16px;
-            }
-            .warning-modal-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 12px;
-                background: var(--md-sys-color-error-container);
-                color: var(--md-sys-color-on-error-container);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .warning-modal-title {
-                font-size: 1.15rem;
-                font-weight: 600;
-                color: var(--md-sys-color-on-surface);
-            }
-            .warning-modal-content {
-                font-size: 14px;
-                line-height: 1.6;
-                color: var(--md-sys-color-on-surface-variant);
-                margin-bottom: 24px;
-            }
-            .warning-modal-content p {
-                margin: 0 0 12px 0;
-            }
-            .warning-modal-content p:last-child {
-                margin-bottom: 0;
-            }
-            .warning-modal-footer {
-                display: flex;
-                justify-content: flex-end;
-                gap: 12px;
-            }
-            .warning-btn {
-                padding: 10px 20px;
-                border-radius: 100px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                border: none;
-                transition: opacity 0.2s ease;
-            }
-            .warning-btn-cancel {
-                background: var(--md-sys-color-surface-container-highest);
-                color: var(--md-sys-color-on-surface);
-            }
-            .warning-btn-proceed {
-                background: var(--md-sys-color-primary);
-                color: var(--md-sys-color-on-primary);
-            }
-            .warning-btn:hover {
-                opacity: 0.9;
-            }
-        </style>
         <div class="warning-modal-card">
             <div class="warning-modal-header">
                 <div class="warning-modal-icon">
-                    <span class="material-symbols-rounded" style="font-size: 24px;">warning</span>
+                    <span class="material-symbols-rounded icon-24">warning</span>
                 </div>
                 <div class="warning-modal-title" data-i18n="ios_warn_title">iOS Compatibility Warning</div>
             </div>

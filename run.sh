@@ -9,9 +9,19 @@ echo "=================================================="
 if [ ! -f "./cloudflared" ]; then
     echo ""
     echo "=========================================="
-    echo "[Cloudflare] Downloading cloudflared for macOS (Intel)..."
+    ARCH=$(uname -m)
+    if [ "$ARCH" = "arm64" ]; then
+        CLOUD_ARCH="arm64"
+    else
+        CLOUD_ARCH="amd64"
+    fi
+    echo "[Cloudflare] Downloading cloudflared for macOS ($CLOUD_ARCH)..."
     echo "=========================================="
-    curl -L -o ./cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64
+    curl -L -o ./cloudflared.tgz "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-${CLOUD_ARCH}.tgz"
+    if [ -f "./cloudflared.tgz" ]; then
+        tar -xzf ./cloudflared.tgz
+        rm -f ./cloudflared.tgz
+    fi
     if [ ! -f "./cloudflared" ]; then
         echo "[ERROR] Failed to download cloudflared automatically."
         echo "Please download it manually or check your connection."

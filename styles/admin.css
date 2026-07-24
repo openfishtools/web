@@ -1023,5 +1023,38 @@ tr.table-row-hidden {
     pointer-events: none;
 }
 
+.badge-icon-sm {
+    font-size: 14px;
+}
+
+.os-icon-sm {
+    width: 18px;
+    height: 18px;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.res-cat-badge, .res-os-badge, .res-ver-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
 
 
