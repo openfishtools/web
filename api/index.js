@@ -689,10 +689,11 @@ app.get('/api/presets', async (req, res) => {
             return acc;
         }, {});
 
-        const results = presets.map(p => {
+        const results = presets.map((p, idx) => {
             const id = p._id.toString();
             return {
                 ...p,
+                presetId: typeof p.presetId === 'number' ? p.presetId : (idx + 1),
                 likes: counts[id] || 0,
                 liked: userLikedSet.has(id)
             };
@@ -739,8 +740,13 @@ app.get('/api/presets/:id', async (req, res) => {
     try {
         const pId = req.params.id;
         if (/^\d+$/.test(pId)) {
-            const item = await Preset.findOne({ presetId: Number(pId) });
+            const num = Number(pId);
+            const item = await Preset.findOne({ presetId: num });
             if (item) return res.json(item);
+
+            const allPresets = await Preset.find().sort({ order: 1, _id: -1 }).lean();
+            const fallbackItem = allPresets.find((p, idx) => (p.presetId === num) || ((idx + 1) === num));
+            if (fallbackItem) return res.json(fallbackItem);
         }
         res.json(await Preset.findById(pId));
     } catch (err) {

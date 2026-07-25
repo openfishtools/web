@@ -1447,9 +1447,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (bestSlide) {
-                const slideId = bestSlide.dataset.id;
+                const slideId = bestSlide.dataset.shortId || bestSlide.dataset.id;
                 if (slideId) {
-                    lastClickedId = slideId;
+                    lastClickedId = bestSlide.dataset.id || slideId;
                     history.replaceState(null, null, `/${slideId}`);
                 }
 
@@ -2152,7 +2152,10 @@ document.addEventListener('DOMContentLoaded', () => {
             exploreGrid.innerHTML = `<div class="empty-state">Failed to load presets. Is the server running?</div>`;
             return;
         }
-        const allPresets = rawPresets.filter(p => !p.hidden);
+        const allPresets = rawPresets.filter(p => !p.hidden).map((p, idx) => ({
+            ...p,
+            presetId: p.presetId || (idx + 1)
+        }));
         loadedPresetsCache = allPresets;
         
         renderPresetCategories(allPresets);
@@ -2208,6 +2211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                 <article class="tiktok-slide preset-post"
                     data-id="${p._id}"
+                    data-short-id="${p.presetId || p._id}"
                     data-name="${dsa(p.name)}"
                     data-size="${dsa(p.size)}"
                     data-type="${dsa(p.type)}"
