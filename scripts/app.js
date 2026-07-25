@@ -888,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* END AM XML ENGINE */
 
-    const showExplore = () => {
+    const showExplore = (updateUrl = true) => {
         amXmlCache.clear();
         const presetFeedView = document.getElementById('preset-feed-view');
         if (presetFeedView) {
@@ -917,7 +917,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const presetExploreView = document.getElementById('preset-explore-view');
         
-        history.pushState(null, null, '/#preset');
+        if (updateUrl && history.pushState) {
+            history.pushState(null, null, '/#preset');
+        }
 
         if (presetFeedView && !presetFeedView.classList.contains('hidden')) {
             presetFeedView.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 1, 1), opacity 0.12s ease';
@@ -1554,19 +1556,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const targetTab = item.getAttribute('data-tab');
 
-            // Stop any playing video and clear state if switching away from the feed
+            if (e.isTrusted) {
+                targetSubId = null;
+            }
+
             const feedView = document.getElementById('preset-feed-view');
-            const feedContainer = document.getElementById('preset-feed');
             if (feedView && !feedView.classList.contains('hidden')) {
-                if (targetTab !== 'preset') {
-                    showExplore();
-                } else {
-                    feedView.querySelectorAll('video').forEach(v => {
-                        v.pause();
-                        v.src = '';
-                        try { v.load(); } catch(e){}
-                    });
-                }
+                showExplore(false);
             }
 
             navItems.forEach(nav => nav.classList.remove('active'));
@@ -1576,7 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (section.id === targetTab) {
                     section.classList.add('active');
                     if (targetTab === 'preset') {
-                        showExplore();
+                        showExplore(false);
                     }
                 }
             });
@@ -1589,8 +1585,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (targetTab === 'contact') {
                 renderContacts();
             }
-            if (history.pushState && !targetSubId && (window.location.pathname === '/' || window.location.pathname === '')) {
-                history.pushState(null, null, `#${targetTab}`);
+            if (e.isTrusted && history.pushState) {
+                history.pushState(null, null, `/#${targetTab}`);
             }
         });
     });

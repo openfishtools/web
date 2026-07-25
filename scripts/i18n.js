@@ -4,9 +4,9 @@
             // General Tabs & Navigation
             "nav_social": "Sosial",
             "nav_preset": "Preset",
-            "nav_resource": "Resource",
+            "nav_resource": "Berkas",
             "nav_video_patcher": "Video Patcher",
-            "nav_tools": "Alat & Fitur",
+            "nav_tools": "Alat",
             "nav_about": "Hubungi Kami",
             
             // Video Patcher Section
@@ -274,7 +274,7 @@
             "nav_preset": "Preset",
             "nav_resource": "Resource",
             "nav_video_patcher": "Video Patcher",
-            "nav_tools": "Tools & Features",
+            "nav_tools": "Tools",
             "nav_about": "Contact Us",
             
             // Video Patcher Section
