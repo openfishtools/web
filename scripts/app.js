@@ -1589,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (targetTab === 'contact') {
                 renderContacts();
             }
-            if (history.pushState) {
+            if (history.pushState && !targetSubId && (window.location.pathname === '/' || window.location.pathname === '')) {
                 history.pushState(null, null, `#${targetTab}`);
             }
         });
