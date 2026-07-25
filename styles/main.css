@@ -4688,8 +4688,9 @@ body {
     transition: opacity 0.25s ease;
 }
 #tiktok-ios-warning-modal.visible {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 .warning-modal-card {
     background: var(--md-sys-color-surface-container-high);

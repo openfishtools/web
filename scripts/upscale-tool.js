@@ -1004,18 +1004,27 @@ document.addEventListener('DOMContentLoaded', () => {
         ffmpeg.on('log', ({ message }) => {
             console.log('[FFmpeg Log]', message);
         });
-        const baseURL = window.location.origin + '/assets/ffmpeg';
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        const localBaseURL = window.location.origin + '/assets/ffmpeg';
         // Force single-threaded FFmpeg — multi-threaded (SharedArrayBuffer + pthreads)
         // causes hangs on Chrome/Windows after frame extraction completes.
         try {
-            console.log('Loading single-threaded FFmpeg...');
-            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
-            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+            console.log('Loading single-threaded FFmpeg from CDN...');
+            const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
+            const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
             await ffmpeg.load({ coreURL, wasmURL });
-            console.log('Single-threaded FFmpeg loaded successfully.');
+            console.log('Single-threaded FFmpeg loaded from CDN successfully.');
         } catch (err) {
-            console.error('getFFmpeg single-thread load error details:', err);
-            throw err;
+            console.warn('CDN single-thread load failed, using local fallback:', err);
+            try {
+                const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+                await ffmpeg.load({ coreURL, wasmURL });
+                console.log('Single-threaded FFmpeg loaded from local fallback.');
+            } catch (localErr) {
+                console.error('getFFmpeg single-thread load error details:', localErr);
+                throw localErr;
+            }
         }
 
         ffmpegInstance = ffmpeg;

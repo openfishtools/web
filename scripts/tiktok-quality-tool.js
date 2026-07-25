@@ -100,10 +100,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function isIosDevice() {
-        const ua = navigator.userAgent;
-        return /iPhone|iPad|iPod|VisionPro/i.test(ua) || 
-               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-               (ua.includes('Macintosh') && 'ontouchend' in document);
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        const platform = navigator.platform || '';
+
+        // 1. Direct iOS / iPadOS User-Agent check
+        if (/iPhone|iPad|iPod|VisionPro|CriOS|FxiOS|EdgiOS|OPiOS|iPhone OS|iPadOS/i.test(ua)) {
+            return true;
+        }
+
+        // 2. Direct Platform check
+        if (/iPhone|iPad|iPod/i.test(platform)) {
+            return true;
+        }
+
+        // 3. iPadOS Desktop Mode check (iPad reporting as MacIntel with multi-touch > 1)
+        if ((platform === 'MacIntel' || ua.includes('Macintosh')) && (navigator.maxTouchPoints > 1)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function showIosWarningModal(onProceed, onCancel) {
+        const iosWarningModal = document.getElementById('tiktok-ios-warning-modal');
+        const btnIosWarningCancel = document.getElementById('btn-ios-warning-cancel');
+        const btnIosWarningProceed = document.getElementById('btn-ios-warning-proceed');
+
+        if (!iosWarningModal) {
+            if (onProceed) onProceed();
+            return;
+        }
+
+        if (typeof window.applyTranslations === 'function') {
+            window.applyTranslations();
+        }
+
+        iosWarningModal.classList.remove('hidden');
+        iosWarningModal.classList.add('visible');
+
+        const handleProceed = () => {
+            iosWarningModal.classList.remove('visible');
+            iosWarningModal.classList.add('hidden');
+            if (btnIosWarningProceed) btnIosWarningProceed.removeEventListener('click', handleProceed);
+            if (btnIosWarningCancel) btnIosWarningCancel.removeEventListener('click', handleCancel);
+            if (onProceed) onProceed();
+        };
+
+        const handleCancel = () => {
+            iosWarningModal.classList.remove('visible');
+            iosWarningModal.classList.add('hidden');
+            if (btnIosWarningProceed) btnIosWarningProceed.removeEventListener('click', handleProceed);
+            if (btnIosWarningCancel) btnIosWarningCancel.removeEventListener('click', handleCancel);
+            if (onCancel) onCancel();
+        };
+
+        if (btnIosWarningProceed && btnIosWarningCancel) {
+            btnIosWarningProceed.onclick = handleProceed;
+            btnIosWarningCancel.onclick = handleCancel;
+        } else {
+            if (onProceed) onProceed();
+        }
     }
 
 
@@ -265,7 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
 
-            if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
+            if (isIosDevice()) {
+                showIosWarningModal(
+                    () => {
+                        if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
+                            doSwitch('v2');
+                            showVersionPatchedModal('v2', () => {}, () => doSwitch('v1'));
+                        } else if (clickedVersion === 'v1' && v1Patched && !v2Patched) {
+                            doSwitch('v1');
+                            showVersionPatchedModal('v1', () => {}, () => doSwitch('v2'));
+                        } else {
+                            doSwitch(clickedVersion);
+                        }
+                    },
+                    () => {}
+                );
+            } else if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
                 doSwitch('v2');
                 showVersionPatchedModal(
                     'v2',
@@ -423,6 +494,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         selectedFile = file;
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Selected: ${file.name} (${fileMB.toFixed(2)} MB)</span>`;
+        // Block execution on iOS devices and show error & modal
+        if (isIosDevice()) {
+            btnStart.classList.add('hidden');
+            showStatusError(window.getTranslation('ios_not_supported_err') || 'Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.');
+            showIosWarningModal(
+                () => {},
+                () => { resetToolState(); }
+            );
+            return;
+        }
         btnStart.classList.remove('hidden');
         progressContainer.classList.add('hidden');
         logsContainer.classList.add('hidden');
@@ -608,49 +689,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         isProcessing = false;
 
-        const iosWarningModal = document.getElementById('tiktok-ios-warning-modal');
-        const btnIosWarningCancel = document.getElementById('btn-ios-warning-cancel');
-        const btnIosWarningProceed = document.getElementById('btn-ios-warning-proceed');
+        isProcessing = false;
 
-        function checkIosWarningAndProceed(onProceed) {
-            if (currentVersion === 'v2' && isIosDevice()) {
-                if (iosWarningModal) {
-                    iosWarningModal.classList.add('visible');
-                }
-                
-                const handleProceed = () => {
-                    if (iosWarningModal) iosWarningModal.classList.remove('visible');
-                    btnIosWarningProceed.removeEventListener('click', handleProceed);
-                    btnIosWarningCancel.removeEventListener('click', handleCancel);
-                    onProceed();
-                };
-                
-                const handleCancel = () => {
-                    if (iosWarningModal) iosWarningModal.classList.remove('visible');
-                    btnIosWarningProceed.removeEventListener('click', handleProceed);
-                    btnIosWarningCancel.removeEventListener('click', handleCancel);
-                    
-
-                    btnStart.classList.remove('hidden');
-                    progressContainer.classList.add('hidden');
-                    logsContainer.classList.add('hidden');
-                    statusText.innerHTML = '';
-                    isProcessing = false;
-                };
-
-                if (btnIosWarningProceed && btnIosWarningCancel) {
-                    btnIosWarningProceed.addEventListener('click', handleProceed);
-                    btnIosWarningCancel.addEventListener('click', handleCancel);
-                } else {
-                    onProceed();
-                }
-            } else {
-                onProceed();
-            }
-        }
-
-        const startV2Process = async () => {
+    function checkIosWarningAndProceed(onProceed) {
+        if (isIosDevice()) {
+            btnStart.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            logsContainer.classList.add('hidden');
+            showStatusError(window.getTranslation('ios_not_supported_err') || 'Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.');
             isProcessing = false;
+            showIosWarningModal(
+                () => {},
+                () => { resetToolState(); }
+            );
+            return;
+        }
+        onProceed();
+    }
+
+        const startProcess = async () => {
+            isProcessing = false;
+            if (currentVersion === 'v1') {
+                await processVideoV1(selectedFile);
+                return;
+            }
             if (compressMode === 'off') {
                 await runAnalysis(selectedFile);
                 return;
@@ -658,12 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await processVideoV2(selectedFile, compressMode);
         };
 
-        if (currentVersion === 'v1') {
-            await processVideoV1(selectedFile);
-            return;
-        }
-
-        checkIosWarningAndProceed(startV2Process);
+        checkIosWarningAndProceed(startProcess);
     });
 
     function parseFpsFromMp4(arrayBuffer) {
@@ -833,34 +890,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
-        const baseURL = window.location.origin + '/assets/ffmpeg';
+        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        const localBaseURL = window.location.origin + '/assets/ffmpeg';
         const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice();
         let loaded = false;
 
         logSection('FFmpeg Load');
-        log(`  Base URL    : ${baseURL}`);
+        log(`  CDN Base MT : ${cdnBaseMT}`);
         log(`  Multi-thread: ${isMultiThread}`);
 
         if (isMultiThread) {
             try {
-                log(`  Attempting multi-thread load...`);
-                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                log(`  Attempting multi-thread load from CDN...`);
+                const coreURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm');
+                const workerURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript');
                 await ffmpeg.load({ coreURL, wasmURL, workerURL });
                 loaded = true;
-                log(`  Multi-thread load: SUCCESS`);
+                log(`  Multi-thread load from CDN: SUCCESS`);
             } catch (err) {
-                log(`  Multi-thread load FAILED: ${err.message} — falling back to single-thread`);
+                log(`  CDN multi-thread load FAILED: ${err.message} — trying local fallback`);
+                try {
+                    const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript');
+                    const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                    const workerURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                    await ffmpeg.load({ coreURL, wasmURL, workerURL });
+                    loaded = true;
+                    log(`  Local multi-thread load: SUCCESS`);
+                } catch (localErr) {
+                    log(`  Local multi-thread load FAILED: ${localErr.message} — falling back to single-thread`);
+                }
             }
         }
 
         if (!loaded) {
-            log(`  Loading single-thread FFmpeg...`);
-            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
-            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
-            await ffmpeg.load({ coreURL, wasmURL });
-            log(`  Single-thread load: SUCCESS`);
+            try {
+                log(`  Loading single-thread FFmpeg from CDN...`);
+                const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
+                await ffmpeg.load({ coreURL, wasmURL });
+                log(`  CDN Single-thread load: SUCCESS`);
+            } catch (err) {
+                log(`  CDN Single-thread load FAILED: ${err.message} — using local fallback`);
+                const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+                await ffmpeg.load({ coreURL, wasmURL });
+                log(`  Local Single-thread load: SUCCESS`);
+            }
         }
         logEnd();
     }

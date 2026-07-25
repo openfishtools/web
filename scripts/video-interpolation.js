@@ -203,13 +203,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 onLog('[RIFE] Initializing ONNX Runtime Web session with WebGPU...');
                 
-                // Locally hosted RIFE model weights path
-                const modelUrl = 'assets/models/rife47_ensemble_True_scale_1_sim.onnx';
+                const cdnModelUrl = 'https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx';
+                const localModelUrl = 'assets/models/rife47_ensemble_True_scale_1_sim.onnx';
                 
-                this.session = await ort.InferenceSession.create(modelUrl, {
-                    executionProviders: ['webgpu'],
-                    preferredOutputFormat: 'RGB'
-                });
+                try {
+                    console.log('🚀 [RIFE Model] Downloading ONNX model from CDN (Hugging Face):', cdnModelUrl);
+                    onLog('[RIFE] Initializing model from CDN...');
+                    this.session = await ort.InferenceSession.create(cdnModelUrl, {
+                        executionProviders: ['webgpu'],
+                        preferredOutputFormat: 'RGB'
+                    });
+                    console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from CDN (Hugging Face Hub)');
+                    onLog('[RIFE] CDN model loaded successfully.');
+                } catch (cdnErr) {
+                    console.warn('⚠️ [RIFE Model] CDN model load failed, using LOCAL fallback:', localModelUrl, cdnErr);
+                    onLog('[RIFE] CDN model failed, loading from local fallback...');
+                    this.session = await ort.InferenceSession.create(localModelUrl, {
+                        executionProviders: ['webgpu'],
+                        preferredOutputFormat: 'RGB'
+                    });
+                    console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from LOCAL fallback');
+                    onLog('[RIFE] Local model loaded successfully.');
+                }
                 
                 this.isReady = true;
                 onLog('[RIFE] ONNX WebGPU Model loaded successfully.');
@@ -299,14 +314,25 @@ document.addEventListener('DOMContentLoaded', () => {
         ffmpeg.on('log', ({ message }) => {
             console.log('[FFmpeg Interp Log]', message);
         });
-        const baseURL = window.location.origin + '/assets/ffmpeg';
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        const localBaseURL = window.location.origin + '/assets/ffmpeg';
         try {
-            const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
-            const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+            console.log('Loading single-threaded FFmpeg from CDN...');
+            const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
+            const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
             await ffmpeg.load({ coreURL, wasmURL });
+            console.log('Single-threaded FFmpeg loaded from CDN successfully.');
         } catch (err) {
-            console.error('Failed to load single-threaded FFmpeg:', err);
-            throw err;
+            console.warn('CDN FFmpeg load failed, trying local fallback:', err);
+            try {
+                const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
+                const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+                await ffmpeg.load({ coreURL, wasmURL });
+                console.log('Single-threaded FFmpeg loaded from local fallback.');
+            } catch (localErr) {
+                console.error('Failed to load FFmpeg:', localErr);
+                throw localErr;
+            }
         }
         ffmpegInstance = ffmpeg;
         return ffmpeg;

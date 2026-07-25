@@ -1,0 +1,3 @@
+# Exclude giant WASM binaries and AI models from Vercel deployments to save bandwidth & deployment size
+assets/ffmpeg/
+assets/models/

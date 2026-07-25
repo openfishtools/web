@@ -176,8 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let oomDetected = false;
 
             // Load ffmpeg.wasm
-            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Loading FFmpeg...</span>`;
-            const baseURL = window.location.origin + '/assets/ffmpeg';
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
+            const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
+            const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+            const localBaseURL = window.location.origin + '/assets/ffmpeg';
             const isIosDevice = /iPhone|iPad|iPod|VisionPro/i.test(navigator.userAgent) || 
                                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
                                (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
@@ -186,25 +188,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isMultiThread) {
                 try {
-                    console.log('Attempting to load multi-threaded FFmpeg...');
-                    const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-                    const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                    const workerURL = await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                    console.log('🚀 [FFmpeg WASM] Downloading multi-threaded engine from CDN:', cdnBaseMT);
+                    const coreURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript');
+                    const wasmURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm');
+                    const workerURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript');
                     await ffmpeg.load({ coreURL, wasmURL, workerURL });
                     loaded = true;
-                    console.log('Multi-threaded FFmpeg loaded successfully.');
+                    console.log('✅ [FFmpeg WASM] Loaded multi-threaded engine SUCCESSFULLY from CDN (jsDelivr)');
                 } catch (err) {
-                    console.warn('Failed to load multi-threaded FFmpeg, falling back to single-threaded:', err);
-                    ffmpeg = new FFmpeg();
+                    console.warn('⚠️ [FFmpeg WASM] CDN load failed, falling back to local asset:', localBaseURL, err);
+                    try {
+                        console.log('📦 [FFmpeg WASM] Downloading multi-threaded engine from LOCAL fallback:', localBaseURL);
+                        const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript');
+                        const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
+                        const workerURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript');
+                        await ffmpeg.load({ coreURL, wasmURL, workerURL });
+                        loaded = true;
+                        console.log('✅ [FFmpeg WASM] Loaded multi-threaded engine SUCCESSFULLY from LOCAL fallback');
+                    } catch (localErr) {
+                        console.warn('⚠️ [FFmpeg WASM] Local multi-threaded load failed, trying single-threaded:', localErr);
+                        ffmpeg = new FFmpeg();
+                    }
                 }
             }
 
             if (!loaded) {
-                console.log('Loading single-threaded FFmpeg...');
-                const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.js`, 'text/javascript');
-                const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
-                await ffmpeg.load({ coreURL, wasmURL });
-                console.log('Single-threaded FFmpeg loaded successfully.');
+                try {
+                    console.log('🚀 [FFmpeg WASM] Downloading single-threaded engine from CDN:', cdnBaseST);
+                    const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
+                    const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
+                    await ffmpeg.load({ coreURL, wasmURL });
+                    console.log('✅ [FFmpeg WASM] Loaded single-threaded engine SUCCESSFULLY from CDN (jsDelivr)');
+                } catch (err) {
+                    console.warn('⚠️ [FFmpeg WASM] CDN single-thread load failed, using LOCAL fallback:', localBaseURL, err);
+                    const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
+                    const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
+                    await ffmpeg.load({ coreURL, wasmURL });
+                    console.log('✅ [FFmpeg WASM] Loaded single-threaded engine SUCCESSFULLY from LOCAL fallback');
+                }
             }
 
             // Setup Progress Listener

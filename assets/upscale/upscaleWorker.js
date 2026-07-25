@@ -227,13 +227,15 @@ self.addEventListener("message", async (e) => {
 
     try {
       model = await tf.loadGraphModel(`indexeddb://${model_name}`);
-      console.log("Model loaded successfully from cache:", model_name);
+      console.log("✅ [Upscale Model] Loaded model SUCCESSFULLY from IndexedDB cache:", model_name);
       self.postMessage({ info: "Loaded from cache" });
     } catch (error) {
+      console.log("🚀 [Upscale Model] Downloading model weights from CDN proxy:", absolute_model_url);
       self.postMessage({ info: "Downloading model..." });
       try {
         model = await tf.loadGraphModel(absolute_model_url);
         await model.save(`indexeddb://${model_name}`);
+        console.log("✅ [Upscale Model] Model downloaded and cached in IndexedDB SUCCESSFULLY from CDN proxy:", absolute_model_url);
         self.postMessage({ info: "Model cached successfully" });
       } catch (fetchError) {
         self.postMessage({

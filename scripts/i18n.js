@@ -100,9 +100,10 @@
             
             // iOS Warning
             "ios_warn_title": "Pemberitahuan Kompatibilitas iOS",
-            "ios_warn_desc": "<p>Metode V2 ini mungkin tidak dapat berjalan atau terunggah dengan sempurna pada perangkat iOS, iPadOS, dan VisionOS. Kamu mungkin akan menemui error saat mencoba mengunggah video yang sudah diproses melalui TikTok Studio.</p><p>Untuk hasil terbaik, kami merekomendasikan penggunaan <strong>macOS, Windows, atau Android</strong> dengan browser desktop seperti <strong>Chrome, Firefox, atau Edge</strong> (tidak termasuk Safari).</p><p>Atau, gunakan <strong>Metode V1</strong> yang sudah stabil di semua perangkat.</p>",
-            "ios_warn_cancel": "Batal",
-            "ios_warn_proceed": "Lanjutkan Saja",
+            "ios_warn_desc": "<p>Tool ini tidak didukung pada perangkat iOS, iPadOS, dan VisionOS. Video yang diproses di iOS mungkin tidak akan terunggah dengan sempurna melalui TikTok Studio.</p><p>Untuk hasil terbaik, silakan gunakan perangkat <strong>macOS, Windows, atau Android</strong>.</p>",
+            "ios_warn_cancel": "Tutup",
+            "ios_warn_proceed": "Mengerti",
+            "ios_not_supported_err": "Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.",
 
             // General Status Labels
             "status_extracting_frames": "Extracting frames...",
@@ -368,9 +369,10 @@
 
             // iOS Warning
             "ios_warn_title": "iOS Compatibility Warning",
-            "ios_warn_desc": "<p>This V2 method may not run or upload perfectly on iOS, iPadOS, and VisionOS devices. You may encounter errors when attempting to upload the patched video via TikTok Studio.</p><p>For the best experience, we recommend performing the upload on <strong>macOS, Windows, or Android</strong> using desktop browsers like <strong>Chrome, Firefox, or Edge</strong> (excluding Safari).</p><p>Alternatively, please use the <strong>V1 method</strong> which has been fully stabilized across all devices.</p>",
-            "ios_warn_cancel": "Cancel",
-            "ios_warn_proceed": "Proceed Anyway",
+            "ios_warn_desc": "<p>This tool is not supported on iOS, iPadOS, and VisionOS devices. Patched videos on iOS may fail to upload via TikTok Studio.</p><p>For the best experience, please use <strong>macOS, Windows, or Android</strong> devices.</p>",
+            "ios_warn_cancel": "Close",
+            "ios_warn_proceed": "Understood",
+            "ios_not_supported_err": "iOS devices are not supported. Please use PC (Windows/macOS) or Android.",
 
             // General Status Labels
             "status_extracting_frames": "Extracting frames...",
