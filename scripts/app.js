@@ -957,7 +957,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!feedView || !feedContainer) return;
 
-        history.pushState(null, null, `/${targetId}`);
+        const foundPreset = allPresets.find(p => p._id === targetId || String(p.presetId) === String(targetId));
+        const shortOrFullId = foundPreset ? (foundPreset.presetId || foundPreset._id) : targetId;
+        history.pushState(null, null, `/${shortOrFullId}`);
 
         lastClickedId = targetId;
         lastClickedRect = clickedEl ? clickedEl.getBoundingClientRect() : null;
@@ -1596,7 +1598,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let targetTab = '';
     let targetSubId = null;
     
-    if (/^[a-f0-9]{24}$/i.test(path)) {
+    if (/^([a-f0-9]{24}|\d+)$/i.test(path)) {
         targetTab = 'preset';
         targetSubId = path;
     }
@@ -2271,9 +2273,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
             if (targetSubId) {
-                const presetExists = allPresets.some(p => p._id === targetSubId);
-                if (presetExists) {
-                    showFeed(targetSubId);
+                const targetPreset = allPresets.find(p => p._id === targetSubId || String(p.presetId) === String(targetSubId));
+                if (targetPreset) {
+                    showFeed(targetPreset._id);
                 }
             }
         }

@@ -27,7 +27,7 @@
       "dest": "https://upscale.chino.icu/realesrgan/$1"
     },
     {
-      "src": "/:id([a-f0-9]{24})",
+      "src": "/([a-fA-F0-9]{24}|[0-9]+)",
       "dest": "/index.html"
     }
   ],

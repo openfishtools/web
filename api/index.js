@@ -46,7 +46,7 @@ app.get('/realesrgan/*', (req, res) => {
     res.redirect(`https://upscale.chino.icu${req.originalUrl}`);
 });
 
-app.get('/:id([a-f0-9]{24})', (req, res) => {
+app.get('/:id([a-fA-F0-9]{24}|\\d+)', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
@@ -72,12 +72,28 @@ async function requireAdmin(req, res, next) {
     }
 }
 
-// Global Mongoose connection management for Serverless
 let cachedDb = null;
+let backfilledPresetIds = false;
+async function ensurePresetIds() {
+    if (backfilledPresetIds) return;
+    try {
+        const missing = await Preset.find({ presetId: { $exists: false } }).sort({ _id: 1 });
+        if (missing.length > 0) {
+            const maxItem = await Preset.findOne({ presetId: { $exists: true } }).sort({ presetId: -1 });
+            let currentId = maxItem && typeof maxItem.presetId === 'number' ? maxItem.presetId : 0;
+            for (const doc of missing) {
+                currentId++;
+                await Preset.updateOne({ _id: doc._id }, { $set: { presetId: currentId } });
+            }
+        }
+        backfilledPresetIds = true;
+    } catch (e) {}
+}
 async function connectToDatabase() {
     if (cachedDb) return cachedDb;
     const db = await mongoose.connect(process.env.MONGODB_URI);
     cachedDb = db;
+    await ensurePresetIds();
     return db;
 }
 
@@ -110,6 +126,7 @@ const ContactSchema = new mongoose.Schema({
 const Contact = mongoose.models.Contact || mongoose.model('Contact', ContactSchema);
 
 const PresetSchema = new mongoose.Schema({
+    presetId: { type: Number, unique: true, sparse: true },
     name: String,
     software: [String],
     type: String,
@@ -686,7 +703,19 @@ app.get('/api/presets', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch presets' });
     }
 });
-app.post('/api/presets', requireAdmin, async (req, res) => res.json(await new Preset(req.body).save()));
+app.post('/api/presets', requireAdmin, async (req, res) => {
+    try {
+        const minPreset = await Preset.findOne().sort({ order: 1 }).lean();
+        const minOrder = minPreset ? (typeof minPreset.order === 'number' ? minPreset.order : 0) : 0;
+        const maxPreset = await Preset.findOne({ presetId: { $exists: true } }).sort({ presetId: -1 }).lean();
+        const nextPresetId = maxPreset && typeof maxPreset.presetId === 'number' ? maxPreset.presetId + 1 : 1;
+        const newPreset = new Preset({ ...req.body, order: minOrder - 1, presetId: nextPresetId });
+        const saved = await newPreset.save();
+        res.json(saved);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.put('/api/presets/reorder', requireAdmin, async (req, res) => {
     try {
         const { items } = req.body;
@@ -706,7 +735,18 @@ app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/presets/:id', async (req, res) => res.json(await Preset.findById(req.params.id)));
+app.get('/api/presets/:id', async (req, res) => {
+    try {
+        const pId = req.params.id;
+        if (/^\d+$/.test(pId)) {
+            const item = await Preset.findOne({ presetId: Number(pId) });
+            if (item) return res.json(item);
+        }
+        res.json(await Preset.findById(pId));
+    } catch (err) {
+        res.status(500).json({ error: 'Preset not found' });
+    }
+});
 
 app.post('/api/presets/:id/like', async (req, res) => {
     const ip = getClientIp(req);
