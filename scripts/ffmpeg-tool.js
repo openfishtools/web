@@ -179,7 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Convert worker code to a same-origin Blob URL to bypass browser SecurityError
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
-                const patchedCode = ffmpegCode.replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
+                const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
+                                               .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
                                                .replace(/u:e=>e\+"\x2effmpeg\x2ejs"/g, `u:()=>"${workerBlobUrl}"`);
                 const ffmpegBlobUrl = URL.createObjectURL(new Blob([patchedCode], { type: 'text/javascript' }));
                 await loadScript(ffmpegBlobUrl);
