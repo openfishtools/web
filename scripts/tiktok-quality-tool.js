@@ -889,6 +889,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function loadFFmpegLibraries() {
+        if (window.FFmpegWASM && window.FFmpegUtil) return true;
+
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve(true);
+            s.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(s);
+        });
+
+        try {
+            if (!window.FFmpegUtil) {
+                await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+            }
+            if (!window.FFmpegWASM) {
+                const [ffmpegRes, workerRes] = await Promise.all([
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'),
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js')
+                ]);
+
+                if (!ffmpegRes.ok || !workerRes.ok) throw new Error('CDN HTTP response error');
+
+                const ffmpegCode = await ffmpegRes.text();
+                const workerCode = await workerRes.text();
+
+                const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
+                const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
+                                               .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
+                                               .replace(/u:e=>e\+"\x2effmpeg\x2ejs"/g, `u:()=>"${workerBlobUrl}"`);
+                const ffmpegBlobUrl = URL.createObjectURL(new Blob([patchedCode], { type: 'text/javascript' }));
+                await loadScript(ffmpegBlobUrl);
+            }
+            if (window.FFmpegWASM && window.FFmpegUtil) {
+                return true;
+            }
+        } catch (cdnErr) {
+            console.warn(cdnErr);
+        }
+
+        try {
+            if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
+            if (!window.FFmpegUtil) await loadScript('assets/ffmpeg/index.js');
+            if (window.FFmpegWASM && window.FFmpegUtil) {
+                return true;
+            }
+        } catch (localErr) {
+            console.error(localErr);
+        }
+
+        return !!(window.FFmpegWASM && window.FFmpegUtil);
+    }
+
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
         const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
@@ -960,6 +1013,10 @@ document.addEventListener('DOMContentLoaded', () => {
         logEnd();
 
         try {
+            const isReady = await loadFFmpegLibraries();
+            if (!isReady) {
+                throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
+            }
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             const ffmpeg = new FFmpeg();
@@ -1567,6 +1624,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressFill.style.width = '40%';
                 progressPercent.textContent = '40%';
             } else {
+                const isReady = await loadFFmpegLibraries();
+                if (!isReady) {
+                    throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
+                }
                 const { FFmpeg } = window.FFmpegWASM;
                 const { fetchFile, toBlobURL } = window.FFmpegUtil;
                 const ffmpeg = new FFmpeg();
