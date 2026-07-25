@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sections = document.querySelectorAll('.section');
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
     let globalMuted = false;
+    let loadedPresetsCache = [];
 
     const safeFetchJson = async (url, options) => {
         try {
@@ -957,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!feedView || !feedContainer) return;
 
-        const foundPreset = allPresets.find(p => p._id === targetId || String(p.presetId) === String(targetId));
+        const foundPreset = loadedPresetsCache.find(p => p._id === targetId || String(p.presetId) === String(targetId));
         const shortOrFullId = foundPreset ? (foundPreset.presetId || foundPreset._id) : targetId;
         history.pushState(null, null, `/${shortOrFullId}`);
 
@@ -2152,6 +2153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const allPresets = rawPresets.filter(p => !p.hidden);
+        loadedPresetsCache = allPresets;
         
         renderPresetCategories(allPresets);
         
@@ -2273,7 +2275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterSoftware === 'All') {
             exploreGrid.setAttribute('data-loaded', 'true');
             if (targetSubId) {
-                const targetPreset = allPresets.find(p => p._id === targetSubId || String(p.presetId) === String(targetSubId));
+                const targetPreset = loadedPresetsCache.find(p => p._id === targetSubId || String(p.presetId) === String(targetSubId));
                 if (targetPreset) {
                     showFeed(targetPreset._id);
                 }
