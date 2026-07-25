@@ -1,7 +1,7 @@
 :root {
-    --primary-h: 145;
-    --primary-s: 35%;
-    --primary-l: 35%;
+    --primary-h: 75;
+    --primary-s: 50%;
+    --primary-l: 45%;
 
     --md-sys-color-primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
     --md-sys-color-on-primary: hsl(var(--primary-h), 100%, 100%);
