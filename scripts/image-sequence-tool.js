@@ -178,6 +178,65 @@ document.addEventListener('DOMContentLoaded', () => {
         await processSequence(selectedFile);
     });
 
+    async function loadFFmpegLibraries() {
+        if (window.FFmpegWASM && window.FFmpegUtil) return true;
+
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve(true);
+            s.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(s);
+        });
+
+        // 1. Prioritas CDN Pertama (dengan Blob Worker Bypass)
+        try {
+            console.log('🚀 Loading FFmpeg libraries from CDN (with Blob worker security bypass)...');
+            if (!window.FFmpegUtil) {
+                await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+            }
+            if (!window.FFmpegWASM) {
+                const [ffmpegRes, workerRes] = await Promise.all([
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'),
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js')
+                ]);
+
+                if (!ffmpegRes.ok || !workerRes.ok) throw new Error('CDN HTTP response error');
+
+                const ffmpegCode = await ffmpegRes.text();
+                const workerCode = await workerRes.text();
+
+                // Convert worker code to a same-origin Blob URL to bypass browser SecurityError
+                const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
+                const patchedCode = ffmpegCode.replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
+                                               .replace(/u:e=>e\+"\x2effmpeg\x2ejs"/g, `u:()=>"${workerBlobUrl}"`);
+                const ffmpegBlobUrl = URL.createObjectURL(new Blob([patchedCode], { type: 'text/javascript' }));
+                await loadScript(ffmpegBlobUrl);
+            }
+            if (window.FFmpegWASM && window.FFmpegUtil) {
+                console.log('✅ Loaded FFmpeg libraries SUCCESSFULLY from CDN');
+                return true;
+            }
+        } catch (cdnErr) {
+            console.warn('⚠️ CDN load failed, falling back to LOCAL assets/ffmpeg/...', cdnErr);
+        }
+
+        // 2. Fallback Lokal jika CDN gagal
+        try {
+            console.log('📦 Loading FFmpeg libraries from LOCAL fallback...');
+            if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
+            if (!window.FFmpegUtil) await loadScript('assets/ffmpeg/index.js');
+            if (window.FFmpegWASM && window.FFmpegUtil) {
+                console.log('✅ Loaded FFmpeg libraries SUCCESSFULLY from LOCAL fallback');
+                return true;
+            }
+        } catch (localErr) {
+            console.error('❌ Failed to load FFmpeg libraries from LOCAL fallback:', localErr);
+        }
+
+        return !!(window.FFmpegWASM && window.FFmpegUtil);
+    }
+
     // Main conversion function
     async function processSequence(file) {
         isProcessing = true;
@@ -254,7 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
             progressText.textContent = window.getTranslation('status_loading_engine');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
 
-            if (!window.FFmpegWASM || !window.FFmpegUtil) {
+            const isReady = await loadFFmpegLibraries();
+            if (!isReady) {
                 throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
             }
             const { FFmpeg } = window.FFmpegWASM;
