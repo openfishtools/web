@@ -153,6 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isCompressing) return;
         isCompressing = true;
 
+        let oomDetected = false;
+
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
@@ -167,13 +169,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Video is ${width}x${height} — will auto-scale to max ${MAX_DIMENSION}px.`);
             }
 
+            if (!window.FFmpegWASM || !window.FFmpegUtil) {
+                throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
+            }
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             let ffmpeg = new FFmpeg();
-
-            // Flag set by the log listener when WASM signals OOM.
-            // Used to show the right error even when exec() doesn't throw.
-            let oomDetected = false;
 
             // Load ffmpeg.wasm
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;

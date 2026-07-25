@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         
+        let oomDetected = false;
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = window.getTranslation('status_processing');
@@ -253,6 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
             progressText.textContent = window.getTranslation('status_loading_engine');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
 
+            if (!window.FFmpegWASM || !window.FFmpegUtil) {
+                throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
+            }
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             ffmpeg = new FFmpeg();
@@ -308,7 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            let oomDetected = false;
             ffmpeg.on('log', ({ message }) => {
                 console.log(`[SeqToVideo FFmpeg] ${message}`);
                 const lc = message.toLowerCase();

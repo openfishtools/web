@@ -107,6 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isExtracting) return;
         isExtracting = true;
 
+        let oomDetected = false;
+
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
@@ -114,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
         progressPercent.textContent = '0%';
 
         try {
+            if (!window.FFmpegWASM || !window.FFmpegUtil) {
+                throw new Error("FFmpeg library failed to load. Please check your network connection and reload the page.");
+            }
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             let ffmpeg = new FFmpeg();
-            let oomDetected = false;
 
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
