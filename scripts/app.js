@@ -1591,8 +1591,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     const path = window.location.pathname.substring(1);
+    const currentHash = window.location.hash.substring(1);
     
-    let targetTab = '';
+    let targetTab = currentHash || '';
     let targetSubId = null;
     
     if (/^([a-f0-9]{24}|\d+)$/i.test(path)) {
@@ -2674,23 +2675,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
 
-    // Auto-open FishTools popup when hash is #fishtoolupdate
-    if (targetTab === 'fishtoolupdate') {
-        const tryOpenFishTools = async () => {
-            // Wait for resources to be fetched and rendered
+    // Auto-open FishTools popup when hash is #fishtoolupdate (Resource ID: 6a11119ae66f4348a5c1069b)
+    const checkAndOpenFishTools = () => {
+        const hash = window.location.hash.substring(1);
+        if (hash === 'fishtoolupdate') {
+            const targetId = '6a11119ae66f4348a5c1069b';
             let attempts = 0;
             const poll = setInterval(() => {
                 attempts++;
                 if (allResources.length > 0) {
                     clearInterval(poll);
-                    const fishTools = allResources.find(r => r.title && r.title.toLowerCase() === 'fishtools');
+                    const fishTools = allResources.find(r => r._id === targetId || r.id === targetId) ||
+                                     allResources.find(r => r.title && r.title.toLowerCase() === 'fishtools');
                     if (fishTools) openResourcePopup(fishTools);
                 }
                 if (attempts > 40) clearInterval(poll); // stop after 4 seconds
             }, 100);
-        };
-        tryOpenFishTools();
-    }
+        }
+    };
+
+    checkAndOpenFishTools();
+
+    window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#fishtoolupdate') {
+            const resourceTabItem = document.querySelector('.nav-item[data-tab="resource"]');
+            if (resourceTabItem) resourceTabItem.click();
+            checkAndOpenFishTools();
+        }
+    });
 
     // Pause all playing videos when page is hidden or window loses focus
     const pauseAllPlayingVideos = () => {
