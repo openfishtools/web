@@ -65,7 +65,7 @@
     --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
 
     --os-icon-filter: brightness(0) invert(1);
-    --os-icon-filter-active: brightness(0) invert(0.15);
+    --os-icon-filter-active: brightness(0) invert(0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,7 +94,7 @@
         --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
 
         --os-icon-filter: brightness(0) invert(1);
-        --os-icon-filter-active: brightness(0) invert(0.15);
+        --os-icon-filter-active: brightness(0) invert(0.1);
     }
 }
 
@@ -2864,8 +2864,11 @@ body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
 /* Dark/Contrast icon on active state */
-.os-chip-btn.active .os-icon-svg {
-    filter: var(--os-icon-filter-active, brightness(0) invert(0.15)) !important;
+.os-chip-btn.active .os-icon-svg,
+.os-chip-btn.active img,
+.res-popup-chip.active .os-icon-svg,
+.res-popup-chip.active img {
+    filter: var(--os-icon-filter-active, brightness(0) invert(0.1)) !important;
 }
 .res-popup-ver-chips .res-popup-chip {
     display: flex !important;
