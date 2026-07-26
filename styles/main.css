@@ -37,6 +37,7 @@
     --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
 
     --os-icon-filter: brightness(0) invert(0.2);
+    --os-icon-filter-active: brightness(0) invert(1);
 }
 
 :root.dark-theme {
@@ -64,6 +65,7 @@
     --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
 
     --os-icon-filter: brightness(0) invert(1);
+    --os-icon-filter-active: brightness(0) invert(0.15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -92,6 +94,7 @@
         --md-sys-color-outline-variant: hsl(var(--primary-h), 10%, 30%);
 
         --os-icon-filter: brightness(0) invert(1);
+        --os-icon-filter-active: brightness(0) invert(0.15);
     }
 }
 
@@ -2860,9 +2863,9 @@ body {
     color: var(--md-sys-color-on-primary) !important;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
-/* Force white icon on active state */
+/* Dark/Contrast icon on active state */
 .os-chip-btn.active .os-icon-svg {
-    filter: brightness(0) invert(1) !important;
+    filter: var(--os-icon-filter-active, brightness(0) invert(0.15)) !important;
 }
 .res-popup-ver-chips .res-popup-chip {
     display: flex !important;
