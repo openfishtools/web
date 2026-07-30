@@ -1,15 +1,13 @@
-const CACHE_NAME = 'chros-offline-v1.2.3';
+const CACHE_NAME = 'chros-offline-v1.2.4';
 
-const CORE_ASSETS = [
+const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/styles/main.css',
     '/styles/responsive.css',
-    '/assets/fonts/brand-icons.css',
-    '/scripts/i18n.js',
     '/scripts/app.js',
+    '/scripts/i18n.js',
     '/scripts/ffmpeg-tool.js',
-    '/scripts/audio-extractor-tool.js',
     '/scripts/tiktok-quality-tool.js',
     '/scripts/tiktok-stats-tool.js',
     '/scripts/tiktok-downloader.js',
@@ -20,19 +18,13 @@ const CORE_ASSETS = [
     '/scripts/fivemb-generator.js',
     '/scripts/ae-to-am-beatmark-tool.js',
     '/assets/jszip/jszip.min.js',
-    '/favicon.ico'
+    '/assets/fonts/brand-icons.css'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return Promise.all(
-                CORE_ASSETS.map((asset) => {
-                    return cache.add(asset).catch((err) => {
-                        console.warn('[SW] Could not pre-cache asset:', asset, err);
-                    });
-                })
-            );
+            return cache.addAll(STATIC_ASSETS);
         }).then(() => self.skipWaiting())
     );
 });
@@ -60,7 +52,7 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.startsWith('/api/')) return;
 
     // Handle HTML Navigation Requests (e.g. www.cutefish.my.id/#tools while offline)
-    if (event.request.mode === 'navigate' || (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'))) {
+    if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
@@ -101,7 +93,7 @@ self.addEventListener('fetch', (event) => {
             } catch (e) {}
 
             return fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+                if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
                 }

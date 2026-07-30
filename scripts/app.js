@@ -2928,15 +2928,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const res = await fetch(item.url);
                                 if (res.ok) {
                                     const contentType = res.headers.get('content-type') || '';
-                                    if (contentType.includes('text/css')) {
+                                    if (contentType.includes('text/css') || item.url.includes('.css') || item.url.includes('fonts.googleapis.com')) {
                                         const cssText = await res.clone().text();
                                         const fontUrls = [...cssText.matchAll(/url\(([^)]+)\)/g)].map(m => m[1].replace(/['"]/g, ''));
-                                        fontUrls.forEach(async fontUrl => {
+                                        await Promise.all(fontUrls.map(async fontUrl => {
                                             try {
-                                                const fontRes = await fetch(fontUrl);
-                                                if (fontRes.ok) cache.put(fontUrl, fontRes);
+                                                const fullFontUrl = new URL(fontUrl, item.url).href;
+                                                const fontRes = await fetch(fullFontUrl);
+                                                if (fontRes.ok || fontRes.type === 'opaque') {
+                                                    await cache.put(fullFontUrl, fontRes.clone());
+                                                    await cache.put(fontUrl, fontRes.clone());
+                                                }
                                             } catch (e) {}
-                                        });
+                                        }));
                                     }
 
                                     await cache.put(item.url, res.clone());
