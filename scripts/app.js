@@ -3131,23 +3131,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (tabName === 'privacy') {
-            if (legalTitle) legalTitle.setAttribute('data-i18n', 'legal_privacy_title');
-            if (legalBody) legalBody.setAttribute('data-i18n-html', 'legal_privacy_content');
-        } else if (tabName === 'terms') {
-            if (legalTitle) legalTitle.setAttribute('data-i18n', 'legal_terms_title');
-            if (legalBody) legalBody.setAttribute('data-i18n-html', 'legal_terms_content');
-        } else if (tabName === 'disclaimer') {
-            if (legalTitle) legalTitle.setAttribute('data-i18n', 'legal_disclaimer_title');
-            if (legalBody) legalBody.setAttribute('data-i18n-html', 'legal_disclaimer_content');
+        const legalData = {
+            privacy: {
+                titleKey: 'legal_privacy_title',
+                defaultTitle: 'Privacy Policy',
+                contentKey: 'legal_privacy_content',
+                defaultContent: `<p><strong>Terakhir diperbarui: 30 Juli 2026</strong></p><p>Selamat datang di <strong>CHROS</strong> (cutefish.my.id). Kami sangat menghargai privasi Anda dan berkomitmen untuk melindungi data pribadi Anda.</p><h4>1. Pemrosesan Berkas Lokal (Client-Side Privacy)</h4><p>Seluruh alat bantu pengolahan video, audio, dan gambar (seperti Video Compressor, Audio Extractor, AI Upscaler, Video Interpolation, dan TikTok Patcher) beroperasi <strong>100% secara lokal di browser perangkat Anda</strong> menggunakan teknologi WebAssembly (WASM) dan WebGPU. Berkas media Anda <strong>TIDAK PERNAH diunggah</strong> ke server kami atau pihak ketiga mana pun.</p><h4>2. Pengumpulan Data Anonim & Log</h4><p>Kami hanya mengumpulkan data teknis anonim seperti alamat IP (digunakan secara terbatas untuk menghitung tombol 'Suka' pada preset) serta data analitik penggunaan standar melalui Vercel Analytics.</p><h4>3. Google AdSense & Cookie DART</h4><p>CHROS menggunakan layanan iklan pihak ketiga seperti <strong>Google AdSense</strong>. Google dapat menggunakan cookie (termasuk Cookie DART) untuk menyajikan iklan berdasarkan kunjungan Anda ke situs ini dan situs web lainnya di internet. Anda dapat memilih untuk menolak penggunaan Cookie DART dengan mengunjungi Kebijakan Privasi Jaringan Iklan dan Konten Google di <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">https://policies.google.com/technologies/ads</a>.</p><h4>4. Kontak Privasi</h4><p>Jika Anda memiliki pertanyaan tentang Kebijakan Privasi ini, silakan hubungi kami di <a href="mailto:cutefishaep@gmail.com">cutefishaep@gmail.com</a>.</p>`
+            },
+            terms: {
+                titleKey: 'legal_terms_title',
+                defaultTitle: 'Terms of Service',
+                contentKey: 'legal_terms_content',
+                defaultContent: `<p><strong>Terakhir diperbarui: 30 Juli 2026</strong></p><p>Dengan mengakses dan menggunakan <strong>CHROS</strong>, Anda menyetujui Syarat dan Ketentuan berikut:</p><h4>1. Penggunaan Layanan</h4><p>CHROS menyediakan tautan sumber daya, preset video, serta alat pemrosesan media berbasis browser secara gratis untuk mendukung alur kerja para pembuat konten dan editor video.</p><h4>2. Batasan Tanggung Jawab</h4><p>Semua alat dan fitur disediakan 'sebagaimana adanya' (AS IS) tanpa jaminan apa pun. Kami tidak bertanggung jawab atas kerusakan berkas atau kehilangan data yang mungkin terjadi selama penggunaan alat pemrosesan browser.</p><h4>3. Perilaku Pengguna</h4><p>Anda setuju untuk tidak menyalahgunakan alat atau infrastruktur kami, tidak melakukan upaya scraping ilegal, atau mengunggah berkas yang mengandung perangkat lunak berbahaya.</p><h4>4. Kontak</h4><p>Pertanyaan mengenai syarat penggunaan ini dapat dikirimkan ke <a href="mailto:cutefishaep@gmail.com">cutefishaep@gmail.com</a>.</p>`
+            },
+            disclaimer: {
+                titleKey: 'legal_disclaimer_title',
+                defaultTitle: 'Disclaimer & DMCA',
+                contentKey: 'legal_disclaimer_content',
+                defaultContent: `<p><strong>Terakhir diperbarui: 30 Juli 2026</strong></p><h4>1. Penafian Sumber Daya & Tautan Pihak Ketiga</h4><p>Semua berkas preset, perangkat lunak, dan plugin yang dibagikan di CHROS ditujukan semata-mata untuk tujuan pembelajaran, edukasi, dan inspirasi kreatif. Tautan pihak ketiga yang ada di platform ini berada di luar kendali langsung CHROS.</p><h4>2. Kebijakan Hak Cipta & DMCA</h4><p>CHROS menghormati hak kekayaan intelektual orang lain. Jika Anda adalah pemilik sah atas suatu karya/preset/sumber daya yang ada di situs ini dan berkeberatan atas penayangannya, silakan kirimkan permohonan penurunan (DMCA Take-Down) ke email kami di <a href="mailto:cutefishaep@gmail.com">cutefishaep@gmail.com</a> dengan melampirkan bukti kepemilikan. Kami akan merespons dan menindaklanjuti permohonan Anda dalam waktu 1x24 jam.</p>`
+            }
+        };
+
+        const currentData = legalData[tabName] || legalData['privacy'];
+
+        if (legalTitle) {
+            legalTitle.setAttribute('data-i18n', currentData.titleKey);
+            const titleTrans = window.getTranslation ? window.getTranslation(currentData.titleKey) : currentData.defaultTitle;
+            legalTitle.textContent = (titleTrans && titleTrans !== currentData.titleKey) ? titleTrans : currentData.defaultTitle;
         }
 
-        if (window.translateUI) window.translateUI();
+        if (legalBody) {
+            legalBody.setAttribute('data-i18n-html', currentData.contentKey);
+            const contentTrans = window.getTranslation ? window.getTranslation(currentData.contentKey) : currentData.defaultContent;
+            legalBody.innerHTML = (contentTrans && contentTrans !== currentData.contentKey) ? contentTrans : currentData.defaultContent;
+        }
     };
 
     const openLegalModal = (initialTab = 'privacy') => {
         setLegalTab(initialTab);
         if (legalModal) {
+            legalModal.style.display = 'flex';
+            legalModal.style.visibility = 'visible';
+            legalModal.style.opacity = '1';
             legalModal.classList.add('show', 'active');
         }
     };
@@ -3155,6 +3180,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideLegalModal = () => {
         if (legalModal) {
             legalModal.classList.remove('show', 'active');
+            legalModal.style.display = '';
+            legalModal.style.visibility = '';
+            legalModal.style.opacity = '';
         }
     };
 
