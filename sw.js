@@ -83,12 +83,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
             if (cachedResponse) {
-                // Return cached version immediately, but refresh cache in background if online
-                fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-                    }
-                }).catch(() => {});
                 return cachedResponse;
             }
 
