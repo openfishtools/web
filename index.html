@@ -964,6 +964,18 @@
                     <!-- Loaded dynamically via scripts/app.js -->
                 </div>
             </section>
+            <footer class="app-footer">
+                <div class="footer-links">
+                    <a href="javascript:void(0)" class="footer-link" id="open-legal-privacy" data-i18n="footer_privacy">Privacy Policy</a>
+                    <span class="footer-dot">•</span>
+                    <a href="javascript:void(0)" class="footer-link" id="open-legal-terms" data-i18n="footer_terms">Terms of Service</a>
+                    <span class="footer-dot">•</span>
+                    <a href="javascript:void(0)" class="footer-link" id="open-legal-disclaimer" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
+                </div>
+                <div class="footer-copy">
+                    &copy; 2026 CHROS. <span data-i18n="footer_rights">All Rights Reserved.</span>
+                </div>
+            </footer>
         </main>
     </div>
 
@@ -1200,6 +1212,25 @@
             <div class="warning-modal-footer">
                 <button class="warning-btn warning-btn-cancel" id="btn-ios-warning-cancel" data-i18n="ios_warn_cancel">Cancel</button>
                 <button class="warning-btn warning-btn-proceed" id="btn-ios-warning-proceed" data-i18n="ios_warn_proceed">Proceed Anyway</button>
+            </div>
+        </div>
+    <div id="legal-modal" class="mini-popup-overlay">
+        <div class="mini-popup legal-popup">
+            <div class="mini-popup-header-row">
+                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1" id="legal-modal-title" data-i18n="legal_privacy_title">
+                    Privacy Policy
+                </h3>
+                <button class="mini-popup-close-btn" id="close-legal-modal" aria-label="Close">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="legal-modal-tabs">
+                <button type="button" class="legal-tab-btn active" data-legal-tab="privacy" data-i18n="footer_privacy">Privacy Policy</button>
+                <button type="button" class="legal-tab-btn" data-legal-tab="terms" data-i18n="footer_terms">Terms of Service</button>
+                <button type="button" class="legal-tab-btn" data-legal-tab="disclaimer" data-i18n="footer_disclaimer">Disclaimer & DMCA</button>
+            </div>
+            <div class="mini-popup-body legal-modal-body" id="legal-modal-body" data-i18n-html="legal_privacy_content">
+                <!-- Loaded dynamically -->
             </div>
         </div>
     </div>
