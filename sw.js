@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chros-offline-v1.2.4';
+const CACHE_NAME = 'chros-offline-v1.2.5';
 
 const CORE_ASSETS = [
     '/',
@@ -83,22 +83,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    const isExternalCDN = url.hostname.includes('fonts.googleapis.com') ||
-                          url.hostname.includes('fonts.gstatic.com') ||
-                          url.hostname.includes('cdn.jsdelivr.net');
+    if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+        return;
+    }
 
-    if (isExternalCDN) {
+    if (url.hostname.includes('cdn.jsdelivr.net')) {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
-                    if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+                    if (networkResponse && networkResponse.status === 200) {
                         const responseToCache = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
                     }
                     return networkResponse;
                 })
                 .catch(async () => {
-                    const cacheNames = [CACHE_NAME, 'chros-offline-assets-v1', 'chros-offline-v1'];
+                    const cacheNames = [CACHE_NAME, 'chros-offline-assets-v1'];
                     for (const name of cacheNames) {
                         if (await caches.has(name)) {
                             const cache = await caches.open(name);
@@ -111,7 +111,7 @@ self.addEventListener('fetch', (event) => {
                             if (match) return match;
                         }
                     }
-                    return new Response('', { status: 404, statusText: 'Offline font unavailable' });
+                    return new Response('', { status: 503, statusText: 'Offline' });
                 })
         );
         return;

@@ -1,5 +1,5 @@
 (() => {
-    const CURRENT_SW_VER = '1.2.4';
+    const CURRENT_SW_VER = '1.2.5';
     if (localStorage.getItem('chros_sw_build_ver') !== CURRENT_SW_VER) {
         localStorage.setItem('chros_sw_build_ver', CURRENT_SW_VER);
         if ('caches' in window) {
