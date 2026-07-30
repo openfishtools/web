@@ -2804,6 +2804,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 280);
     };
 
+    const OFFLINE_CACHE_NAME = 'chros-offline-assets-v1';
+
     const checkOfflineAssetsCached = async () => {
         if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
             if ('caches' in window) {
