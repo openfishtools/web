@@ -2796,10 +2796,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (const name of cacheNames) {
                         if (await caches.has(name)) {
                             const cache = await caches.open(name);
-                            const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') || 
-                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm') ||
+                            const match = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm') || 
                                           await cache.match('assets/ffmpeg/ffmpeg-core.wasm') ||
-                                          await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm');
+                                          await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') ||
+                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
                             if (match) return true;
                         }
                     }
@@ -2870,42 +2870,32 @@ document.addEventListener('DOMContentLoaded', () => {
             btnDownloadOffline.style.display = 'none';
             if (btnLaterOffline) btnLaterOffline.style.display = 'none';
 
-            const assetSources = [
-                { path: 'assets/ffmpeg/ffmpeg.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js' },
-                { path: 'assets/ffmpeg/index.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js' },
-                { path: 'assets/ffmpeg/ffmpeg-core-st.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
-                { path: 'assets/ffmpeg/ffmpeg-core-st.wasm', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
-                { path: 'assets/ffmpeg/ffmpeg-core.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
-                { path: 'assets/ffmpeg/ffmpeg-core.wasm', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
-                { path: 'assets/ffmpeg/814.ffmpeg.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
-                { path: 'assets/upscale/upscaleWorker.js', cdn: null },
-                { path: 'assets/upscale/webm-muxer.min.js', cdn: null }
+            const assetCDNList = [
+                { path: 'assets/ffmpeg/ffmpeg.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js' },
+                { path: 'assets/ffmpeg/index.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core-st.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
+                { path: 'assets/ffmpeg/ffmpeg-core-st.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
+                { path: 'assets/ffmpeg/814.ffmpeg.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
+                { path: 'assets/upscale/upscaleWorker.js', url: 'assets/upscale/upscaleWorker.js' },
+                { path: 'assets/upscale/webm-muxer.min.js', url: 'https://cdn.jsdelivr.net/npm/webm-muxer/build/webm-muxer.min.js' }
             ];
 
             try {
                 if ('caches' in window) {
                     const cache = await caches.open(OFFLINE_CACHE_NAME);
                     await Promise.all(
-                        assetSources.map(async item => {
+                        assetCDNList.map(async item => {
                             try {
-                                let res = await fetch(item.path);
-                                if (!res.ok && item.cdn) {
-                                    res = await fetch(item.cdn);
-                                }
+                                const res = await fetch(item.url);
                                 if (res.ok) {
+                                    await cache.put(item.url, res.clone());
                                     await cache.put(item.path, res.clone());
-                                    if (item.cdn) await cache.put(item.cdn, res.clone());
+                                    await cache.put('/' + item.path, res.clone());
                                 }
-                            } catch (err) {
-                                if (item.cdn) {
-                                    try {
-                                        const cdnRes = await fetch(item.cdn);
-                                        if (cdnRes.ok) {
-                                            await cache.put(item.path, cdnRes.clone());
-                                            await cache.put(item.cdn, cdnRes.clone());
-                                        }
-                                    } catch (e) {}
-                                }
+                            } catch (e) {
+                                console.warn(`Failed to pre-cache ${item.url}:`, e);
                             }
                         })
                     );
