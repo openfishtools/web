@@ -184,8 +184,8 @@ self.addEventListener("message", async (e) => {
       
       // WebGL Backend optimizations
       safeSetFlag('WEBGL_VERSION', 2);
-      safeSetFlag('WEBGL_FORCE_F16_TEXTURES', true);
-      safeSetFlag('WEBGL_FORCE_F16_OPERATOR', true);
+      safeSetFlag('WEBGL_FORCE_F16_TEXTURES', false);
+      safeSetFlag('WEBGL_FORCE_F16_OPERATOR', false);
       safeSetFlag('WEBGL_PACK', true);
       safeSetFlag('WEBGL_EXP_CONV', true);
       safeSetFlag('WEBGL_PACK_BINARY_OPERATIONS', true);

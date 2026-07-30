@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         brightness: 0, contrast: 0, shadows: 0, hue: 0, saturation: 0, denoise: 0
     };
 
-    const TFJS_PARAMS = { model: 'anime_fast', factor: 4, tile_size: 128, min_lap: 0, backend: 'webgl' };
+    const TFJS_PARAMS = { model: 'anime_fast', factor: 4, tile_size: 64, min_lap: 12, backend: 'webgl' };
 
     let appState = 'import';
     let isImageMode = false;

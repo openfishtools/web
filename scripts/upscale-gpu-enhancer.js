@@ -109,20 +109,20 @@ void main(){
     color=hsl2rgb(hsl);
   }
   if(sharpen>0.0){
-    vec3 n=texture(uOrig,vUv+vec2(0.0,-uTexel.y)).rgb;
-    vec3 s=texture(uOrig,vUv+vec2(0.0,uTexel.y)).rgb;
-    vec3 w=texture(uOrig,vUv+vec2(-uTexel.x,0.0)).rgb;
-    vec3 e=texture(uOrig,vUv+vec2(uTexel.x,0.0)).rgb;
+    vec3 n=texture(uTex,vUv+vec2(0.0,-uTexel.y)).rgb;
+    vec3 s=texture(uTex,vUv+vec2(0.0,uTexel.y)).rgb;
+    vec3 w=texture(uTex,vUv+vec2(-uTexel.x,0.0)).rgb;
+    vec3 e=texture(uTex,vUv+vec2(uTexel.x,0.0)).rgb;
     vec3 laplacian=n+s+w+e-4.0*color;
     color=color-(sharpen/100.0)*laplacian;
   }
   if(unsharpAmount>0.0){
     vec2 t=uTexel*unsharpRadius;
-    vec3 b=texture(uOrig,vUv).rgb*0.25;
-    b+=texture(uOrig,vUv+vec2(t.x,0.0)).rgb*0.1875;
-    b+=texture(uOrig,vUv+vec2(-t.x,0.0)).rgb*0.1875;
-    b+=texture(uOrig,vUv+vec2(0.0,t.y)).rgb*0.1875;
-    b+=texture(uOrig,vUv+vec2(0.0,-t.y)).rgb*0.1875;
+    vec3 b=texture(uTex,vUv).rgb*0.25;
+    b+=texture(uTex,vUv+vec2(t.x,0.0)).rgb*0.1875;
+    b+=texture(uTex,vUv+vec2(-t.x,0.0)).rgb*0.1875;
+    b+=texture(uTex,vUv+vec2(0.0,t.y)).rgb*0.1875;
+    b+=texture(uTex,vUv+vec2(0.0,-t.y)).rgb*0.1875;
     vec3 diff=color-b;
     color=color+(unsharpAmount/100.0)*diff;
   }
