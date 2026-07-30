@@ -1,3 +1,20 @@
+(() => {
+    const CURRENT_SW_VER = '1.2.4';
+    if (localStorage.getItem('chros_sw_build_ver') !== CURRENT_SW_VER) {
+        localStorage.setItem('chros_sw_build_ver', CURRENT_SW_VER);
+        if ('caches' in window) {
+            caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+        }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                Promise.all(regs.map(r => r.unregister())).then(() => {
+                    window.location.reload(true);
+                });
+            }).catch(() => {});
+        }
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
