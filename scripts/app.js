@@ -2797,7 +2797,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (await caches.has(name)) {
                             const cache = await caches.open(name);
                             const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') || 
-                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
+                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm') ||
+                                          await cache.match('assets/ffmpeg/ffmpeg-core.wasm') ||
+                                          await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm');
                             if (match) return true;
                         }
                     }
@@ -2868,28 +2870,44 @@ document.addEventListener('DOMContentLoaded', () => {
             btnDownloadOffline.style.display = 'none';
             if (btnLaterOffline) btnLaterOffline.style.display = 'none';
 
-            const assetsToFetch = [
-                'assets/ffmpeg/ffmpeg.js',
-                'assets/ffmpeg/index.js',
-                'assets/ffmpeg/ffmpeg-core-st.js',
-                'assets/ffmpeg/ffmpeg-core-st.wasm',
-                'assets/ffmpeg/ffmpeg-core.js',
-                'assets/ffmpeg/ffmpeg-core.wasm',
-                'assets/ffmpeg/ffmpeg-core.worker.js',
-                'assets/ffmpeg/814.ffmpeg.js',
-                'assets/upscale/upscaleWorker.js',
-                'assets/upscale/webm-muxer.min.js'
+            const assetSources = [
+                { path: 'assets/ffmpeg/ffmpeg.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js' },
+                { path: 'assets/ffmpeg/index.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core-st.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core-st.wasm', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
+                { path: 'assets/ffmpeg/ffmpeg-core.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
+                { path: 'assets/ffmpeg/ffmpeg-core.wasm', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
+                { path: 'assets/ffmpeg/814.ffmpeg.js', cdn: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
+                { path: 'assets/upscale/upscaleWorker.js', cdn: null },
+                { path: 'assets/upscale/webm-muxer.min.js', cdn: null }
             ];
 
             try {
                 if ('caches' in window) {
                     const cache = await caches.open(OFFLINE_CACHE_NAME);
                     await Promise.all(
-                        assetsToFetch.map(asset => 
-                            fetch(asset).then(res => {
-                                if (res.ok) cache.put(asset, res.clone());
-                            }).catch(err => console.warn(`Failed to pre-cache ${asset}:`, err))
-                        )
+                        assetSources.map(async item => {
+                            try {
+                                let res = await fetch(item.path);
+                                if (!res.ok && item.cdn) {
+                                    res = await fetch(item.cdn);
+                                }
+                                if (res.ok) {
+                                    await cache.put(item.path, res.clone());
+                                    if (item.cdn) await cache.put(item.cdn, res.clone());
+                                }
+                            } catch (err) {
+                                if (item.cdn) {
+                                    try {
+                                        const cdnRes = await fetch(item.cdn);
+                                        if (cdnRes.ok) {
+                                            await cache.put(item.path, cdnRes.clone());
+                                            await cache.put(item.cdn, cdnRes.clone());
+                                        }
+                                    } catch (e) {}
+                                }
+                            }
+                        })
                     );
                 }
                 localStorage.setItem('chros_offline_assets_downloaded', 'true');
