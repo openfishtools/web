@@ -2697,23 +2697,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storedVersion = localStorage.getItem('chros_app_version');
                 if (storedVersion && storedVersion !== data.version) {
                     console.log(`[Version] New release detected: ${data.version} (current: ${storedVersion}). Invalidate cache & reload...`);
-                    localStorage.setItem('chros_app_version', data.version);
-                    
+                    const newVer = data.version;
                     if ('caches' in window) {
                         try {
                             const keys = await caches.keys();
-                            await Promise.all(
-                                keys.filter(k => k !== 'chros-offline-assets-v1' && !k.startsWith('chros-offline-assets'))
-                                    .map(k => caches.delete(k))
-                            );
+                            await Promise.all(keys.map(k => caches.delete(k)));
                         } catch (e) {}
                     }
-                    Object.keys(localStorage).forEach(k => {
-                        if (k.startsWith('icon_cache_')) {
-                            localStorage.removeItem(k);
-                        }
-                    });
-
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    localStorage.setItem('chros_app_version', newVer);
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            const regs = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(regs.map(r => r.unregister()));
+                        } catch (e) {}
+                    }
+                    console.log('✅ Semua Cache & Service Worker Berhasil Dihapus!');
                     window.location.reload(true);
                     return;
                 }
