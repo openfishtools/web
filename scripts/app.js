@@ -2864,13 +2864,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnDownloadOffline) {
         btnDownloadOffline.addEventListener('click', async () => {
             if (promptTimer) clearTimeout(promptTimer);
-            if (offlinePromptText) {
-                offlinePromptText.textContent = window.getTranslation('offline_downloading');
-            }
+
+            const progressContainer = document.getElementById('offline-progress-container');
+            const progressFill = document.getElementById('offline-progress-fill');
+
             btnDownloadOffline.style.display = 'none';
             if (btnLaterOffline) btnLaterOffline.style.display = 'none';
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            if (progressFill) progressFill.style.width = '0%';
 
-            const assetCDNList = [
+            const baseAssets = [
+                { path: 'index.html', url: 'index.html' },
+                { path: 'styles/main.css', url: 'styles/main.css' },
+                { path: 'styles/responsive.css', url: 'styles/responsive.css' },
+                { path: 'scripts/i18n.js', url: 'scripts/i18n.js' },
+                { path: 'scripts/app.js', url: 'scripts/app.js' },
+                { path: 'scripts/ffmpeg-tool.js', url: 'scripts/ffmpeg-tool.js' },
+                { path: 'scripts/audio-extractor-tool.js', url: 'scripts/audio-extractor-tool.js' },
+                { path: 'scripts/tiktok-quality-tool.js', url: 'scripts/tiktok-quality-tool.js' },
+                { path: 'scripts/tiktok-stats-tool.js', url: 'scripts/tiktok-stats-tool.js' },
+                { path: 'scripts/tiktok-downloader.js', url: 'scripts/tiktok-downloader.js' },
+                { path: 'scripts/upscale-gpu-enhancer.js', url: 'scripts/upscale-gpu-enhancer.js' },
+                { path: 'scripts/upscale-tool.js', url: 'scripts/upscale-tool.js' },
+                { path: 'scripts/video-interpolation.js', url: 'scripts/video-interpolation.js' },
+                { path: 'scripts/image-sequence-tool.js', url: 'scripts/image-sequence-tool.js' },
+                { path: 'scripts/fivemb-generator.js', url: 'scripts/fivemb-generator.js' },
+                { path: 'scripts/ae-to-am-beatmark-tool.js', url: 'scripts/ae-to-am-beatmark-tool.js' },
+                { path: 'assets/jszip/jszip.min.js', url: 'assets/jszip/jszip.min.js' },
+                { path: 'assets/fonts/brand-icons.css', url: 'assets/fonts/brand-icons.css' },
+                { path: 'assets/upscale/upscaleWorker.js', url: 'assets/upscale/upscaleWorker.js' },
+                { path: 'assets/upscale/webm-muxer.min.js', url: 'https://cdn.jsdelivr.net/npm/webm-muxer/build/webm-muxer.min.js' },
                 { path: 'assets/ffmpeg/ffmpeg.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js' },
                 { path: 'assets/ffmpeg/index.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js' },
                 { path: 'assets/ffmpeg/ffmpeg-core.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
@@ -2878,24 +2901,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 { path: 'assets/ffmpeg/ffmpeg-core.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
                 { path: 'assets/ffmpeg/ffmpeg-core-st.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
                 { path: 'assets/ffmpeg/814.ffmpeg.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
-                { path: 'assets/upscale/upscaleWorker.js', url: 'assets/upscale/upscaleWorker.js' },
-                { path: 'assets/upscale/webm-muxer.min.js', url: 'https://cdn.jsdelivr.net/npm/webm-muxer/build/webm-muxer.min.js' }
+                { path: 'font-outfit', url: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap' },
+                { path: 'font-material-symbols', url: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block' },
+                { path: 'font-bootstrap-icons', url: 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css' }
             ];
+
+            let completed = 0;
+            const total = baseAssets.length;
+
+            const updateProgress = () => {
+                completed++;
+                const percent = Math.min(100, Math.round((completed / total) * 100));
+                if (progressFill) progressFill.style.width = `${percent}%`;
+                if (offlinePromptText) {
+                    const dlText = window.getTranslation('offline_downloading') || 'Downloading...';
+                    offlinePromptText.textContent = `${dlText} (${completed}/${total}) ${percent}%`;
+                }
+            };
 
             try {
                 if ('caches' in window) {
                     const cache = await caches.open(OFFLINE_CACHE_NAME);
                     await Promise.all(
-                        assetCDNList.map(async item => {
+                        baseAssets.map(async item => {
                             try {
                                 const res = await fetch(item.url);
                                 if (res.ok) {
+                                    const contentType = res.headers.get('content-type') || '';
+                                    if (contentType.includes('text/css')) {
+                                        const cssText = await res.clone().text();
+                                        const fontUrls = [...cssText.matchAll(/url\(([^)]+)\)/g)].map(m => m[1].replace(/['"]/g, ''));
+                                        fontUrls.forEach(async fontUrl => {
+                                            try {
+                                                const fontRes = await fetch(fontUrl);
+                                                if (fontRes.ok) cache.put(fontUrl, fontRes);
+                                            } catch (e) {}
+                                        });
+                                    }
+
                                     await cache.put(item.url, res.clone());
-                                    await cache.put(item.path, res.clone());
-                                    await cache.put('/' + item.path, res.clone());
+                                    if (item.path && item.path !== item.url) {
+                                        await cache.put(item.path, res.clone());
+                                        await cache.put('/' + item.path, res.clone());
+                                    }
                                 }
                             } catch (e) {
                                 console.warn(`Failed to pre-cache ${item.url}:`, e);
+                            } finally {
+                                updateProgress();
                             }
                         })
                     );
@@ -2905,10 +2958,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     offlinePromptText.textContent = window.getTranslation('offline_download_complete');
                 }
                 setTimeout(() => {
+                    if (progressContainer) progressContainer.classList.add('hidden');
                     hideDownloadPrompt();
                 }, 2000);
             } catch (err) {
                 console.error('Offline asset download failed:', err);
+                if (progressContainer) progressContainer.classList.add('hidden');
                 hideDownloadPrompt();
             }
         });

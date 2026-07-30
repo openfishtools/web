@@ -66,7 +66,12 @@
             <div id="offline-download-prompt" class="offline-download-prompt hidden" role="dialog">
                 <div class="offline-prompt-content">
                     <span class="material-symbols-rounded offline-prompt-icon">download_for_offline</span>
-                    <span class="offline-prompt-text" id="offline-prompt-text" data-i18n="offline_download_prompt">Do you want to download required files to work offline?</span>
+                    <div class="offline-prompt-text-wrapper">
+                        <span class="offline-prompt-text" id="offline-prompt-text" data-i18n="offline_download_prompt">Do you want to download required files to work offline?</span>
+                        <div class="offline-progress-bar-container hidden" id="offline-progress-container">
+                            <div class="offline-progress-bar-fill" id="offline-progress-fill"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="offline-prompt-actions" id="offline-prompt-actions">
                     <button type="button" class="offline-btn offline-btn-download" id="btn-download-offline-assets" data-i18n="btn_download_files">Download</button>
