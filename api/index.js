@@ -41,7 +41,7 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..')));
 
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 
 // API version endpoint for client auto-update and cache invalidation
 app.get('/api/version', (req, res) => {
