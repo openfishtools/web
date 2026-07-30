@@ -2702,7 +2702,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if ('caches' in window) {
                         try {
                             const keys = await caches.keys();
-                            await Promise.all(keys.map(k => caches.delete(k)));
+                            await Promise.all(
+                                keys.filter(k => k !== 'chros-offline-assets-v1' && !k.startsWith('chros-offline-assets'))
+                                    .map(k => caches.delete(k))
+                            );
                         } catch (e) {}
                     }
                     Object.keys(localStorage).forEach(k => {
@@ -2783,17 +2786,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 280);
     };
 
+    const OFFLINE_CACHE_NAME = 'chros-offline-assets-v1';
+
     const checkOfflineAssetsCached = async () => {
         if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
             if ('caches' in window) {
                 try {
-                    const hasCache = await caches.has('chros-offline-v1');
+                    const hasCache = await caches.has(OFFLINE_CACHE_NAME) || await caches.has('chros-offline-v1');
                     if (hasCache) {
-                        const cache = await caches.open('chros-offline-v1');
-                        const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm');
+                        const cache = await caches.open(OFFLINE_CACHE_NAME);
+                        const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') || 
+                                      await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
                         if (match) return true;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.debug('[CHROS Offline] Cache check error:', e);
+                }
             }
         }
         return false;
@@ -2801,6 +2809,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const triggerDownloadPrompt = async () => {
         if (!navigator.onLine) return;
+        if (sessionStorage.getItem('chros_offline_prompt_dismissed') === 'true') return;
 
         const alreadyCached = await checkOfflineAssetsCached();
         if (alreadyCached) {
@@ -2835,6 +2844,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnLaterOffline) {
         btnLaterOffline.addEventListener('click', () => {
             if (promptTimer) clearTimeout(promptTimer);
+            sessionStorage.setItem('chros_offline_prompt_dismissed', 'true');
             hideDownloadPrompt();
         });
     }
@@ -2855,16 +2865,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 'assets/ffmpeg/ffmpeg-core-st.wasm',
                 'assets/ffmpeg/ffmpeg-core.js',
                 'assets/ffmpeg/ffmpeg-core.wasm',
-                'assets/ffmpeg/814.ffmpeg.js'
+                'assets/ffmpeg/ffmpeg-core.worker.js',
+                'assets/ffmpeg/814.ffmpeg.js',
+                'assets/upscale/upscaleWorker.js',
+                'assets/upscale/webm-muxer.min.js'
             ];
 
             try {
                 if ('caches' in window) {
-                    const cache = await caches.open('chros-offline-v1');
+                    const cache = await caches.open(OFFLINE_CACHE_NAME);
                     await Promise.all(
                         assetsToFetch.map(asset => 
                             fetch(asset).then(res => {
-                                if (res.ok) cache.put(asset, res);
+                                if (res.ok) cache.put(asset, res.clone());
                             }).catch(err => console.warn(`Failed to pre-cache ${asset}:`, err))
                         )
                     );
@@ -2962,7 +2975,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 3000);
         } else if (mode === 'prompt') {
             localStorage.removeItem('chros_offline_assets_downloaded');
-            if ('caches' in window) caches.delete('chros-offline-v1');
+            sessionStorage.removeItem('chros_offline_prompt_dismissed');
+            if ('caches' in window) {
+                caches.delete(OFFLINE_CACHE_NAME);
+                caches.delete('chros-offline-v1');
+            }
             triggerDownloadPrompt();
         }
     };

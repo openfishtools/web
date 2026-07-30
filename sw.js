@@ -44,7 +44,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
+                    if (cache !== CACHE_NAME && cache !== 'chros-offline-assets-v1' && !cache.startsWith('chros-offline')) {
                         return caches.delete(cache);
                     }
                 })
