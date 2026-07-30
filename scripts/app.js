@@ -2725,7 +2725,9 @@ document.addEventListener('DOMContentLoaded', () => {
        SERVICE WORKER REGISTRATION
     ═══════════════════════════════════════════════════════ */
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(err => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.update();
+        }).catch(err => {
             console.debug('[SW] Registration skipped/failed:', err);
         });
     }
