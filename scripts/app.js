@@ -2808,21 +2808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const checkOfflineAssetsCached = async () => {
         if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
-            if ('caches' in window) {
-                try {
-                    const keys = await caches.keys();
-                    for (const name of keys) {
-                        const cache = await caches.open(name);
-                        const match = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm') || 
-                                      await cache.match('assets/ffmpeg/ffmpeg-core.wasm') ||
-                                      await cache.match('/assets/ffmpeg/ffmpeg-core.wasm') ||
-                                      await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-                        if (match) return true;
-                    }
-                } catch (e) {
-                    console.debug('[CHROS Offline] Cache check error:', e);
-                }
-            }
+            return true;
         }
         return false;
     };

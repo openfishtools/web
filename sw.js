@@ -62,11 +62,9 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
-    // Skip caching for backend API endpoints
     if (url.pathname.startsWith('/api/')) return;
 
-    // Handle HTML Navigation Requests (e.g. www.cutefish.my.id/#tools while offline)
-    if (event.request.mode === 'navigate' || (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'))) {
+    if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
@@ -85,30 +83,61 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static Assets Strategy: Cache First, fallback to Network with dynamic caching
+    const isExternalCDN = url.hostname.includes('fonts.googleapis.com') ||
+                          url.hostname.includes('fonts.gstatic.com') ||
+                          url.hostname.includes('cdn.jsdelivr.net');
+
+    if (isExternalCDN) {
+        event.respondWith(
+            fetch(event.request)
+                .then((networkResponse) => {
+                    if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+                    }
+                    return networkResponse;
+                })
+                .catch(async () => {
+                    const cacheNames = [CACHE_NAME, 'chros-offline-assets-v1', 'chros-offline-v1'];
+                    for (const name of cacheNames) {
+                        if (await caches.has(name)) {
+                            const cache = await caches.open(name);
+                            const cleanPath = url.pathname.replace(/^\//, '');
+                            const match = await cache.match(event.request, { ignoreSearch: true }) ||
+                                          await cache.match(url.href, { ignoreSearch: true }) ||
+                                          await cache.match(url.pathname, { ignoreSearch: true }) ||
+                                          await cache.match(cleanPath, { ignoreSearch: true }) ||
+                                          await cache.match('/' + cleanPath, { ignoreSearch: true });
+                            if (match) return match;
+                        }
+                    }
+                    return new Response('', { status: 404, statusText: 'Offline font unavailable' });
+                })
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request, { ignoreSearch: true }).then(async (cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
+            if (cachedResponse) return cachedResponse;
 
             try {
                 const cacheNames = [CACHE_NAME, 'chros-offline-assets-v1', 'chros-offline-v1'];
                 for (const name of cacheNames) {
                     if (await caches.has(name)) {
                         const cache = await caches.open(name);
+                        const cleanPath = url.pathname.replace(/^\//, '');
                         const match = await cache.match(event.request, { ignoreSearch: true }) ||
                                       await cache.match(url.pathname, { ignoreSearch: true }) ||
                                       await cache.match(url.href, { ignoreSearch: true }) ||
-                                      await cache.match(url.pathname.replace(/^\//, ''), { ignoreSearch: true }) ||
-                                      await cache.match(url.pathname + url.search, { ignoreSearch: true });
+                                      await cache.match(cleanPath, { ignoreSearch: true });
                         if (match) return match;
                     }
                 }
             } catch (e) {}
 
             return fetch(event.request).then((networkResponse) => {
-                if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+                if (networkResponse && networkResponse.status === 200) {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
                 }
