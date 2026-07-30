@@ -3154,13 +3154,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (legalModal) legalModal.classList.remove('active');
     };
 
-    const btnOpenPrivacy = document.getElementById('open-legal-privacy');
-    const btnOpenTerms = document.getElementById('open-legal-terms');
-    const btnOpenDisclaimer = document.getElementById('open-legal-disclaimer');
-
-    if (btnOpenPrivacy) btnOpenPrivacy.addEventListener('click', () => openLegalModal('privacy'));
-    if (btnOpenTerms) btnOpenTerms.addEventListener('click', () => openLegalModal('terms'));
-    if (btnOpenDisclaimer) btnOpenDisclaimer.addEventListener('click', () => openLegalModal('disclaimer'));
+    document.querySelectorAll('.open-legal-privacy').forEach(el => {
+        el.addEventListener('click', () => openLegalModal('privacy'));
+    });
+    document.querySelectorAll('.open-legal-terms').forEach(el => {
+        el.addEventListener('click', () => openLegalModal('terms'));
+    });
+    document.querySelectorAll('.open-legal-disclaimer').forEach(el => {
+        el.addEventListener('click', () => openLegalModal('disclaimer'));
+    });
 
     if (closeLegalModal) closeLegalModal.addEventListener('click', hideLegalModal);
     if (legalModal) {
