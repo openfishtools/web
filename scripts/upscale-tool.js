@@ -680,14 +680,19 @@ document.addEventListener('DOMContentLoaded', () => {
         presetList.appendChild(btn);
     });
 
+    function syncOrderButtons(order) {
+        enhanceOrder = order;
+        card.querySelectorAll('.upscale-order-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.order === enhanceOrder);
+        });
+    }
+
     card.querySelectorAll('.upscale-order-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (appState === 'rendering') return;
-            enhanceOrder = btn.dataset.order;
             isPreviewed = false;
-            btnPreview.classList.remove('active');
-            card.querySelectorAll('.upscale-order-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if (btnPreview) btnPreview.classList.remove('active');
+            syncOrderButtons(btn.dataset.order);
             drawGpuPreview();
         });
     });
@@ -1595,10 +1600,14 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
         }
 
-        let outCanvas = canvas;
+        let outCanvas = document.createElement('canvas');
+        outCanvas.width = canvas.width;
+        outCanvas.height = canvas.height;
+        outCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
         if (isNormaliseEnabled()) {
             addLog(`[Batch] Normalising crop 1080×1920 for ${item.name}`);
-            outCanvas = applyCropTo1080x1920(canvas);
+            outCanvas = applyCropTo1080x1920(outCanvas);
         }
 
         const outBlob = await new Promise(res => outCanvas.toBlob(res, 'image/jpeg', 0.92));
@@ -1914,9 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
         batchOrderToggle.querySelectorAll('.upscale-order-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (appState === 'rendering') return;
-                enhanceOrder = btn.dataset.order;
-                card.querySelectorAll('.upscale-order-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                syncOrderButtons(btn.dataset.order);
             });
         });
     }

@@ -290,94 +290,47 @@ self.addEventListener("message", async (e) => {
     model,
     inputImg,
     factor = 4,
-    input_size = 64,
-    min_lap = 12
+    input_size = 128,
+    margin = 16
   ) {
     const width = inputImg.width;
     const height = inputImg.height;
     const output = new WorkerImage(width * factor, height * factor);
 
-    let num_x = 1;
-    if (width > input_size) {
-      for (; (input_size * num_x - width) / (num_x - 1) < min_lap; num_x++);
-    }
-    let num_y = 1;
-    if (height > input_size) {
-      for (; (input_size * num_y - height) / (num_y - 1) < min_lap; num_y++);
-    }
-
-    const locs_x = new Array(num_x);
-    const locs_y = new Array(num_y);
-    const pad_left = new Array(num_x);
-    const pad_top = new Array(num_y);
-    const pad_right = new Array(num_x);
-    const pad_bottom = new Array(num_y);
-
-    const total_lap_x = input_size * num_x - width;
-    const total_lap_y = input_size * num_y - height;
-    const base_lap_x = num_x > 1 ? Math.floor(total_lap_x / (num_x - 1)) : 0;
-    const base_lap_y = num_y > 1 ? Math.floor(total_lap_y / (num_y - 1)) : 0;
-    const extra_lap_x = num_x > 1 ? total_lap_x - base_lap_x * (num_x - 1) : 0;
-    const extra_lap_y = num_y > 1 ? total_lap_y - base_lap_y * (num_y - 1) : 0;
-
-    locs_x[0] = 0;
-    for (let i = 1; i < num_x; i++) {
-      if (i <= extra_lap_x) {
-        locs_x[i] = locs_x[i - 1] + input_size - base_lap_x - 1;
-      } else {
-        locs_x[i] = locs_x[i - 1] + input_size - base_lap_x;
-      }
-    }
-    locs_y[0] = 0;
-    for (let i = 1; i < num_y; i++) {
-      if (i <= extra_lap_y) {
-        locs_y[i] = locs_y[i - 1] + input_size - base_lap_y - 1;
-      } else {
-        locs_y[i] = locs_y[i - 1] + input_size - base_lap_y;
-      }
-    }
-
-    pad_left[0] = 0;
-    pad_top[0] = 0;
-    pad_right[num_x - 1] = 0;
-    pad_bottom[num_y - 1] = 0;
-
-    for (let i = 1; i < num_x; i++) {
-      pad_left[i] = Math.floor((locs_x[i - 1] + input_size - locs_x[i]) / 2);
-    }
-    for (let i = 1; i < num_y; i++) {
-      pad_top[i] = Math.floor((locs_y[i - 1] + input_size - locs_y[i]) / 2);
-    }
-    for (let i = 0; i < num_x - 1; i++) {
-      pad_right[i] = locs_x[i] + input_size - locs_x[i + 1] - pad_left[i + 1];
-    }
-    for (let i = 0; i < num_y - 1; i++) {
-      pad_bottom[i] = locs_y[i] + input_size - locs_y[i + 1] - pad_top[i + 1];
-    }
-
+    const step = input_size;
+    const num_x = Math.ceil(width / step);
+    const num_y = Math.ceil(height / step);
     const total = num_x * num_y;
     let current = 0;
 
-    for (let i = 0; i < num_x; i++) {
-      for (let j = 0; j < num_y; j++) {
-        const x1 = locs_x[i];
-        const y1 = locs_y[j];
-        const x2 = locs_x[i] + input_size;
-        const y2 = locs_y[j] + input_size;
+    for (let y = 0; y < height; y += step) {
+      const tile_h = Math.min(step, height - y);
+      const src_y1 = Math.max(0, y - margin);
+      const src_y2 = Math.min(height, y + tile_h + margin);
+      const crop_top = (y - src_y1) * factor;
 
-        const tile = new WorkerImage(input_size, input_size);
-        tile.getImageCrop(0, 0, inputImg, x1, y1, x2, y2);
+      for (let x = 0; x < width; x += step) {
+        const tile_w = Math.min(step, width - x);
+        const src_x1 = Math.max(0, x - margin);
+        const src_x2 = Math.min(width, x + tile_w + margin);
+        const crop_left = (x - src_x1) * factor;
+
+        const tile_src_w = src_x2 - src_x1;
+        const tile_src_h = src_y2 - src_y1;
+
+        const tile = new WorkerImage(tile_src_w, tile_src_h);
+        tile.getImageCrop(0, 0, inputImg, src_x1, src_y1, src_x2, src_y2);
 
         const scaled = await upscale(tile, model, hasAlpha);
-        
+
         output.getImageCrop(
-          (x1 + pad_left[i]) * factor,
-          (y1 + pad_top[j]) * factor,
+          x * factor,
+          y * factor,
           scaled,
-          pad_left[i] * factor,
-          pad_top[j] * factor,
-          scaled.width - pad_right[i] * factor,
-          scaled.height - pad_bottom[j] * factor
+          crop_left,
+          crop_top,
+          crop_left + tile_w * factor,
+          crop_top + tile_h * factor
         );
 
         current++;
