@@ -81,10 +81,24 @@ self.addEventListener('fetch', (event) => {
 
     // Static Assets Strategy: Cache First, fallback to Network with dynamic caching
     event.respondWith(
-        caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+        caches.match(event.request, { ignoreSearch: true }).then(async (cachedResponse) => {
             if (cachedResponse) {
                 return cachedResponse;
             }
+
+            try {
+                const cacheNames = [CACHE_NAME, 'chros-offline-assets-v1', 'chros-offline-v1'];
+                for (const name of cacheNames) {
+                    if (await caches.has(name)) {
+                        const cache = await caches.open(name);
+                        const match = await cache.match(event.request, { ignoreSearch: true }) ||
+                                      await cache.match(url.pathname, { ignoreSearch: true }) ||
+                                      await cache.match(url.href, { ignoreSearch: true }) ||
+                                      await cache.match(url.pathname.replace(/^\//, ''), { ignoreSearch: true });
+                        if (match) return match;
+                    }
+                }
+            } catch (e) {}
 
             return fetch(event.request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
