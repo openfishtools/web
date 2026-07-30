@@ -662,6 +662,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     }
 
+    function syncPresetButtons(presetId) {
+        activePreset = presetId;
+        card.querySelectorAll('.upscale-preset-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.preset === activePreset);
+        });
+    }
+
     PRESETS.forEach(p => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -670,11 +677,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.dataset.preset = p.id;
         btn.addEventListener('click', () => {
             if (appState === 'rendering') return;
-            activePreset = p.id;
             isPreviewed = false;
-            btnPreview.classList.remove('active');
-            presetList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if (btnPreview) btnPreview.classList.remove('active');
+            syncPresetButtons(p.id);
             drawGpuPreview();
         });
         presetList.appendChild(btn);
@@ -1908,12 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.dataset.preset = p.id;
             btn.addEventListener('click', () => {
                 if (appState === 'rendering') return;
-                activePreset = p.id;
-                presetList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
-                batchPresetList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const singleBtn = presetList.querySelector(`[data-preset="${p.id}"]`);
-                if (singleBtn) singleBtn.classList.add('active');
+                syncPresetButtons(p.id);
             });
             batchPresetList.appendChild(btn);
         });
