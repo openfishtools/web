@@ -239,26 +239,35 @@ document.addEventListener('DOMContentLoaded', () => {
      * Returns a new canvas of size 1080x1920.
      */
     function applyCropTo1080x1920(srcCanvas) {
-        const targetW = 1080;
-        const targetH = 1920;
         const srcW = srcCanvas.width;
         const srcH = srcCanvas.height;
 
-        // Cover-fit: scale so that the image fully covers the target rect
-        const scaleX = targetW / srcW;
-        const scaleY = targetH / srcH;
-        const scale = Math.max(scaleX, scaleY);
+        const targetAspect = 9 / 16;
+        const srcAspect = srcW / srcH;
 
-        const drawW = Math.round(srcW * scale);
-        const drawH = Math.round(srcH * scale);
-        const offsetX = Math.round((drawW - targetW) / 2);
-        const offsetY = Math.round((drawH - targetH) / 2);
+        let targetW = srcW;
+        let targetH = srcH;
+
+        if (Math.abs(srcAspect - targetAspect) < 0.01) {
+            return srcCanvas;
+        }
+
+        if (srcAspect > targetAspect) {
+            targetH = srcH;
+            targetW = Math.round(srcH * targetAspect);
+        } else {
+            targetW = srcW;
+            targetH = Math.round(srcW / targetAspect);
+        }
+
+        const offsetX = Math.round((srcW - targetW) / 2);
+        const offsetY = Math.round((srcH - targetH) / 2);
 
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = targetW;
         cropCanvas.height = targetH;
         const ctx = cropCanvas.getContext('2d');
-        ctx.drawImage(srcCanvas, -offsetX, -offsetY, drawW, drawH);
+        ctx.drawImage(srcCanvas, offsetX, offsetY, targetW, targetH, 0, 0, targetW, targetH);
         return cropCanvas;
     }
 
