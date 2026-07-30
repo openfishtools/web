@@ -2804,22 +2804,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 280);
     };
 
-    const OFFLINE_CACHE_NAME = 'chros-offline-assets-v1';
-
     const checkOfflineAssetsCached = async () => {
         if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
             if ('caches' in window) {
                 try {
-                    const cacheNames = [OFFLINE_CACHE_NAME, 'chros-offline-v1'];
-                    for (const name of cacheNames) {
-                        if (await caches.has(name)) {
-                            const cache = await caches.open(name);
-                            const match = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm') || 
-                                          await cache.match('assets/ffmpeg/ffmpeg-core.wasm') ||
-                                          await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') ||
-                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
-                            if (match) return true;
-                        }
+                    const keys = await caches.keys();
+                    for (const name of keys) {
+                        const cache = await caches.open(name);
+                        const match = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm') || 
+                                      await cache.match('assets/ffmpeg/ffmpeg-core.wasm') ||
+                                      await cache.match('/assets/ffmpeg/ffmpeg-core.wasm') ||
+                                      await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                        if (match) return true;
                     }
                 } catch (e) {
                     console.debug('[CHROS Offline] Cache check error:', e);
@@ -2829,17 +2825,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     };
 
-    const triggerDownloadPrompt = async () => {
-        if (!navigator.onLine) return;
-        if (sessionStorage.getItem('chros_offline_prompt_dismissed') === 'true') return;
-
-        const alreadyCached = await checkOfflineAssetsCached();
-        if (alreadyCached) {
-            console.log('[CHROS Offline] All required offline assets are already cached.');
-            return;
-        }
-
-        console.log('[CHROS Offline] Offline assets missing — triggering download prompt (5s)...');
+    const showDownloadPrompt = () => {
         if (offlineDownloadPrompt) {
             if (btnDownloadOffline) btnDownloadOffline.style.display = '';
             if (btnLaterOffline) btnLaterOffline.style.display = '';
@@ -2848,7 +2834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             offlineDownloadPrompt.classList.remove('hidden', 'banner-slide-up');
             offlineDownloadPrompt.classList.remove('banner-slide-down');
-            void offlineDownloadPrompt.offsetWidth; // Force reflow
+            void offlineDownloadPrompt.offsetWidth;
             offlineDownloadPrompt.classList.add('banner-slide-down');
 
             if (promptTimer) clearTimeout(promptTimer);
@@ -2857,6 +2843,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideDownloadPrompt();
             }, 5000);
         }
+    };
+
+    const triggerDownloadPrompt = async () => {
+        if (!navigator.onLine) return;
+        if (sessionStorage.getItem('chros_offline_prompt_dismissed') === 'true') return;
+
+        const isCached = await checkOfflineAssetsCached();
+        if (isCached) {
+            console.log('[CHROS Offline] All required offline assets are already cached.');
+            return;
+        }
+
+        console.log('[CHROS Offline] Offline assets missing — triggering download prompt (5s)...');
+        promptTimer = setTimeout(() => {
+            showDownloadPrompt();
+        }, 5000);
     };
 
     const hideDownloadPrompt = () => {
@@ -2918,6 +2920,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { path: 'assets/ffmpeg/ffmpeg-core-st.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' },
                 { path: 'assets/ffmpeg/ffmpeg-core.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
                 { path: 'assets/ffmpeg/ffmpeg-core-st.wasm', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' },
+                { path: 'assets/ffmpeg/ffmpeg-core.worker.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js' },
                 { path: 'assets/ffmpeg/814.ffmpeg.js', url: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js' },
                 { path: 'font-outfit', url: 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap' },
                 { path: 'font-material-symbols', url: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block' },
