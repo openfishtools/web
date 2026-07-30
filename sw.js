@@ -1,13 +1,15 @@
 const CACHE_NAME = 'chros-offline-v1.2.4';
 
-const STATIC_ASSETS = [
+const CORE_ASSETS = [
     '/',
     '/index.html',
     '/styles/main.css',
     '/styles/responsive.css',
-    '/scripts/app.js',
+    '/assets/fonts/brand-icons.css',
     '/scripts/i18n.js',
+    '/scripts/app.js',
     '/scripts/ffmpeg-tool.js',
+    '/scripts/audio-extractor-tool.js',
     '/scripts/tiktok-quality-tool.js',
     '/scripts/tiktok-stats-tool.js',
     '/scripts/tiktok-downloader.js',
@@ -18,13 +20,19 @@ const STATIC_ASSETS = [
     '/scripts/fivemb-generator.js',
     '/scripts/ae-to-am-beatmark-tool.js',
     '/assets/jszip/jszip.min.js',
-    '/assets/fonts/brand-icons.css'
+    '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
+            return Promise.all(
+                CORE_ASSETS.map((asset) => {
+                    return cache.add(asset).catch((err) => {
+                        console.warn('[SW] Could not pre-cache asset:', asset, err);
+                    });
+                })
+            );
         }).then(() => self.skipWaiting())
     );
 });
@@ -52,7 +60,7 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.startsWith('/api/')) return;
 
     // Handle HTML Navigation Requests (e.g. www.cutefish.my.id/#tools while offline)
-    if (event.request.mode === 'navigate') {
+    if (event.request.mode === 'navigate' || (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'))) {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
@@ -86,7 +94,8 @@ self.addEventListener('fetch', (event) => {
                         const match = await cache.match(event.request, { ignoreSearch: true }) ||
                                       await cache.match(url.pathname, { ignoreSearch: true }) ||
                                       await cache.match(url.href, { ignoreSearch: true }) ||
-                                      await cache.match(url.pathname.replace(/^\//, ''), { ignoreSearch: true });
+                                      await cache.match(url.pathname.replace(/^\//, ''), { ignoreSearch: true }) ||
+                                      await cache.match(url.pathname + url.search, { ignoreSearch: true });
                         if (match) return match;
                     }
                 }

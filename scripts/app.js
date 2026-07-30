@@ -2933,13 +2933,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                         const fontUrls = [...cssText.matchAll(/url\(([^)]+)\)/g)].map(m => m[1].replace(/['"]/g, ''));
                                         await Promise.all(fontUrls.map(async fontUrl => {
                                             try {
-                                                const fullFontUrl = new URL(fontUrl, item.url).href;
-                                                const fontRes = await fetch(fullFontUrl);
+                                                const baseUrl = item.url.startsWith('http') ? item.url : (location.origin + '/' + item.url.replace(/^\//, ''));
+                                                const resolvedUrl = new URL(fontUrl, baseUrl).href;
+                                                const fontRes = await fetch(resolvedUrl);
                                                 if (fontRes.ok || fontRes.type === 'opaque') {
-                                                    await cache.put(fullFontUrl, fontRes.clone());
+                                                    await cache.put(resolvedUrl, fontRes.clone());
                                                     await cache.put(fontUrl, fontRes.clone());
+                                                    const fontObj = new URL(resolvedUrl);
+                                                    await cache.put(fontObj.pathname, fontRes.clone());
+                                                    await cache.put(fontObj.pathname + fontObj.search, fontRes.clone());
                                                 }
-                                            } catch (e) {}
+                                            } catch (e) {
+                                                console.warn('Failed to pre-cache font:', fontUrl, e);
+                                            }
                                         }));
                                     }
 
