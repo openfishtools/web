@@ -2792,12 +2792,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
             if ('caches' in window) {
                 try {
-                    const hasCache = await caches.has(OFFLINE_CACHE_NAME) || await caches.has('chros-offline-v1');
-                    if (hasCache) {
-                        const cache = await caches.open(OFFLINE_CACHE_NAME);
-                        const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') || 
-                                      await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
-                        if (match) return true;
+                    const cacheNames = [OFFLINE_CACHE_NAME, 'chros-offline-v1'];
+                    for (const name of cacheNames) {
+                        if (await caches.has(name)) {
+                            const cache = await caches.open(name);
+                            const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm') || 
+                                          await cache.match('/assets/ffmpeg/ffmpeg-core-st.wasm');
+                            if (match) return true;
+                        }
                     }
                 } catch (e) {
                     console.debug('[CHROS Offline] Cache check error:', e);
@@ -2819,6 +2821,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('[CHROS Offline] Offline assets missing — triggering download prompt (5s)...');
         if (offlineDownloadPrompt) {
+            if (btnDownloadOffline) btnDownloadOffline.style.display = '';
+            if (btnLaterOffline) btnLaterOffline.style.display = '';
+            if (offlinePromptText) {
+                offlinePromptText.textContent = window.getTranslation('offline_download_prompt');
+            }
             offlineDownloadPrompt.classList.remove('hidden', 'banner-slide-up');
             offlineDownloadPrompt.classList.remove('banner-slide-down');
             void offlineDownloadPrompt.offsetWidth; // Force reflow
@@ -2826,6 +2833,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (promptTimer) clearTimeout(promptTimer);
             promptTimer = setTimeout(() => {
+                sessionStorage.setItem('chros_offline_prompt_dismissed', 'true');
                 hideDownloadPrompt();
             }, 5000);
         }
@@ -2838,6 +2846,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             offlineDownloadPrompt.classList.add('hidden');
             offlineDownloadPrompt.classList.remove('banner-slide-up');
+            if (btnDownloadOffline) btnDownloadOffline.style.display = '';
+            if (btnLaterOffline) btnLaterOffline.style.display = '';
         }, 280);
     };
 
