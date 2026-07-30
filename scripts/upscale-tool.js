@@ -460,11 +460,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_checking_ffmpeg');
 
+        if (!window.FFmpegWASM && typeof window.loadFFmpegLibraries === 'function') {
+            window.loadFFmpegLibraries().catch(e => console.warn('Preload FFmpeg failed:', e));
+        }
+
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
             
-            // Check GPU
             if (gpuReady) {
                 if (gpuDot) {
                     gpuDot.textContent = 'check_circle';
@@ -481,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (gpuStatus) gpuStatus.textContent = window.getTranslation('upscale_failed_gpu');
             }
 
-            // Check FFmpeg WASM
             const ffmpegReady = !!window.FFmpegWASM;
             if (ffmpegReady) {
                 if (webcodecsDot) {
@@ -490,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     webcodecsDot.classList.remove('upscale-spinner');
                 }
                 if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_ready_ffmpeg');
-            } else {
+            } else if (attempts > 20) {
                 if (webcodecsDot) {
                     webcodecsDot.textContent = 'cancel';
                     webcodecsDot.style.color = '#F44336';

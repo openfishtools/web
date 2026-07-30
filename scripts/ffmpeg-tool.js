@@ -209,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return !!(window.FFmpegWASM && window.FFmpegUtil);
     }
 
+    window.loadFFmpegLibraries = loadFFmpegLibraries;
+
     async function compressVideo(file, preset) {
         if (isCompressing) return;
         isCompressing = true;
