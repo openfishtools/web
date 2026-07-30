@@ -239,35 +239,35 @@ document.addEventListener('DOMContentLoaded', () => {
      * Returns a new canvas of size 1080x1920.
      */
     function applyCropTo1080x1920(srcCanvas) {
+        const targetW = 1080;
+        const targetH = 1920;
         const srcW = srcCanvas.width;
         const srcH = srcCanvas.height;
 
-        const targetAspect = 9 / 16;
+        const targetAspect = targetW / targetH;
         const srcAspect = srcW / srcH;
 
-        let targetW = srcW;
-        let targetH = srcH;
-
-        if (Math.abs(srcAspect - targetAspect) < 0.01) {
-            return srcCanvas;
-        }
+        let cropW = srcW;
+        let cropH = srcH;
 
         if (srcAspect > targetAspect) {
-            targetH = srcH;
-            targetW = Math.round(srcH * targetAspect);
-        } else {
-            targetW = srcW;
-            targetH = Math.round(srcW / targetAspect);
+            cropH = srcH;
+            cropW = Math.round(srcH * targetAspect);
+        } else if (srcAspect < targetAspect) {
+            cropW = srcW;
+            cropH = Math.round(srcW / targetAspect);
         }
 
-        const offsetX = Math.round((srcW - targetW) / 2);
-        const offsetY = Math.round((srcH - targetH) / 2);
+        const cropX = Math.round((srcW - cropW) / 2);
+        const cropY = Math.round((srcH - cropH) / 2);
 
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = targetW;
         cropCanvas.height = targetH;
         const ctx = cropCanvas.getContext('2d');
-        ctx.drawImage(srcCanvas, offsetX, offsetY, targetW, targetH, 0, 0, targetW, targetH);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(srcCanvas, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
         return cropCanvas;
     }
 
