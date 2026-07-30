@@ -5542,7 +5542,8 @@ body {
 
 /* Legal Policy Bottom Sheet */
 #legal-modal {
-    align-items: flex-end;
+    align-items: flex-end !important;
+    z-index: 99999 !important;
 }
 
 #legal-modal .mini-popup {
@@ -5556,18 +5557,20 @@ body {
     transition: transform 0.32s cubic-bezier(0.2, 0, 0, 1);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5) !important;
     background: var(--md-sys-color-surface-container-high) !important;
+    pointer-events: auto;
 }
 
 #legal-modal.active,
 #legal-modal.show {
     background: rgba(0, 0, 0, 0.72) !important;
     visibility: visible !important;
+    opacity: 1 !important;
     transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), visibility 0s;
 }
 
 #legal-modal.active .mini-popup,
 #legal-modal.show .mini-popup {
-    transform: translateY(0);
+    transform: translateY(0) !important;
 }
 
 .bottom-sheet-drag-handle {
