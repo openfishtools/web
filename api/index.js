@@ -41,21 +41,19 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..')));
 
-const pkg = require('../package.json');
-
 function getDynamicVersion() {
     if (process.env.VERCEL_GIT_COMMIT_SHA) {
-        return `${pkg.version || '1.2.2'}-${process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7)}`;
+        return process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7);
     }
     if (process.env.VERCEL_DEPLOYMENT_ID) {
-        return `${pkg.version || '1.2.2'}-${process.env.VERCEL_DEPLOYMENT_ID}`;
+        return process.env.VERCEL_DEPLOYMENT_ID;
     }
     try {
         const indexPath = path.join(__dirname, '..', 'index.html');
         const stat = fs.statSync(indexPath);
-        return `${pkg.version || '1.2.2'}-dev-${Math.floor(stat.mtimeMs)}`;
+        return `dev-${Math.floor(stat.mtimeMs)}`;
     } catch (e) {
-        return pkg.version || '1.2.2';
+        return 'dev';
     }
 }
 
