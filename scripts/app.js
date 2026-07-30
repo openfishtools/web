@@ -2728,8 +2728,26 @@ document.addEventListener('DOMContentLoaded', () => {
        SERVICE WORKER REGISTRATION
     ═══════════════════════════════════════════════════════ */
     if ('serviceWorker' in navigator) {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
+        });
+
         navigator.serviceWorker.register('/sw.js').then((reg) => {
             reg.update();
+            reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                if (installingWorker) {
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    };
+                }
+            };
         }).catch(err => {
             console.debug('[SW] Registration skipped/failed:', err);
         });
