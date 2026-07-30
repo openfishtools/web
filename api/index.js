@@ -41,6 +41,16 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..')));
 
+const APP_VERSION = '1.2.1';
+
+// API version endpoint for client auto-update and cache invalidation
+app.get('/api/version', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.json({ version: APP_VERSION, timestamp: Date.now() });
+});
+
 // Proxy/redirect /realesrgan requests to target
 app.get('/realesrgan/*', (req, res) => {
     res.redirect(`https://upscale.chino.icu${req.originalUrl}`);

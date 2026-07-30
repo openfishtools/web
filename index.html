@@ -6,14 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CHROS</title>
     <meta name="description" content="CHROS is the ultimate resource hub for video editors and creators. Access a curated collection of premium presets, essential editing software, professional plugins, and powerful online tools to supercharge your creative workflow.">
+    <meta name="app-version" content="1.2.1">
     <link rel="stylesheet" href="assets/fonts/outfit.css">
     <link rel="stylesheet" href="assets/fonts/material-symbols.css">
     <link rel="stylesheet" href="assets/fonts/brand-icons.css">
-    <link rel="stylesheet" href="styles/main.css?v=1.1">
-    <link rel="stylesheet" href="styles/responsive.css?v=1.1">
+    <link rel="stylesheet" href="styles/main.css?v=1.2.1">
+    <link rel="stylesheet" href="styles/responsive.css?v=1.2.1">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.webgpu.min.js"></script>
-    <script src="scripts/i18n.js"></script>
+    <script src="scripts/i18n.js?v=1.2.1"></script>
 </head>
 
 <body>
@@ -53,6 +54,22 @@
         </nav>
 
         <main class="main-content">
+
+            <div id="offline-banner" class="offline-banner hidden" role="alert">
+                <span class="material-symbols-rounded offline-banner-icon" id="offline-banner-icon">wifi_off</span>
+                <span class="offline-banner-text" id="offline-banner-text" data-i18n="offline_notice">Kamu sedang offline, kamu hanya bisa mengakses Tools</span>
+            </div>
+
+            <div id="offline-download-prompt" class="offline-download-prompt hidden" role="dialog">
+                <div class="offline-prompt-content">
+                    <span class="material-symbols-rounded offline-prompt-icon">download_for_offline</span>
+                    <span class="offline-prompt-text" id="offline-prompt-text" data-i18n="offline_download_prompt">Do you want to download required files to work offline?</span>
+                </div>
+                <div class="offline-prompt-actions" id="offline-prompt-actions">
+                    <button type="button" class="offline-btn offline-btn-download" id="btn-download-offline-assets" data-i18n="btn_download_files">Download</button>
+                    <button type="button" class="offline-btn offline-btn-later" id="btn-later-offline-assets" data-i18n="btn_later">Later</button>
+                </div>
+            </div>
 
             <section id="social" class="section active">
                 <div class="page-header-row">
@@ -1180,20 +1197,20 @@
     </div>
 
     <script src="assets/jszip/jszip.min.js"></script>
-    <script src="scripts/app.js"></script>
-    <script src="scripts/ffmpeg-tool.js"></script>
-    <script src="scripts/audio-extractor-tool.js"></script>
-    <script src="scripts/tiktok-quality-tool.js"></script>
+    <script src="scripts/app.js?v=1.2.1"></script>
+    <script src="scripts/ffmpeg-tool.js?v=1.2.1"></script>
+    <script src="scripts/audio-extractor-tool.js?v=1.2.1"></script>
+    <script src="scripts/tiktok-quality-tool.js?v=1.2.1"></script>
 
-    <script src="scripts/tiktok-stats-tool.js"></script>
-    <script src="scripts/tiktok-downloader.js"></script>
+    <script src="scripts/tiktok-stats-tool.js?v=1.2.1"></script>
+    <script src="scripts/tiktok-downloader.js?v=1.2.1"></script>
     <script src="assets/upscale/webm-muxer.min.js"></script>
-    <script src="scripts/upscale-gpu-enhancer.js"></script>
-    <script src="scripts/upscale-tool.js"></script>
-    <script src="scripts/video-interpolation.js"></script>
-    <script src="scripts/image-sequence-tool.js"></script>
-    <script src="scripts/fivemb-generator.js"></script>
-    <script src="scripts/ae-to-am-beatmark-tool.js"></script>
+    <script src="scripts/upscale-gpu-enhancer.js?v=1.2.1"></script>
+    <script src="scripts/upscale-tool.js?v=1.2.1"></script>
+    <script src="scripts/video-interpolation.js?v=1.2.1"></script>
+    <script src="scripts/image-sequence-tool.js?v=1.2.1"></script>
+    <script src="scripts/fivemb-generator.js?v=1.2.1"></script>
+    <script src="scripts/ae-to-am-beatmark-tool.js?v=1.2.1"></script>
 
 </body>
 

@@ -40,8 +40,9 @@ npm install
 
 echo ""
 echo "=========================================="
-echo "🔒 Obfuscating JavaScript files..."
+echo "🧹 Cleaning old obfuscated files & re-building high-security JS..."
 echo "=========================================="
+rm -rf ./dist/scripts
 npm run obfuscate
 
 echo ""

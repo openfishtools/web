@@ -5,8 +5,8 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "dev": "nodemon api/index.js",
-    "obfuscate": "javascript-obfuscator ./scripts --output ./dist/scripts --compact true --control-flow-flattening false",
+    "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('./dist/scripts')) fs.rmSync('./dist/scripts', {recursive:true, force:true});\"",
+    "obfuscate": "npm run clean && javascript-obfuscator ./scripts --output ./dist/scripts --compact true --control-flow-flattening true --control-flow-flattening-threshold 0.55 --dead-code-injection true --dead-code-injection-threshold 0.3 --string-array true --string-array-encoding 'base64' --string-array-threshold 0.75 --identifier-names-generator 'hexadecimal' --split-strings true --split-strings-chunk-length 5 --transform-object-keys true",
     "build": "npm run obfuscate"
   },
   "dependencies": {

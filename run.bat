@@ -24,8 +24,9 @@ call npm install
 
 echo.
 echo ==========================================
-echo 🔒 Obfuscating JavaScript files...
+echo 🧹 Cleaning old obfuscated files & re-building high-security JS...
 echo ==========================================
+if exist "%~dp0dist\scripts" rmdir /s /q "%~dp0dist\scripts"
 call npm run obfuscate
 
 echo.

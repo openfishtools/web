@@ -1556,6 +1556,16 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const targetTab = item.getAttribute('data-tab');
 
+            if (!navigator.onLine && targetTab !== 'tools') {
+                e.stopImmediatePropagation();
+                const offlineBanner = document.getElementById('offline-banner');
+                if (offlineBanner) {
+                    offlineBanner.classList.add('banner-shake');
+                    setTimeout(() => offlineBanner.classList.remove('banner-shake'), 400);
+                }
+                return false;
+            }
+
             if (e.isTrusted) {
                 targetSubId = null;
             }
@@ -2671,7 +2681,296 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const initialTab = (targetTab === 'fishtoolupdate') ? 'resource' : (targetTab || 'social');
+    /* ═══════════════════════════════════════════════════════
+       AUTOMATIC VERSION CHECK & CACHE INVALIDATION
+    ═══════════════════════════════════════════════════════ */
+    const checkAppVersion = async () => {
+        if (!navigator.onLine) return;
+        try {
+            const res = await fetch(`${API_URL}/version?_t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.version) {
+                const storedVersion = localStorage.getItem('chros_app_version');
+                if (storedVersion && storedVersion !== data.version) {
+                    console.log(`[Version] New release detected: ${data.version} (current: ${storedVersion}). Invalidate cache & reload...`);
+                    localStorage.setItem('chros_app_version', data.version);
+                    
+                    if ('caches' in window) {
+                        try {
+                            const keys = await caches.keys();
+                            await Promise.all(keys.map(k => caches.delete(k)));
+                        } catch (e) {}
+                    }
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('icon_cache_')) {
+                            localStorage.removeItem(k);
+                        }
+                    });
+
+                    window.location.reload(true);
+                    return;
+                }
+                localStorage.setItem('chros_app_version', data.version);
+            }
+        } catch (e) {
+            console.debug('[Version] Version check skipped:', e);
+        }
+    };
+
+    /* ═══════════════════════════════════════════════════════
+       SERVICE WORKER REGISTRATION
+    ═══════════════════════════════════════════════════════ */
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.debug('[SW] Registration skipped/failed:', err);
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       OFFLINE STATUS DETECTION, RECONNECTION & PRE-DOWNLOAD
+    ═══════════════════════════════════════════════════════ */
+    const offlineBanner = document.getElementById('offline-banner');
+    const offlineBannerIcon = document.getElementById('offline-banner-icon');
+    const offlineBannerText = document.getElementById('offline-banner-text');
+    const offlineDownloadPrompt = document.getElementById('offline-download-prompt');
+    const btnDownloadOffline = document.getElementById('btn-download-offline-assets');
+    const btnLaterOffline = document.getElementById('btn-later-offline-assets');
+    const offlinePromptText = document.getElementById('offline-prompt-text');
+
+    let isOfflineState = !navigator.onLine;
+    let connectedTimer = null;
+    let promptTimer = null;
+
+    const showOfflineBanner = (mode) => {
+        if (!offlineBanner) return;
+        if (connectedTimer) clearTimeout(connectedTimer);
+
+        offlineBanner.classList.remove('hidden', 'banner-slide-up', 'banner-shake');
+        
+        if (mode === 'connected') {
+            offlineBanner.classList.add('connected');
+            if (offlineBannerIcon) offlineBannerIcon.textContent = 'wifi';
+            if (offlineBannerText) offlineBannerText.textContent = window.getTranslation('online_connected');
+        } else {
+            offlineBanner.classList.remove('connected');
+            if (offlineBannerIcon) offlineBannerIcon.textContent = 'wifi_off';
+            if (offlineBannerText) offlineBannerText.textContent = window.getTranslation('offline_notice');
+        }
+
+        // Trigger slide down animation
+        offlineBanner.classList.remove('banner-slide-down');
+        void offlineBanner.offsetWidth; // Force reflow
+        offlineBanner.classList.add('banner-slide-down');
+    };
+
+    const hideOfflineBanner = (onComplete) => {
+        if (!offlineBanner || offlineBanner.classList.contains('hidden')) {
+            if (onComplete) onComplete();
+            return;
+        }
+        offlineBanner.classList.remove('banner-slide-down');
+        offlineBanner.classList.add('banner-slide-up');
+        setTimeout(() => {
+            offlineBanner.classList.add('hidden');
+            offlineBanner.classList.remove('banner-slide-up', 'connected');
+            if (onComplete) onComplete();
+        }, 280);
+    };
+
+    const checkOfflineAssetsCached = async () => {
+        if (localStorage.getItem('chros_offline_assets_downloaded') === 'true') {
+            if ('caches' in window) {
+                try {
+                    const hasCache = await caches.has('chros-offline-v1');
+                    if (hasCache) {
+                        const cache = await caches.open('chros-offline-v1');
+                        const match = await cache.match('assets/ffmpeg/ffmpeg-core-st.wasm');
+                        if (match) return true;
+                    }
+                } catch (e) {}
+            }
+        }
+        return false;
+    };
+
+    const triggerDownloadPrompt = async () => {
+        if (!navigator.onLine) return;
+
+        const alreadyCached = await checkOfflineAssetsCached();
+        if (alreadyCached) {
+            console.log('[CHROS Offline] All required offline assets are already cached.');
+            return;
+        }
+
+        console.log('[CHROS Offline] Offline assets missing — triggering download prompt (5s)...');
+        if (offlineDownloadPrompt) {
+            offlineDownloadPrompt.classList.remove('hidden', 'banner-slide-up');
+            offlineDownloadPrompt.classList.remove('banner-slide-down');
+            void offlineDownloadPrompt.offsetWidth; // Force reflow
+            offlineDownloadPrompt.classList.add('banner-slide-down');
+
+            if (promptTimer) clearTimeout(promptTimer);
+            promptTimer = setTimeout(() => {
+                hideDownloadPrompt();
+            }, 5000);
+        }
+    };
+
+    const hideDownloadPrompt = () => {
+        if (!offlineDownloadPrompt || offlineDownloadPrompt.classList.contains('hidden')) return;
+        offlineDownloadPrompt.classList.remove('banner-slide-down');
+        offlineDownloadPrompt.classList.add('banner-slide-up');
+        setTimeout(() => {
+            offlineDownloadPrompt.classList.add('hidden');
+            offlineDownloadPrompt.classList.remove('banner-slide-up');
+        }, 280);
+    };
+
+    if (btnLaterOffline) {
+        btnLaterOffline.addEventListener('click', () => {
+            if (promptTimer) clearTimeout(promptTimer);
+            hideDownloadPrompt();
+        });
+    }
+
+    if (btnDownloadOffline) {
+        btnDownloadOffline.addEventListener('click', async () => {
+            if (promptTimer) clearTimeout(promptTimer);
+            if (offlinePromptText) {
+                offlinePromptText.textContent = window.getTranslation('offline_downloading');
+            }
+            btnDownloadOffline.style.display = 'none';
+            if (btnLaterOffline) btnLaterOffline.style.display = 'none';
+
+            const assetsToFetch = [
+                'assets/ffmpeg/ffmpeg.js',
+                'assets/ffmpeg/index.js',
+                'assets/ffmpeg/ffmpeg-core-st.js',
+                'assets/ffmpeg/ffmpeg-core-st.wasm',
+                'assets/ffmpeg/ffmpeg-core.js',
+                'assets/ffmpeg/ffmpeg-core.wasm',
+                'assets/ffmpeg/814.ffmpeg.js'
+            ];
+
+            try {
+                if ('caches' in window) {
+                    const cache = await caches.open('chros-offline-v1');
+                    await Promise.all(
+                        assetsToFetch.map(asset => 
+                            fetch(asset).then(res => {
+                                if (res.ok) cache.put(asset, res);
+                            }).catch(err => console.warn(`Failed to pre-cache ${asset}:`, err))
+                        )
+                    );
+                }
+                localStorage.setItem('chros_offline_assets_downloaded', 'true');
+                if (offlinePromptText) {
+                    offlinePromptText.textContent = window.getTranslation('offline_download_complete');
+                }
+                setTimeout(() => {
+                    hideDownloadPrompt();
+                }, 2000);
+            } catch (err) {
+                console.error('Offline asset download failed:', err);
+                hideDownloadPrompt();
+            }
+        });
+    }
+
+    const updateOfflineTabNavigation = (isOffline) => {
+        navItems.forEach(item => {
+            const tabName = item.getAttribute('data-tab');
+            if (isOffline && tabName !== 'tools') {
+                item.classList.add('disabled-offline');
+                item.setAttribute('aria-disabled', 'true');
+            } else {
+                item.classList.remove('disabled-offline');
+                item.removeAttribute('aria-disabled');
+            }
+        });
+
+        if (isOffline) {
+            const activeNav = document.querySelector('.nav-item.active');
+            const activeTab = activeNav ? activeNav.getAttribute('data-tab') : null;
+            if (activeTab !== 'tools') {
+                const toolsTabItem = document.querySelector('.nav-item[data-tab="tools"]');
+                if (toolsTabItem) {
+                    toolsTabItem.click();
+                }
+            }
+        }
+    };
+
+    window.addEventListener('offline', () => {
+        console.log('[CHROS Network] Connection status: OFFLINE');
+        isOfflineState = true;
+        showOfflineBanner('offline');
+        updateOfflineTabNavigation(true);
+        hideDownloadPrompt();
+    });
+
+    window.addEventListener('online', () => {
+        console.log('[CHROS Network] Connection status: ONLINE (was offline:', isOfflineState, ')');
+        if (isOfflineState) {
+            isOfflineState = false;
+            showOfflineBanner('connected');
+            updateOfflineTabNavigation(false);
+
+            if (connectedTimer) clearTimeout(connectedTimer);
+            connectedTimer = setTimeout(() => {
+                hideOfflineBanner(() => {
+                    triggerDownloadPrompt();
+                });
+            }, 3000);
+        } else {
+            updateOfflineTabNavigation(false);
+            triggerDownloadPrompt();
+        }
+    });
+
+    // Initial check on page load
+    if (isOfflineState) {
+        console.log('[CHROS Network] Page loaded in OFFLINE state');
+        showOfflineBanner('offline');
+        updateOfflineTabNavigation(true);
+    } else {
+        console.log('[CHROS Network] Page loaded in ONLINE state');
+        updateOfflineTabNavigation(false);
+        setTimeout(triggerDownloadPrompt, 1000);
+    }
+
+    // DevTools testing helper
+    window.testOfflineNotice = (mode = 'offline') => {
+        console.log('[CHROS DevTools Test]', mode);
+        if (mode === 'offline') {
+            showOfflineBanner('offline');
+            updateOfflineTabNavigation(true);
+        } else if (mode === 'connected') {
+            showOfflineBanner('connected');
+            updateOfflineTabNavigation(false);
+            if (connectedTimer) clearTimeout(connectedTimer);
+            connectedTimer = setTimeout(() => {
+                hideOfflineBanner(() => {
+                    triggerDownloadPrompt();
+                });
+            }, 3000);
+        } else if (mode === 'prompt') {
+            localStorage.removeItem('chros_offline_assets_downloaded');
+            if ('caches' in window) caches.delete('chros-offline-v1');
+            triggerDownloadPrompt();
+        }
+    };
+
+    checkAppVersion();
+
+    let initialTab = (targetTab === 'fishtoolupdate') ? 'resource' : (targetTab || 'social');
+    if (!navigator.onLine) {
+        initialTab = 'tools';
+    }
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
 
@@ -2697,6 +2996,10 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAndOpenFishTools();
 
     window.addEventListener('hashchange', () => {
+        if (!navigator.onLine && window.location.hash !== '#tools') {
+            window.location.hash = '#tools';
+            return;
+        }
         if (window.location.hash === '#fishtoolupdate') {
             const resourceTabItem = document.querySelector('.nav-item[data-tab="resource"]');
             if (resourceTabItem) resourceTabItem.click();
@@ -2716,6 +3019,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             pauseAllPlayingVideos();
+        } else {
+            checkAppVersion();
         }
     });
 

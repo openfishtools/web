@@ -1,30 +1,30 @@
 :root {
     --primary-h: 75;
-    --primary-s: 50%;
-    --primary-l: 45%;
+    --primary-s: 38%;
+    --primary-l: 35%;
 
     --md-sys-color-primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
     --md-sys-color-on-primary: hsl(var(--primary-h), 100%, 100%);
-    --md-sys-color-primary-container: hsl(var(--primary-h), 45%, 90%);
-    --md-sys-color-on-primary-container: hsl(var(--primary-h), 60%, 15%);
+    --md-sys-color-primary-container: hsl(var(--primary-h), 30%, 78%);
+    --md-sys-color-on-primary-container: hsl(var(--primary-h), 55%, 12%);
 
-    --md-sys-color-secondary: hsl(var(--primary-h), 15%, 45%);
+    --md-sys-color-secondary: hsl(var(--primary-h), 15%, 40%);
     --md-sys-color-on-secondary: hsl(0, 0%, 100%);
-    --md-sys-color-secondary-container: hsl(var(--primary-h), 25%, 92%);
-    --md-sys-color-on-secondary-container: hsl(var(--primary-h), 30%, 20%);
+    --md-sys-color-secondary-container: hsl(var(--primary-h), 20%, 80%);
+    --md-sys-color-on-secondary-container: hsl(var(--primary-h), 30%, 15%);
 
-    --md-sys-color-surface: hsl(var(--primary-h), 15%, 98%);
-    --md-sys-color-on-surface: hsl(var(--primary-h), 20%, 10%);
-    --md-sys-color-surface-variant: hsl(var(--primary-h), 15%, 90%);
-    --md-sys-color-on-surface-variant: hsl(var(--primary-h), 20%, 30%);
+    --md-sys-color-surface: hsl(var(--primary-h), 18%, 86%);
+    --md-sys-color-on-surface: hsl(var(--primary-h), 30%, 10%);
+    --md-sys-color-surface-variant: hsl(var(--primary-h), 16%, 80%);
+    --md-sys-color-on-surface-variant: hsl(var(--primary-h), 22%, 24%);
 
-    --md-sys-color-surface-container-low: hsl(var(--primary-h), 10%, 96%);
-    --md-sys-color-surface-container: hsl(var(--primary-h), 10%, 94%);
-    --md-sys-color-surface-container-high: hsl(var(--primary-h), 10%, 92%);
-    --md-sys-color-surface-container-highest: hsl(var(--primary-h), 10%, 90%);
+    --md-sys-color-surface-container-low: hsl(var(--primary-h), 16%, 84%);
+    --md-sys-color-surface-container: hsl(var(--primary-h), 16%, 82%);
+    --md-sys-color-surface-container-high: hsl(var(--primary-h), 16%, 79%);
+    --md-sys-color-surface-container-highest: hsl(var(--primary-h), 16%, 76%);
 
-    --md-sys-color-outline: hsl(var(--primary-h), 10%, 50%);
-    --md-sys-color-outline-variant: hsl(var(--primary-h), 15%, 80%);
+    --md-sys-color-outline: hsl(var(--primary-h), 12%, 50%);
+    --md-sys-color-outline-variant: hsl(var(--primary-h), 14%, 70%);
 
     --radius-xs: 4px;
     --radius-s: 8px;
@@ -34,10 +34,13 @@
     --radius-full: 100px;
 
     --transition-standard: 250ms cubic-bezier(0.2, 0.0, 0, 1.0);
-    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.12), 0 1px 3px 1px rgba(0, 0, 0, 0.09);
 
     --os-icon-filter: brightness(0) invert(0.2);
     --os-icon-filter-active: brightness(0) invert(1);
+
+    --panel-recessed-bg: hsl(var(--primary-h), 16%, 76%);
+    --panel-recessed-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.12), inset 0 -2px 4px rgba(0, 0, 0, 0.06);
 }
 
 :root.dark-theme {
@@ -66,6 +69,9 @@
 
     --os-icon-filter: brightness(0) invert(1);
     --os-icon-filter-active: brightness(0) invert(0.1);
+
+    --panel-recessed-bg: hsl(var(--primary-h), 15%, 4%);
+    --panel-recessed-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 -3px 8px rgba(0, 0, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -95,6 +101,9 @@
 
         --os-icon-filter: brightness(0) invert(1);
         --os-icon-filter-active: brightness(0) invert(0.1);
+
+        --panel-recessed-bg: hsl(var(--primary-h), 15%, 4%);
+        --panel-recessed-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 -3px 8px rgba(0, 0, 0, 0.5);
     }
 }
 
@@ -295,6 +304,183 @@ body {
     margin: 0;
     border-radius: 0;
     position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Recessed Integrated Top Banner System (Inside Shadow, Darker BG, No Borders) */
+.offline-banner,
+.offline-download-prompt {
+    position: relative;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background-color: var(--panel-recessed-bg) !important;
+    color: var(--md-sys-color-on-surface);
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 0 var(--radius-l) var(--radius-l) !important;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--panel-recessed-shadow) !important;
+    z-index: 20;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.offline-download-prompt {
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.offline-banner.connected {
+    background-color: rgba(46, 125, 50, 0.25) !important;
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.offline-banner.connected .offline-banner-icon {
+    color: var(--md-sys-color-primary) !important;
+}
+
+.offline-banner.hidden,
+.offline-download-prompt.hidden {
+    display: none !important;
+}
+
+.offline-banner-icon {
+    font-size: 22px;
+    color: #e53935;
+    flex-shrink: 0;
+}
+
+.offline-banner-text {
+    text-align: center;
+}
+
+.offline-banner.banner-slide-down,
+.offline-download-prompt.banner-slide-down {
+    animation: integratedPanelExpand 380ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.offline-banner.banner-slide-up,
+.offline-download-prompt.banner-slide-up {
+    animation: integratedPanelCollapse 320ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes integratedPanelExpand {
+    from {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        max-height: 180px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes integratedPanelCollapse {
+    from {
+        max-height: 180px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.offline-banner.banner-shake {
+    animation: bannerShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes bannerShake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(4px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+    40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+.offline-prompt-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.offline-prompt-icon {
+    font-size: 24px;
+    color: var(--md-sys-color-primary);
+    flex-shrink: 0;
+}
+
+.offline-prompt-text {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--md-sys-color-on-surface);
+}
+
+.offline-prompt-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.offline-btn {
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-standard);
+}
+
+.offline-btn-download {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.offline-btn-download:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.offline-btn-later {
+    background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.offline-btn-later:hover {
+    background-color: var(--md-sys-color-surface-container);
+}
+
+
+
+.nav-item.disabled-offline {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
 }
 
 .nav-bar {
@@ -370,6 +556,8 @@ body {
 
 .section.active {
     display: block;
+    flex: 1;
+    min-height: 0;
 }
 
 

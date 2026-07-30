@@ -97,6 +97,13 @@
             "status_processing": "Memproses...",
             "status_error": "Terjadi kesalahan: ",
             "status_cleanup": "Membersihkan memory cache...",
+            "offline_notice": "Kamu sedang offline, kamu hanya bisa mengakses Tools",
+            "online_connected": "Kamu terhubung kembali",
+            "offline_download_prompt": "Apakah kamu ingin mengunduh berkas yang diperlukan agar bisa bekerja secara offline?",
+            "btn_download_files": "Unduh",
+            "btn_later": "Nanti",
+            "offline_downloading": "Mengunduh berkas offline...",
+            "offline_download_complete": "Berkas offline siap digunakan!",
             
             // iOS Warning
             "ios_warn_title": "Pemberitahuan Kompatibilitas iOS",
@@ -366,6 +373,13 @@
             "status_processing": "Processing...",
             "status_error": "An error occurred: ",
             "status_cleanup": "Cleaning up memory cache...",
+            "offline_notice": "You are offline, you can only access Tools",
+            "online_connected": "You're Connected",
+            "offline_download_prompt": "Do you want to download required files to work offline?",
+            "btn_download_files": "Download",
+            "btn_later": "Later",
+            "offline_downloading": "Downloading offline files...",
+            "offline_download_complete": "Offline files ready to use!",
 
             // iOS Warning
             "ios_warn_title": "iOS Compatibility Warning",
