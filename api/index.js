@@ -41,6 +41,9 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..')));
 
+/**
+ * Returns dynamic version string based on Vercel Git Commit SHA, Deployment ID, or local file mtime
+ */
 function getDynamicVersion() {
     if (process.env.VERCEL_GIT_COMMIT_SHA) {
         return process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7);
