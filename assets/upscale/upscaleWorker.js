@@ -9,8 +9,15 @@ class WorkerImage {
   }
 
   getImageCrop(x, y, image, x1, y1, x2, y2) {
+    x = Math.round(x);
+    y = Math.round(y);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+    x2 = Math.round(x2);
+    y2 = Math.round(y2);
     const width = x2 - x1;
-    for (let j = 0; j < y2 - y1; j++) {
+    const height = y2 - y1;
+    for (let j = 0; j < height; j++) {
       const destIndex = (y + j) * this.width * 4 + x * 4;
       const srcIndex = (y1 + j) * image.width * 4 + x1 * 4;
       try {
@@ -291,9 +298,13 @@ self.addEventListener("message", async (e) => {
     const output = new WorkerImage(width * factor, height * factor);
 
     let num_x = 1;
-    for (; (input_size * num_x - width) / (num_x - 1) < min_lap; num_x++);
+    if (width > input_size) {
+      for (; (input_size * num_x - width) / (num_x - 1) < min_lap; num_x++);
+    }
     let num_y = 1;
-    for (; (input_size * num_y - height) / (num_y - 1) < min_lap; num_y++);
+    if (height > input_size) {
+      for (; (input_size * num_y - height) / (num_y - 1) < min_lap; num_y++);
+    }
 
     const locs_x = new Array(num_x);
     const locs_y = new Array(num_y);
@@ -304,10 +315,10 @@ self.addEventListener("message", async (e) => {
 
     const total_lap_x = input_size * num_x - width;
     const total_lap_y = input_size * num_y - height;
-    const base_lap_x = Math.floor(total_lap_x / (num_x - 1));
-    const base_lap_y = Math.floor(total_lap_y / (num_y - 1));
-    const extra_lap_x = total_lap_x - base_lap_x * (num_x - 1);
-    const extra_lap_y = total_lap_y - base_lap_y * (num_y - 1);
+    const base_lap_x = num_x > 1 ? Math.floor(total_lap_x / (num_x - 1)) : 0;
+    const base_lap_y = num_y > 1 ? Math.floor(total_lap_y / (num_y - 1)) : 0;
+    const extra_lap_x = num_x > 1 ? total_lap_x - base_lap_x * (num_x - 1) : 0;
+    const extra_lap_y = num_y > 1 ? total_lap_y - base_lap_y * (num_y - 1) : 0;
 
     locs_x[0] = 0;
     for (let i = 1; i < num_x; i++) {
