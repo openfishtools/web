@@ -5,8 +5,6 @@ const CORE_ASSETS = [
     '/index.html',
     '/styles/main.css',
     '/styles/responsive.css',
-    '/assets/fonts/outfit.css',
-    '/assets/fonts/material-symbols.css',
     '/assets/fonts/brand-icons.css',
     '/scripts/i18n.js',
     '/scripts/app.js',
