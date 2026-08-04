@@ -4898,6 +4898,7 @@ body {
 }
 
 #tiktok-ios-warning-modal,
+#tiktok-v3-warning-modal,
 #offline-resource-modal {
     position: fixed;
     inset: 0;
@@ -4911,6 +4912,7 @@ body {
     transition: opacity 0.25s ease;
 }
 #tiktok-ios-warning-modal.visible,
+#tiktok-v3-warning-modal.visible,
 #offline-resource-modal.visible {
     display: flex !important;
     opacity: 1 !important;

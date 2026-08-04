@@ -138,6 +138,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if (onProceed) onProceed();
         }
     }
+    function showV3WarningModal(onProceed, onCancel) {
+        const v3Modal = document.getElementById('tiktok-v3-warning-modal');
+        const btnV3Cancel = document.getElementById('btn-v3-warning-cancel');
+        const btnV3Proceed = document.getElementById('btn-v3-warning-proceed');
+        if (!v3Modal) {
+            if (onProceed) onProceed();
+            return;
+        }
+        if (typeof window.applyTranslations === 'function') {
+            window.applyTranslations();
+        }
+        v3Modal.classList.remove('hidden');
+        v3Modal.classList.add('visible');
+        const handleProceed = () => {
+            v3Modal.classList.remove('visible');
+            v3Modal.classList.add('hidden');
+            if (onProceed) onProceed();
+        };
+        const handleCancel = () => {
+            v3Modal.classList.remove('visible');
+            v3Modal.classList.add('hidden');
+            if (onCancel) onCancel();
+        };
+        if (btnV3Proceed && btnV3Cancel) {
+            btnV3Proceed.onclick = handleProceed;
+            btnV3Cancel.onclick = handleCancel;
+        } else {
+            if (onProceed) onProceed();
+        }
+    }
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return;
         logSection('UNCAUGHT ERROR');
@@ -306,6 +336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     'v1',
                     () => {  },
                     () => doSwitch('v2')
+                );
+            } else if (clickedVersion === 'v3') {
+                showV3WarningModal(
+                    () => { doSwitch('v3'); },
+                    () => {}
                 );
             } else {
                 doSwitch(clickedVersion);
