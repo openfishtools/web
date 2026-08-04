@@ -4327,7 +4327,23 @@ body {
 .overlay-patched-desc { font-size: 13px; color: rgba(255,255,255,0.65); max-width: 240px; line-height: 1.5; }
 .btn-patched-ignore { margin-top: 4px; padding: 10px 28px; border-radius: 100px; border: 1.5px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .tool-header-icon { font-size: 32px; color: var(--md-sys-color-primary); }
+.tool-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tool-title { font-size: 1.25rem; font-weight: 600; }
+.tool-status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    line-height: 1.4;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+}
+.patch-partially-badge {
+    background: color-mix(in srgb, #f4a21e 15%, transparent);
+    color: #f4a21e;
+    border: 1px solid color-mix(in srgb, #f4a21e 40%, transparent);
+}
 .res-ver-badge-inline-wrap { margin-top: 4px; display: inline-block; }
 .btn-icon-ghost { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); transition: background 0.2s ease; }
 .icon-22 { font-size: 22px; }
