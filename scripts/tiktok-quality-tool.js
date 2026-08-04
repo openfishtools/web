@@ -976,7 +976,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'",
                 '-c:v', 'wmv2',
                 '-qscale:v', '1',
-                '-r', '60',
                 '-c:a', 'wmav2',
                 '-b:a', '320k',
                 'output.wmv'
@@ -1039,8 +1038,13 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
         }
     }
-    const FAKE_SAMPLE_SIZE       = 8;
-    const FAKE_SAMPLE_BYTES      = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
+    const FAKE_SAMPLE_SIZE       = 10;
+    const FAKE_SAMPLE_BYTES      = new Uint8Array([
+        0x00, 0x00, 0x00, 0x06, // length of NAL unit
+        0x0C,                   // NAL unit header (forbidden_zero_bit=0, nal_ref_idc=00, nal_unit_type=12: Filler)
+        0xFF, 0xFF, 0xFF, 0xFF, // filler byte payload
+        0x80                    // rbsp trailing bits
+    ]);
     const VIDEO_TIMESCALE        = 90000;
     const VIDEO_DURATION         = 2269500;
     const VIDEO_EDIT_MEDIA_TIME  = 0;
@@ -1248,9 +1252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stsc', payload);
     }
-    function buildStco(originalOffsets, delta, fakeOffset, fakeSampleCount) {
-        const hasFake = fakeOffset !== null && fakeOffset !== undefined;
-        const count   = originalOffsets.length + (hasFake ? fakeSampleCount : 0);
+    function buildStco(originalOffsets, delta, fakeSampleCount) {
+        const count   = originalOffsets.length + fakeSampleCount;
         const payload = new Uint8Array(4 + 4 + count * 4);
         writeU32BE(payload, 4, count);
         let off = 8;
@@ -1259,11 +1262,11 @@ document.addEventListener('DOMContentLoaded', () => {
             assertUint32(shifted, 'stco.chunk_offset');
             writeU32BE(payload, off, shifted); off += 4;
         }
-        if (hasFake) {
-            assertUint32(fakeOffset, 'stco.fake_sample_offset');
-            for (let i = 0; i < fakeSampleCount; i++) {
-                writeU32BE(payload, off, fakeOffset); off += 4;
-            }
+        for (let i = 0; i < fakeSampleCount; i++) {
+            const originalIndex = i % originalOffsets.length;
+            const shifted = originalOffsets[originalIndex] + delta;
+            assertUint32(shifted, 'stco.fake_sample_offset');
+            writeU32BE(payload, off, shifted); off += 4;
         }
         return makeBox('stco', payload);
     }
@@ -1286,10 +1289,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return stcoBoxes;
     }
-    function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeOffset, fakeSampleCount) {
+    function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeSampleCount) {
         const map = new Map();
         for (const stco of stcoBoxes) {
-            map.set(stco, buildStco(parseStco(stco), delta, stco === videoStco ? fakeOffset : null, fakeSampleCount));
+            map.set(stco, buildStco(parseStco(stco), delta, stco === videoStco ? fakeSampleCount : 0));
         }
         return map;
     }
@@ -1382,26 +1385,23 @@ document.addEventListener('DOMContentLoaded', () => {
             [stsz, buildStsz(originalSizes, fakeSampleCount)],
         ]);
         const placeholderRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, 0, 0, fakeSampleCount).forEach((v, k) => placeholderRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, 0, fakeSampleCount).forEach((v, k) => placeholderRep.set(k, v));
         const moovPlaceholder   = rebuildBox(moov, placeholderRep);
         const preservedBytes    = concatBytes(preservedTopLevel);
         const oldMdatPayload    = new Uint8Array(data.buffer, data.byteOffset + mdat.contentStart, mdat.end - mdat.contentStart);
         const newMdatStart1     = ftyp.size + moovPlaceholder.byteLength + preservedBytes.byteLength + 8;
         const delta1            = newMdatStart1 - mdat.contentStart;
-        const fakeOffset1       = newMdatStart1 + oldMdatPayload.byteLength;
         _log(`  Pass 1 — moovPlaceholder: ${moovPlaceholder.byteLength}B, newMdatStart: ${newMdatStart1}, delta: ${delta1}`);
         let finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta1, fakeOffset1, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, delta1, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovV2        = rebuildBox(moov, finalRep);
         const newMdatStart2 = ftyp.size + moovV2.byteLength + preservedBytes.byteLength + 8;
         const delta2        = newMdatStart2 - mdat.contentStart;
-        const fakeOffset2   = newMdatStart2 + oldMdatPayload.byteLength;
-        _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}, fakeOffset: ${fakeOffset2}`);
+        _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}`);
         finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta2, fakeOffset2, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
+        buildStcoReplacements(stcoBoxes, stco, delta2, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovFinal      = rebuildBox(moov, finalRep);
-        const mdatPayloadNew = concatBytes([oldMdatPayload, FAKE_SAMPLE_BYTES]);
-        const mdatNew        = makeBox('mdat', mdatPayloadNew);
+        const mdatNew        = makeBox('mdat', oldMdatPayload);
         const ftypBytes      = boxBytes(ftyp);
         const output         = concatBytes([ftypBytes, moovFinal, preservedBytes, mdatNew]);
         _log(`  Pass 3 — moovFinal: ${moovFinal.byteLength}B`);
@@ -1729,17 +1729,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pct = Math.min(92, Math.round(40 + progress * 52));
                 progressFill.style.width = `${pct}%`;
                 progressPercent.textContent = `${pct}%`;
-                progressText.textContent = `Processing... ${pct}%`;
+                progressText.textContent = pct >= 90
+                    ? `Almost done, please wait...`
+                    : `Processing... ${pct}%`;
             };
             ffmpeg.on('progress', pSingleHandler);
 
-            const crf = targetBitrateMbps >= 3.5 ? 23 : (targetBitrateMbps >= 2.0 ? 25 : 27);
+            const crf = targetBitrateMbps >= 3.5 ? 19 : (targetBitrateMbps >= 2.0 ? 21 : 23);
 
             await ffmpeg.exec([
                 '-y', '-i', 'input.mp4',
                 '-threads', threads,
                 '-c:v', 'libx264',
-                '-preset', 'slow',
+                '-preset', 'slower',
                 '-crf', `${crf}`,
                 '-x264opts', 'aq-mode=3:aq-strength=0.85:psy-rd=1.0,0.15',
                 '-pix_fmt', 'yuv420p',
