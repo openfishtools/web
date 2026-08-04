@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropInner = document.getElementById('tool-fivemb-inner');
     const statusText = document.getElementById('tool-fivemb-status');
 
-    // Layer selector UI elements
     const layersContainer = document.getElementById('tool-fivemb-layers-container');
     const layersList = document.getElementById('tool-fivemb-layers-list');
     const selectAllBtn = document.getElementById('tool-fivemb-select-all');
@@ -16,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let loadedXmlText = null;
     let currentFilter = 'all'; // 'all' | 'photo' | 'video' | 'audio'
 
-    // Predefined pleasant random colors for audio placeholders
     const AUDIO_COLORS = [
         '#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c',
         '#4dabf7', '#748ffc', '#da77f2', '#f783ac',
@@ -29,14 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return color;
     }
 
-    // File input selection
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFileSelection(e.target.files[0]);
         }
     });
 
-    // Drag & Drop event handlers
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -154,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 statusText.innerHTML = '';
 
-                // Translate any newly rendered elements
                 if (typeof window.translateUI === 'function') {
                     window.translateUI();
                 }
@@ -165,8 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsText(file);
     }
-
-    // ── Filter tabs ──────────────────────────────────────────────────────────
 
     function renderFilterTabs(layers) {
         if (!filterTabsContainer) return;
@@ -199,7 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => {
                 currentFilter = tab.key;
                 applyFilter();
-                // Update active state
                 filterTabsContainer.querySelectorAll('.fivemb-filter-tab').forEach(b => {
                     b.classList.toggle('active', b.dataset.filter === currentFilter);
                 });
@@ -216,8 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
             item.style.display = visible ? '' : 'none';
         });
     }
-
-    // ── Layer list items ─────────────────────────────────────────────────────
 
     function formatDuration(startTime, endTime) {
         if (startTime === null || endTime === null) return "";
@@ -245,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 1. Shapes (Photos & Videos)
         const shapes = xmlDoc.getElementsByTagName("shape");
         for (let i = 0; i < shapes.length; i++) {
             const shape = shapes[i];
@@ -291,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2. Audios (Sound tracks)
         const audios = xmlDoc.getElementsByTagName("audio");
         for (let i = 0; i < audios.length; i++) {
             const audio = audios[i];
@@ -368,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         checkbox.addEventListener("change", updateItemVisual);
 
-        // Toggle checkbox on clicking item
         item.addEventListener("click", (e) => {
             if (e.target !== checkbox) {
                 checkbox.checked = !checkbox.checked;
@@ -379,8 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateItemVisual();
         return item;
     }
-
-    // ── Bulk selection (scoped to visible items only) ─────────────────────────
 
     if (selectAllBtn) {
         selectAllBtn.addEventListener('click', () => {
@@ -418,9 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return visible;
     }
 
-    // ── Export handler ────────────────────────────────────────────────────────
-
-    // Realistic placeholder filenames by type
     function getPlaceholderFilename(type, originalLabel) {
         if (type === 'video') {
             if (/\.mov$/i.test(originalLabel)) return 'placeholder.mov';
@@ -444,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'placeholder';
     }
 
-    // Convert hex color (#rrggbb) -> AM-style ARGB hex (#ffrrggbb)
     function hexToArgb(hex) {
         const r = hex.slice(1, 3);
         const g = hex.slice(3, 5);
@@ -463,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedIds.add(cb.getAttribute('data-id'));
                 });
 
-                // Build a map of layer audio colors from the rendered items
                 const audioColorMap = {};
                 layersList.querySelectorAll('.fivemb-layer-item[data-type="audio"]').forEach(item => {
                     audioColorMap[item.dataset.id] = item.dataset.audioColor;
@@ -474,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const activeMediaUris = new Set();
 
-                // 1. Process shapes (photos & videos)
                 const shapes = xmlDoc.getElementsByTagName("shape");
                 for (let i = 0; i < shapes.length; i++) {
                     const shape = shapes[i];
@@ -493,8 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             const layerType = isVideo ? 'video' : 'photo';
                             const placeholder = getPlaceholderFilename(layerType, label);
 
-                            // Replace with a fake-file media fill (fillType stays "media")
-                            // but point to a placeholder filename so Alight Motion treats it as missing media
                             shape.setAttribute("fillType", "media");
 
                             if (isVideo) {
@@ -507,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 shape.setAttribute("label", placeholder);
                             }
 
-                            // Remove existing fillColor to avoid conflicts
                             const existingFillColor = shape.getElementsByTagName("fillColor")[0];
                             if (existingFillColor) {
                                 existingFillColor.parentNode.removeChild(existingFillColor);
@@ -519,7 +495,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 2. Process audios
                 const audios = xmlDoc.getElementsByTagName("audio");
                 for (let i = 0; i < audios.length; i++) {
                     const audio = audios[i];
@@ -543,7 +518,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 3. Process <media> elements
                 const mediaElements = xmlDoc.getElementsByTagName("media");
                 for (let i = mediaElements.length - 1; i >= 0; i--) {
                     const media = mediaElements[i];

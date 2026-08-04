@@ -4897,7 +4897,8 @@ body {
     color: var(--md-sys-color-on-primary);
 }
 
-#tiktok-ios-warning-modal {
+#tiktok-ios-warning-modal,
+#offline-resource-modal {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
@@ -4909,7 +4910,8 @@ body {
     pointer-events: none;
     transition: opacity 0.25s ease;
 }
-#tiktok-ios-warning-modal.visible {
+#tiktok-ios-warning-modal.visible,
+#offline-resource-modal.visible {
     display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -5560,16 +5562,18 @@ body {
     pointer-events: auto;
 }
 
-#legal-modal.active,
-#legal-modal.show {
+#legal-modal.show,
+#legal-modal.open,
+#legal-modal.active {
     background: rgba(0, 0, 0, 0.72) !important;
     visibility: visible !important;
     opacity: 1 !important;
-    transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1), visibility 0s;
+    pointer-events: auto !important;
 }
 
-#legal-modal.active .mini-popup,
-#legal-modal.show .mini-popup {
+#legal-modal.show .mini-popup,
+#legal-modal.open .mini-popup,
+#legal-modal.active .mini-popup {
     transform: translateY(0) !important;
 }
 

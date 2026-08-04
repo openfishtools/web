@@ -20,14 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAudioFile = null;
     let isProcessing = false;
 
-    // File input change
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFileSelection(e.target.files[0]);
         }
     });
 
-    // Drag & Drop events for ZIP
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -48,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Drag & Drop events for Audio
     audioDropArea.addEventListener('click', () => audioFileInput.click());
     audioDropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -69,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Audio File Selection
     audioFileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleAudioSelection(e.target.files[0]);
@@ -189,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.head.appendChild(s);
         });
 
-        // 1. Prioritas CDN Pertama (dengan Blob Worker Bypass)
         try {
             console.log('🚀 Loading FFmpeg libraries from CDN (with Blob worker security bypass)...');
             if (!window.FFmpegUtil) {
@@ -206,7 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const ffmpegCode = await ffmpegRes.text();
                 const workerCode = await workerRes.text();
 
-                // Convert worker code to a same-origin Blob URL to bypass browser SecurityError
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
                 const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
                                                .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
@@ -222,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('⚠️ CDN load failed, falling back to LOCAL assets/ffmpeg/...', cdnErr);
         }
 
-        // 2. Fallback Lokal jika CDN gagal
         try {
             console.log('📦 Loading FFmpeg libraries from LOCAL fallback...');
             if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
@@ -238,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return !!(window.FFmpegWASM && window.FFmpegUtil);
     }
 
-    // Main conversion function
     async function processSequence(file) {
         isProcessing = true;
         btnStart.classList.add('hidden');
@@ -255,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let ffmpeg = null;
 
         try {
-            // 1. Unzip using JSZip (Actual file reading triggers here)
             const zip = await JSZip.loadAsync(file);
             const imageEntries = [];
 
@@ -263,12 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zipEntry.dir) return;
                 
                 const lowercasePath = relativePath.toLowerCase();
-                // Filter out macOS metadata and system files
                 if (lowercasePath.includes('__macosx') || lowercasePath.split('/').some(part => part.startsWith('.'))) {
                     return;
                 }
 
-                // Check for image extensions
                 if (/\.(jpe?g|png|webp|bmp)$/.test(lowercasePath)) {
                     const filename = relativePath.split('/').pop();
                     const numMatch = filename.match(/^(\d+)/);
@@ -287,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(window.getTranslation('status_empty_zip'));
             }
 
-            // Sort files numerically by their frame prefix
             if (imageEntries.some(e => e.frameIndex !== -1)) {
                 imageEntries.sort((a, b) => a.frameIndex - b.frameIndex);
             } else {
@@ -296,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             console.log(`Found and sorted ${imageEntries.length} frames.`);
             
-            // Get frame extension
             const sampleName = imageEntries[0].filename.toLowerCase();
             if (sampleName.endsWith('.png')) {
                 firstExt = 'png';
@@ -308,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 firstExt = 'jpg';
             }
 
-            // 2. Load FFmpeg WASM
             progressFill.style.width = '15%';
             progressPercent.textContent = '15%';
             progressText.textContent = window.getTranslation('status_loading_engine');
@@ -381,7 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 3. Write image files to FFmpeg Virtual Filesystem
             progressFill.style.width = '30%';
             progressPercent.textContent = '30%';
             progressText.textContent = window.getTranslation('status_writing_frames');
@@ -400,7 +385,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 writtenFiles.push(virtualName);
             }
 
-            // Write audio file if selected
             let virtualAudioName = '';
             if (selectedAudioFile) {
                 const audioExt = selectedAudioFile.name.split('.').pop().toLowerCase() || 'mp3';
@@ -410,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 writtenFiles.push(virtualAudioName);
             }
 
-            // 4. Run FFmpeg command to compile the video
             progressFill.style.width = '55%';
             progressPercent.textContent = '55%';
             progressText.textContent = window.getTranslation('status_encoding');
@@ -422,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? Math.min(navigator.hardwareConcurrency, 4).toString() 
                 : '2';
 
-            // FFmpeg progress handler
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = 55 + Math.round(progress * 40); // 55% to 95%
                 progressFill.style.width = `${percent}%`;
@@ -447,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             if (selectedAudioFile) {
-                // Explicitly map first input video stream and second input audio stream, ignoring input video track
                 command.push(
                     '-map', '0:v',
                     '-map', '1:a',
@@ -464,7 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("FFmpeg ran out of memory. Try using fewer frames or lower resolution images.");
             }
 
-            // 5. Read output and trigger download
             progressFill.style.width = '96%';
             progressPercent.textContent = '96%';
             progressText.textContent = window.getTranslation('status_finalizing');
@@ -489,7 +469,6 @@ document.addEventListener('DOMContentLoaded', () => {
             progressText.textContent = window.getTranslation('status_completed');
             statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">${window.getTranslation('status_download_success')}</span>`;
 
-            // Release URL object after download
             setTimeout(() => URL.revokeObjectURL(videoUrl), 10000);
 
         } catch (err) {
@@ -497,17 +476,14 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatusError(window.getTranslation('status_error') + (err.message || ""));
             progressContainer.classList.add('hidden');
         } finally {
-            // 6. Purge cache by deleting files in the virtual filesystem
             if (ffmpeg) {
                 statusText.innerHTML += `<br><span style="font-size: 11px; color: var(--md-sys-color-on-surface-variant); opacity: 0.85;">${window.getTranslation('status_cleanup')}</span>`;
                 console.log(`[SeqToVideo] Cleaning up ${writtenFiles.length} cache files from virtual memory.`);
                 
-                // Delete output file
                 try {
                     await ffmpeg.deleteFile('output.mp4');
                 } catch(e) {}
                 
-                // Delete frame files in chunks to avoid blocking
                 for (const virtualFile of writtenFiles) {
                     try {
                         await ffmpeg.deleteFile(virtualFile);

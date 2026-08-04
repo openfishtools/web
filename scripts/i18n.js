@@ -1,15 +1,12 @@
 (function() {
     const translations = {
         id: {
-            // General Tabs & Navigation
             "nav_social": "Sosial",
             "nav_preset": "Preset",
             "nav_resource": "Berkas",
             "nav_video_patcher": "Video Patcher",
             "nav_tools": "Alat",
             "nav_about": "Hubungi Kami",
-            
-            // Video Patcher Section
             "patcher_subtitle": "TikTok HQ Upload",
             "patcher_drop_label": "Drag & drop video di sini atau klik untuk memilih",
             "patcher_ver_title": "Pilih Versi TikTok:",
@@ -19,19 +16,15 @@
             "patcher_variant_xml": "5MB Free XML",
             "patcher_variant_preset": "Premium (Full Preset)",
             "patcher_btn_process": "Proses Video",
-            
-            // Tools Section
             "tool_compressor_title": "Video Compressor",
             "tool_compressor_desc": "Kompres video ke ukuran tertentu",
             "tool_compressor_drop": "Drag & drop video di sini atau klik untuk memilih",
             "tool_compressor_size": "Target Ukuran File (MB)",
             "tool_compressor_btn": "Mulai Kompresi",
-
             "tool_audio_extractor_title": "Audio Extractor",
             "tool_audio_extractor_desc": "Ekstrak audio dari video ke MP3",
             "tool_audio_extractor_drop": "Drag & drop video di sini atau klik untuk memilih",
             "tool_audio_extractor_btn": "Ekstrak Audio",
-
             "tool_seq_title": "Image Sequence to Video",
             "tool_seq_desc": "AM Zip Exporter",
             "tool_seq_drop": "Drag & drop AM Export .zip di sini atau klik untuk memilih",
@@ -39,11 +32,9 @@
             "tool_seq_fps": "Framerate (FPS)",
             "tool_seq_bitrate": "Video Bitrate (Mbps)",
             "tool_seq_btn": "Convert to Video",
-
             "tool_fivemb_title": "5MB XML Generator",
             "tool_fivemb_desc": "Alight Motion",
             "tool_fivemb_drop": "Drag & drop Alight Motion XML di sini untuk diproses",
-
             "tool_ae_am_title": "AE to AM",
             "tool_ae_am_desc": "Beatmark Converter",
             "tool_ae_am_drop": "Drag & drop AE XML (.xml/.aepx) di sini atau klik untuk memilih",
@@ -62,36 +53,29 @@
             "tool_ae_am_no_beats_alert": "Komposisi terpilih tidak memiliki beatmark.",
             "tool_ae_am_error_invalid": "Berkas bukan After Effects XML.",
             "tool_ae_am_error_no_comp": "Tidak ditemukan komposisi dalam berkas ini.",
-
             "tool_stats_title": "TikTok Statistics",
             "tool_stats_desc": "Metadata & Stream Analyser",
             "tool_stats_url": "TikTok Video URL",
             "tool_stats_btn": "Ambil Statistik",
-
             "tool_downloader_title": "TikTok Downloader",
             "tool_downloader_desc": "Powered By TikWm",
             "tool_downloader_url": "TikTok Video URL",
             "tool_downloader_btn": "Unduh Video",
-
             "tool_webcodecs_title": "WebCodecs Compressor",
             "tool_webcodecs_desc": "Kompresi video cepat menggunakan hardware acceleration",
             "tool_webcodecs_drop": "Drag & drop video di sini atau klik untuk memilih",
             "tool_webcodecs_fps": "Framerate (FPS)",
             "tool_webcodecs_btn": "Mulai Kompresi",
-
             "tool_upscale_title": "Qualitelio Enhancer",
             "tool_upscale_desc": "Media Upscaler",
             "tool_upscale_drop": "Drag & drop foto / video di sini (bisa pilih beberapa file) atau klik untuk memilih",
             "tool_upscale_scale": "Faktor Skala",
             "tool_upscale_btn": "Mulai Proses",
-
             "tool_interp_title": "Video Interpolation",
             "tool_interp_desc": "FPS Upscaler",
             "tool_interp_drop": "Drag & drop video di sini atau klik untuk memilih",
             "tool_interp_factor": "Faktor Interpolasi (2x = Double FPS)",
             "tool_interp_btn": "Mulai Interpolasi",
-
-            // Statuses and messages
             "status_selected": "Dipilih: ",
             "status_completed": "Proses Selesai!",
             "status_processing": "Memproses...",
@@ -104,15 +88,11 @@
             "btn_later": "Nanti",
             "offline_downloading": "Mengunduh berkas offline...",
             "offline_download_complete": "Berkas offline siap digunakan!",
-            
-            // iOS Warning
             "ios_warn_title": "Pemberitahuan Kompatibilitas iOS",
             "ios_warn_desc": "<p>Tool ini tidak didukung pada perangkat iOS, iPadOS, dan VisionOS. Video yang diproses di iOS mungkin tidak akan terunggah dengan sempurna melalui TikTok Studio.</p><p>Untuk hasil terbaik, silakan gunakan perangkat <strong>macOS, Windows, atau Android</strong>.</p>",
             "ios_warn_cancel": "Tutup",
             "ios_warn_proceed": "Mengerti",
             "ios_not_supported_err": "Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.",
-
-            // General Status Labels
             "status_extracting_frames": "Extracting frames...",
             "status_loading_engine": "Loading engine...",
             "status_writing_frames": "Writing frames to virtual engine...",
@@ -135,22 +115,15 @@
             "tool_fivemb_filter_photo": "Foto",
             "tool_fivemb_filter_video": "Video",
             "tool_fivemb_filter_audio": "Suara",
-
-
-            // Section Titles
             "social_title": "Link Saya",
             "preset_title": "Jelajahi",
             "resource_title": "Resource",
             "resource_search_placeholder": "Cari resource...",
             "tools_title": "Alat",
             "contact_title": "Hubungi Kami",
-
-            // Patcher Overlay
             "patcher_overlay_title": "Metode Ter-patch",
             "patcher_overlay_desc": "Metode V1 dan V2 saat ini tidak tersedia.",
             "patcher_overlay_ignore": "Abaikan",
-
-            // Patcher Compression Switcher
             "patcher_compress_title": "Preset Kompresi",
             "patcher_mode_off": "Mati",
             "patcher_mode_compatibility": "Kompatibilitas",
@@ -158,13 +131,15 @@
             "patcher_mode_off_desc": "Patch Langsung | Mem-patch video asli secara langsung tanpa kompresi. Mempertahankan kualitas asli, tetapi mungkin menyebabkan lag atau kegagalan pemutaran pada perangkat yang tidak mendukung resolusi/framerate tersebut.",
             "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 16 Mbps (10M-22M), preset veryfast | Mengompresi video ke 720p untuk kualitas maksimal dan kepatuhan. Berjalan lancar tanpa lag di semua perangkat.",
             "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 19 Mbps (12M-26M), preset veryfast | Mengompresi video ke 1080p untuk mempertahankan kualitas premium dan ketajaman. Mungkin menyebabkan lag atau tersendat pada beberapa perangkat.",
-
-            // Ffmpeg presets
+            "offline_title": "Sumber Daya Offline Belum Lengkap",
+            "offline_desc": "Unduh paket resource FFmpeg & AI Model offline agar semua tools dapat berjalan lancar tanpa koneksi internet.",
+            "offline_btn_download": "Unduh Sekarang",
+            "offline_btn_later": "Nanti",
+            "offline_status_downloading": "Mengunduh sumber daya...",
+            "offline_status_complete": "Semua sumber daya offline berhasil diunduh!",
             "preset_slow": "Lambat",
             "preset_medium": "Sedang",
             "preset_fast": "Cepat",
-
-            // Ffmpeg preset descriptions
             "ffmpeg_preset_slow_desc": `
                 <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
                     <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
@@ -207,29 +182,19 @@
                     </div>
                 </div>
             `,
-
-            // Stats items
             "stats_resolution": "Resolusi",
             "stats_fps": "Frame Rate (FPS)",
             "stats_bitrate": "Bitrate",
             "stats_duration": "Durasi",
             "stats_size": "Ukuran File",
-
-            // General UI Buttons
             "btn_copy": "Salin",
             "btn_copied": "Tersalin!",
             "btn_preview": "Pratinjau",
             "btn_cancel": "Batal",
             "btn_upscale_another": "Tingkatkan File Lain",
             "btn_interp_another": "Interpolasi File Lain",
-
-            // System checking title
             "system_checking_title": "Memeriksa Kompatibilitas Sistem...",
-
-            // Process Logs Title
             "process_logs_title": "Log Proses:",
-
-            // Qualitelio Enhancer Preset / Timing Panels
             "upscale_preset_title": "Preset Peningkatan",
             "upscale_timing_title": "Waktu Peningkatan",
             "upscale_timing_before": "Sebelum Upscale",
@@ -251,15 +216,11 @@
             "upscale_batch_step2_title": "Pengaturan Batch Upscale",
             "upscale_batch_desc": "Memproses beberapa file media secara berurutan",
             "status_queued": "Mengantri",
-
-            // Video Interpolation Panel
             "interp_input_label": "Input",
             "interp_output_label": "Output",
             "interp_multiplier_title": "FPS Multiplier",
             "interp_original_label": "Asli",
             "interp_interpolated_label": "Interpolasi",
-
-            // Dynamic Compatibility Check Strings
             "upscale_checking_ai": "AI Engine: Memeriksa...",
             "upscale_checking_gpu": "GPU Canvas: Memeriksa...",
             "upscale_checking_ffmpeg": "FFmpeg WASM: Memeriksa...",
@@ -269,11 +230,9 @@
             "upscale_failed_ai": "AI Engine: Waktu Habis/Gagal",
             "upscale_failed_gpu": "GPU Canvas: Tidak Tersedia",
             "upscale_failed_ffmpeg": "FFmpeg WASM: Tidak Tersedia",
-
             "interp_checking_gpu": "WebGPU: Memeriksa...",
             "interp_ready_gpu": "WebGPU: Didukung",
             "interp_failed_gpu": "WebGPU: Tidak Didukung (Eksekusi Diblokir)",
-
             "preset_category_all": "Semua",
 
             "footer_rights": "Hak Cipta Dilindungi Undang-Undang.",
@@ -288,15 +247,12 @@
             "legal_disclaimer_content": "<p><strong>Terakhir diperbarui: 30 Juli 2026</strong></p><h4>1. Penafian Sumber Daya & Tautan Pihak Ketiga</h4><p>Semua berkas preset, perangkat lunak, dan plugin yang dibagikan di cutefishaep ditujukan semata-mata untuk tujuan pembelajaran, edukasi, dan inspirasi kreatif. Tautan pihak ketiga yang ada di platform ini berada di luar kendali langsung cutefishaep.</p><h4>2. Kebijakan Hak Cipta & DMCA</h4><p>cutefishaep menghormati hak kekayaan intelektual orang lain. Jika Anda adalah pemilik sah atas suatu karya/preset/sumber daya yang ada di situs ini dan berkeberatan atas penayangannya, silakan kirimkan permohonan penurunan (DMCA Take-Down) ke email kami di <a href=\"mailto:cutefishaep@gmail.com\">cutefishaep@gmail.com</a> dengan melampirkan bukti kepemilikan. Kami akan merespons dan menindaklanjuti permohonan Anda dalam waktu 1x24 jam.</p>"
         },
         en: {
-            // General Tabs & Navigation
             "nav_social": "Social",
             "nav_preset": "Preset",
             "nav_resource": "Resource",
             "nav_video_patcher": "Video Patcher",
             "nav_tools": "Tools",
             "nav_about": "Contact Us",
-            
-            // Video Patcher Section
             "patcher_subtitle": "TikTok HQ Upload",
             "patcher_drop_label": "Drag & drop video here or click to select",
             "patcher_ver_title": "Select TikTok Version:",
@@ -306,19 +262,15 @@
             "patcher_variant_xml": "5MB Free XML",
             "patcher_variant_preset": "Premium (Full Preset)",
             "patcher_btn_process": "Process Video",
-            
-            // Tools Section
             "tool_compressor_title": "Video Compressor",
             "tool_compressor_desc": "Compress video to custom sizes",
             "tool_compressor_drop": "Drag & drop video here or click to select",
             "tool_compressor_size": "Target File Size (MB)",
             "tool_compressor_btn": "Start Compression",
-
             "tool_audio_extractor_title": "Audio Extractor",
             "tool_audio_extractor_desc": "Extract audio from video to MP3",
             "tool_audio_extractor_drop": "Drag & drop video here or click to select",
             "tool_audio_extractor_btn": "Extract Audio",
-
             "tool_seq_title": "Image Sequence to Video",
             "tool_seq_desc": "AM Zip Exporter",
             "tool_seq_drop": "Drag & drop AM Export .zip here or click to select",
@@ -326,11 +278,9 @@
             "tool_seq_fps": "Framerate (FPS)",
             "tool_seq_bitrate": "Video Bitrate (Mbps)",
             "tool_seq_btn": "Convert to Video",
-
             "tool_fivemb_title": "5MB XML Generator",
             "tool_fivemb_desc": "Alight Motion",
             "tool_fivemb_drop": "Drag & drop Alight Motion XML here to process",
-
             "tool_ae_am_title": "AE to AM",
             "tool_ae_am_desc": "Beatmark Converter",
             "tool_ae_am_drop": "Drag & drop AE XML (.xml/.aepx) here or click to select",
@@ -349,36 +299,29 @@
             "tool_ae_am_no_beats_alert": "Selected composition has no beatmarks.",
             "tool_ae_am_error_invalid": "File is not a valid After Effects XML.",
             "tool_ae_am_error_no_comp": "No compositions found in this file.",
-
             "tool_stats_title": "TikTok Statistics",
             "tool_stats_desc": "Metadata & Stream Analyser",
             "tool_stats_url": "TikTok Video URL",
             "tool_stats_btn": "Get Statistics",
-
             "tool_downloader_title": "TikTok Downloader",
             "tool_downloader_desc": "Powered By TikWm",
             "tool_downloader_url": "TikTok Video URL",
             "tool_downloader_btn": "Download Video",
-
             "tool_webcodecs_title": "WebCodecs Compressor",
             "tool_webcodecs_desc": "Fast video compression using hardware acceleration",
             "tool_webcodecs_drop": "Drag & drop video here or click to select",
             "tool_webcodecs_fps": "Framerate (FPS)",
             "tool_webcodecs_btn": "Start Compression",
-
             "tool_upscale_title": "Qualitelio Enhancer",
             "tool_upscale_desc": "Media Upscaler",
             "tool_upscale_drop": "Drag & drop photos / videos here (multiple files supported) or click to select",
             "tool_upscale_scale": "Scale Factor",
             "tool_upscale_btn": "Start Processing",
-
             "tool_interp_title": "Video Interpolation",
             "tool_interp_desc": "FPS Upscaler",
             "tool_interp_drop": "Drag & drop video here or click to select",
             "tool_interp_factor": "Interpolation Factor (2x = Double FPS)",
             "tool_interp_btn": "Start Interpolation",
-
-            // Statuses and messages
             "status_selected": "Selected: ",
             "status_completed": "Completed!",
             "status_processing": "Processing...",
@@ -391,15 +334,11 @@
             "btn_later": "Later",
             "offline_downloading": "Downloading offline files...",
             "offline_download_complete": "Offline files ready to use!",
-
-            // iOS Warning
             "ios_warn_title": "iOS Compatibility Warning",
             "ios_warn_desc": "<p>This tool is not supported on iOS, iPadOS, and VisionOS devices. Patched videos on iOS may fail to upload via TikTok Studio.</p><p>For the best experience, please use <strong>macOS, Windows, or Android</strong> devices.</p>",
             "ios_warn_cancel": "Close",
             "ios_warn_proceed": "Understood",
             "ios_not_supported_err": "iOS devices are not supported. Please use PC (Windows/macOS) or Android.",
-
-            // General Status Labels
             "status_extracting_frames": "Extracting frames...",
             "status_loading_engine": "Loading engine...",
             "status_writing_frames": "Writing frames to virtual engine...",
@@ -422,22 +361,15 @@
             "tool_fivemb_filter_photo": "Photo",
             "tool_fivemb_filter_video": "Video",
             "tool_fivemb_filter_audio": "Audio",
-
-
-            // Section Titles
             "social_title": "My Links",
             "preset_title": "Explore",
             "resource_title": "Resources",
             "resource_search_placeholder": "Search resources...",
             "tools_title": "Tools",
             "contact_title": "Contact Us",
-
-            // Patcher Overlay
             "patcher_overlay_title": "Method Patched",
             "patcher_overlay_desc": "Both V1 and V2 are currently unavailable.",
             "patcher_overlay_ignore": "Ignore",
-
-            // Patcher Compression Switcher
             "patcher_compress_title": "Compress preset",
             "patcher_mode_off": "OFF",
             "patcher_mode_compatibility": "Compatibility",
@@ -445,13 +377,15 @@
             "patcher_mode_off_desc": "Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.",
             "patcher_mode_fast_desc": "720p, 60fps | H.264 VBR 16 Mbps (10M-22M), preset veryfast | Compresses video to 720p for optimal quality and compliance. Runs smoothly without lag on all devices.",
             "patcher_mode_hd_desc": "1080p, 60fps | H.264 VBR 19 Mbps (12M-26M), preset veryfast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.",
-
-            // Ffmpeg presets
+            "offline_title": "Offline Resources Incomplete",
+            "offline_desc": "Download FFmpeg & AI Model offline packages so all tools work smoothly without an internet connection.",
+            "offline_btn_download": "Download Now",
+            "offline_btn_later": "Later",
+            "offline_status_downloading": "Downloading resources...",
+            "offline_status_complete": "All offline resources downloaded successfully!",
             "preset_slow": "Slow",
             "preset_medium": "Medium",
             "preset_fast": "Fast",
-
-            // Ffmpeg preset descriptions
             "ffmpeg_preset_slow_desc": `
                 <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
                     <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
@@ -494,29 +428,19 @@
                     </div>
                 </div>
             `,
-
-            // Stats items
             "stats_resolution": "Resolution",
             "stats_fps": "Frame Rate (FPS)",
             "stats_bitrate": "Bitrate",
             "stats_duration": "Duration",
             "stats_size": "File Size",
-
-            // General UI Buttons
             "btn_copy": "Copy",
             "btn_copied": "Copied!",
             "btn_preview": "Preview",
             "btn_cancel": "Cancel",
             "btn_upscale_another": "Upscale Another",
             "btn_interp_another": "Interpolate Another",
-
-            // System checking title
             "system_checking_title": "Checking System Compatibility...",
-
-            // Process Logs Title
             "process_logs_title": "Process Logs:",
-
-            // Qualitelio Enhancer Preset / Timing Panels
             "upscale_preset_title": "Enhancement Preset",
             "upscale_timing_title": "Enhance Timing",
             "upscale_timing_before": "Before Upscale",
@@ -538,15 +462,11 @@
             "upscale_batch_step2_title": "Batch Enhancement Settings",
             "upscale_batch_desc": "Processing multiple media files sequentially",
             "status_queued": "Queued",
-
-            // Video Interpolation Panel
             "interp_input_label": "Input",
             "interp_output_label": "Output",
             "interp_multiplier_title": "FPS Multiplier",
             "interp_original_label": "Original",
             "interp_interpolated_label": "Interpolated",
-
-            // Dynamic Compatibility Check Strings
             "upscale_checking_ai": "AI Engine: Checking...",
             "upscale_checking_gpu": "GPU Canvas: Checking...",
             "upscale_checking_ffmpeg": "FFmpeg WASM: Checking...",
@@ -556,11 +476,9 @@
             "upscale_failed_ai": "AI Engine: Timeout/Failed",
             "upscale_failed_gpu": "GPU Canvas: Unavailable",
             "upscale_failed_ffmpeg": "FFmpeg WASM: Unavailable",
-
             "interp_checking_gpu": "WebGPU: Checking...",
             "interp_ready_gpu": "WebGPU: Supported",
             "interp_failed_gpu": "WebGPU: Not Supported (Execution Blocked)",
-
             "preset_category_all": "All",
 
             "footer_rights": "All Rights Reserved.",
@@ -575,29 +493,19 @@
             "legal_disclaimer_content": "<p><strong>Last Updated: July 30, 2026</strong></p><h4>1. Third-Party Resources Disclaimer</h4><p>All preset files, software links, and plugins shared on cutefishaep are provided solely for educational, learning, and creative inspiration purposes. Third-party links are outside cutefishaep's direct control.</p><h4>2. Copyright & DMCA Policy</h4><p>cutefishaep respects the intellectual property rights of others. If you are the copyright owner of any material listed on this site and wish to request removal, please submit a formal DMCA Take-Down notice to <a href=\"mailto:cutefishaep@gmail.com\">cutefishaep@gmail.com</a> with proof of ownership. We will process and act upon your request within 24 hours.</p>"
         }
     };
-
     let userLang = 'en';
-    
-    // Check primary browser language only — do NOT use timezone as a fallback
-    // so users with English browser language always get English
     const matchesPrimaryLang = navigator.language && navigator.language.startsWith('id');
-    // Check secondary browser languages
     const hasIndonesianLang = navigator.languages && navigator.languages.some(lang => lang.toLowerCase().startsWith('id'));
-
     if (matchesPrimaryLang || hasIndonesianLang) {
         userLang = 'id';
     }
-
     window.getTranslation = function(key) {
         return (translations[userLang] && translations[userLang][key]) || translations['en'][key] || key;
     };
-
     window.translateUI = function() {
-        // Handle standard text translation
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const translation = window.getTranslation(key);
-            
             if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
                 el.setAttribute('placeholder', translation);
             } else if (el.tagName === 'OPTION') {
@@ -609,7 +517,6 @@
                         hasIcon = true;
                     }
                 });
-                
                 if (hasIcon) {
                     el.childNodes.forEach(node => {
                         if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim().length > 0) {
@@ -621,16 +528,12 @@
                 }
             }
         });
-
-        // Handle HTML translation (preserves inner tags like <p>, <strong>, etc.)
         document.querySelectorAll('[data-i18n-html]').forEach(el => {
             const key = el.getAttribute('data-i18n-html');
             const translation = window.getTranslation(key);
             el.innerHTML = translation;
         });
     };
-
-    // Auto-run on load
     document.addEventListener('DOMContentLoaded', () => {
         window.translateUI();
     });

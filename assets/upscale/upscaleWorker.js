@@ -237,19 +237,39 @@ self.addEventListener("message", async (e) => {
       console.log("✅ [Upscale Model] Loaded model SUCCESSFULLY from IndexedDB cache:", model_name);
       self.postMessage({ info: "Loaded from cache" });
     } catch (error) {
-      console.log("🚀 [Upscale Model] Downloading model weights from CDN proxy:", absolute_model_url);
+      console.log("🚀 [Upscale Model] Downloading model weights:", absolute_model_url);
       self.postMessage({ info: "Downloading model..." });
-      try {
-        model = await tf.loadGraphModel(absolute_model_url);
-        await model.save(`indexeddb://${model_name}`);
-        console.log("✅ [Upscale Model] Model downloaded and cached in IndexedDB SUCCESSFULLY from CDN proxy:", absolute_model_url);
-        self.postMessage({ info: "Model cached successfully" });
-      } catch (fetchError) {
+
+      const urlsToTry = [
+        absolute_model_url,
+        `https://upscale.chino.icu${model_url}`
+      ];
+
+      let loadedModel = null;
+      let lastErr = null;
+
+      for (const targetUrl of urlsToTry) {
+        try {
+          console.log("🚀 [Upscale Model] Attempting model fetch from:", targetUrl);
+          loadedModel = await tf.loadGraphModel(targetUrl);
+          await loadedModel.save(`indexeddb://${model_name}`);
+          console.log("✅ [Upscale Model] Model downloaded and cached in IndexedDB SUCCESSFULLY from:", targetUrl);
+          self.postMessage({ info: "Model cached successfully" });
+          break;
+        } catch (fetchErr) {
+          console.warn("⚠️ [Upscale Model] Failed to fetch from:", targetUrl, fetchErr.message);
+          lastErr = fetchErr;
+        }
+      }
+
+      if (!loadedModel) {
         self.postMessage({
-          alertmsg: `Failed to download model weights from ${absolute_model_url}. Error: ${fetchError.message}`,
+          alertmsg: `Failed to download model weights from ${absolute_model_url}. Error: ${lastErr ? lastErr.message : 'Network error'}`,
         });
         return;
       }
+
+      model = loadedModel;
     }
 
     cachedModel = model;
@@ -290,14 +310,14 @@ self.addEventListener("message", async (e) => {
     model,
     inputImg,
     factor = 4,
-    input_size = 128,
-    margin = 16
+    tile_size = 64,
+    margin = 12
   ) {
     const width = inputImg.width;
     const height = inputImg.height;
     const output = new WorkerImage(width * factor, height * factor);
 
-    const step = input_size;
+    const step = tile_size - 2 * margin;
     const num_x = Math.ceil(width / step);
     const num_y = Math.ceil(height / step);
     const total = num_x * num_y;
@@ -321,7 +341,13 @@ self.addEventListener("message", async (e) => {
         const tile = new WorkerImage(tile_src_w, tile_src_h);
         tile.getImageCrop(0, 0, inputImg, src_x1, src_y1, src_x2, src_y2);
 
+        // Ensure the input to the model is exactly tile_size x tile_size
+        tile.padToTileSize(tile_size);
+
         const scaled = await upscale(tile, model, hasAlpha);
+
+        // Crop the upscaled output back to its original tile source size
+        scaled.cropToOriginalSize(tile_src_w * factor, tile_src_h * factor);
 
         output.getImageCrop(
           x * factor,

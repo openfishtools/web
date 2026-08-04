@@ -63,8 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let isUnauthorizedAlertShowing = false;
 
-
-
     const onUnauthorized = () => {
         if (isUnauthorizedAlertShowing) return;
         isUnauthorizedAlertShowing = true;
@@ -161,7 +159,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const initIconSourceToggles = () => {
-        // Social Icon Toggles
         const btnSocialStock = document.getElementById('btn-social-icon-stock');
         const btnSocialCustom = document.getElementById('btn-social-icon-custom');
         const socialStockContainer = document.getElementById('social-stock-icon-container');
@@ -182,7 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         }
 
-        // Contact Icon Toggles
         const btnContactStock = document.getElementById('btn-contact-icon-stock');
         const btnContactCustom = document.getElementById('btn-contact-icon-custom');
         const contactStockContainer = document.getElementById('contact-stock-icon-container');
@@ -492,7 +488,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-
     const getSelectedSoftware = () => {
         const selected = [];
         document.querySelectorAll('#sw-badge-picker .sw-badge-preset.selected').forEach(b => {
@@ -644,7 +639,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('modal-contact-icon').value = iconVal;
                 }
 
-
             } else if (id === 'preset-modal') {
                 document.getElementById('modal-preset-name').value = editData.name;
 
@@ -769,9 +763,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById(id).classList.remove('show');
     };
 
-    // End of chat UI functions
-
-    // Helper for reordering items (move up / down)
     const reorderItem = async (type, list, index, direction, reloadFn) => {
         const targetIndex = index + direction;
         if (targetIndex < 0 || targetIndex >= list.length) return;
@@ -796,7 +787,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Helper for toggling item visibility (hide / show)
     const toggleHideItem = async (type, id, currentHiddenStatus, reloadFn) => {
         try {
             const res = await fetch(`${API_URL}/${type}/${id}`, {
@@ -1124,8 +1114,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // ── Resource Admin Logic ──────────────────────────────────────────────────
-
     const STATIC_RES_CATS = ['Made By Cutefish', 'Software', 'Plugin', 'Extension'];
     const STATIC_RES_VERS = ['Latest', 'Stable', 'Oldest'];
     const OS_META = {
@@ -1135,7 +1123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const resetResourceModal = () => {
-        // Clear badges
         document.querySelectorAll('#resource-category-picker .res-cat-badge').forEach(b => {
             if (!STATIC_RES_CATS.includes(b.dataset.cat)) b.remove();
             else b.classList.remove('selected');
@@ -1156,7 +1143,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modal-resource-icon').value = '';
     };
 
-    // Badge pickers for resource category
     const initResourceBadgePickers = () => {
         document.querySelectorAll('#resource-category-picker .res-cat-badge').forEach(b => {
             b.addEventListener('click', () => b.classList.toggle('selected'));
@@ -1168,7 +1154,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             b.addEventListener('click', () => { b.classList.toggle('selected'); syncResourceOsRows(); });
         });
 
-        // Custom category popup
         document.getElementById('open-resource-cat-popup')?.addEventListener('click', e => {
             e.stopPropagation();
             document.getElementById('resource-cat-popup').classList.add('show');
@@ -1191,7 +1176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('resource-cat-popup').classList.remove('show');
         });
 
-        // Custom version popup
         document.getElementById('open-resource-ver-popup')?.addEventListener('click', e => {
             e.stopPropagation();
             document.getElementById('resource-ver-popup').classList.add('show');
@@ -1216,7 +1200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // Build per-OS version link rows
     const syncResourceOsRows = () => {
         const container = document.getElementById('resource-os-links-container');
         if (!container) return;
@@ -1228,7 +1211,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Preserve existing values
         const existing = {};
         container.querySelectorAll('.res-os-ver-row').forEach(row => {
             existing[`${row.dataset.os}__${row.dataset.ver}`] = row.querySelector('input[type="text"]')?.value || '';
@@ -1360,7 +1342,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (img) img.src = item.icon;
         }
 
-        // Restore categories
         const cats = Array.isArray(item.category) ? item.category : (item.category ? [item.category] : []);
         cats.forEach(cat => {
             let badge = document.querySelector(`#resource-category-picker .res-cat-badge[data-cat="${cat}"]`);
@@ -1377,7 +1358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             badge.classList.add('selected');
         });
 
-        // Restore OS selections
         const osArr = Array.isArray(item.os) ? item.os : [];
         osArr.forEach(entry => {
             const osKey = typeof entry === 'string' ? entry.toUpperCase() : (entry.name || '').toUpperCase();
@@ -1385,7 +1365,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (badge) badge.classList.add('selected');
         });
 
-        // Collect all unique version labels from os entries
         const allVers = new Set();
         osArr.forEach(entry => {
             if (entry.versions) entry.versions.forEach(v => allVers.add(v.label));
@@ -1407,7 +1386,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         syncResourceOsRows();
 
-        // Restore url values
         osArr.forEach(entry => {
             const osKey = typeof entry === 'string' ? entry.toUpperCase() : (entry.name || '').toUpperCase();
             if (entry.versions) {
@@ -1433,7 +1411,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const iconDropFallback = document.getElementById('resource-icon-drop')?.dataset.uploadedUrl || '';
         const icon = iconDropFallback || iconHiddenVal;
 
-        // Build OS structure
         const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
         const selectedVers = [...document.querySelectorAll('#resource-version-picker .res-ver-badge.selected')].map(b => b.dataset.ver);
         const osData = selectedOs.map(osKey => {
@@ -1466,9 +1443,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-
-
-
     window.deleteItem = async (type, id, callback) => {
         if (confirm('Are you sure you want to delete this item?')) {
             const delRes = await fetch(`${API_URL}/${type}/${id}`, { method: 'DELETE', headers: adminAuthHeaders() });
@@ -1476,8 +1450,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             callback();
         }
     };
-
-    // Chat functions removed
 
     showLoadingUI();
     if (adminToken) {

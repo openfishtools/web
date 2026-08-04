@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const versionSwitch = document.getElementById('tiktok-version-switch');
     const compressToggleRow = document.getElementById('tiktok-compress-toggle-row');
     const compressModeSelector = document.getElementById('tiktok-compress-mode');
-
     const analysisModal = document.getElementById('tiktok-analysis-modal');
     const tktk = {
         checkFps:  document.getElementById('tktk-check-fps'),
@@ -28,17 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
         btnProceed: document.getElementById('tktk-btn-proceed'),
         btnCompress: document.getElementById('tktk-btn-compress'),
     };
-
     let selectedFile = null;
     let currentFileBuffer = null;
     let isProcessing = false;
     let currentVersion = 'v1';
     let compressMode = 'off';
-
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 50;
-
-
     function log(msg) {
         const ts = new Date().toISOString().replace('T', ' ').replace('Z', '');
         const line = `[${ts}] ${msg}`;
@@ -54,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function logEnd() {
         log('');
     }
-
     function appendToLogsEl(message) {
         if (!logsEl) return;
         const lines = logsEl.textContent.split('\n');
@@ -66,8 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         logsEl.scrollTop = logsEl.scrollHeight;
     }
-
-
     function detectBrowser() {
         const ua = navigator.userAgent;
         if (/CriOS/i.test(ua))  return 'Chrome (iOS)';
@@ -77,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/EdgA/i.test(ua))   return 'Edge (Android)';
         if (/SamsungBrowser/i.test(ua)) return 'Samsung Browser';
         if (/OPR|Opera/i.test(ua))      return 'Opera';
-        if (/Edg\//i.test(ua))          return 'Edge';
+        if (/Edg/i.test(ua))            return 'Edge';
         if (/YaBrowser/i.test(ua))      return 'Yandex';
         if (/Firefox/i.test(ua))        return 'Firefox';
         if (/Chrome/i.test(ua))         return 'Chrome';
@@ -98,46 +90,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/Linux/i.test(ua))    return 'Linux';
         return 'Unknown OS';
     }
-
     function isIosDevice() {
         const ua = navigator.userAgent || navigator.vendor || window.opera || '';
         const platform = navigator.platform || '';
-
-        // 1. Direct iOS / iPadOS User-Agent check
         if (/iPhone|iPad|iPod|VisionPro|CriOS|FxiOS|EdgiOS|OPiOS|iPhone OS|iPadOS/i.test(ua)) {
             return true;
         }
-
-        // 2. Direct Platform check
         if (/iPhone|iPad|iPod/i.test(platform)) {
             return true;
         }
-
-        // 3. iPadOS Desktop Mode check (iPad reporting as MacIntel with multi-touch > 1)
         if ((platform === 'MacIntel' || ua.includes('Macintosh')) && (navigator.maxTouchPoints > 1)) {
             return true;
         }
-
         return false;
     }
-
     function showIosWarningModal(onProceed, onCancel) {
         const iosWarningModal = document.getElementById('tiktok-ios-warning-modal');
         const btnIosWarningCancel = document.getElementById('btn-ios-warning-cancel');
         const btnIosWarningProceed = document.getElementById('btn-ios-warning-proceed');
-
         if (!iosWarningModal) {
             if (onProceed) onProceed();
             return;
         }
-
         if (typeof window.applyTranslations === 'function') {
             window.applyTranslations();
         }
-
         iosWarningModal.classList.remove('hidden');
         iosWarningModal.classList.add('visible');
-
         const handleProceed = () => {
             iosWarningModal.classList.remove('visible');
             iosWarningModal.classList.add('hidden');
@@ -145,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnIosWarningCancel) btnIosWarningCancel.removeEventListener('click', handleCancel);
             if (onProceed) onProceed();
         };
-
         const handleCancel = () => {
             iosWarningModal.classList.remove('visible');
             iosWarningModal.classList.add('hidden');
@@ -153,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnIosWarningCancel) btnIosWarningCancel.removeEventListener('click', handleCancel);
             if (onCancel) onCancel();
         };
-
         if (btnIosWarningProceed && btnIosWarningCancel) {
             btnIosWarningProceed.onclick = handleProceed;
             btnIosWarningCancel.onclick = handleCancel;
@@ -161,8 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (onProceed) onProceed();
         }
     }
-
-
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return;
         logSection('UNCAUGHT ERROR');
@@ -186,8 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         logEnd();
     });
-
-
     const btnCopyLogs = document.getElementById('btn-copy-logs');
     const btnCopyLogsLabel = document.getElementById('btn-copy-logs-label');
     if (btnCopyLogs) {
@@ -205,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(text);
                 } else {
-
                     const ta = document.createElement('textarea');
                     ta.value = text;
                     ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
@@ -230,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 2000);
         });
     }
-
     function updateSwitchIndicator(trackEl, indicatorEl, activeClass) {
         if (!trackEl || !indicatorEl) return;
         const active = trackEl.querySelector(`.${activeClass}.active`);
@@ -239,8 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
             indicatorEl.style.width = active.offsetWidth + 'px';
         }
     }
-
-
     const patcherCard       = document.getElementById('tiktok-patcher-card');
     const patchedOverlay    = document.getElementById('tiktok-patched-overlay');
     const btnOverlayIgnore  = document.getElementById('btn-patched-overlay-ignore');
@@ -249,16 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const vpModalBody       = document.getElementById('vp-modal-body');
     const btnVpProceed      = document.getElementById('btn-vp-proceed');
     const btnVpSwitch       = document.getElementById('btn-vp-switch');
-
     const v1Patched = patcherCard?.dataset.v1Patched === 'true';
     const v2Patched = patcherCard?.dataset.v2Patched === 'true';
-
-
     if (v1Patched && v2Patched && patchedOverlay) {
         patchedOverlay.style.display = 'flex';
     }
-
-
     if (btnOverlayIgnore && patchedOverlay) {
         btnOverlayIgnore.addEventListener('click', () => {
             patchedOverlay.style.opacity = '0';
@@ -272,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnOverlayIgnore.style.background = 'rgba(255,255,255,0.1)';
         });
     }
-
     function showVersionPatchedModal(patchedVersion, onProceed, onSwitch) {
         if (!vpModal) { onProceed && onProceed(); return; }
         const other = patchedVersion === 'v2' ? 'V1' : 'V2';
@@ -281,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnVpSwitch.textContent = `Use ${other}`;
         vpModal.classList.remove('hidden');
         requestAnimationFrame(() => vpModal.classList.add('visible'));
-
         const cleanup = () => {
             vpModal.classList.remove('visible');
             setTimeout(() => vpModal.classList.add('hidden'), 260);
@@ -293,14 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnVpProceed.addEventListener('click', handleProceed);
         btnVpSwitch.addEventListener('click', handleSwitch);
     }
-
-
     if (versionSwitch) {
         versionSwitch.addEventListener('click', (e) => {
             const btn = e.target.closest('.tiktok-switch-option');
             if (!btn || isProcessing) return;
             const clickedVersion = btn.dataset.version;
-
             const doSwitch = (version) => {
                 versionSwitch.querySelectorAll('.tiktok-switch-option').forEach(b => b.classList.remove('active'));
                 const target = versionSwitch.querySelector(`[data-version="${version}"]`);
@@ -319,8 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             };
-
-
             if (isIosDevice()) {
                 showIosWarningModal(
                     () => {
@@ -340,14 +297,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 doSwitch('v2');
                 showVersionPatchedModal(
                     'v2',
-                    () => { /* proceed anyway – already on v2 */ },
+                    () => {  },
                     () => doSwitch('v1')
                 );
             } else if (clickedVersion === 'v1' && v1Patched && !v2Patched) {
                 doSwitch('v1');
                 showVersionPatchedModal(
                     'v1',
-                    () => { /* proceed anyway */ },
+                    () => {  },
                     () => doSwitch('v2')
                 );
             } else {
@@ -358,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const ind = document.getElementById('tiktok-version-indicator');
             updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
         });
-
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 if (item.getAttribute('data-tab') === 'tools') {
@@ -370,14 +326,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-
         window.addEventListener('resize', () => {
             const ind = document.getElementById('tiktok-version-indicator');
             updateSwitchIndicator(versionSwitch, ind, 'tiktok-switch-option');
             updateModeIndicator(compressMode);
         });
     }
-
     if (compressModeSelector) {
         compressModeSelector.addEventListener('click', (e) => {
             const option = e.target.closest('.tiktok-switch-option');
@@ -386,7 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateModeIndicator(compressMode);
         });
     }
-
     function updateModeIndicator(mode) {
         if (!compressModeSelector) return;
         const indicator = document.getElementById('tiktok-mode-indicator');
@@ -406,16 +359,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 160);
         }
     }
-
     function setCompressMode(mode) {
         compressMode = mode;
         updateModeIndicator(mode);
     }
-
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
     });
-
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -433,11 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
         dropArea.style.background = '';
         if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]);
     });
-
     function showStatusError(msg) {
         statusText.innerHTML = `<span style="color: var(--md-sys-color-error);">${msg}</span>`;
     }
-
     function resetToolState() {
         selectedFile = null;
         currentFileBuffer = null;
@@ -453,15 +401,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dropArea.style.borderColor = '';
         dropArea.style.background = '';
     }
-
     const btnClearCache = document.getElementById('btn-tiktok-clear-cache');
-
     if (btnClearCache) {
         btnClearCache.addEventListener('click', () => {
             if (isProcessing) return;
             resetToolState();
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Cache cleared.</span>`;
-
             const icon = btnClearCache.querySelector('.material-symbols-rounded');
             if (icon) {
                 icon.style.transition = 'transform 0.4s ease';
@@ -476,9 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnClearCache.style.background = 'none';
         });
     }
-
-
-
     function handleFileSelection(file) {
         if (!file.type.startsWith('video/')) {
             showStatusError('Please select a valid video file.');
@@ -494,7 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         selectedFile = file;
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Selected: ${file.name} (${fileMB.toFixed(2)} MB)</span>`;
-        // Block execution on iOS devices and show error & modal
         if (isIosDevice()) {
             btnStart.classList.add('hidden');
             showStatusError(window.getTranslation('ios_not_supported_err') || 'Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.');
@@ -509,7 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logsContainer.classList.add('hidden');
         logsEl.textContent = '';
     }
-
     function setCheckState(iconEl, itemEl, state, valueText) {
         const iconMap = { loading: 'progress_activity', pass: 'check', fail: 'close', warn: 'warning' };
         iconEl.className = `tktk-check-icon ${state}`;
@@ -518,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const valEl = itemEl.querySelector('.tktk-check-value');
         if (valEl && valueText !== undefined) valEl.textContent = valueText;
     }
-
     function openAnalysisModal() {
         setCheckState(tktk.iconFps, tktk.checkFps, 'loading', 'Analyzing...');
         setCheckState(tktk.iconRes, tktk.checkRes, 'loading', 'Analyzing...');
@@ -528,19 +467,15 @@ document.addEventListener('DOMContentLoaded', () => {
         tktk.btnCompress.disabled = true;
         analysisModal.classList.add('visible');
     }
-
     function closeAnalysisModal() {
         analysisModal.classList.remove('visible');
     }
-
     async function runAnalysis(file) {
         openAnalysisModal();
-
         const fileMB = file.size / (1024 * 1024);
         let fps = null;
         let w = 0, h = 0;
         let hasFail = false;
-
         try {
             if (currentFileBuffer) {
                 fps = parseFpsFromMp4(currentFileBuffer);
@@ -551,7 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (e) {}
-
         if (w === 0 || h === 0) {
             await new Promise(resolve => {
                 const url = URL.createObjectURL(file);
@@ -572,7 +506,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 vid.load();
             });
         }
-
         const fpsFail = fps !== null && fps > 120;
         const fpsLabel = fps !== null ? `${fps} fps` : 'Unable to detect';
         setCheckState(tktk.iconFps, tktk.checkFps, fpsFail ? 'fail' : 'pass', fpsLabel);
@@ -580,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const errFpsEl = document.getElementById('tktk-err-fps');
             if (errFpsEl) errFpsEl.textContent = 'Exceeds 120 fps limit (max 120fps). Must be compressed.';
         }
-
         const shortSide = Math.min(w, h);
         const longSide = Math.max(w, h);
         const resFail = w > 0 && (shortSide > 1080 || longSide > 1920);
@@ -590,40 +522,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const errResEl = document.getElementById('tktk-err-res');
             if (errResEl) errResEl.textContent = 'Exceeds 1080p limit (max 1080x1920). Must be compressed.';
         }
-
         hasFail = false;
         let hasHardFail = false;
         if (fpsFail || resFail) {
             hasFail = true;
             hasHardFail = true;
         }
-
         const sizeFail = fileMB > COMPRESS_WARN_MB;
         setCheckState(tktk.iconSize, tktk.checkSize, sizeFail ? 'warn' : 'pass', `${fileMB.toFixed(1)} MB`);
         if (sizeFail) hasFail = true;
-
         if (!hasFail) {
             closeAnalysisModal();
             await processVideoV2(file, 'off');
             return;
         }
-
         tktk.btnProceed.disabled = hasHardFail;
         tktk.btnProceed.style.display = hasHardFail ? 'none' : '';
         tktk.btnCompress.disabled = false;
     }
-
     if (tktk.btnCancel) {
         tktk.btnCancel.addEventListener('click', () => closeAnalysisModal());
     }
-
     if (tktk.btnProceed) {
         tktk.btnProceed.addEventListener('click', async () => {
             closeAnalysisModal();
             await processVideoV2(selectedFile, 'off');
         });
     }
-
     if (tktk.btnCompress) {
         tktk.btnCompress.addEventListener('click', async () => {
             closeAnalysisModal();
@@ -631,7 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await processVideoV2(selectedFile, 'hd');
         });
     }
-
     function readFileAsArrayBuffer(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -640,12 +564,10 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsArrayBuffer(file);
         });
     }
-
     btnStart.addEventListener('click', async () => {
         if (!selectedFile) return;
         if (isProcessing) return;
         isProcessing = true;
-
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
@@ -654,7 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
         progressFill.style.width = '5%';
         progressPercent.textContent = '5%';
         progressText.textContent = 'Reading...';
-
         logSection('FILE READ');
         log(`  Name        : ${selectedFile.name}`);
         log(`  Size        : ${(selectedFile.size / (1024*1024)).toFixed(3)} MB (${selectedFile.size} bytes)`);
@@ -668,12 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
         log(`  Threads(HW) : ${navigator.hardwareConcurrency || 'unknown'}`);
         log(`  SharedArrayBuffer: ${'SharedArrayBuffer' in window ? 'available (multi-thread)' : 'NOT available (single-thread)'}`);
         logEnd();
-
         try {
             currentFileBuffer = await readFileAsArrayBuffer(selectedFile);
             log(`  ArrayBuffer byteLength : ${currentFileBuffer.byteLength} bytes`);
             log(`  FileReader read        : SUCCESS`);
-
             const peek = new Uint8Array(currentFileBuffer, 0, Math.min(12, currentFileBuffer.byteLength));
             const ftypMagic = String.fromCharCode(peek[4], peek[5], peek[6], peek[7]);
             log(`  Box[0] magic bytes    : ${ftypMagic} (expect: ftyp or mdat)`);
@@ -688,9 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         isProcessing = false;
-
         isProcessing = false;
-
     function checkIosWarningAndProceed(onProceed) {
         if (isIosDevice()) {
             btnStart.classList.add('hidden');
@@ -706,11 +623,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         onProceed();
     }
-
         const startProcess = async () => {
             isProcessing = false;
             if (currentVersion === 'v1') {
                 await processVideoV1(selectedFile);
+                return;
+            }
+            if (currentVersion === 'v3') {
+                await processVideoV3(selectedFile);
                 return;
             }
             if (compressMode === 'off') {
@@ -719,13 +639,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             await processVideoV2(selectedFile, compressMode);
         };
-
         checkIosWarningAndProceed(startProcess);
     });
-
     function parseFpsFromMp4(arrayBuffer) {
         try {
-
             const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
             const fresh = new Uint8Array(srcArr.byteLength);
             fresh.set(srcArr);
@@ -742,7 +659,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
             const stsz = stbl && findChild(stbl, 'stsz');
             if (!mdhd || !stsz) return null;
-
             const mdhdPayload = boxPayload(mdhd);
             const version = mdhdPayload[0];
             let timescale, duration;
@@ -757,21 +673,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 return null;
             }
-
             if (!timescale || !duration) return null;
             const durationSec = duration / timescale;
             const frameCount = stsz.view.getUint32(stsz.offset + 16, false);
-
             if (!frameCount || durationSec <= 0) return null;
             return Math.round(frameCount / durationSec);
         } catch (e) {
             return null;
         }
     }
-
     function parseResolutionFromMp4(arrayBuffer) {
         try {
-
             const srcArr = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
             const fresh = new Uint8Array(srcArr.byteLength);
             fresh.set(srcArr);
@@ -784,8 +696,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
             );
             if (!videoTrak) return null;
-
-
             const stsd = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stsd']);
             if (stsd) {
                 const entryCount = stsd.view.getUint32(stsd.offset + 12, false);
@@ -804,8 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-
-
             const tkhd = findChild(videoTrak, 'tkhd');
             if (tkhd) {
                 const tkhdPayload = boxPayload(tkhd);
@@ -827,56 +735,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-
     function detectCompatibilityFlags(file) {
         return new Promise((resolve) => {
             const url = URL.createObjectURL(file);
             const video = document.createElement('video');
             const flags = [];
             const fileMB = file.size / (1024 * 1024);
-
             let resolved = false;
             const cleanup = () => {
                 URL.revokeObjectURL(url);
             };
-
             const safeResolve = (result) => {
                 if (resolved) return;
                 resolved = true;
                 cleanup();
                 resolve(result);
             };
-
             const timeoutId = setTimeout(() => {
                 if (fileMB > COMPRESS_WARN_MB) {
                     flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
                 }
                 safeResolve(flags);
             }, 1500);
-
             video.preload = 'metadata';
             video.muted = true;
             video.playsInline = true;
             video.src = url;
-
             video.onloadedmetadata = () => {
                 clearTimeout(timeoutId);
                 const w = video.videoWidth;
                 const h = video.videoHeight;
-
                 if (fileMB > COMPRESS_WARN_MB) {
                     flags.push(`File size is ${fileMB.toFixed(1)} MB (exceeds the 50 MB safe limit)`);
                 }
-
                 const shortSide = Math.min(w, h);
                 const longSide = Math.max(w, h);
                 if (shortSide > 1080 || longSide > 1920) {
                     flags.push(`Resolution ${w}x${h} exceeds the 1080p limit (max 1080x1920 or 1920x1080)`);
                 }
-
                 safeResolve(flags);
             };
-
             video.onerror = () => {
                 clearTimeout(timeoutId);
                 if (fileMB > COMPRESS_WARN_MB) {
@@ -884,14 +782,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 safeResolve(flags);
             };
-
             video.load();
         });
     }
-
     async function loadFFmpegLibraries() {
         if (window.FFmpegWASM && window.FFmpegUtil) return true;
-
         const loadScript = (src) => new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = src;
@@ -899,7 +794,6 @@ document.addEventListener('DOMContentLoaded', () => {
             s.onerror = () => reject(new Error(`Failed to load ${src}`));
             document.head.appendChild(s);
         });
-
         try {
             if (!window.FFmpegUtil) {
                 await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
@@ -909,12 +803,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'),
                     fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js')
                 ]);
-
                 if (!ffmpegRes.ok || !workerRes.ok) throw new Error('CDN HTTP response error');
-
                 const ffmpegCode = await ffmpegRes.text();
                 const workerCode = await workerRes.text();
-
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
                 const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
                                                .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
@@ -928,7 +819,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (cdnErr) {
             console.warn(cdnErr);
         }
-
         try {
             if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
             if (!window.FFmpegUtil) await loadScript('assets/ffmpeg/index.js');
@@ -938,21 +828,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (localErr) {
             console.error(localErr);
         }
-
         return !!(window.FFmpegWASM && window.FFmpegUtil);
     }
-
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
         const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         const localBaseURL = window.location.origin + '/assets/ffmpeg';
         const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice();
         let loaded = false;
-
         logSection('FFmpeg Load');
         log(`  CDN Base MT : ${cdnBaseMT}`);
         log(`  Multi-thread: ${isMultiThread}`);
-
         if (isMultiThread) {
             try {
                 log(`  Attempting multi-thread load from CDN...`);
@@ -976,7 +862,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-
         if (!loaded) {
             try {
                 log(`  Loading single-thread FFmpeg from CDN...`);
@@ -994,11 +879,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         logEnd();
     }
-
     async function processVideoV1(file) {
         if (isProcessing) return;
         isProcessing = true;
-
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
@@ -1006,12 +889,10 @@ document.addEventListener('DOMContentLoaded', () => {
         progressFill.style.width = '0%';
         progressPercent.textContent = '0%';
         progressText.textContent = window.getTranslation('status_processing');
-
         logSection('V1 PROCESS START');
         log(`  File : ${file.name}`);
         log(`  Mode : WMV2 lossless re-encode (v1)`);
         logEnd();
-
         try {
             const isReady = await loadFFmpegLibraries();
             if (!isReady) {
@@ -1020,17 +901,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             const ffmpeg = new FFmpeg();
-
             let oomDetected = false;
             let oomLine = '';
-
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_encoding')}</span>`;
             });
-
             let warnRepeatCount = 0;
             ffmpeg.on('log', ({ message }) => {
                 const lc = message.toLowerCase();
@@ -1038,30 +916,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     oomDetected = true;
                     oomLine = message;
                 }
-
                 if (lc.includes('missing picture in access') || lc.includes('no frame!') || lc.includes('invalid data found when processing')) {
                     warnRepeatCount++;
                     if (warnRepeatCount % 100 !== 1) {
                         return;
                     }
                 }
-
                 appendToLogsEl(message);
             });
-
             await loadFFmpegHelper(ffmpeg, toBlobURL);
             logSection('FFmpeg V1 — Writing Input');
             log(`  Buffer size : ${currentFileBuffer.byteLength} bytes`);
             await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
             log(`  Write       : DONE`);
             logEnd();
-
             const hardwareThreads = navigator.hardwareConcurrency || 4;
             const threads = Math.min(4, hardwareThreads).toString();
             logSection('FFmpeg V1 — Command');
             log(`  Hardware threads : ${hardwareThreads}`);
             log(`  Using threads    : ${threads}`);
-
             const command = [
                 '-i', 'input.mp4',
                 '-threads', threads,
@@ -1073,12 +946,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 '-b:a', '320k',
                 'output.wmv'
             ];
-
             logsEl.textContent += `Executing command: ffmpeg ${command.join(' ')}\n`;
             log(`  Full command: ffmpeg ${command.join(' ')}`);
             logEnd();
             logSection('FFmpeg V1 — Encoding');
-
             try {
                 await ffmpeg.exec(command);
             } catch (execError) {
@@ -1091,13 +962,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw execError;
                 }
             }
-
             logEnd();
             if (oomDetected) {
                 log(`  OOM detected! Triggered by: ${oomLine}`);
                 throw new Error(`Out of memory during video processing. (Triggered by log: "${oomLine}")`);
             }
-
             logSection('FFmpeg V1 — Output');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
             const data = await ffmpeg.readFile('output.wmv');
@@ -1108,11 +977,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Processing failed (output is empty or too small).');
             }
             logEnd();
-
             const blob = new Blob([data.buffer], { type: 'video/x-ms-wmv' });
             const url = URL.createObjectURL(blob);
             log(`  Blob URL created, triggering download...`);
-
             const a = document.createElement('a');
             a.href = url;
             a.download = `${file.name.replace(/\.[^.]+$/, '')}_hq.wmv`;
@@ -1122,12 +989,10 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(url);
             log(`  Download triggered: ${a.download}`);
             logEnd();
-
             statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
             btnStart.classList.remove('hidden');
-
         } catch (error) {
             log(`  !! V1 ERROR: ${error.name} — ${error.message}`);
             if (error.stack) log(`  Stack: ${error.stack.split('\n').slice(0,3).join(' | ')}`);
@@ -1139,37 +1004,29 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
         }
     }
-
-
-
     const FAKE_SAMPLE_SIZE       = 8;
     const FAKE_SAMPLE_BYTES      = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
     const VIDEO_TIMESCALE        = 90000;
     const VIDEO_DURATION         = 2269500;
     const VIDEO_EDIT_MEDIA_TIME  = 0;
     const VIDEO_SAMPLE_DELTA     = 1500;
-
     const CONTAINER_BOXES = new Set([
         'moov', 'trak', 'mdia', 'minf', 'stbl',
         'edts', 'dinf', 'udta', 'meta', 'ilst',
     ]);
-
     function getBoxType(data, offset) {
         return String.fromCharCode(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
     }
-
     function assertUint32(value, label) {
         if (!Number.isFinite(value) || value < 0 || value > 0xffffffff)
             throw new Error(`${label} out of uint32 range: ${value}`);
     }
-
     function readBox(view, data, offset, end, parentPath) {
         if (offset + 8 > end) throw new Error('Incomplete MP4 box.');
         const smallSize = view.getUint32(offset, false);
         const type = getBoxType(data, offset + 4);
         let size = smallSize;
         let headerSize = 8;
-
         if (smallSize === 1) {
             if (offset + 16 > end) throw new Error(`Incomplete box: ${type}`);
             const high = view.getUint32(offset + 8, false);
@@ -1179,10 +1036,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (smallSize === 0) {
             size = end - offset;
         }
-
         if (size < headerSize || offset + size > end)
             throw new Error(`Invalid size in box: ${type}`);
-
         return {
             type, offset, size, headerSize,
             contentStart: offset + headerSize,
@@ -1194,11 +1049,9 @@ document.addEventListener('DOMContentLoaded', () => {
             prefixEnd:   offset + headerSize,
         };
     }
-
     function childStartForBox(box) {
         return box.type === 'meta' ? box.contentStart + 4 : box.contentStart;
     }
-
     function parseBoxes(data, view, start, end, parentPath) {
         const boxes = [];
         let offset = start;
@@ -1216,11 +1069,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return boxes;
     }
-
     function findChild(box, type) {
         return box.children.find(c => c.type === type) || null;
     }
-
     function findDescendant(box, typePath) {
         let cur = box;
         for (const t of typePath) {
@@ -1229,17 +1080,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cur;
     }
-
     function findTopLevel(boxes, type) {
         return boxes.find(b => b.type === type) || null;
     }
-
     function handlerTypeForTrak(trak) {
         const hdlr = findDescendant(trak, ['mdia', 'hdlr']);
         if (!hdlr || hdlr.offset + 20 > hdlr.end) return null;
         return getBoxType(hdlr.data, hdlr.offset + 16);
     }
-
     function parseStsz(stsz) {
         const sampleSize = stsz.view.getUint32(stsz.offset + 12, false);
         const count      = stsz.view.getUint32(stsz.offset + 16, false);
@@ -1252,7 +1100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sizes.push(stsz.view.getUint32(tableStart + i * 4, false));
         return sizes;
     }
-
     function parseStco(stco) {
         const count      = stco.view.getUint32(stco.offset + 12, false);
         const tableStart = stco.offset + 16;
@@ -1263,7 +1110,6 @@ document.addEventListener('DOMContentLoaded', () => {
             offsets.push(stco.view.getUint32(tableStart + i * 4, false));
         return offsets;
     }
-
     function parseStsc(stsc) {
         const count      = stsc.view.getUint32(stsc.offset + 12, false);
         const tableStart = stsc.offset + 16;
@@ -1280,7 +1126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return rows;
     }
-
     function makeBox(type, payload) {
         const size = 8 + payload.byteLength;
         assertUint32(size, `${type}.size`);
@@ -1291,7 +1136,6 @@ document.addEventListener('DOMContentLoaded', () => {
         box.set(new Uint8Array(payload.buffer || payload, payload.byteOffset || 0, payload.byteLength), 8);
         return box;
     }
-
     function concatBytes(parts) {
         let totalLen = 0;
         for (const p of parts) totalLen += p.byteLength;
@@ -1303,25 +1147,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return result;
     }
-
     function boxBytes(box) {
         return new Uint8Array(box.data.buffer, box.data.byteOffset + box.offset, box.size);
     }
-
     function boxPayload(box) {
         return new Uint8Array(box.data.buffer, box.data.byteOffset + box.contentStart, box.end - box.contentStart);
     }
-
     function writeU32BE(arr, offset, value) {
         const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
         dv.setUint32(offset, value, false);
     }
-
     function readU32BE(arr, offset) {
         const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
         return dv.getUint32(offset, false);
     }
-
     function buildMdhd(box, dynamicTimescale, dynamicDuration) {
         const payload = new Uint8Array(boxPayload(box));
         const version = payload[0];
@@ -1330,7 +1169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         writeU32BE(payload, 16, dynamicDuration);
         return makeBox('mdhd', payload);
     }
-
     function buildElst(box, dynamicEditMediaTime) {
         const payload    = new Uint8Array(boxPayload(box));
         const version    = payload[0];
@@ -1340,7 +1178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         writeU32BE(payload, 12, dynamicEditMediaTime);
         return makeBox('elst', payload);
     }
-
     function buildStts(realSampleCount, fakeSampleCount, dynamicSampleDelta) {
         const payload = new Uint8Array(4 + 4 + 8 + 8);
         writeU32BE(payload, 4, 2);
@@ -1350,7 +1187,6 @@ document.addEventListener('DOMContentLoaded', () => {
         writeU32BE(payload, 20, dynamicSampleDelta);
         return makeBox('stts', payload);
     }
-
     function buildStsz(originalSizes, fakeSampleCount) {
         const total   = originalSizes.length + fakeSampleCount;
         const payload = new Uint8Array(4 + 4 + 4 + total * 4);
@@ -1362,7 +1198,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stsz', payload);
     }
-
     function buildStsc(originalRows, originalChunkCount) {
         const rows    = originalRows.map(r => [...r]);
         const lastRow = rows[rows.length - 1];
@@ -1378,7 +1213,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stsc', payload);
     }
-
     function buildStco(originalOffsets, delta, fakeOffset, fakeSampleCount) {
         const hasFake = fakeOffset !== null && fakeOffset !== undefined;
         const count   = originalOffsets.length + (hasFake ? fakeSampleCount : 0);
@@ -1398,17 +1232,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stco', payload);
     }
-
     function rebuildBox(box, replacements) {
         if (replacements.has(box)) return replacements.get(box);
         if (!box.children.length) return boxBytes(box);
-
         const prefix = new Uint8Array(box.data.buffer, box.data.byteOffset + box.prefixStart, box.prefixEnd - box.prefixStart);
         const parts  = [prefix];
         for (const child of box.children) parts.push(rebuildBox(child, replacements));
         return makeBox(box.type, concatBytes(parts));
     }
-
     function collectTrackStcoBoxes(moov) {
         const stcoBoxes = [];
         for (const trak of moov.children.filter(c => c.type === 'trak')) {
@@ -1420,7 +1251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return stcoBoxes;
     }
-
     function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeOffset, fakeSampleCount) {
         const map = new Map();
         for (const stco of stcoBoxes) {
@@ -1428,41 +1258,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return map;
     }
-
     function patchMp4(inputData, _logFn) {
         const _log = _logFn || (() => {});
-
         const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
         const fresh = new Uint8Array(srcArr.byteLength);
         fresh.set(srcArr);
         const data = fresh;
         const view = new DataView(data.buffer);
-
         _log(`  Input buffer : ${data.byteLength} bytes (${(data.byteLength/(1024*1024)).toFixed(3)} MB)`);
         _log(`  byteOffset   : ${fresh.byteOffset} (should be 0 on iOS fix)`);
-
         const topLevel = parseBoxes(data, view, 0, data.length, '');
         _log(`  Top-level boxes: ${topLevel.map(b => `${b.type}(${b.size})`).join(', ')}`);
-
         const ftyp = findTopLevel(topLevel, 'ftyp');
         const moov = findTopLevel(topLevel, 'moov');
         const mdat = findTopLevel(topLevel, 'mdat');
-
         if (!ftyp) throw new Error('"ftyp" box not found. Not a valid MP4.');
         if (!moov) throw new Error('"moov" box not found. Missing MP4 metadata.');
         if (!mdat) throw new Error('"mdat" box not found. No media data.');
-
         _log(`  ftyp @ offset ${ftyp.offset}, size ${ftyp.size}`);
         _log(`  moov @ offset ${moov.offset}, size ${moov.size}`);
         _log(`  mdat @ offset ${mdat.offset}, size ${mdat.size}, content @ ${mdat.contentStart}`);
         _log(`  moov children: ${moov.children.map(c => c.type).join(', ')}`);
-
         const videoTrak = moov.children.find(
             c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
         );
         if (!videoTrak) throw new Error('Video track not found.');
         _log(`  Video trak children: ${videoTrak.children.map(c => c.type).join(', ')}`);
-
         const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
         const mdhd = findDescendant(videoTrak, ['mdia', 'mdhd']);
         const elst = findDescendant(videoTrak, ['edts', 'elst']);
@@ -1470,29 +1291,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const stsc = stbl && findChild(stbl, 'stsc');
         const stsz = stbl && findChild(stbl, 'stsz');
         const stco = stbl && findChild(stbl, 'stco');
-
         if (!stbl || !mdhd || !elst || !stts || !stsc || !stsz || !stco) {
             _log(`  MISSING BOXES — stbl:${!!stbl} mdhd:${!!mdhd} elst:${!!elst} stts:${!!stts} stsc:${!!stsc} stsz:${!!stsz} stco:${!!stco}`);
             throw new Error('Missing required boxes: mdhd, elst, stts, stsc, stsz, stco.');
         }
         _log(`  All required boxes found ✓`);
-
         const originalSizes        = parseStsz(stsz);
         const originalStscRows     = parseStsc(stsc);
         const originalChunkOffsets = parseStco(stco);
         const stcoBoxes            = collectTrackStcoBoxes(moov);
-
         _log(`  stsz: ${originalSizes.length} samples, first=${originalSizes[0]}, last=${originalSizes[originalSizes.length-1]}`);
         _log(`  stsc: ${originalStscRows.length} entries`);
         _log(`  stco: ${originalChunkOffsets.length} chunks, first offset=${originalChunkOffsets[0]}, last=${originalChunkOffsets[originalChunkOffsets.length-1]}`);
         _log(`  stco tracks total: ${stcoBoxes.length}`);
-
         const preservedTopLevel = topLevel
             .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
             .map(boxBytes);
-
-
-        // Read dynamic timescale from mdhd
         const mdhdPayload = boxPayload(mdhd);
         const mdhdVer = mdhdPayload[0];
         let originalTimescale = 90000;
@@ -1501,29 +1315,22 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (mdhdVer === 1) {
             originalTimescale = readU32BE(mdhdPayload, 20);
         }
-
-        // Read dynamic sample delta from stts
         const sttsPayload = boxPayload(stts);
         const sttsEntryCount = readU32BE(sttsPayload, 4);
         let originalSampleDelta = 1500;
         if (sttsEntryCount >= 1) {
             originalSampleDelta = readU32BE(sttsPayload, 12);
         }
-
-        // Read dynamic edit media time from elst
         const elstPayload = boxPayload(elst);
         let originalEditMediaTime = 0;
         if (elstPayload[0] === 0) {
             originalEditMediaTime = readU32BE(elstPayload, 12);
         }
-
         const realSampleCount  = originalSizes.length;
         const fakeSampleCount  = realSampleCount * 9;
         const dynamicDuration  = (realSampleCount + fakeSampleCount) * originalSampleDelta;
-
         const inputFps = Math.round(originalTimescale / originalSampleDelta);
         const patchedFps = Math.round(((realSampleCount + fakeSampleCount) * originalTimescale) / dynamicDuration);
-
         _log(`  realSamples    : ${realSampleCount}`);
         _log(`  fakeSamples    : ${fakeSampleCount} (realSamples × 9)`);
         _log(`  timescale      : ${originalTimescale} (dynamic)`);
@@ -1532,7 +1339,6 @@ document.addEventListener('DOMContentLoaded', () => {
         _log(`  editMediaTime  : ${originalEditMediaTime} (dynamic)`);
         _log(`  Input FPS      : ${inputFps}`);
         _log(`  Patched FPS    : ${patchedFps}`);
-
         const fixedReplacements = new Map([
             [mdhd, buildMdhd(mdhd, originalTimescale, dynamicDuration)],
             [elst, buildElst(elst, originalEditMediaTime)],
@@ -1540,7 +1346,6 @@ document.addEventListener('DOMContentLoaded', () => {
             [stsc, buildStsc(originalStscRows, originalChunkOffsets.length)],
             [stsz, buildStsz(originalSizes, fakeSampleCount)],
         ]);
-
         const placeholderRep = new Map(fixedReplacements);
         buildStcoReplacements(stcoBoxes, stco, 0, 0, fakeSampleCount).forEach((v, k) => placeholderRep.set(k, v));
         const moovPlaceholder   = rebuildBox(moov, placeholderRep);
@@ -1550,7 +1355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const delta1            = newMdatStart1 - mdat.contentStart;
         const fakeOffset1       = newMdatStart1 + oldMdatPayload.byteLength;
         _log(`  Pass 1 — moovPlaceholder: ${moovPlaceholder.byteLength}B, newMdatStart: ${newMdatStart1}, delta: ${delta1}`);
-
         let finalRep = new Map(fixedReplacements);
         buildStcoReplacements(stcoBoxes, stco, delta1, fakeOffset1, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovV2        = rebuildBox(moov, finalRep);
@@ -1558,7 +1362,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const delta2        = newMdatStart2 - mdat.contentStart;
         const fakeOffset2   = newMdatStart2 + oldMdatPayload.byteLength;
         _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}, fakeOffset: ${fakeOffset2}`);
-
         finalRep = new Map(fixedReplacements);
         buildStcoReplacements(stcoBoxes, stco, delta2, fakeOffset2, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
         const moovFinal      = rebuildBox(moov, finalRep);
@@ -1569,7 +1372,6 @@ document.addEventListener('DOMContentLoaded', () => {
         _log(`  Pass 3 — moovFinal: ${moovFinal.byteLength}B`);
         _log(`  Output layout: ftyp(${ftypBytes.byteLength}) + moov(${moovFinal.byteLength}) + preserved(${preservedBytes.byteLength}) + mdat(${mdatNew.byteLength})`);
         _log(`  Total output: ${output.byteLength} bytes (${(output.byteLength/(1024*1024)).toFixed(3)} MB)`);
-
         return {
             output,
             realSamples:    realSampleCount,
@@ -1580,14 +1382,11 @@ document.addEventListener('DOMContentLoaded', () => {
             chunkCount:     originalChunkOffsets.length,
         };
     }
-
     async function processVideoV2(file, mode = 'hd') {
         if (isProcessing) return;
         isProcessing = true;
-
         const isOff = mode === 'off';
         const modeLabel = mode === 'off' ? 'OFF' : mode === 'fast' ? 'Compatibility (720p)' : 'Quality (1080p)';
-
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
@@ -1600,27 +1399,22 @@ document.addEventListener('DOMContentLoaded', () => {
         log(`  Mode     : ${modeLabel}`);
         log(`  Buffer   : ${currentFileBuffer ? (currentFileBuffer.byteLength/(1024*1024)).toFixed(3)+' MB' : 'NOT LOADED'}`);
         logEnd();
-
         try {
             let dataToPath;
-
             if (isOff) {
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
                 progressFill.style.width = '10%';
                 progressPercent.textContent = '10%';
                 logsEl.textContent += 'Compression skipped | reading original file...\n';
-
                 dataToPath = new Uint8Array(currentFileBuffer);
                 logSection('Direct Patch — Buffer Prep');
                 log(`  Uint8Array byteLength : ${dataToPath.byteLength}`);
                 log(`  byteOffset            : ${dataToPath.byteOffset}`);
-
                 const h = dataToPath;
                 log(`  First box size bytes  : [${h[0]},${h[1]},${h[2]},${h[3]}] = ${((h[0]<<24)|(h[1]<<16)|(h[2]<<8)|h[3])>>>0}`);
                 log(`  First box type bytes  : ${String.fromCharCode(h[4],h[5],h[6],h[7])}`);
                 log(`  Original size         : ${(dataToPath.byteLength / (1024 * 1024)).toFixed(3)} MB`);
                 logEnd();
-
                 progressFill.style.width = '40%';
                 progressPercent.textContent = '40%';
             } else {
@@ -1631,17 +1425,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { FFmpeg } = window.FFmpegWASM;
                 const { fetchFile, toBlobURL } = window.FFmpegUtil;
                 const ffmpeg = new FFmpeg();
-
                 let oomDetected = false;
                 let oomLine = '';
-
                 ffmpeg.on('progress', ({ progress }) => {
                     const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
                     progressFill.style.width = `${percent}%`;
                     progressPercent.textContent = `${percent}%`;
                     statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_encoding')}</span>`;
                 });
-
                 let warnRepeatCount = 0;
                 ffmpeg.on('log', ({ message }) => {
                     const lc = message.toLowerCase();
@@ -1649,31 +1440,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         oomDetected = true;
                         oomLine = message;
                     }
-
                     if (lc.includes('missing picture in access') || lc.includes('no frame!') || lc.includes('invalid data found when processing')) {
                         warnRepeatCount++;
                         if (warnRepeatCount % 100 !== 1) {
                             return;
                         }
                     }
-
                     appendToLogsEl(message);
                 });
-
                 await loadFFmpegHelper(ffmpeg, toBlobURL);
                 logSection('V2 FFmpeg — Writing Input');
                 log(`  Buffer byteLength: ${currentFileBuffer.byteLength}`);
                 await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
                 log(`  Write: DONE`);
                 logEnd();
-
                 const hardwareThreads = navigator.hardwareConcurrency || 4;
                 const threads = Math.min(4, hardwareThreads).toString();
                 logSection('V2 FFmpeg — Command');
                 log(`  Hardware threads : ${hardwareThreads}`);
                 log(`  Using threads    : ${threads}`);
                 log(`  Mode             : ${mode}`);
-
                 let command;
                 if (mode === 'fast') {
                     command = [
@@ -1714,12 +1500,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         'compressed.mp4'
                     ];
                 }
-
                 logsEl.textContent += `Compressing: ffmpeg ${command.join(' ')}\n`;
                 log(`  Full command: ffmpeg ${command.join(' ')}`);
                 logEnd();
                 logSection('V2 FFmpeg — Encoding');
-
                 try {
                     await ffmpeg.exec(command);
                 } catch (execError) {
@@ -1732,19 +1516,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         throw execError;
                     }
                 }
-
                 logEnd();
                 if (oomDetected) {
                     log(`  OOM: ${oomLine}`);
                     throw new Error(`Out of memory during compression. (Triggered by log: "${oomLine}")`);
                 }
-
                 const compressedData = await ffmpeg.readFile('compressed.mp4');
                 logSection('V2 FFmpeg — Compress Output');
                 log(`  compressedData bytes : ${compressedData ? compressedData.byteLength : 0}`);
                 log(`  compressedData byteOffset : ${compressedData ? compressedData.byteOffset : 'N/A'}`);
                 log(`  Size : ${compressedData ? (compressedData.byteLength/(1024*1024)).toFixed(3)+' MB' : 'EMPTY'}`);
-
                 if (!compressedData || compressedData.byteLength < 1024) {
                     log(`  ERROR: Compressed output is empty or too small!`);
                     throw new Error('Compression failed (output is empty or too small).');
@@ -1753,15 +1534,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 logsEl.textContent += `Compressed size: ${(compressedData.byteLength / (1024 * 1024)).toFixed(2)} MB\n`;
                 dataToPath = compressedData;
             }
-
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
             progressText.textContent = window.getTranslation('status_processing');
             progressFill.style.width = '92%';
             progressPercent.textContent = '92%';
-
             logSection('MP4 Patch');
             const patchResult = patchMp4(dataToPath, log);
-
             log(`  Patch result:`);
             log(`    Real samples     : ${patchResult.realSamples}`);
             log(`    Fake samples     : ${patchResult.fakeSamples}`);
@@ -1773,19 +1551,15 @@ document.addEventListener('DOMContentLoaded', () => {
             log(`    Output size      : ${(patchResult.output.byteLength/(1024*1024)).toFixed(3)} MB`);
             logEnd();
             logsEl.scrollTop = logsEl.scrollHeight;
-
             progressFill.style.width = '98%';
             progressPercent.textContent = '98%';
-
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
-
             const blob = new Blob([patchResult.output], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
             logSection('Download');
             log(`  Blob size  : ${blob.size} bytes`);
             log(`  Blob type  : ${blob.type}`);
             log(`  Filename   : ${file.name.replace(/\.[^.]+$/, '')}_hq.mp4`);
-
             const a = document.createElement('a');
             a.href = url;
             a.download = `${file.name.replace(/\.[^.]+$/, '')}_hq.mp4`;
@@ -1795,15 +1569,183 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(url);
             log(`  Download triggered ✓`);
             logEnd();
-
             statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
             progressText.textContent = window.getTranslation('status_completed');
             btnStart.classList.remove('hidden');
-
         } catch (error) {
             console.error(error);
+            showStatusError(`Error: ${error.message}`);
+            btnStart.classList.remove('hidden');
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    function detectVideoInfo(file) {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file);
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = url;
+            video.onloadedmetadata = () => {
+                const width = video.videoWidth || 1080;
+                const height = video.videoHeight || 1920;
+                const duration = video.duration || 1;
+                URL.revokeObjectURL(url);
+                resolve({ width, height, duration });
+            };
+            video.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve({ width: 1080, height: 1920, duration: 1 });
+            };
+        });
+    }
+
+    function parseFpsFromLogs(logText) {
+        if (!logText) return 60;
+        const match = logText.match(/(\d+(?:\.\d+)?)\s*fps/i) || logText.match(/(\d+(?:\.\d+)?)\s*tbr/i);
+        if (match) {
+            const parsed = parseFloat(match[1]);
+            if (parsed > 0 && parsed < 240) return Math.round(parsed);
+        }
+        return 60;
+    }
+
+    function computeOptimalSettings(measuredMbps, width, height, fps) {
+        let targetBitrateMbps = Math.round((measuredMbps * 0.4) * 10) / 10;
+        if (fps >= 60) targetBitrateMbps = Math.round((targetBitrateMbps * 1.1) * 10) / 10;
+        targetBitrateMbps = Math.max(0.8, Math.min(5.0, targetBitrateMbps));
+        let maxrateMbps = Math.round((targetBitrateMbps * 1.4) * 10) / 10;
+        maxrateMbps = Math.max(1.2, Math.min(10.0, maxrateMbps));
+        const bufsizeMbps = Math.max(2.0, Math.round(maxrateMbps * 2 * 10) / 10);
+        const crf = targetBitrateMbps >= 3.5 ? 23 : (targetBitrateMbps >= 2.0 ? 25 : 27);
+        return { targetBitrateMbps, maxrateMbps, bufsizeMbps, crf };
+    }
+
+    async function processVideoV3(file) {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        btnStart.classList.add('hidden');
+        progressContainer.classList.remove('hidden');
+        logsContainer.classList.remove('hidden');
+        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
+        progressFill.style.width = '0%';
+        progressPercent.textContent = '0%';
+        progressText.textContent = 'Processing...';
+
+        log(`  Processing V3: ${file.name}`);
+
+        try {
+            const isReady = await loadFFmpegLibraries();
+            if (!isReady) throw new Error("FFmpeg library failed to load.");
+
+            const { FFmpeg } = window.FFmpegWASM;
+            const { toBlobURL } = window.FFmpegUtil;
+            const ffmpeg = new FFmpeg();
+
+            let oomDetected = false;
+
+            ffmpeg.on('log', ({ message }) => {
+                if (message.toLowerCase().includes('oom')) oomDetected = true;
+            });
+
+            const hardwareThreads = navigator.hardwareConcurrency || 4;
+            const threads = Math.min(4, hardwareThreads).toString();
+
+            await loadFFmpegHelper(ffmpeg, toBlobURL);
+            await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
+
+            const videoInfo = await detectVideoInfo(file);
+
+            let probeLog = '';
+            const probeHandler = ({ message }) => { probeLog += message + '\n'; };
+            ffmpeg.on('log', probeHandler);
+            try { await ffmpeg.exec(['-i', 'input.mp4', '-threads', threads, '-f', 'null', '-']); } catch (e) {}
+            ffmpeg.off('log', probeHandler);
+            const fpsFromLogs = parseFpsFromLogs(probeLog);
+
+            progressText.textContent = 'Analyzing... 15%';
+            progressFill.style.width = '15%';
+            progressPercent.textContent = '15%';
+
+            await ffmpeg.exec([
+                '-y', '-i', 'input.mp4',
+                '-threads', threads,
+                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30',
+                '-an', 'analysis.mp4'
+            ]);
+
+            const analysisFile = await ffmpeg.readFile('analysis.mp4');
+            const measuredMbps = (analysisFile.byteLength * 8) / (videoInfo.duration || 1) / 1000000;
+            await ffmpeg.deleteFile('analysis.mp4');
+
+            const { targetBitrateMbps, maxrateMbps, bufsizeMbps } = computeOptimalSettings(
+                measuredMbps, videoInfo.width, videoInfo.height, fpsFromLogs
+            );
+
+            progressText.textContent = 'Processing... 40%';
+            progressFill.style.width = '40%';
+            progressPercent.textContent = '40%';
+
+            const pSingleHandler = ({ progress }) => {
+                const pct = Math.min(92, Math.round(40 + progress * 52));
+                progressFill.style.width = `${pct}%`;
+                progressPercent.textContent = `${pct}%`;
+                progressText.textContent = `Processing... ${pct}%`;
+            };
+            ffmpeg.on('progress', pSingleHandler);
+
+            await ffmpeg.exec([
+                '-y', '-i', 'input.mp4',
+                '-threads', threads,
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-b:v', `${targetBitrateMbps}M`,
+                '-maxrate', `${maxrateMbps}M`,
+                '-bufsize', `${bufsizeMbps}M`,
+                '-x264opts', 'aq-mode=3:aq-strength=0.85:psy-rd=1.0,0.15',
+                '-pix_fmt', 'yuv420p',
+                '-c:a', 'aac',
+                '-b:a', '320k',
+                'output.mp4'
+            ]);
+            ffmpeg.off('progress', pSingleHandler);
+
+            if (oomDetected) throw new Error("Out of memory.");
+
+            progressText.textContent = 'Finalizing...';
+            progressFill.style.width = '95%';
+            progressPercent.textContent = '95%';
+
+            const compressedData = await ffmpeg.readFile('output.mp4');
+            await ffmpeg.deleteFile('input.mp4');
+            await ffmpeg.deleteFile('output.mp4');
+
+            const patchResult = patchMp4(compressedData, () => {});
+
+            const blob = new Blob([patchResult.output], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+
+            const filename = `${file.name.replace(/\.[^.]+$/, '')}_h264_v3_patched.mp4`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            log(`  Completed.`);
+            statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; Done</span>`;
+            progressFill.style.width = '100%';
+            progressPercent.textContent = '100%';
+            progressText.textContent = 'Done.';
+            btnStart.classList.remove('hidden');
+
+        } catch (error) {
             showStatusError(`Error: ${error.message}`);
             btnStart.classList.remove('hidden');
         } finally {

@@ -114,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.head.appendChild(s);
         });
 
-        // 1. Prioritas CDN Pertama (dengan Blob Worker Bypass)
         try {
             console.log('🚀 Loading FFmpeg libraries from CDN (with Blob worker security bypass)...');
             if (!window.FFmpegUtil) {
@@ -131,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const ffmpegCode = await ffmpegRes.text();
                 const workerCode = await workerRes.text();
 
-                // Convert worker code to a same-origin Blob URL to bypass browser SecurityError
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
                 const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
                                                .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
@@ -147,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('⚠️ CDN load failed, falling back to LOCAL assets/ffmpeg/...', cdnErr);
         }
 
-        // 2. Fallback Lokal jika CDN gagal
         try {
             console.log('📦 Loading FFmpeg libraries from LOCAL fallback...');
             if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');

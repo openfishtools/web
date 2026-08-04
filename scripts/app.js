@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const cached = localStorage.getItem(cacheKey);
         if (cached) return cached;
 
-        // Fetch cross-origin and cache as base64 in background
         fetch(url)
             .then(response => response.blob())
             .then(blob => {
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         localStorage.setItem(cacheKey, reader.result);
                     } catch (e) {
-                        // Handle localStorage full quota limit gracefully
                         console.warn('Storage quota limit reached for icon cache:', e);
                     }
                 };
@@ -106,15 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastClickedId = null;
     let lastClickedRect = null;
 
-    /* ═══════════════════════════════════════════════════════
-       AM XML INTERACTIVE PREVIEW ENGINE
-    ═══════════════════════════════════════════════════════ */
-
-    // Per-slide parsed XML state cache
     const amXmlCache = new Map();
     const AM_XML_CACHE_MAX = 20;
 
-    // Cubic bezier evaluator (ported from AM XML PREVIEW.html)
     const amCubicBezier = (p1x, p1y, p2x, p2y, t) => {
         const bezier = (t, p0, p1, p2, p3) =>
             (1-t)**3*p0 + 3*(1-t)**2*t*p1 + 3*(1-t)*t**2*p2 + t**3*p3;
@@ -179,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const r = Number(amInterpolateKf(layer.keyframes.rotation, layerProgress));
             if (!isNaN(r)) rot = r;
         }
-        // Oscillate effects
         if (layer.oscillates && layer.oscillates.length && elapsedMs >= layer.startTime) {
             const t_sec = (elapsedMs - layer.startTime) / 1000;
             layer.oscillates.forEach(eff => {
@@ -377,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const wasExitingDown = overlay?.classList.contains('exiting-down');
         const wasExitingUp = overlay?.classList.contains('exiting-up');
 
-        // Temporarily remove classes that alter canvas size to measure target position
         if (overlay) {
             overlay.classList.remove('entering', 'exiting-down', 'exiting-up');
         }
@@ -386,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const cRect = container.getBoundingClientRect();
         const kRect = canvas.getBoundingClientRect();
 
-        // Restore classes
         if (overlay) {
             if (wasEntering) overlay.classList.add('entering');
             if (wasExitingDown) overlay.classList.add('exiting-down');
@@ -407,7 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
         video.style.clipPath = '';
     };
 
-    // Build the entire AM XML overlay DOM inside a slide
     const buildAmXmlOverlay = (slide, parsed) => {
         const { layers, beats, durationMs, fps, sceneW, sceneH, title } = parsed;
         const PX_PER_MS = 0.2;
@@ -455,7 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         </div>`;
 
-        // ── Wiring ──────────────────────────────────
         const previewCanvas = overlay.querySelector('.am-xml-canvas');
         const railEl = overlay.querySelector('.am-xml-rail');
         const trackViewport = overlay.querySelector('.am-xml-track-viewport');
@@ -475,10 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
         trackContent.style.width = `${totalWidth}px`;
         if (rulerStrip) rulerStrip.style.width = `${totalWidth}px`;
 
-        // Draw ruler
         amDrawRuler(rulerCanvas, durationMs, PX_PER_MS);
 
-        // Beat marks
         beats.forEach(beat => {
             const bm = document.createElement('div');
             bm.className = 'am-xml-beat-mark';
@@ -486,7 +471,6 @@ document.addEventListener('DOMContentLoaded', () => {
             trackContent.appendChild(bm);
         });
 
-        // Layer rows (rail + chips)
         layers.forEach(layer => {
             const railRow = document.createElement('div');
             railRow.className = 'am-xml-rail-row';
@@ -508,17 +492,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isAudio) chip.style.background = layer.color;
             chip.textContent = layer.label;
 
-            // Render keyframe diamonds inside the chip
             if (layer.keyframes) {
                 const uniqueKfTimes = new Set();
                 ['location', 'scale', 'rotation'].forEach(type => {
                     const list = layer.keyframes[type] || [];
-                    // Skip if it only contains the static default full-duration keyframes
                     if (list.length === 2 && list[1].time === 999999) return;
 
                     list.forEach(kf => {
                         if (kf.time === 999999) return;
-                        // kf.time is a progress value between 0 and 1
                         if (kf.time >= 0 && kf.time <= 1) {
                             uniqueKfTimes.add(kf.time);
                         }
@@ -538,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
             trackContent.appendChild(row);
         });
 
-        // Wireframe elements in canvas
         layers.forEach((layer, idx) => {
             if (layer.type === 'audio' || layer.type === 'nullobj') return;
             const div = document.createElement('div');
@@ -574,14 +554,12 @@ document.addEventListener('DOMContentLoaded', () => {
             previewCanvas.appendChild(div);
         });
 
-        // ── Playhead x position ──
         const getPlayheadX = () => {
             const vpRect = trackViewport.getBoundingClientRect();
             const oRect = overlay.getBoundingClientRect();
             return (oRect.left + oRect.width / 2) - vpRect.left;
         };
 
-        // ── Render frame ──
         const amRender = (elapsedMs) => {
             const playheadX = getPlayheadX();
             if (playhead) playhead.style.left = `${playheadX}px`;
@@ -617,7 +595,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // ── State ──
         let xmlPlaying = false;
         let xmlScrubbing = false;
         let scrubStartX = 0, scrubStartY = 0, scrubStartElapsed = 0, scrubStartScrollTop = 0;
@@ -627,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
             iconPause.style.display = playing ? '' : 'none';
         };
 
-        // ── Sync loop with video ──
         const video = slide.querySelector('video') || slide.querySelector('.tiktok-media-host video');
         let lastVideoTime = -1;
         let syncRafId = null;
@@ -639,9 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.currentTime = 0;
                 vtMs = 0;
             }
-            // Detect loop: video.currentTime reset to near 0 from something > 0
             if (lastVideoTime > 200 && vtMs < 50) {
-                // looped
             }
             lastVideoTime = vtMs;
             const elapsed = vtMs % (durationMs || 1);
@@ -667,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay._scrollArea = scrollArea;
         overlay._video = video;
 
-        // ── Play / Pause buttons ──
         playBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!video) return;
@@ -676,11 +649,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 startSync();
             } else {
                 video.pause();
-                // keep sync running at 1 frame so UI stays updated
             }
         });
 
-        // Prev / Next beat buttons
         prevBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!video) return;
@@ -709,7 +680,6 @@ document.addEventListener('DOMContentLoaded', () => {
         frameObserver.observe(overlay);
         overlay._frameObserver = frameObserver;
 
-        // ── Scrubbing ──
         trackViewport.addEventListener('pointerdown', (e) => {
             if (!video) return;
             if (!video.paused) {
@@ -733,7 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
             newElapsed = Math.min(Math.max(newElapsed, 0), durationMs);
             if (video) video.currentTime = newElapsed / 1000;
             amRender(newElapsed);
-            // vertical scroll of layers
             if (scrollArea) {
                 const dy = e.clientY - scrubStartY;
                 scrollArea.scrollTop = scrubStartScrollTop - dy;
@@ -749,12 +718,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         trackViewport.addEventListener('pointercancel', () => { xmlScrubbing = false; });
 
-        // Sync rail scroll with scroll area
         scrollArea.addEventListener('scroll', () => {
             railEl.scrollTop = scrollArea.scrollTop;
         }, { passive: true });
 
-        // ── Scroll behavior: in-frame area ──
         const feed = slide.closest('.tiktok-feed');
         const editorEl = overlay.querySelector('.am-xml-editor');
 
@@ -789,7 +756,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 200);
         };
 
-        // Stop propagation of wheel and touch inside scroll area
         scrollArea.addEventListener('wheel', (e) => {
             e.stopPropagation();
         }, { passive: true });
@@ -797,7 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
         }, { passive: true });
 
-        // Start sync immediately if video is already playing
         if (video && !video.paused) startSync();
         else if (video) {
             const onPlay = () => startSync();
@@ -806,7 +771,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Trigger XML overlay: fetch → parse → build → animate in
     const triggerAmXmlPreview = async (slide) => {
         const xmlUrl = slide.dataset.amXmlUrl;
         if (!xmlUrl) return;
@@ -815,7 +779,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!overlay) return;
         if (overlay.dataset.shown === 'true') return; // already shown
 
-        // Show loading badge
         const badge = slide.querySelector('.am-xml-loading-badge');
         if (badge) badge.classList.add('show');
 
@@ -847,7 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (badge) badge.classList.remove('show');
 
-        // Build DOM if not yet built
         if (!overlay.dataset.built) {
             buildAmXmlOverlay(slide, parsed);
             overlay.dataset.built = 'true';
@@ -885,8 +847,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (overlay._startSync) overlay._startSync();
     };
-
-    /* END AM XML ENGINE */
 
     const showExplore = (updateUrl = true) => {
         amXmlCache.clear();
@@ -967,7 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lastClickedId = targetId;
         lastClickedRect = clickedEl ? clickedEl.getBoundingClientRect() : null;
 
-        // Reset transition styles
         feedView.style.transition = 'none';
         feedView.style.transform = 'translateY(6%)';
         feedView.style.opacity = '0';
@@ -1044,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (container.dataset.interactionsSet) return;
             container.dataset.interactionsSet = 'true';
 
-            // Check if this slide has AM XML — if so, skip native tap handling
             const slide = container.closest('.tiktok-slide');
             const hasAmXml = !!(slide && slide.dataset.amXmlUrl);
             
@@ -1062,8 +1020,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // For AM XML slides: single tap does nothing (pause handled in XML UI)
-            // double tap does nothing (like disabled while XML preview is active)
             if (hasAmXml) return;
 
             let lastTap = 0;
@@ -1074,12 +1030,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const DOUBLE_TAP_DELAY = 300;
                 
                 if (now - lastTap < DOUBLE_TAP_DELAY) {
-                    // Double Tap
                     clearTimeout(tapTimeout);
                     handleDoubleTap(container, e);
                     lastTap = 0;
                 } else {
-                    // Single Tap potential
                     lastTap = now;
                     tapTimeout = setTimeout(() => {
                         handleSingleTap(container);
@@ -1117,7 +1071,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = slide?.dataset.id;
         const likeBtn = slide?.querySelector('[data-action="like"]');
         
-        // Show heart animation
         const heart = document.createElement('span');
         heart.className = 'material-symbols-rounded overlay-heart animate-heart';
         heart.textContent = 'favorite';
@@ -1201,7 +1154,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return '<div class="media-placeholder" aria-hidden="true"></div>';
         }
         if (isDirectVideoUrl(m)) {
-            // Remove controls, keep autoplay and loop
             return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous" referrerpolicy="no-referrer"></video>`;
         }
         if (isTikTokLikeUrl(m)) {
@@ -1846,10 +1798,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = btn.dataset.url;
                 if (sw === 'AM') {
                     openAmVariantPicker(presetData, true);
-                    // Do not close sw-download-picker, let it stay open in stacked mode
                 } else {
                     openSwDetailPicker({ sw, url }, presetData, true);
-                    // Do not close sw-download-picker, let it stay open in stacked mode
                 }
             });
         });
@@ -1965,8 +1915,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-
     const handleLike = async (id, btn, onlyLike = false) => {
         const isLiked = btn.classList.contains('liked');
         if (onlyLike && isLiked) return;
@@ -2080,7 +2028,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('social-grid');
         if (!container || container.getAttribute('data-loaded') === 'true') return;
 
-        // Show skeleton loading state
         container.innerHTML = Array(6).fill(0).map(() => `
             <div class="skeleton-social-card">
                 <div class="skeleton-social-icon"></div>
@@ -2210,7 +2157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const icon = badgeIcons[sw];
                     return icon ? `<img src="${icon}" class="tiktok-title-icon" alt="${sw}">` : '';
                 }).join('');
-                // Check if this preset has AM XML
                 const swArr2 = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
                 const hasAmXml = swArr2.includes('AM') && !!p.amXmlUrl;
                 const xmlAttr = hasAmXml ? `data-am-xml-url="${dsa(p.amXmlUrl)}"` : '';
@@ -2307,7 +2253,6 @@ document.addEventListener('DOMContentLoaded', () => {
             cats.forEach(c => catSet.add(c));
         });
 
-        // Sort: "Made By Cutefish" first, then alphabetical
         const sorted = [...catSet].sort((a, b) => {
             if (a === 'Made By Cutefish') return -1;
             if (b === 'Made By Cutefish') return 1;
@@ -2364,7 +2309,6 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        // Sort: "Made By Cutefish" category resources first
         filtered.sort((a, b) => {
             const aIsCute = (Array.isArray(a.category) ? a.category : [a.category]).includes('Made By Cutefish');
             const bIsCute = (Array.isArray(b.category) ? b.category : [b.category]).includes('Made By Cutefish');
@@ -2412,7 +2356,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
             container.setAttribute('data-loaded', 'true');
 
-            // Attach click handlers
             container.querySelectorAll('.resource-card').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.closest('.res-card-detail-btn') || e.target.closest('.download-direct-btn')) return;
@@ -2432,14 +2375,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     const RESOURCE_PASSWORD = 'EDITINGSTUFF';
 
     const openResourcePopup = (resource) => {
         const popup = document.getElementById('resource-detail-popup');
         if (!popup) return;
 
-        // Icon
         const iconEl = document.getElementById('res-popup-icon');
         const fallbackEl = document.getElementById('res-popup-icon-fallback');
         if (resource.icon && (resource.icon.startsWith('http') || resource.icon.includes('/'))) {
@@ -2455,20 +2396,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('res-popup-dev').textContent = resource.dev || 'cutefishaep Team';
         document.getElementById('res-popup-info').textContent = resource.info || '—';
 
-        // Categories
         const cats = Array.isArray(resource.category) ? resource.category : (resource.category ? [resource.category] : []);
         document.getElementById('res-popup-cats').innerHTML = cats.map(c =>
             `<span class="res-popup-cat-chip">${c}</span>`
         ).join('');
 
-        // OS data
         const osArr = Array.isArray(resource.os) ? resource.os : [];
         document.getElementById('res-popup-os-count').textContent = osArr.length || '—';
         const totalVers = new Set();
         osArr.forEach(o => { if (o.versions) o.versions.forEach(v => totalVers.add(v.label)); });
         document.getElementById('res-popup-ver-count').textContent = totalVers.size || '—';
 
-        // State
         let selectedOs = null;
         let selectedVer = null;
         let osVersionMap = {}; // { WIN: [{label, url}], MAC: [...] }
@@ -2488,7 +2426,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const verChipsEl = document.getElementById('res-popup-ver-chips');
         const osChipsEl = document.getElementById('res-popup-os-chips');
 
-        // Hide downstream sections initially
         verSection.classList.add('hidden');
         downloadSection.classList.add('hidden');
         passwordSection.classList.add('hidden');
@@ -2505,7 +2442,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (mainTextEl) mainTextEl.style.display = 'block';
                     downloadLabel.textContent = `${OS_LABEL[selectedOs] || selectedOs} - ${selectedVer}`;
                     
-                    // Show downstream sections once selected
                     downloadSection.classList.remove('hidden');
                     passwordSection.classList.remove('hidden');
                     if (resource.instruction) {
@@ -2550,7 +2486,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // Render OS chips
         const osKeys = Object.keys(osVersionMap);
         if (osKeys.length > 0) {
             osChipsEl.innerHTML = osKeys.map(key =>
@@ -2566,7 +2501,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
 
-                    // Reset and hide downstream when switching platform
                     downloadSection.classList.add('hidden');
                     passwordSection.classList.add('hidden');
                     instrSection.classList.add('hidden');
@@ -2578,7 +2512,6 @@ document.addEventListener('DOMContentLoaded', () => {
             osChipsEl.innerHTML = '<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">No platforms configured</span>';
         }
 
-        // Password
         document.getElementById('res-popup-password').textContent = RESOURCE_PASSWORD;
         const copyBtn = document.getElementById('res-popup-copy-btn');
         copyBtn.onclick = () => {
@@ -2589,7 +2522,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // Instruction
         const instrEl = document.getElementById('res-popup-instruction');
         if (resource.instruction) {
             instrEl.textContent = resource.instruction;
@@ -2606,8 +2538,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.remove('show');
         }
     });
-
-
 
     const categoryContainer = document.getElementById('preset-categories');
     if (categoryContainer) {
@@ -2642,10 +2572,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
-
-
-    // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     if (themeToggleBtn) {
         const root = document.documentElement;
@@ -2671,7 +2597,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Init theme
         setTheme(getPreferredTheme());
 
         themeToggleBtn.addEventListener('click', () => {
@@ -2681,9 +2606,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* ═══════════════════════════════════════════════════════
-       AUTOMATIC VERSION CHECK & CACHE INVALIDATION
-    ═══════════════════════════════════════════════════════ */
     const checkAppVersion = async () => {
         if (!navigator.onLine) return;
         try {
@@ -2724,9 +2646,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    /* ═══════════════════════════════════════════════════════
-       SERVICE WORKER REGISTRATION
-    ═══════════════════════════════════════════════════════ */
     if ('serviceWorker' in navigator) {
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -2753,9 +2672,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* ═══════════════════════════════════════════════════════
-       OFFLINE STATUS DETECTION, RECONNECTION & PRE-DOWNLOAD
-    ═══════════════════════════════════════════════════════ */
     const offlineBanner = document.getElementById('offline-banner');
     const offlineBannerIcon = document.getElementById('offline-banner-icon');
     const offlineBannerText = document.getElementById('offline-banner-text');
@@ -2784,7 +2700,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (offlineBannerText) offlineBannerText.textContent = window.getTranslation('offline_notice');
         }
 
-        // Trigger slide down animation
         offlineBanner.classList.remove('banner-slide-down');
         void offlineBanner.offsetWidth; // Force reflow
         offlineBanner.classList.add('banner-slide-down');
@@ -3039,7 +2954,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initial check on page load
     if (isOfflineState) {
         console.log('[CHROS Network] Page loaded in OFFLINE state');
         showOfflineBanner('offline');
@@ -3050,7 +2964,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(triggerDownloadPrompt, 1000);
     }
 
-    // DevTools testing helper
     window.testOfflineNotice = (mode = 'offline') => {
         console.log('[CHROS DevTools Test]', mode);
         if (mode === 'offline') {
@@ -3085,7 +2998,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialItem = document.querySelector(`.nav-item[data-tab="${initialTab}"]`);
     if (initialItem) initialItem.click();
 
-    // Auto-open FishTools popup when hash is #fishtoolupdate (Resource ID: 6a11119ae66f4348a5c1069b)
     const checkAndOpenFishTools = () => {
         const hash = window.location.hash.substring(1);
         if (hash === 'fishtoolupdate') {
@@ -3118,7 +3030,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Pause all playing videos when page is hidden or window loses focus
     const pauseAllPlayingVideos = () => {
         document.querySelectorAll('video').forEach(v => {
             if (!v.paused) {
@@ -3237,4 +3148,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('blur', pauseAllPlayingVideos);
+
 });

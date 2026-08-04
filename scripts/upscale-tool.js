@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         brightness: 0, contrast: 0, shadows: 0, hue: 0, saturation: 0, denoise: 0
     };
 
-    const TFJS_PARAMS = { model: 'anime_fast', factor: 4, tile_size: 64, min_lap: 12, backend: 'webgl' };
+    const TFJS_PARAMS = { model: 'anime_fast', factor: 4, tile_size: 128, min_lap: 16, backend: 'webgl' };
 
     let appState = 'import';
     let isImageMode = false;
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         init() {
             try {
-                this.worker = new Worker('assets/upscale/upscaleWorker.js?v=2');
+                this.worker = new Worker('assets/upscale/upscaleWorker.js?v=3');
                 this.worker.addEventListener('error', (e) => {
                     const msg = e.message || 'Worker error.';
                     this.workerInfo = `Worker Error: ${msg}`;
@@ -232,12 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
-    /**
-     * Center-crops srcCanvas to 1080x1920 using cover-fit logic.
-     * - Horizontal images: crops left/right, keeps center vertical strip.
-     * - Tall images: crops top/bottom, keeps center horizontal strip.
-     * Returns a new canvas of size 1080x1920.
-     */
     function applyCropTo1080x1920(srcCanvas) {
         const targetW = 1080;
         const targetH = 1920;
@@ -394,11 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
         workspace.classList.remove('hidden');
         logsContainer.classList.remove('hidden');
         updateActionButtons('single_ready');
-        // Show/hide duration controls based on media type
         if (durationContainer) {
             durationContainer.classList.toggle('hidden', isImageMode);
         }
-        // Show correct media element
         if (isImageMode) {
             video.classList.add('hidden');
             imageEl.classList.remove('hidden');
@@ -510,7 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (webcodecsStatus) webcodecsStatus.textContent = window.getTranslation('upscale_failed_ffmpeg');
             }
 
-            // Check AI Engine
             const aiReady = engine && engine.isReady;
             if (aiReady) {
                 if (engineDot) {
@@ -786,12 +777,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPreview.classList.remove('active');
         updateSliderLabel();
         
-        // Clear canvas to immediately reveal the original video underneath
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
 
-    // Slider & zoom/pan controls (Mouse & Touch support)
     sliderLine.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1027,8 +1016,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         const localBaseURL = window.location.origin + '/assets/ffmpeg';
-        // Force single-threaded FFmpeg — multi-threaded (SharedArrayBuffer + pthreads)
-        // causes hangs on Chrome/Windows after frame extraction completes.
         try {
             console.log('Loading single-threaded FFmpeg from CDN...');
             const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
@@ -1089,7 +1076,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             setProgress(97, 'Generating output...');
-            // Apply normalise crop if enabled
             let outCanvas = canvas;
             if (isNormaliseEnabled()) {
                 addLog('[Normalise] Cropping to 1080×1920 (center crop)...');
@@ -1112,7 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
             progressContainer.classList.add('hidden');
             updateActionButtons('single_completed');
 
-            // Auto download
             const baseName = currentImageFile.name.replace(/\.[^.]+$/, '');
             const a = document.createElement('a');
             a.href = outUrl;
@@ -1135,15 +1120,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Detects the exact FPS by running a lightweight FFmpeg probe on a file
-    // already written to the WASM FS, parsing the fps value from the log.
-    // Falls back to requestVideoFrameCallback, then 30fps.
     async function detectVideoFps(vid, ffmpeg) {
-        // Strategy 1: parse FPS from an FFmpeg -i probe (most accurate)
         if (ffmpeg) {
             let detectedFps = null;
             const logHandler = ({ message }) => {
-                // Match patterns like "29.97 fps", "60 fps", "59.94 tbr"
                 const m = message.match(/(\d+(?:\.\d+)?)\s+(?:fps|tbr)/);
                 if (m && !detectedFps) detectedFps = parseFloat(m[1]);
             };
@@ -1158,7 +1138,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Strategy 2: requestVideoFrameCallback playback probe (Chrome)
         const commonFpsMap = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
         if ('requestVideoFrameCallback' in vid) {
             const probed = await new Promise((resolve) => {
@@ -1197,12 +1176,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Strategy 3: fallback
         console.warn('[FPS] Could not detect fps, falling back to 30');
         return 30;
     }
 
-    // Seeks video to a specific time and waits for seeked event.
     function seekVideoToTime(vid, time) {
         return new Promise((resolve) => {
             if (Math.abs(vid.currentTime - time) < 0.001) {
@@ -1274,27 +1251,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const extractedFrames = [];
         const enhancedFrames = [];
         const enhancedFrameBlobs = []; // kept in memory for abort-recovery re-encode
-        // Seek-based temp canvas for capturing frames without FFmpeg extraction
         const seekCanvas = document.createElement('canvas');
         seekCanvas.width = video.videoWidth;
         seekCanvas.height = video.videoHeight;
         const seekCtx = seekCanvas.getContext('2d');
 
         try {
-            // Write original video file (needed only for audio muxing at the end)
             const { fetchFile } = window.FFmpegUtil;
             addLog('[System] Writing video to FFmpeg FS for audio...');
             await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
 
             if (cancelRender) throw new Error('Cancelled');
 
-            // Determine frame count and FPS — probe from the already-written input.mp4.
-            // NOTE: the probe exec() causes Aborted() in ST WASM, which kills the instance.
-            // We reset and reload ffmpeg after the probe so frame writes go to a live instance.
             const videoFps = await detectVideoFps(video, ffmpeg);
             ffmpegInstance = null;  // probe killed the instance; get a fresh one
             ffmpeg = await getFFmpeg();
-            // Re-write input.mp4 to the fresh instance (needed for audio mux)
             await ffmpeg.writeFile('input.mp4', await fetchFile(currentVideoFile));
             const totalFrames = Math.round(video.duration * videoFps);
             const outputFps = videoFps.toFixed(2);
@@ -1308,13 +1279,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const frameNum = i + 1;
                 const timestamp = i / videoFps;
 
-                // Seek video to the target frame timestamp
                 await seekVideoToTime(video, timestamp);
 
-                // Draw the current video frame to the seek canvas
                 seekCtx.drawImage(video, 0, 0, seekCanvas.width, seekCanvas.height);
 
-                // Adjust output canvas size
                 const finalW = (seekCanvas.width * scale) % 2 === 0 ? (seekCanvas.width * scale) : (seekCanvas.width * scale) + 1;
                 const finalH = (seekCanvas.height * scale) % 2 === 0 ? (seekCanvas.height * scale) : (seekCanvas.height * scale) + 1;
                 if (canvas.width !== finalW || canvas.height !== finalH) {
@@ -1336,7 +1304,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
                 }
 
-                // Apply normalise crop per-frame if enabled
                 let frameCanvas = canvas;
                 if (isNormaliseEnabled()) {
                     frameCanvas = applyCropTo1080x1920(canvas);
@@ -1354,7 +1321,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog(`[Process] Rendered frame ${frameNum}/${totalFrames} (${pct}%)`);
                 }
 
-                // Yield to the event loop every 5 frames to keep Chrome/Windows responsive
                 if (frameNum % 5 === 0) {
                     await new Promise(r => setTimeout(r, 0));
                 }
@@ -1365,10 +1331,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (cancelRender) throw new Error('Cancelled');
 
-            // Exec FFmpeg to encode frames + mux audio.
-            // ST WASM always calls exit(0) → Emscripten throws Aborted().
-            // The output file IS written to the JS-side FS before the throw,
-            // so we try to readFile immediately on the same instance.
             const encodeArgs = [
                 '-r', String(outputFps),
                 '-i', 'enhanced_%04d.jpg',
@@ -1391,7 +1353,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!isAbort) throw execErr;
                     addLog('[System] FFmpeg encode exited (ST WASM normal). Reading output...');
                 }
-                // Try to read output from the same instance (FS is JS-side, may survive abort)
                 return await ff.readFile('output.mp4');
             };
 
@@ -1399,7 +1360,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 outputData = await runEncode(ffmpeg);
             } catch (firstErr) {
-                // FS wasn't readable — spawn fresh instance and re-encode from saved blobs
                 addLog('[System] Re-encoding on fresh FFmpeg instance...');
                 ffmpegInstance = null;
                 const freshFfmpeg = await getFFmpeg();
@@ -1420,7 +1380,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (renderedVideoSrc) URL.revokeObjectURL(renderedVideoSrc);
             renderedVideoSrc = URL.createObjectURL(outputBlob);
 
-            // Cleanup FFmpeg virtual files
             for (const file of extractedFrames) {
                 try { await ffmpeg.deleteFile(file); } catch (e) {}
             }
@@ -1446,7 +1405,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnEnhance) btnEnhance.classList.add('hidden');
             video.currentTime = originalTime;
 
-            // Automatically download video when finished
             const a = document.createElement('a');
             a.href = renderedVideoSrc;
             a.download = 'enhanced_video.mp4';
@@ -1465,7 +1423,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnCancel.classList.add('hidden');
             if (btnEnhance) btnEnhance.classList.remove('hidden');
             
-            // Cleanup on crash/cancel
             for (const file of extractedFrames) {
                 try { await ffmpeg.deleteFile(file); } catch (e) {}
             }
@@ -1569,7 +1526,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (batchQueue.length === 0) {
                         resetTool();
                     } else if (batchQueue.length === 1) {
-                        // Switch to single file mode if 1 file left
                         const singleFile = batchQueue[0].file;
                         resetTool();
                         handleFileInput(singleFile);
@@ -1766,7 +1722,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelRender = false;
         setCardControlsEnabled(false);
 
-        // Switch to Step 1 so progress list is visible
         if (batchStep2) batchStep2.classList.add('hidden');
         if (batchStep1) batchStep1.classList.remove('hidden');
         if (batchStepTitle) {

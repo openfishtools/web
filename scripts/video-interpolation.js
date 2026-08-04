@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalVideoUrl = null;
     let outputVideoUrl = null;
 
-    // --- Multipier Switching ---
     multiplierChips.forEach(chip => {
         chip.addEventListener('click', () => {
             if (isProcessing) return;
@@ -56,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Drag and Drop / File Input Handler ---
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -104,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gpuDot.classList.add('upscale-spinner');
         gpuStatus.textContent = window.getTranslation('interp_checking_gpu');
         
-        // Small delay for checking effect
         await new Promise(resolve => setTimeout(resolve, 800));
         
         const hasWebGPU = navigator.gpu ? true : false;
@@ -120,14 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
             logsContainer.classList.remove('hidden');
             btnProcess.classList.remove('hidden');
             
-            // Initialize original video preview element for properties extraction
             const url = URL.createObjectURL(file);
             originalVideoUrl = url;
             videoOriginal.src = url;
             videoOriginal.load();
 
             videoOriginal.onloadedmetadata = async () => {
-                // Get original FPS (mock probe or estimate)
                 originalFps = await detectFps(videoOriginal);
                 inputFpsEl.textContent = `${originalFps.toFixed(2)} FPS`;
                 updateTargetFps();
@@ -137,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gpuDot.style.color = '#F44336';
             gpuDot.classList.remove('upscale-spinner');
             gpuStatus.textContent = window.getTranslation('interp_failed_gpu');
-            // Keep workspace and process button hidden to block further action
         }
     }
 
@@ -178,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return 30;
     }
 
-    // --- WebGPU ONNX RIFE Frame Interpolator ---
     class RIFEInterpolator {
         constructor(width, height) {
             this.width = width;
@@ -206,25 +199,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cdnModelUrl = 'https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx';
                 const localModelUrl = 'assets/models/rife47_ensemble_True_scale_1_sim.onnx';
                 
-                try {
-                    console.log('🚀 [RIFE Model] Downloading ONNX model from CDN (Hugging Face):', cdnModelUrl);
-                    onLog('[RIFE] Initializing model from CDN...');
-                    this.session = await ort.InferenceSession.create(cdnModelUrl, {
-                        executionProviders: ['webgpu'],
-                        preferredOutputFormat: 'RGB'
-                    });
-                    console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from CDN (Hugging Face Hub)');
-                    onLog('[RIFE] CDN model loaded successfully.');
-                } catch (cdnErr) {
-                    console.warn('⚠️ [RIFE Model] CDN model load failed, using LOCAL fallback:', localModelUrl, cdnErr);
-                    onLog('[RIFE] CDN model failed, loading from local fallback...');
-                    this.session = await ort.InferenceSession.create(localModelUrl, {
-                        executionProviders: ['webgpu'],
-                        preferredOutputFormat: 'RGB'
-                    });
-                    console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from LOCAL fallback');
-                    onLog('[RIFE] Local model loaded successfully.');
+                let loadedSession = null;
+                if (!navigator.onLine || ('caches' in window)) {
+                    try {
+                        const cache = await caches.open('chros-offline-v1');
+                        const fullLocalUrl = new URL(localModelUrl, window.location.origin).href;
+                        const match = await cache.match(fullLocalUrl);
+                        if (match || !navigator.onLine) {
+                            onLog('[RIFE] Loading model from offline cache...');
+                            loadedSession = await ort.InferenceSession.create(localModelUrl, {
+                                executionProviders: ['webgpu'],
+                                preferredOutputFormat: 'RGB'
+                            });
+                            onLog('[RIFE] Offline cached model loaded successfully.');
+                        }
+                    } catch (cacheErr) {}
                 }
+
+                if (!loadedSession) {
+                    try {
+                        console.log('🚀 [RIFE Model] Downloading ONNX model from CDN (Hugging Face):', cdnModelUrl);
+                        onLog('[RIFE] Initializing model from CDN...');
+                        loadedSession = await ort.InferenceSession.create(cdnModelUrl, {
+                            executionProviders: ['webgpu'],
+                            preferredOutputFormat: 'RGB'
+                        });
+                        console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from CDN (Hugging Face Hub)');
+                        onLog('[RIFE] CDN model loaded successfully.');
+                    } catch (cdnErr) {
+                        console.warn('⚠️ [RIFE Model] CDN model load failed, using LOCAL fallback:', localModelUrl, cdnErr);
+                        onLog('[RIFE] CDN model failed, loading from local fallback...');
+                        loadedSession = await ort.InferenceSession.create(localModelUrl, {
+                            executionProviders: ['webgpu'],
+                            preferredOutputFormat: 'RGB'
+                        });
+                        console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from LOCAL fallback');
+                        onLog('[RIFE] Local model loaded successfully.');
+                    }
+                }
+                this.session = loadedSession;
                 
                 this.isReady = true;
                 onLog('[RIFE] ONNX WebGPU Model loaded successfully.');
@@ -234,14 +247,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Run RIFE inference on two canvas frame inputs using WebGPU
         async interpolate(canvas0, canvas1, progressVal, outCanvas) {
             if (!this.isReady) throw new Error('RIFE session is not initialized');
             
             const w = this.width;
             const h = this.height;
             
-            // Extract frame data as raw Float32 array tensors
             const imgData0 = canvas0.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
             const imgData1 = canvas1.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
             
@@ -249,7 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const floatData0 = new Float32Array(tensorSize);
             const floatData1 = new Float32Array(tensorSize);
             
-            // Convert RGBA -> RGB Normalized [0.0, 1.0] NCHW format required by RIFE
             let idx = 0;
             for (let i = 0; i < imgData0.length; i += 4) {
                 floatData0[idx] = imgData0[i] / 255.0;     // R
@@ -262,12 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 idx++;
             }
             
-            // Wrap inputs into ONNX Tensors
             const t0 = new ort.Tensor('float32', floatData0, [1, 3, h, w]);
             const t1 = new ort.Tensor('float32', floatData1, [1, 3, h, w]);
             const timeTensor = new ort.Tensor('float32', new Float32Array([progressVal]), [1]);
             
-            // Dynamically match input names (e.g. 'img0' & 'img1' vs 'input_0' & 'input_1')
             const inputs = this.session.inputNames;
             const name0 = inputs.includes('img0') ? 'img0' : (inputs.includes('input_0') ? 'input_0' : inputs[0]);
             const name1 = inputs.includes('img1') ? 'img1' : (inputs.includes('input_1') ? 'input_1' : inputs[1]);
@@ -284,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const outputTensor = results[this.session.outputNames[0]];
             const outData = outputTensor.data;
             
-            // Decode RGB NCHW Tensor back to RGBA Canvas ImageData
             const outCtx = outCanvas.getContext('2d');
             const targetImgData = outCtx.createImageData(w, h);
             const d = targetImgData.data;
@@ -435,14 +442,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const t0 = i / originalFps;
                 const t1 = (i + 1) / originalFps;
 
-                // Load frame 0 & frame 1
                 await seekVideoToTime(videoOriginal, t0);
                 ctx0.drawImage(videoOriginal, 0, 0);
 
                 await seekVideoToTime(videoOriginal, t1);
                 ctx1.drawImage(videoOriginal, 0, 0);
 
-                // Interpolate sub-frames (e.g. for multiplier=2, step=0 and step=1)
                 for (let step = 0; step < multiplier; step++) {
                     const progressVal = step / multiplier;
                     await interpolator.interpolate(seekCanvas0, seekCanvas1, progressVal, outputCanvas);
@@ -459,11 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog(`[Interpolating] Synthesized frame series up to sequence ${outFrameIndex}`);
                 }
                 
-                // Yield thread control back to browser to allow UI repaint and avoid freezes
                 await new Promise(resolve => setTimeout(resolve, 30));
             }
 
-            // Write final tail frames
             if (!cancelProcessing) {
                 await seekVideoToTime(videoOriginal, duration - 0.05);
                 ctx0.drawImage(videoOriginal, 0, 0);
@@ -503,7 +506,6 @@ document.addEventListener('DOMContentLoaded', () => {
             videoOutput.src = outputVideoUrl;
             videoOutput.load();
 
-            // Clear virtual storage files
             for (let f = 0; f <= outFrameIndex; f++) {
                 try { await ffmpeg.deleteFile(`frame_${f.toString().padStart(5, '0')}.jpg`); } catch(e){}
             }
@@ -513,7 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setProgress(100, 'Finished!');
             addLog('[Success] Video interpolation completed successfully!');
 
-            // Update UI to complete screen
             completedPanel.classList.remove('hidden');
             btnCancel.classList.add('hidden');
             btnReset.classList.remove('hidden');
@@ -521,10 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
             workspace.classList.add('hidden');
             logsContainer.classList.add('hidden');
 
-            // Set up original and output synchronized playback
             setupSynchronizedComparison();
 
-            // Trigger direct download
             const a = document.createElement('a');
             a.href = outputVideoUrl;
             a.download = `interpolated_${multiplier}x_${selectedFile.name}`;
@@ -574,19 +573,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.value = '';
     }
 
-    // --- Interactive Synchronized Side-by-Side Slider ---
     function setupSynchronizedComparison() {
-        // Synchronize playback play/pause & seek
         videoOriginal.addEventListener('play', () => videoOutput.play());
         videoOriginal.addEventListener('pause', () => videoOutput.pause());
         videoOriginal.addEventListener('seeking', () => {
             videoOutput.currentTime = videoOriginal.currentTime;
         });
 
-        // Loop controls
         videoOriginal.play().catch(()=>{});
 
-        // Comparison slider logic
         let isDragging = false;
         
         const updateSlider = (clientX) => {
@@ -605,7 +600,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         videoOriginal.addEventListener('loadedmetadata', initSliderWidth);
         videoOutput.addEventListener('loadedmetadata', initSliderWidth);
-        // Fallback immediate initialization in case metadata is already loaded
         setTimeout(initSliderWidth, 300);
 
         comparisonContainer.addEventListener('mousedown', (e) => {

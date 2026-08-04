@@ -13,14 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPreset = 'medium';
     let isCompressing = false;
 
-    // --- Limits ---
-    // FFmpeg WASM has a strict WebAssembly memory cap (~1.8 GB).
-    // Encoding ProRes / large RAW files far exceeds that budget.
     const MAX_FILE_MB = 800;        // Soft-warn if file > 800 MB
     const MAX_FILE_MB_HARD = 1500;  // Hard-block if file > 1.5 GB
     const MAX_DIMENSION = 3840;     // Auto-downscale if width or height > 4K (3840)
 
-    // Preset selection logic
     if (presetDesc) {
         presetDesc.innerHTML = window.getTranslation('ffmpeg_preset_' + selectedPreset + '_desc');
     }
@@ -35,14 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // File input change
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFileSelection(e.target.files[0]);
         }
     });
 
-    // Drag & Drop
     dropArea.addEventListener('click', () => fileInput.click());
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -95,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const fileMB = file.size / (1024 * 1024);
 
-        // Hard block — will always OOM
         if (fileMB > MAX_FILE_MB_HARD) {
             showOomWarning(fileMB, true);
             btnStart.classList.add('hidden');
@@ -106,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedFile = file;
         const infoLine = window.getTranslation('status_selected') + `${file.name} (${fileMB.toFixed(2)} MB)`;
 
-        // Soft warning
         if (fileMB > MAX_FILE_MB) {
             statusText.innerHTML = `
                 <div style="background: hsl(40,80%,10%); border: 1px solid hsl(40,70%,35%); color: hsl(40,80%,75%); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.6; text-align: left; margin-bottom: 8px;">
@@ -130,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await compressVideo(selectedFile, selectedPreset);
     });
 
-    // Get video dimensions using an offscreen video element
     function getVideoDimensions(file) {
         return new Promise((resolve) => {
             const video = document.createElement('video');
@@ -160,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.head.appendChild(s);
         });
 
-        // 1. Prioritas CDN Pertama (dengan Blob Worker Bypass)
         try {
             console.log('🚀 Loading FFmpeg libraries from CDN (with Blob worker security bypass)...');
             if (!window.FFmpegUtil) {
@@ -177,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const ffmpegCode = await ffmpegRes.text();
                 const workerCode = await workerRes.text();
 
-                // Convert worker code to a same-origin Blob URL to bypass browser SecurityError
                 const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
                 const patchedCode = ffmpegCode.replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
                                                .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
@@ -193,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('⚠️ CDN load failed, falling back to LOCAL assets/ffmpeg/...', cdnErr);
         }
 
-        // 2. Fallback Lokal jika CDN gagal
         try {
             console.log('📦 Loading FFmpeg libraries from LOCAL fallback...');
             if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
@@ -224,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         progressPercent.textContent = '0%';
 
         try {
-            // --- Pre-flight: detect resolution for auto-scaling and preset selection ---
             const { width, height } = await getVideoDimensions(file);
             const needsScale = width > MAX_DIMENSION || height > MAX_DIMENSION;
             if (needsScale) {
@@ -239,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
             let ffmpeg = new FFmpeg();
 
-            // Load ffmpeg.wasm
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_processing')}</span>`;
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
             const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
@@ -292,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Setup Progress Listener
             ffmpeg.on('progress', ({ progress }) => {
                 const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
                 progressFill.style.width = `${percent}%`;
@@ -301,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${statusMsg}...</span>`;
             });
 
-            // Watch logs for OOM / abort signals from the WASM worker
             ffmpeg.on('log', ({ message }) => {
                 console.log(message);
                 const lc = message.toLowerCase();
@@ -316,17 +300,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const startMsg = window.getTranslation('status_encoding');
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${startMsg}</span>`;
 
-            // Determine optimal thread count (capped to 4 to prevent WASM Out of Memory)
             const threads = navigator.hardwareConcurrency 
                 ? Math.min(navigator.hardwareConcurrency, 4).toString() 
                 : '2';
             console.log(`Using ${threads} threads for compression.`);
 
-            // Scale filter — limits the longest edge to MAX_DIMENSION (4K), preserves aspect ratio,
-            // forces even pixel dimensions (required by libx264/libx265).
             const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
 
-            // Build command based on user-chosen preset
             let command = [];
             if (preset === 'slow') {
                 command = ['-i', 'input.mp4', '-threads', threads,
@@ -357,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // OOM check 1: log listener flagged it
             if (oomDetected) {
                 throw Object.assign(new Error('OOM'), { _oom: true });
             }
@@ -365,7 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
             const data = await ffmpeg.readFile('output.mp4');
 
-            // OOM check 2: output file is suspiciously small (< 1 KB = definitely failed)
             if (!data || data.byteLength < 1024) {
                 throw Object.assign(new Error('OOM'), { _oom: true });
             }
@@ -373,7 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const blob = new Blob([data.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
 
-            // Trigger Download
             const a = document.createElement('a');
             a.href = url;
             a.download = `compressed_${preset}_${file.name.replace(/\.[^.]+$/, '')}.mp4`;
@@ -384,7 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
 
-            // Cleanup
             progressContainer.classList.add('hidden');
             btnStart.classList.remove('hidden');
 

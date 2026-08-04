@@ -68,9 +68,21 @@ app.get('/api/version', (req, res) => {
     res.json({ version: getDynamicVersion(), timestamp: Date.now() });
 });
 
-// Proxy/redirect /realesrgan requests to target
-app.get('/realesrgan/*', (req, res) => {
-    res.redirect(`https://upscale.chino.icu${req.originalUrl}`);
+// Proxy /realesrgan requests to target model host directly
+app.get('/realesrgan/*', async (req, res) => {
+    try {
+        const targetUrl = `https://upscale.chino.icu${req.originalUrl}`;
+        const proxyRes = await fetch(targetUrl);
+        if (!proxyRes.ok) {
+            return res.status(proxyRes.status).send(`Proxy error: ${proxyRes.statusText}`);
+        }
+        const buffer = await proxyRes.arrayBuffer();
+        const contentType = proxyRes.headers.get('content-type');
+        if (contentType) res.setHeader('Content-Type', contentType);
+        res.send(Buffer.from(buffer));
+    } catch (err) {
+        res.status(500).send(`Proxy failed: ${err.message}`);
+    }
 });
 
 app.get('/:id([a-fA-F0-9]{24}|\\d+)', (req, res) => {
