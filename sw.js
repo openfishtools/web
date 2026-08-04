@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chros-offline-v1.3.5';
+const CACHE_NAME = 'chros-offline-v1.3.6';
 
 const CORE_ASSETS = [
     '/',

@@ -1652,9 +1652,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetBitrateMbps = Math.round((measuredMbps * 0.4) * 10) / 10;
         if (fps >= 60) targetBitrateMbps = Math.round((targetBitrateMbps * 1.1) * 10) / 10;
         targetBitrateMbps = Math.max(0.8, Math.min(5.0, targetBitrateMbps));
-        let maxrateMbps = Math.round((targetBitrateMbps * 1.4) * 10) / 10;
-        maxrateMbps = Math.max(1.2, Math.min(10.0, maxrateMbps));
-        const bufsizeMbps = Math.max(2.0, Math.round(maxrateMbps * 2 * 10) / 10);
+        let maxrateMbps = Math.round((targetBitrateMbps * 2.0) * 10) / 10;
+        maxrateMbps = Math.max(2.0, Math.min(20.0, maxrateMbps));
+        const bufsizeMbps = Math.max(4.0, Math.round(maxrateMbps * 3 * 10) / 10);
         const crf = targetBitrateMbps >= 3.5 ? 23 : (targetBitrateMbps >= 2.0 ? 25 : 27);
         return { targetBitrateMbps, maxrateMbps, bufsizeMbps, crf };
     }
@@ -1733,12 +1733,14 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             ffmpeg.on('progress', pSingleHandler);
 
+            const crf = targetBitrateMbps >= 3.5 ? 23 : (targetBitrateMbps >= 2.0 ? 25 : 27);
+
             await ffmpeg.exec([
                 '-y', '-i', 'input.mp4',
                 '-threads', threads,
                 '-c:v', 'libx264',
-                '-preset', 'fast',
-                '-b:v', `${targetBitrateMbps}M`,
+                '-preset', 'slow',
+                '-crf', `${crf}`,
                 '-maxrate', `${maxrateMbps}M`,
                 '-bufsize', `${bufsizeMbps}M`,
                 '-x264opts', 'aq-mode=3:aq-strength=0.85:psy-rd=1.0,0.15',
