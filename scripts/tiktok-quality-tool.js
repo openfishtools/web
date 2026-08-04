@@ -973,6 +973,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const command = [
                 '-i', 'input.mp4',
                 '-threads', threads,
+                '-map_metadata', '-1',
+                '-map_chapters', '-1',
                 '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'",
                 '-c:v', 'wmv2',
                 '-qscale:v', '1',
@@ -1343,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _log(`  stco: ${originalChunkOffsets.length} chunks, first offset=${originalChunkOffsets[0]}, last=${originalChunkOffsets[originalChunkOffsets.length-1]}`);
         _log(`  stco tracks total: ${stcoBoxes.length}`);
         const preservedTopLevel = topLevel
-            .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
+            .filter(b => !['ftyp', 'moov', 'mdat', 'udta', 'meta', 'free', 'skip', 'wide'].includes(b.type))
             .map(boxBytes);
         const mdhdPayload = boxPayload(mdhd);
         const mdhdVer = mdhdPayload[0];
@@ -1500,6 +1502,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     command = [
                         '-i', 'input.mp4',
                         '-threads', threads,
+                        '-map_metadata', '-1',
+                        '-map_chapters', '-1',
                         '-vf', "scale='if(lt(iw,ih),720,-2)':'if(lt(iw,ih),-2,720)',fps=60",
                         '-c:v', 'libx264',
                         '-preset', 'veryfast',
@@ -1519,6 +1523,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     command = [
                         '-i', 'input.mp4',
                         '-threads', threads,
+                        '-map_metadata', '-1',
+                        '-map_chapters', '-1',
                         '-vf', "scale='if(lt(iw,ih),1080,-2)':'if(lt(iw,ih),-2,1080)',fps=60",
                         '-c:v', 'libx264',
                         '-preset', 'veryfast',
@@ -1740,6 +1746,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await ffmpeg.exec([
                 '-y', '-i', 'input.mp4',
                 '-threads', threads,
+                '-map_metadata', '-1',
+                '-map_chapters', '-1',
                 '-c:v', 'libx264',
                 '-preset', 'slower',
                 '-crf', `${crf}`,
