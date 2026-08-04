@@ -1741,8 +1741,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 '-c:v', 'libx264',
                 '-preset', 'slow',
                 '-crf', `${crf}`,
-                '-maxrate', `${maxrateMbps}M`,
-                '-bufsize', `${bufsizeMbps}M`,
                 '-x264opts', 'aq-mode=3:aq-strength=0.85:psy-rd=1.0,0.15',
                 '-pix_fmt', 'yuv420p',
                 '-c:a', 'aac',
