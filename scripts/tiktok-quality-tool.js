@@ -591,146 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await processVideoV2(selectedFile, 'hd');
         });
     }
-    function tryUnpatchBuffer(inputBuffer) {
-        try {
-            const data = new Uint8Array(inputBuffer);
-            const view = new DataView(data.buffer);
-            const topLevel = parseBoxes(data, view, 0, data.length, '');
-            const ftyp = findTopLevel(topLevel, 'ftyp');
-            const moov = findTopLevel(topLevel, 'moov');
-            const mdat = findTopLevel(topLevel, 'mdat');
-            if (!ftyp || !moov || !mdat) return null;
-            const videoTrak = moov.children.find(
-                c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
-            );
-            if (!videoTrak) return null;
-            const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
-            const mdhd = findDescendant(videoTrak, ['mdia', 'mdhd']);
-            const elst = findDescendant(videoTrak, ['edts', 'elst']);
-            const stts = stbl && findChild(stbl, 'stts');
-            const stsc = stbl && findChild(stbl, 'stsc');
-            const stsz = stbl && findChild(stbl, 'stsz');
-            const stco = stbl && findChild(stbl, 'stco');
-            if (!stbl || !mdhd || !elst || !stts || !stsc || !stsz || !stco) return null;
-
-            const sttsPayload = boxPayload(stts);
-            const sttsEntryCount = readU32BE(sttsPayload, 4);
-            let isPatched = false;
-            let realSampleCount = 0;
-            let originalSampleDelta = 1500;
-            if (sttsEntryCount >= 2) {
-                const secondDelta = readU32BE(sttsPayload, 20);
-                if (secondDelta === 0) {
-                    isPatched = true;
-                    realSampleCount = readU32BE(sttsPayload, 8);
-                    originalSampleDelta = readU32BE(sttsPayload, 12);
-                }
-            }
-            if (!isPatched) return null;
-
-            const originalSizes = parseStsz(stsz).slice(0, realSampleCount);
-            const originalChunkOffsets = parseStco(stco).slice(0, realSampleCount);
-            const originalStscRows = parseStsc(stsc).filter(row => row[0] <= originalChunkOffsets.length);
-            
-            const mdhdPayload = boxPayload(mdhd);
-            const mdhdVer = mdhdPayload[0];
-            let originalTimescale = 90000;
-            if (mdhdVer === 0) {
-                originalTimescale = readU32BE(mdhdPayload, 12);
-            } else if (mdhdVer === 1) {
-                originalTimescale = readU32BE(mdhdPayload, 20);
-            }
-            const originalDuration = realSampleCount * originalSampleDelta;
-            const originalEditMediaTime = 0;
-
-            const buildStts_clean = (count, delta) => {
-                const payload = new Uint8Array(4 + 4 + 8);
-                writeU32BE(payload, 4, 1);
-                writeU32BE(payload, 8, count);
-                writeU32BE(payload, 12, delta);
-                return makeBox('stts', payload);
-            };
-            const buildStsc_clean = (rows) => {
-                const payload = new Uint8Array(4 + 4 + rows.length * 12);
-                writeU32BE(payload, 4, rows.length);
-                let off = 8;
-                for (const [fc, spc, sdi] of rows) {
-                    writeU32BE(payload, off, fc);
-                    writeU32BE(payload, off + 4, spc);
-                    writeU32BE(payload, off + 8, sdi);
-                    off += 12;
-                }
-                return makeBox('stsc', payload);
-            };
-            const buildStsz_clean = (sizes) => {
-                const total = sizes.length;
-                const payload = new Uint8Array(4 + 4 + 4 + total * 4);
-                writeU32BE(payload, 8, total);
-                let off = 12;
-                for (const s of sizes) { writeU32BE(payload, off, s); off += 4; }
-                return makeBox('stsz', payload);
-            };
-            const buildStco_clean = (offsets, d) => {
-                const count = offsets.length;
-                const payload = new Uint8Array(4 + 4 + count * 4);
-                writeU32BE(payload, 4, count);
-                let off = 8;
-                for (const o of offsets) {
-                    const shifted = o + d;
-                    writeU32BE(payload, off, shifted); off += 4;
-                }
-                return makeBox('stco', payload);
-            };
-
-            const fixedReplacements = new Map([
-                [mdhd, buildMdhd(mdhd, originalTimescale, originalDuration)],
-                [elst, buildElst(elst, originalEditMediaTime)],
-                [stts, buildStts_clean(realSampleCount, originalSampleDelta)],
-                [stsc, buildStsc_clean(originalStscRows)],
-                [stsz, buildStsz_clean(originalSizes)],
-            ]);
-            
-            const stcoBoxes = collectTrackStcoBoxes(moov);
-            const buildStcoReplacements_clean = (stcoBoxes, videoStco, d) => {
-                const map = new Map();
-                for (const st of stcoBoxes) {
-                    map.set(st, st === videoStco ? buildStco_clean(originalChunkOffsets, d) : buildStco_clean(parseStco(st), d, 0));
-                }
-                return map;
-            };
-
-            const placeholderRep = new Map(fixedReplacements);
-            buildStcoReplacements_clean(stcoBoxes, stco, 0).forEach((v, k) => placeholderRep.set(k, v));
-            const moovPlaceholder = rebuildBox(moov, placeholderRep);
-            const preservedTopLevel = topLevel
-                .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
-                .map(boxBytes);
-            const preservedBytes = concatBytes(preservedTopLevel);
-
-            const oldMdatPayload = new Uint8Array(data.buffer, data.byteOffset + mdat.contentStart, mdat.end - mdat.contentStart);
-            const O_last = originalChunkOffsets[realSampleCount - 1];
-            const S_last = originalSizes[realSampleCount - 1];
-            const originalMdatEndOffset = O_last + S_last;
-            const originalMdatLength = Math.min(oldMdatPayload.byteLength, originalMdatEndOffset - mdat.contentStart);
-            const cleanedMdatPayload = new Uint8Array(oldMdatPayload.buffer, oldMdatPayload.byteOffset, originalMdatLength);
-
-            const newMdatStart = ftyp.size + moovPlaceholder.byteLength + preservedBytes.byteLength + 8;
-            const delta = newMdatStart - mdat.contentStart;
-
-            const finalRep = new Map(fixedReplacements);
-            buildStcoReplacements_clean(stcoBoxes, stco, delta).forEach((v, k) => finalRep.set(k, v));
-            const moovFinal = rebuildBox(moov, finalRep);
-
-            const mdatNew = makeBox('mdat', cleanedMdatPayload);
-            const ftypBytes = boxBytes(ftyp);
-            const output = concatBytes([ftypBytes, moovFinal, preservedBytes, mdatNew]);
-
-            return output.buffer;
-        } catch (e) {
-            console.warn('[Unpatch] Failed to clean patch:', e);
-            return null;
-        }
-    }
     function readFileAsArrayBuffer(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -768,13 +628,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFileBuffer = await readFileAsArrayBuffer(selectedFile);
             log(`  ArrayBuffer byteLength : ${currentFileBuffer.byteLength} bytes`);
             log(`  FileReader read        : SUCCESS`);
-            
-            const cleanedBuffer = tryUnpatchBuffer(currentFileBuffer);
-            if (cleanedBuffer) {
-                log(`  [Clean Up] Patched video structure detected. Reverted patch to clean raw MP4 successfully.`);
-                currentFileBuffer = cleanedBuffer;
-            }
-
             const peek = new Uint8Array(currentFileBuffer, 0, Math.min(12, currentFileBuffer.byteLength));
             const ftypMagic = String.fromCharCode(peek[4], peek[5], peek[6], peek[7]);
             log(`  Box[0] magic bytes    : ${ftypMagic} (expect: ftyp or mdat)`);
@@ -1118,7 +971,6 @@ document.addEventListener('DOMContentLoaded', () => {
             log(`  Hardware threads : ${hardwareThreads}`);
             log(`  Using threads    : ${threads}`);
             const command = [
-                '-err_detect', 'ignore_err',
                 '-i', 'input.mp4',
                 '-threads', threads,
                 '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'",
