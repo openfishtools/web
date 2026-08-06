@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             };
-            if (isIosDevice()) {
+            if (isIosDevice() && clickedVersion !== 'v3') {
                 showIosWarningModal(
                     () => {
                         if (clickedVersion === 'v2' && v2Patched && !v1Patched) {
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         selectedFile = file;
         statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">Selected: ${escapeHTML(file.name)} (${fileMB.toFixed(2)} MB)</span>`;
-        if (isIosDevice()) {
+        if (isIosDevice() && currentVersion !== 'v3') {
             btnStart.classList.add('hidden');
             showStatusError(window.getTranslation('ios_not_supported_err') || 'Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.');
             showIosWarningModal(
@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isProcessing = false;
         isProcessing = false;
     function checkIosWarningAndProceed(onProceed) {
-        if (isIosDevice()) {
+        if (isIosDevice() && currentVersion !== 'v3') {
             btnStart.classList.add('hidden');
             progressContainer.classList.add('hidden');
             logsContainer.classList.add('hidden');
