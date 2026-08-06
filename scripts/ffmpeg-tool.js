@@ -309,9 +309,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let command = [];
             if (preset === 'slow') {
-                command = ['-i', 'input.mp4', '-threads', threads,
-                    ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-c:a', 'copy', 'output.mp4'];
+                command = [
+                    '-y', '-i', 'input.mp4',
+                    '-threads', threads,
+                    '-map', '0:v:0',
+                    '-map', '0:a:0?',
+                    '-dn',
+                    '-map_metadata', '-1',
+                    '-map_chapters', '-1',
+                    '-vf', "scale='trunc(iw/2)*2':'trunc(ih/2)*2'",
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-crf', '22',
+                    '-maxrate', '12M',
+                    '-bufsize', '20M',
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '192k',
+                    '-movflags', '+faststart',
+                    'output.mp4'
+                ];
             } else if (preset === 'fast') {
                 command = ['-i', 'input.mp4', '-threads', threads,
                     ...(needsScale ? ['-vf', scaleFilter] : []),
@@ -348,7 +365,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw Object.assign(new Error('OOM'), { _oom: true });
             }
 
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const rawOutput = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            let finalResultBytes = rawOutput;
+            if (typeof window.patchMp4HDMethod === 'function') {
+                try {
+                    finalResultBytes = window.patchMp4HDMethod(rawOutput.buffer, true);
+                } catch (patchErr) {
+                    console.warn('V3 patcher fallback in video compressor:', patchErr);
+                }
+            }
+
+            const blob = new Blob([finalResultBytes], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
 
             const a = document.createElement('a');

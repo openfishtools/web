@@ -274,7 +274,6 @@
                             <div class="flex-1">
                                 <div class="tool-title-row">
                                     <h3 class="tool-title">Quality Method</h3>
-                                    <span class="tool-status-badge patch-partially-badge" data-i18n="patcher_partially_patched">Partially patched</span>
                                 </div>
                                 <div class="res-ver-badge-inline res-ver-badge-inline-wrap" data-i18n="patcher_subtitle">TikTok HQ Upload</div>
                             </div>
@@ -295,22 +294,20 @@
                         <div class="mb-14">
                             <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose version</div>
                             <div class="tiktok-switch-track" id="tiktok-version-switch">
-                                <div class="tiktok-switch-indicator" id="tiktok-version-indicator"></div>
-                                <div class="tiktok-switch-option active" data-version="v1">v1</div>
-                                <div class="tiktok-switch-option" data-version="v2">v2</div>
-                                <div class="tiktok-switch-option" data-version="v3">v3</div>
+                                <div class="tiktok-switch-indicator" id="tiktok-version-indicator" style="left: calc(50% + 4px); width: calc(50% - 8px);"></div>
+                                <div class="tiktok-switch-option" data-version="v1">v1</div>
+                                <div class="tiktok-switch-option active" data-version="v3">v3</div>
                             </div>
                         </div>
 
-                        <div id="tiktok-compress-toggle-row" class="hidden mb-14">
-                            <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress preset</div>
+                        <div id="tiktok-compress-toggle-row" class="mb-14">
+                            <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress</div>
                             <div class="tiktok-switch-track" id="tiktok-compress-mode">
-                                <div class="tiktok-switch-indicator" id="tiktok-mode-indicator"></div>
-                                <div class="tiktok-switch-option active" data-mode="off" data-i18n="patcher_mode_off" data-desc="Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.">OFF</div>
-                                <div class="tiktok-switch-option" data-mode="fast" data-i18n="patcher_mode_compatibility" data-desc="720p, 60fps | H.264 VBR 16 Mbps (10M-22M), preset veryfast | Compresses video to 720p for optimal quality and compliance. Runs smoothly without lag on all devices.">Compatibility</div>
-                                <div class="tiktok-switch-option" data-mode="hd" data-i18n="patcher_mode_quality" data-desc="1080p, 60fps | H.264 VBR 19 Mbps (12M-26M), preset veryfast | Compresses video to 1080p to preserve premium quality and sharpness. Might cause lag or playback stutters on some devices.">Quality</div>
+                                <div class="tiktok-switch-indicator" id="tiktok-mode-indicator" style="left: 4px; width: calc(50% - 8px);"></div>
+                                <div class="tiktok-switch-option active" data-mode="off" data-desc="Direct patch | Mem-patch video asli secara langsung tanpa kompresi (0% penurunan kualitas & instan).">OFF</div>
+                                <div class="tiktok-switch-option" data-mode="on" data-desc="HD Compression | Mengompresi video ke kualitas HD tajam dengan ukuran file terkecil dan aman dari Out Of Memory (OOM).">ON</div>
                             </div>
-                            <div class="tiktok-preset-desc" id="tiktok-mode-desc">Direct patch | Patches the original video directly without compression. Keeps original quality, but might cause lag or playback failures on devices that do not support the resolution/framerate.</div>
+                            <div class="tiktok-preset-desc" id="tiktok-mode-desc">Direct patch | Mem-patch video asli secara langsung tanpa kompresi (0% penurunan kualitas & instan).</div>
                         </div>
 
                         <div id="tool-tiktok-status" class="mt-4 text-center font-14 font-500 text-primary">

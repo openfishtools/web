@@ -37,6 +37,12 @@ start "CHROS Node.js Server" cmd /k "npm start"
 
 echo.
 echo ==========================================
+echo 🌐 Opening app in default browser...
+echo ==========================================
+start http://localhost:5000
+
+echo.
+echo ==========================================
 echo 🌐 Launching Cloudflare Tunnel...
 echo ==========================================
 echo Please wait a moment for the tunnel link to generate.
