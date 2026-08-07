@@ -484,13 +484,20 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedFile = null;
 
         // 6. Visual UI Feedback
-        statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; Service Worker & cache thoroughly cleared!</span>`;
+        statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; Cache cleared. Reloading...</span>`;
         const icon = btnClearCache ? btnClearCache.querySelector('.material-symbols-rounded') : null;
         if (icon) {
             icon.style.transition = 'transform 0.5s ease';
             icon.style.transform = 'rotate(360deg) scale(1.2)';
-            setTimeout(() => { icon.style.transform = ''; }, 500);
+            setTimeout(() => {
+                icon.style.transform = '';
+            }, 500);
         }
+        setTimeout(() => {
+            const reloadUrl = new URL(window.location.href);
+            reloadUrl.searchParams.set('cache', Date.now().toString());
+            window.location.replace(reloadUrl.href);
+        }, 550);
     }
 
     const btnClearCache = document.getElementById('btn-tiktok-clear-cache');
