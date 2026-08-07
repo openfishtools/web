@@ -3011,6 +3011,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    if (window.location.search && window.location.search.includes('cache=')) {
+        const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+        window.history.replaceState(null, '', cleanUrl);
+    }
+
     checkAppVersion();
 
     let initialTab = (targetTab === 'fishtoolupdate') ? 'resource' : (targetTab || 'social');

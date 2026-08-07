@@ -494,9 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         }
         setTimeout(() => {
-            const reloadUrl = new URL(window.location.href);
-            reloadUrl.searchParams.set('cache', Date.now().toString());
-            window.location.replace(reloadUrl.href);
+            const cleanUrl = window.location.origin + window.location.pathname + (window.location.hash || '#tools');
+            window.location.replace(cleanUrl);
         }, 550);
     }
 
