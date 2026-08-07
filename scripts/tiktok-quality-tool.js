@@ -1099,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const VIDEO_TIMESCALE        = 90000;
     const VIDEO_DURATION         = 2269500;
     const VIDEO_EDIT_MEDIA_TIME  = 0;
-    const VIDEO_SAMPLE_DELTA     = 1500;
     const CONTAINER_BOXES = new Set([
         'moov', 'trak', 'mdia', 'minf', 'stbl',
         'edts', 'dinf', 'udta', 'meta', 'ilst',
@@ -1112,13 +1111,13 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(`${label} out of uint32 range: ${value}`);
     }
     function readBox(view, data, offset, end, parentPath) {
-        if (offset + 8 > end) throw new Error('Incomplete MP4 box.');
+        if (offset + 8 > end) return null;
         const smallSize = view.getUint32(offset, false);
         const type = getBoxType(data, offset + 4);
         let size = smallSize;
         let headerSize = 8;
         if (smallSize === 1) {
-            if (offset + 16 > end) throw new Error(`Incomplete box: ${type}`);
+            if (offset + 16 > end) return null;
             const high = view.getUint32(offset + 8, false);
             const low  = view.getUint32(offset + 12, false);
             size = high * 4294967296 + low;
@@ -1126,8 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (smallSize === 0) {
             size = end - offset;
         }
-        if (size < headerSize || offset + size > end)
-            throw new Error(`Invalid size in box: ${type}`);
+        if (size < headerSize || offset + size > end) return null;
         return {
             type, offset, size, headerSize,
             contentStart: offset + headerSize,
@@ -1147,12 +1145,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let offset = start;
         while (offset + 8 <= end) {
             const box = readBox(view, data, offset, end, parentPath || '');
+            if (!box) break;
             if (CONTAINER_BOXES.has(box.type)) {
                 const childStart = childStartForBox(box);
-                if (childStart > box.end) throw new Error(`Container ${box.type} too short.`);
-                box.prefixStart = box.contentStart;
-                box.prefixEnd   = childStart;
-                box.children    = parseBoxes(data, view, childStart, box.end, box.path);
+                if (childStart <= box.end) {
+                    box.prefixStart = box.contentStart;
+                    box.prefixEnd   = childStart;
+                    box.children    = parseBoxes(data, view, childStart, box.end, box.path);
+                }
             }
             boxes.push(box);
             offset = box.end;
@@ -1190,14 +1190,23 @@ document.addEventListener('DOMContentLoaded', () => {
             sizes.push(stsz.view.getUint32(tableStart + i * 4, false));
         return sizes;
     }
-    function parseStco(stco) {
-        const count      = stco.view.getUint32(stco.offset + 12, false);
-        const tableStart = stco.offset + 16;
-        if (tableStart + count * 4 > stco.end)
-            throw new Error('stco too small for declared chunk count.');
+    function parseStco(stcoBox) {
+        const isCo64 = stcoBox.type === 'co64';
+        const count = stcoBox.view.getUint32(stcoBox.offset + 12, false);
+        const tableStart = stcoBox.offset + 16;
+        const itemSize = isCo64 ? 8 : 4;
+        if (tableStart + count * itemSize > stcoBox.end)
+            throw new Error(`${stcoBox.type} too small for declared chunk count.`);
         const offsets = [];
-        for (let i = 0; i < count; i++)
-            offsets.push(stco.view.getUint32(tableStart + i * 4, false));
+        for (let i = 0; i < count; i++) {
+            if (isCo64) {
+                const high = stcoBox.view.getUint32(tableStart + i * 8, false);
+                const low  = stcoBox.view.getUint32(tableStart + i * 8 + 4, false);
+                offsets.push(high * 4294967296 + low);
+            } else {
+                offsets.push(stcoBox.view.getUint32(tableStart + i * 4, false));
+            }
+        }
         return offsets;
     }
     function parseStsc(stsc) {
@@ -1215,6 +1224,71 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
         }
         return rows;
+    }
+    function parseStts(stts) {
+        const count = stts.view.getUint32(stts.offset + 12, false);
+        const tableStart = stts.offset + 16;
+        const entries = [];
+        for (let i = 0; i < count; i++) {
+            const off = tableStart + i * 8;
+            entries.push([
+                stts.view.getUint32(off, false),
+                stts.view.getUint32(off + 4, false)
+            ]);
+        }
+        return entries;
+    }
+    function getTimescale(trak) {
+        const mdhd = findDescendant(trak, ['mdia', 'mdhd']);
+        if (!mdhd) return 90000;
+        const ver = mdhd.data[mdhd.offset + 8];
+        if (ver === 0) {
+            return mdhd.view.getUint32(mdhd.offset + 20, false);
+        } else {
+            return mdhd.view.getUint32(mdhd.offset + 28, false);
+        }
+    }
+    function extractSampleLocations(trak) {
+        const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
+        if (!stbl) return [];
+        const stszBox = findChild(stbl, 'stsz');
+        const stcoBox = findChild(stbl, 'stco') || findChild(stbl, 'co64');
+        const stscBox = findChild(stbl, 'stsc');
+        if (!stszBox || !stcoBox || !stscBox) return [];
+        const sizes = parseStsz(stszBox);
+        const offsets = parseStco(stcoBox);
+        const stsc = parseStsc(stscBox);
+        const locations = [];
+        let sampleIdx = 0;
+        for (let i = 0; i < stsc.length; i++) {
+            const firstChunk = stsc[i][0];
+            const samplesPerChunk = stsc[i][1];
+            const nextChunk = (i + 1 < stsc.length) ? stsc[i + 1][0] : (offsets.length + 1);
+            for (let chunkIdx = firstChunk - 1; chunkIdx < nextChunk - 1; chunkIdx++) {
+                let currOff = offsets[chunkIdx];
+                for (let s = 0; s < samplesPerChunk; s++) {
+                    if (sampleIdx < sizes.length) {
+                        const sz = sizes[sampleIdx];
+                        locations.push({ offset: currOff, size: sz });
+                        currOff += sz;
+                        sampleIdx++;
+                    }
+                }
+            }
+        }
+        return locations;
+    }
+    function getSampleTimestamps(sttsEntries, timescale) {
+        const timestamps = [];
+        let currTime = 0.0;
+        for (const [count, delta] of sttsEntries) {
+            const dt = delta / timescale;
+            for (let i = 0; i < count; i++) {
+                timestamps.push(currTime);
+                currTime += dt;
+            }
+        }
+        return timestamps;
     }
     function makeBox(type, payload) {
         const size = 8 + payload.byteLength;
@@ -1247,52 +1321,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
         dv.setUint32(offset, value, false);
     }
-    function readU32BE(arr, offset) {
-        const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-        return dv.getUint32(offset, false);
-    }
     function buildMdhd(box, dynamicTimescale, dynamicDuration) {
         const payload = new Uint8Array(boxPayload(box));
         const version = payload[0];
-        if (version !== 0) throw new Error(`Unsupported mdhd version: ${version}`);
-        writeU32BE(payload, 12, dynamicTimescale);
-        writeU32BE(payload, 16, dynamicDuration);
+        if (version === 0) {
+            writeU32BE(payload, 12, dynamicTimescale);
+            writeU32BE(payload, 16, dynamicDuration);
+        } else if (version === 1) {
+            writeU32BE(payload, 20, dynamicTimescale);
+            const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+            dv.setBigUint64(24, BigInt(dynamicDuration), false);
+        }
         return makeBox('mdhd', payload);
     }
-    function buildElst(box, dynamicEditMediaTime) {
-        const payload    = new Uint8Array(boxPayload(box));
-        const version    = payload[0];
-        const entryCount = readU32BE(payload, 4);
-        if (version !== 0 || entryCount < 1)
-            throw new Error('Need elst version 0 with at least one entry.');
-        writeU32BE(payload, 12, dynamicEditMediaTime);
-        return makeBox('elst', payload);
-    }
-    function buildStts(realSampleCount, fakeSampleCount, dynamicSampleDelta) {
-        const payload = new Uint8Array(4 + 4 + 8 + 8);
-        writeU32BE(payload, 4, 2);
-        writeU32BE(payload, 8, realSampleCount);
-        writeU32BE(payload, 12, dynamicSampleDelta);
-        writeU32BE(payload, 16, fakeSampleCount);
-        writeU32BE(payload, 20, dynamicSampleDelta);
-        return makeBox('stts', payload);
+    function buildStts(originalSttsEntries, fakeSampleCount, dynamicSampleDelta) {
+        if (!fakeSampleCount) {
+            let totalLen = 8 + originalSttsEntries.length * 8;
+            const payload = new Uint8Array(totalLen);
+            writeU32BE(payload, 4, originalSttsEntries.length);
+            let off = 8;
+            for (const [count, delta] of originalSttsEntries) {
+                writeU32BE(payload, off, count);
+                writeU32BE(payload, off + 4, delta);
+                off += 8;
+            }
+            return makeBox('stts', payload);
+        } else {
+            let entries = [...originalSttsEntries, [fakeSampleCount, dynamicSampleDelta]];
+            const payload = new Uint8Array(8 + entries.length * 8);
+            writeU32BE(payload, 4, entries.length);
+            let off = 8;
+            for (const [count, delta] of entries) {
+                writeU32BE(payload, off, count);
+                writeU32BE(payload, off + 4, delta);
+                off += 8;
+            }
+            return makeBox('stts', payload);
+        }
     }
     function buildStsz(originalSizes, fakeSampleCount) {
-        const total   = originalSizes.length + fakeSampleCount;
-        const payload = new Uint8Array(4 + 4 + 4 + total * 4);
+        const total = originalSizes.length + (fakeSampleCount || 0);
+        const payload = new Uint8Array(12 + total * 4);
         writeU32BE(payload, 8, total);
         let off = 12;
         for (const s of originalSizes) { writeU32BE(payload, off, s); off += 4; }
-        for (let i = 0; i < fakeSampleCount; i++) {
-            writeU32BE(payload, off, FAKE_SAMPLE_SIZE); off += 4;
+        if (fakeSampleCount) {
+            for (let i = 0; i < fakeSampleCount; i++) {
+                writeU32BE(payload, off, FAKE_SAMPLE_SIZE); off += 4;
+            }
         }
         return makeBox('stsz', payload);
     }
-    function buildStsc(originalRows, originalChunkCount) {
-        const rows    = originalRows.map(r => [...r]);
-        const lastRow = rows[rows.length - 1];
-        if (!lastRow || lastRow[1] !== 1) rows.push([originalChunkCount + 1, 1, 1]);
-        const payload = new Uint8Array(4 + 4 + rows.length * 12);
+    function buildStscFromChunkMap(chunkSampleCounts) {
+        const rows = [];
+        let startChunk = 1;
+        let prevCount = chunkSampleCounts[0];
+        for (let i = 1; i < chunkSampleCounts.length; i++) {
+            if (chunkSampleCounts[i] !== prevCount) {
+                rows.push([startChunk, prevCount, 1]);
+                startChunk = i + 1;
+                prevCount = chunkSampleCounts[i];
+            }
+        }
+        rows.push([startChunk, prevCount, 1]);
+        const payload = new Uint8Array(8 + rows.length * 12);
         writeU32BE(payload, 4, rows.length);
         let off = 8;
         for (const [fc, spc, sdi] of rows) {
@@ -1303,21 +1395,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stsc', payload);
     }
-    function buildStco(originalOffsets, delta, fakeSampleCount) {
-        const count   = originalOffsets.length + fakeSampleCount;
-        const payload = new Uint8Array(4 + 4 + count * 4);
-        writeU32BE(payload, 4, count);
+    function buildStco(newOffsets) {
+        const payload = new Uint8Array(8 + newOffsets.length * 4);
+        writeU32BE(payload, 4, newOffsets.length);
         let off = 8;
-        for (const o of originalOffsets) {
-            const shifted = o + delta;
-            assertUint32(shifted, 'stco.chunk_offset');
-            writeU32BE(payload, off, shifted); off += 4;
-        }
-        for (let i = 0; i < fakeSampleCount; i++) {
-            const originalIndex = i % originalOffsets.length;
-            const shifted = originalOffsets[originalIndex] + delta;
-            assertUint32(shifted, 'stco.fake_sample_offset');
-            writeU32BE(payload, off, shifted); off += 4;
+        for (const o of newOffsets) {
+            assertUint32(o, 'stco.chunk_offset');
+            writeU32BE(payload, off, o);
+            off += 4;
         }
         return makeBox('stco', payload);
     }
@@ -1329,144 +1414,130 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const child of box.children) parts.push(rebuildBox(child, replacements));
         return makeBox(box.type, concatBytes(parts));
     }
-    function collectTrackStcoBoxes(moov) {
-        const stcoBoxes = [];
-        for (const trak of moov.children.filter(c => c.type === 'trak')) {
-            const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
-            if (!stbl) continue;
-            if (findChild(stbl, 'co64')) throw new Error('co64 (64-bit offsets) not supported.');
-            const stco = findChild(stbl, 'stco');
-            if (stco) stcoBoxes.push(stco);
-        }
-        return stcoBoxes;
-    }
-    function buildStcoReplacements(stcoBoxes, videoStco, delta, fakeSampleCount) {
-        const map = new Map();
-        for (const stco of stcoBoxes) {
-            map.set(stco, buildStco(parseStco(stco), delta, stco === videoStco ? fakeSampleCount : 0));
-        }
-        return map;
-    }
     function patchMp4(inputData, _logFn) {
         const _log = _logFn || (() => {});
         const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
-        const fresh = new Uint8Array(srcArr.byteLength);
-        fresh.set(srcArr);
-        const data = fresh;
+        const data = new Uint8Array(srcArr.byteLength);
+        data.set(srcArr);
         const view = new DataView(data.buffer);
-        _log(`  Input buffer : ${data.byteLength} bytes (${(data.byteLength/(1024*1024)).toFixed(3)} MB)`);
-        _log(`  byteOffset   : ${fresh.byteOffset} (should be 0 on iOS fix)`);
+        _log(`Input buffer size: ${data.byteLength} bytes (${(data.byteLength/(1024*1024)).toFixed(3)} MB)`);
         const topLevel = parseBoxes(data, view, 0, data.length, '');
-        _log(`  Top-level boxes: ${topLevel.map(b => `${b.type}(${b.size})`).join(', ')}`);
         const ftyp = findTopLevel(topLevel, 'ftyp');
         const moov = findTopLevel(topLevel, 'moov');
         const mdat = findTopLevel(topLevel, 'mdat');
-        if (!ftyp) throw new Error('"ftyp" box not found. Not a valid MP4.');
-        if (!moov) throw new Error('"moov" box not found. Missing MP4 metadata.');
-        if (!mdat) throw new Error('"mdat" box not found. No media data.');
-        _log(`  ftyp @ offset ${ftyp.offset}, size ${ftyp.size}`);
-        _log(`  moov @ offset ${moov.offset}, size ${moov.size}`);
-        _log(`  mdat @ offset ${mdat.offset}, size ${mdat.size}, content @ ${mdat.contentStart}`);
-        _log(`  moov children: ${moov.children.map(c => c.type).join(', ')}`);
-        const videoTrak = moov.children.find(
-            c => c.type === 'trak' && handlerTypeForTrak(c) === 'vide'
-        );
+        if (!ftyp || !moov || !mdat) {
+            throw new Error('Invalid MP4 structure: missing ftyp, moov, or mdat.');
+        }
+        const traks = moov.children.filter(c => c.type === 'trak');
+        const videoTrak = traks.find(c => handlerTypeForTrak(c) === 'vide');
+        const audioTrak = traks.find(c => handlerTypeForTrak(c) === 'soun');
         if (!videoTrak) throw new Error('Video track not found.');
-        _log(`  Video trak children: ${videoTrak.children.map(c => c.type).join(', ')}`);
-        const stbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
-        const mdhd = findDescendant(videoTrak, ['mdia', 'mdhd']);
-        const elst = findDescendant(videoTrak, ['edts', 'elst']);
-        const stts = stbl && findChild(stbl, 'stts');
-        const stsc = stbl && findChild(stbl, 'stsc');
-        const stsz = stbl && findChild(stbl, 'stsz');
-        const stco = stbl && findChild(stbl, 'stco');
-        if (!stbl || !mdhd || !elst || !stts || !stsc || !stsz || !stco) {
-            _log(`  MISSING BOXES — stbl:${!!stbl} mdhd:${!!mdhd} elst:${!!elst} stts:${!!stts} stsc:${!!stsc} stsz:${!!stsz} stco:${!!stco}`);
-            throw new Error('Missing required boxes: mdhd, elst, stts, stsc, stsz, stco.');
+        const vSamples = extractSampleLocations(videoTrak);
+        const aSamples = audioTrak ? extractSampleLocations(audioTrak) : [];
+        const vSttsBox = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stts']);
+        const aSttsBox = audioTrak ? findDescendant(audioTrak, ['mdia', 'minf', 'stbl', 'stts']) : null;
+        const vStts = parseStts(vSttsBox);
+        const aStts = aSttsBox ? parseStts(aSttsBox) : [];
+        const vTimescale = getTimescale(videoTrak);
+        const aTimescale = audioTrak ? getTimescale(audioTrak) : 44100;
+        const vPts = getSampleTimestamps(vStts, vTimescale);
+        const aPts = audioTrak ? getSampleTimestamps(aStts, aTimescale) : [];
+        _log(`Extracted ${vSamples.length} video samples, ${aSamples.length} audio samples.`);
+        const allItems = [];
+        for (let i = 0; i < vSamples.length; i++) {
+            allItems.push({ type: 'v', idx: i, pts: vPts[i] || 0, loc: vSamples[i] });
         }
-        _log(`  All required boxes found ✓`);
-        const originalSizes        = parseStsz(stsz);
-        const originalStscRows     = parseStsc(stsc);
-        const originalChunkOffsets = parseStco(stco);
-        const stcoBoxes            = collectTrackStcoBoxes(moov);
-        _log(`  stsz: ${originalSizes.length} samples, first=${originalSizes[0]}, last=${originalSizes[originalSizes.length-1]}`);
-        _log(`  stsc: ${originalStscRows.length} entries`);
-        _log(`  stco: ${originalChunkOffsets.length} chunks, first offset=${originalChunkOffsets[0]}, last=${originalChunkOffsets[originalChunkOffsets.length-1]}`);
-        _log(`  stco tracks total: ${stcoBoxes.length}`);
+        for (let i = 0; i < aSamples.length; i++) {
+            allItems.push({ type: 'a', idx: i, pts: aPts[i] || 0, loc: aSamples[i] });
+        }
+        allItems.sort((a, b) => (a.pts - b.pts) || (a.type === 'a' ? -1 : 1));
+        let mdatPayloadSize = 0;
+        for (const item of allItems) mdatPayloadSize += item.loc.size;
+        const fakeSampleCount = (aSamples.length > 0 ? aSamples.length : vSamples.length) * 9;
+        const fakeTotalBytes  = fakeSampleCount * FAKE_SAMPLE_SIZE;
+        const newMdatPayload = new Uint8Array(mdatPayloadSize + fakeTotalBytes);
+        let writeOffset = 0;
+        const newVOffsets = new Array(vSamples.length);
+        const newAOffsets = new Array(aSamples.length);
+        for (const item of allItems) {
+            const srcOffset = item.loc.offset;
+            const sz = item.loc.size;
+            newMdatPayload.set(data.subarray(srcOffset, srcOffset + sz), writeOffset);
+            if (item.type === 'v') newVOffsets[item.idx] = writeOffset;
+            else newAOffsets[item.idx] = writeOffset;
+            writeOffset += sz;
+        }
+        const fakeStartInMdat = writeOffset;
+        for (let i = 0; i < fakeSampleCount; i++) {
+            newMdatPayload.set(FAKE_SAMPLE_BYTES, writeOffset);
+            writeOffset += FAKE_SAMPLE_SIZE;
+        }
+        _log(`Rebuilt mdat payload: ${newMdatPayload.byteLength} bytes (${fakeSampleCount} fake samples appended).`);
         const preservedTopLevel = topLevel
-            .filter(b => !['ftyp', 'moov', 'mdat', 'udta', 'meta', 'free', 'skip', 'wide'].includes(b.type))
+            .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
             .map(boxBytes);
-        const mdhdPayload = boxPayload(mdhd);
-        const mdhdVer = mdhdPayload[0];
-        let originalTimescale = 90000;
-        if (mdhdVer === 0) {
-            originalTimescale = readU32BE(mdhdPayload, 12);
-        } else if (mdhdVer === 1) {
-            originalTimescale = readU32BE(mdhdPayload, 20);
+        const preservedBytes = concatBytes(preservedTopLevel);
+        const ftypBytes = boxBytes(ftyp);
+        let moovHeaderLen = moov.size;
+        let finalOutput = null;
+        let patchResultStats = null;
+        for (let pass = 1; pass <= 3; pass++) {
+            const mdatStartOffset = ftypBytes.byteLength + moovHeaderLen + preservedBytes.byteLength + 8;
+            const vAbsOffsets = newVOffsets.map(rel => rel + mdatStartOffset);
+            const aAbsOffsets = newAOffsets.map(rel => rel + mdatStartOffset);
+            if (audioTrak) {
+                aAbsOffsets.push(fakeStartInMdat + mdatStartOffset);
+            } else {
+                vAbsOffsets.push(fakeStartInMdat + mdatStartOffset);
+            }
+            const vStbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
+            const vStscBox = findChild(vStbl, 'stsc');
+            const vStszBox = findChild(vStbl, 'stsz');
+            const vStcoBox = findChild(vStbl, 'stco') || findChild(vStbl, 'co64');
+            const vChunkCounts = new Array(vSamples.length).fill(1);
+            const replacements = new Map([
+                [vStcoBox, buildStco(vAbsOffsets)],
+                [vStscBox, buildStscFromChunkMap(vChunkCounts)],
+                [vStszBox, buildStsz(vSamples.map(s => s.size), 0)],
+            ]);
+            if (audioTrak) {
+                const aStbl = findDescendant(audioTrak, ['mdia', 'minf', 'stbl']);
+                const aStscBox = findChild(aStbl, 'stsc');
+                const aStszBox = findChild(aStbl, 'stsz');
+                const aStcoBox = findChild(aStbl, 'stco') || findChild(aStbl, 'co64');
+                const aMdhdBox = findDescendant(audioTrak, ['mdia', 'mdhd']);
+                const aChunkCounts = new Array(aSamples.length).fill(1);
+                aChunkCounts.push(fakeSampleCount);
+                const aSizes = aSamples.map(s => s.size);
+                const aSampleDelta = aStts.length ? aStts[0][1] : 1024;
+                const aDynamicDuration = (aSamples.length + fakeSampleCount) * aSampleDelta;
+                replacements.set(aStcoBox, buildStco(aAbsOffsets));
+                replacements.set(aStscBox, buildStscFromChunkMap(aChunkCounts));
+                replacements.set(aStszBox, buildStsz(aSizes, fakeSampleCount));
+                replacements.set(aSttsBox, buildStts(aStts, fakeSampleCount, aSampleDelta));
+                replacements.set(aMdhdBox, buildMdhd(aMdhdBox, aTimescale, aDynamicDuration));
+            }
+            const moovFinal = rebuildBox(moov, replacements);
+            moovHeaderLen = moovFinal.byteLength;
+            if (pass === 3) {
+                const newMdatBox = makeBox('mdat', newMdatPayload);
+                finalOutput = concatBytes([ftypBytes, moovFinal, preservedBytes, newMdatBox]);
+                const inputFps = Math.round(vTimescale / (vStts[0] ? vStts[0][1] : 1000));
+                patchResultStats = {
+                    output: finalOutput,
+                    realSamples: vSamples.length,
+                    fakeSamples: fakeSampleCount,
+                    timescale: vTimescale,
+                    sampleDelta: vStts[0] ? vStts[0][1] : 1000,
+                    duration: (vSamples.length + fakeSampleCount) * (vStts[0] ? vStts[0][1] : 1000),
+                    chunkCount: vAbsOffsets.length,
+                    inputFps,
+                    patchedFps: inputFps
+                };
+            }
         }
-        const sttsPayload = boxPayload(stts);
-        const sttsEntryCount = readU32BE(sttsPayload, 4);
-        let originalSampleDelta = 1500;
-        if (sttsEntryCount >= 1) {
-            originalSampleDelta = readU32BE(sttsPayload, 12);
-        }
-        const elstPayload = boxPayload(elst);
-        let originalEditMediaTime = 0;
-        if (elstPayload[0] === 0) {
-            originalEditMediaTime = readU32BE(elstPayload, 12);
-        }
-        const realSampleCount  = originalSizes.length;
-        const fakeSampleCount  = realSampleCount * 9;
-        const dynamicDuration  = (realSampleCount + fakeSampleCount) * originalSampleDelta;
-        const inputFps = Math.round(originalTimescale / originalSampleDelta);
-        const patchedFps = Math.round(((realSampleCount + fakeSampleCount) * originalTimescale) / dynamicDuration);
-        _log(`  realSamples    : ${realSampleCount}`);
-        _log(`  fakeSamples    : ${fakeSampleCount} (realSamples × 9)`);
-        _log(`  timescale      : ${originalTimescale} (dynamic)`);
-        _log(`  duration       : ${dynamicDuration} (dynamic)`);
-        _log(`  sampleDelta    : ${originalSampleDelta} (dynamic)`);
-        _log(`  editMediaTime  : ${originalEditMediaTime} (dynamic)`);
-        _log(`  Input FPS      : ${inputFps}`);
-        _log(`  Patched FPS    : ${patchedFps}`);
-        const fixedReplacements = new Map([
-            [mdhd, buildMdhd(mdhd, originalTimescale, dynamicDuration)],
-            [elst, buildElst(elst, originalEditMediaTime)],
-            [stts, buildStts(realSampleCount, fakeSampleCount, originalSampleDelta)],
-            [stsc, buildStsc(originalStscRows, originalChunkOffsets.length)],
-            [stsz, buildStsz(originalSizes, fakeSampleCount)],
-        ]);
-        const placeholderRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, 0, fakeSampleCount).forEach((v, k) => placeholderRep.set(k, v));
-        const moovPlaceholder   = rebuildBox(moov, placeholderRep);
-        const preservedBytes    = concatBytes(preservedTopLevel);
-        const oldMdatPayload    = new Uint8Array(data.buffer, data.byteOffset + mdat.contentStart, mdat.end - mdat.contentStart);
-        const newMdatStart1     = ftyp.size + moovPlaceholder.byteLength + preservedBytes.byteLength + 8;
-        const delta1            = newMdatStart1 - mdat.contentStart;
-        _log(`  Pass 1 — moovPlaceholder: ${moovPlaceholder.byteLength}B, newMdatStart: ${newMdatStart1}, delta: ${delta1}`);
-        let finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta1, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
-        const moovV2        = rebuildBox(moov, finalRep);
-        const newMdatStart2 = ftyp.size + moovV2.byteLength + preservedBytes.byteLength + 8;
-        const delta2        = newMdatStart2 - mdat.contentStart;
-        _log(`  Pass 2 — moovV2: ${moovV2.byteLength}B, newMdatStart: ${newMdatStart2}, delta: ${delta2}`);
-        finalRep = new Map(fixedReplacements);
-        buildStcoReplacements(stcoBoxes, stco, delta2, fakeSampleCount).forEach((v, k) => finalRep.set(k, v));
-        const moovFinal      = rebuildBox(moov, finalRep);
-        const mdatNew        = makeBox('mdat', oldMdatPayload);
-        const ftypBytes      = boxBytes(ftyp);
-        const output         = concatBytes([ftypBytes, moovFinal, preservedBytes, mdatNew]);
-        _log(`  Pass 3 — moovFinal: ${moovFinal.byteLength}B`);
-        _log(`  Output layout: ftyp(${ftypBytes.byteLength}) + moov(${moovFinal.byteLength}) + preserved(${preservedBytes.byteLength}) + mdat(${mdatNew.byteLength})`);
-        _log(`  Total output: ${output.byteLength} bytes (${(output.byteLength/(1024*1024)).toFixed(3)} MB)`);
-        return {
-            output,
-            realSamples:    realSampleCount,
-            fakeSamples:    fakeSampleCount,
-            timescale:      originalTimescale,
-            sampleDelta:    originalSampleDelta,
-            duration:       dynamicDuration,
-            chunkCount:     originalChunkOffsets.length,
-        };
+        _log(`Universal MP4 patch completed successfully. Total output: ${finalOutput.byteLength} bytes.`);
+        return patchResultStats;
     }
     async function processVideoV2(file, mode = 'hd') {
         if (isProcessing) return;
@@ -1715,331 +1786,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function patchMp4HDMethod(inputBuffer, isCompressedMode = false) {
-        const data = new Uint8Array(inputBuffer);
-        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-
-        // 1. Standard ISO FastStart ftyp brand (isom/iso2/avc1/mp41)
-        const ftypBox = new Uint8Array([
-            0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70,
-            0x69, 0x73, 0x6f, 0x6d, 0x00, 0x00, 0x02, 0x00,
-            0x69, 0x73, 0x6f, 0x6d, 0x69, 0x73, 0x6f, 0x32,
-            0x61, 0x76, 0x63, 0x31, 0x6d, 0x70, 0x34, 0x31
-        ]);
-
-        let offset = 0;
-        let moovBox = null;
-        let mdatBox = null;
-        let origMdatOffset = -1;
-
-        while (offset < data.length - 8) {
-            let sz = view.getUint32(offset);
-            const name = String.fromCharCode(data[offset+4], data[offset+5], data[offset+6], data[offset+7]);
-            let hdr = 8;
-            if (sz === 1) {
-                sz = Number(view.getBigUint64(offset + 8));
-                hdr = 16;
-            } else if (sz === 0) {
-                sz = data.length - offset;
-            }
-            if (sz < hdr || offset + sz > data.length) break;
-
-            if (name === 'moov') {
-                moovBox = data.slice(offset, offset + sz);
-            } else if (name === 'mdat') {
-                mdatBox = data.slice(offset, offset + sz);
-                origMdatOffset = offset;
-            }
-            offset += sz;
-        }
-
-        if (!moovBox || !mdatBox) return data;
-
-        let mdatPayload = mdatBox.slice(8);
-        let zeroStrip = 0;
-        if (mdatPayload.length >= 4 && mdatPayload[0] === 0 && mdatPayload[1] === 0 && mdatPayload[2] === 0 && mdatPayload[3] === 0) {
-            mdatPayload = mdatPayload.slice(4);
-            zeroStrip = 4;
-        }
-
-        const newMdatBox = new Uint8Array(8 + mdatPayload.length);
-        const mdatView = new DataView(newMdatBox.buffer);
-        mdatView.setUint32(0, newMdatBox.length);
-        newMdatBox.set([0x6d, 0x64, 0x61, 0x74], 4);
-        newMdatBox.set(mdatPayload, 8);
-
-        let moovArr = Array.from(moovBox);
-        const mview = () => new DataView(new Uint8Array(moovArr).buffer);
-
-        function findParentBefore(nameBytes, startIdx) {
-            for (let i = startIdx; i >= 8; i--) {
-                if (moovArr[i+4] === nameBytes[0] && moovArr[i+5] === nameBytes[1] &&
-                    moovArr[i+6] === nameBytes[2] && moovArr[i+7] === nameBytes[3]) {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        // A. Remove Track 3 (Timecode/Data) if present
-        const trakIndices = [];
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x74 && moovArr[i+5] === 0x72 && moovArr[i+6] === 0x61 && moovArr[i+7] === 0x6b) {
-                const sz = mview().getUint32(i);
-                trakIndices.push({ pos: i, size: sz });
-            }
-        }
-        if (trakIndices.length >= 3) {
-            const t3 = trakIndices[2];
-            moovArr.splice(t3.pos, t3.size);
-        }
-
-        // B. In Track 1 (Video), remove sdtp if present
-        let sdtpIdx = -1;
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x64 && moovArr[i+6] === 0x74 && moovArr[i+7] === 0x70) {
-                sdtpIdx = i;
-                break;
-            }
-        }
-        if (sdtpIdx >= 0) {
-            const sdtpSz = mview().getUint32(sdtpIdx);
-            const stblPos = findParentBefore([0x73, 0x74, 0x62, 0x6c], sdtpIdx);
-            const minfPos = findParentBefore([0x6d, 0x69, 0x6e, 0x66], stblPos);
-            const mdiaPos = findParentBefore([0x6d, 0x64, 0x69, 0x61], minfPos);
-            const allTraks = [];
-            for (let i = 0; i < moovArr.length - 8; i++) {
-                if (moovArr[i+4] === 0x74 && moovArr[i+5] === 0x72 && moovArr[i+6] === 0x61 && moovArr[i+7] === 0x6b) allTraks.push(i);
-            }
-            const trak1Pos = allTraks[0];
-            moovArr.splice(sdtpIdx, sdtpSz);
-            [stblPos, minfPos, mdiaPos, trak1Pos].forEach(pos => {
-                if (pos >= 0) {
-                    const s = mview().getUint32(pos);
-                    const b = new Uint8Array(4);
-                    new DataView(b.buffer).setUint32(0, s - sdtpSz);
-                    for (let k = 0; k < 4; k++) moovArr[pos + k] = b[k];
-                }
-            });
-        }
-
-        // C. In Track 2 (Audio), remove edts if present (unifies sample timeline with injected samples)
-        const allTraks = [];
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x74 && moovArr[i+5] === 0x72 && moovArr[i+6] === 0x61 && moovArr[i+7] === 0x6b) allTraks.push(i);
-        }
-        if (allTraks.length >= 2) {
-            const trak2Start = allTraks[1];
-            const trak2Sz = mview().getUint32(trak2Start);
-            let edtsIdx = -1;
-            for (let i = trak2Start; i < trak2Start + trak2Sz - 8; i++) {
-                if (moovArr[i+4] === 0x65 && moovArr[i+5] === 0x64 && moovArr[i+6] === 0x74 && moovArr[i+7] === 0x73) {
-                    edtsIdx = i;
-                    break;
-                }
-            }
-            if (edtsIdx >= 0) {
-                const edtsSz = mview().getUint32(edtsIdx);
-                moovArr.splice(edtsIdx, edtsSz);
-                const newT2Sz = trak2Sz - edtsSz;
-                const b = new Uint8Array(4);
-                new DataView(b.buffer).setUint32(0, newT2Sz);
-                for (let k = 0; k < 4; k++) moovArr[trak2Start + k] = b[k];
-            }
-        }
-
-        // D. In Track 2 (Audio), find stbl and patch stsz, stsc, stco
-        let smhdIdx = -1;
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x6d && moovArr[i+6] === 0x68 && moovArr[i+7] === 0x64) {
-                smhdIdx = i;
-                break;
-            }
-        }
-        if (smhdIdx < 0) return data;
-
-        let stblStart = -1;
-        for (let i = smhdIdx; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x74 && moovArr[i+6] === 0x62 && moovArr[i+7] === 0x6c) {
-                stblStart = i;
-                break;
-            }
-        }
-        if (stblStart < 0) return data;
-
-        const stblSz = mview().getUint32(stblStart);
-        let stszIdx = -1, stscIdx = -1, stcoIdx = -1;
-        for (let i = stblStart; i < stblStart + stblSz - 8; i++) {
-            const tag = String.fromCharCode(moovArr[i+4], moovArr[i+5], moovArr[i+6], moovArr[i+7]);
-            if (tag === 'stsz') stszIdx = i;
-            else if (tag === 'stsc') stscIdx = i;
-            else if (tag === 'stco') stcoIdx = i;
-        }
-
-        if (stszIdx < 0 || stscIdx < 0 || stcoIdx < 0) return data;
-
-        const origStszSz = mview().getUint32(stszIdx);
-        const origSampleCnt = mview().getUint32(stszIdx + 16);
-        const origStscSz = mview().getUint32(stscIdx);
-        const origStscEntries = mview().getUint32(stscIdx + 12);
-        const origStcoSz = mview().getUint32(stcoIdx);
-        const origStcoCnt = mview().getUint32(stcoIdx + 12);
-
-        const dummyEntriesCnt = origSampleCnt * 9;
-        const newSampleCnt = origSampleCnt * 10;
-
-        // 1. Expand stsz
-        const scBytes = new Uint8Array(4);
-        new DataView(scBytes.buffer).setUint32(0, newSampleCnt);
-        for (let k = 0; k < 4; k++) moovArr[stszIdx + 16 + k] = scBytes[k];
-
-        const dummyStszBytes = new Uint8Array(dummyEntriesCnt * 4);
-        for (let i = 0; i < dummyEntriesCnt * 4; i += 4) {
-            dummyStszBytes[i + 3] = 0x08;
-        }
-        const stszEnd = stszIdx + origStszSz;
-        moovArr.splice(stszEnd, 0, ...dummyStszBytes);
-        const stszAdded = dummyStszBytes.length;
-        const newStszSz = origStszSz + stszAdded;
-        const nszBytes = new Uint8Array(4);
-        new DataView(nszBytes.buffer).setUint32(0, newStszSz);
-        for (let k = 0; k < 4; k++) moovArr[stszIdx + k] = nszBytes[k];
-
-        // 2. Expand stsc
-        stscIdx = -1;
-        for (let i = stblStart; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x74 && moovArr[i+6] === 0x73 && moovArr[i+7] === 0x63) {
-                stscIdx = i;
-                break;
-            }
-        }
-        const newStscEntry = new Uint8Array(12);
-        const stscEntryView = new DataView(newStscEntry.buffer);
-        stscEntryView.setUint32(0, origStcoCnt + 1);
-        stscEntryView.setUint32(4, dummyEntriesCnt);
-        stscEntryView.setUint32(8, 1);
-        const stscEnd = stscIdx + origStscSz;
-        moovArr.splice(stscEnd, 0, ...newStscEntry);
-        const stscAdded = newStscEntry.length;
-        const nscSzBytes = new Uint8Array(4);
-        new DataView(nscSzBytes.buffer).setUint32(0, origStscSz + stscAdded);
-        for (let k = 0; k < 4; k++) moovArr[stscIdx + k] = nscSzBytes[k];
-        const nscCntBytes = new Uint8Array(4);
-        new DataView(nscCntBytes.buffer).setUint32(0, origStscEntries + 1);
-        for (let k = 0; k < 4; k++) moovArr[stscIdx + 12 + k] = nscCntBytes[k];
-
-        // 3. Expand stco
-        stcoIdx = -1;
-        for (let i = stblStart; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x74 && moovArr[i+6] === 0x63 && moovArr[i+7] === 0x6f) {
-                stcoIdx = i;
-                break;
-            }
-        }
-        const dummyStcoEntry = new Uint8Array(4);
-        const stcoEnd = stcoIdx + origStcoSz;
-        moovArr.splice(stcoEnd, 0, ...dummyStcoEntry);
-        const stcoAdded = dummyStcoEntry.length;
-        const ncoSzBytes = new Uint8Array(4);
-        new DataView(ncoSzBytes.buffer).setUint32(0, origStcoSz + stcoAdded);
-        for (let k = 0; k < 4; k++) moovArr[stcoIdx + k] = ncoSzBytes[k];
-        const ncoCntBytes = new Uint8Array(4);
-        new DataView(ncoCntBytes.buffer).setUint32(0, origStcoCnt + 1);
-        for (let k = 0; k < 4; k++) moovArr[stcoIdx + 12 + k] = ncoCntBytes[k];
-
-        // Parent box size updates
-        const totalAddedTrak2 = stszAdded + stscAdded + stcoAdded;
-        const stblPos = findParentBefore([0x73, 0x74, 0x62, 0x6c], stszIdx);
-        const minfPos = findParentBefore([0x6d, 0x69, 0x6e, 0x66], stblPos);
-        const mdiaPos = findParentBefore([0x6d, 0x64, 0x69, 0x61], minfPos);
-        const allTraksUpdated = [];
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x74 && moovArr[i+5] === 0x72 && moovArr[i+6] === 0x61 && moovArr[i+7] === 0x6b) allTraksUpdated.push(i);
-        }
-        const trak2Pos = allTraksUpdated[1];
-
-        [stblPos, minfPos, mdiaPos, trak2Pos].forEach(pos => {
-            if (pos >= 0) {
-                const s = mview().getUint32(pos);
-                const b = new Uint8Array(4);
-                new DataView(b.buffer).setUint32(0, s + totalAddedTrak2);
-                for (let k = 0; k < 4; k++) moovArr[pos + k] = b[k];
-            }
-        });
-
-        // E. Replace / standardize udta metadata (CuteFish Lavf signature)
-        let udtaIdx = -1;
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x75 && moovArr[i+5] === 0x64 && moovArr[i+6] === 0x74 && moovArr[i+7] === 0x61) {
-                udtaIdx = i;
-                break;
-            }
-        }
-        const lavfUdtaHex = '00000157756474610000014f6d657461000000000000002168646c7200000000000000006d6469726170706c00000000000000000000000122696c737400000026a94152540000001e64617461000000010000000063757465666973682e6d792e696400000026a97772740000001e64617461000000010000000063757465666973682e6d792e69640000002aa9616c62000000226461746100000001000000004375746546697368204844204d6574686f6400000025a9746f6f0000001d6461746100000001000000004c61766636302e31362e31303000000033a9636d740000002b6461746100000001000000004f7074696d697a65642062792063757465666973682e6d792e696400000026637072740000001e64617461000000010000000063757465666973682e6d792e696400000026a96772700000001e64617461000000010000000063757465666973682e6d792e6964';
-        const lavfUdta = [];
-        for (let i = 0; i < lavfUdtaHex.length; i += 2) {
-            lavfUdta.push(parseInt(lavfUdtaHex.substring(i, i + 2), 16));
-        }
-        if (udtaIdx >= 0) {
-            const udtaSz = mview().getUint32(udtaIdx);
-            moovArr.splice(udtaIdx, udtaSz, ...lavfUdta);
-        } else {
-            moovArr.push(...lavfUdta);
-        }
-
-        const newMoovSz = moovArr.length;
-        const moovSzBytes = new Uint8Array(4);
-        new DataView(moovSzBytes.buffer).setUint32(0, newMoovSz);
-        for (let k = 0; k < 4; k++) moovArr[k] = moovSzBytes[k];
-
-        const newMdatOffset = ftypBox.length + newMoovSz;
-        const newMdatEnd = newMdatOffset + newMdatBox.length;
-
-        const allStco = [];
-        for (let i = 0; i < moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 0x73 && moovArr[i+5] === 0x74 && moovArr[i+6] === 0x63 && moovArr[i+7] === 0x6f) allStco.push(i);
-        }
-
-        const vStco = allStco[0];
-        const vCnt = mview().getUint32(vStco + 12);
-        for (let e = 0; e < vCnt; e++) {
-            const idx = vStco + 16 + (e * 4);
-            const oldVal = mview().getUint32(idx);
-            const newVal = oldVal - origMdatOffset + newMdatOffset - zeroStrip;
-            const b = new Uint8Array(4);
-            new DataView(b.buffer).setUint32(0, newVal);
-            for (let k = 0; k < 4; k++) moovArr[idx + k] = b[k];
-        }
-
-        const aStco = allStco[1];
-        const aCnt = mview().getUint32(aStco + 12);
-        for (let e = 0; e < aCnt - 1; e++) {
-            const idx = aStco + 16 + (e * 4);
-            const oldVal = mview().getUint32(idx);
-            const newVal = oldVal - origMdatOffset + newMdatOffset - zeroStrip;
-            const b = new Uint8Array(4);
-            new DataView(b.buffer).setUint32(0, newVal);
-            for (let k = 0; k < 4; k++) moovArr[idx + k] = b[k];
-        }
-
-        const lastChunkIdx = aStco + 16 + ((aCnt - 1) * 4);
-        const bEnd = new Uint8Array(4);
-        new DataView(bEnd.buffer).setUint32(0, newMdatEnd);
-        for (let k = 0; k < 4; k++) moovArr[lastChunkIdx + k] = bEnd[k];
-
-        const paddingTotal = dummyEntriesCnt * 8;
-        const paddingBuf = new Uint8Array(paddingTotal);
-        const unit = [0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00];
-        for (let p = 0; p < paddingTotal; p += 8) {
-            paddingBuf.set(unit, p);
-        }
-
-        const finalResult = new Uint8Array(ftypBox.length + moovArr.length + newMdatBox.length + paddingBuf.length);
-        finalResult.set(ftypBox, 0);
-        finalResult.set(new Uint8Array(moovArr), ftypBox.length);
-        finalResult.set(newMdatBox, ftypBox.length + moovArr.length);
-        finalResult.set(paddingBuf, ftypBox.length + moovArr.length + newMdatBox.length);
-
-        return finalResult;
+        const result = patchMp4(inputBuffer);
+        return result.output;
     }
     window.patchMp4HDMethod = patchMp4HDMethod;
 

@@ -239,6 +239,7 @@
             "preset_category_all": "Semua",
 
             "footer_rights": "Hak Cipta Dilindungi Undang-Undang.",
+            "footer_build_date": "Build date:",
             "footer_privacy": "Kebijakan Privasi",
             "footer_terms": "Syarat & Ketentuan",
             "footer_disclaimer": "Penafian & DMCA",
@@ -488,6 +489,7 @@
             "preset_category_all": "All",
 
             "footer_rights": "All Rights Reserved.",
+            "footer_build_date": "Build date:",
             "footer_privacy": "Privacy Policy",
             "footer_terms": "Terms of Service",
             "footer_disclaimer": "Disclaimer & DMCA",
@@ -539,6 +541,9 @@
             const translation = window.getTranslation(key);
             el.innerHTML = translation;
         });
+        if (typeof window.renderFooterBuildDate === 'function') {
+            window.renderFooterBuildDate(window.cachedBuildData);
+        }
     };
     document.addEventListener('DOMContentLoaded', () => {
         window.translateUI();

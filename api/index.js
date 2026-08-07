@@ -42,22 +42,72 @@ if (fs.existsSync(distScriptsPath)) {
 app.use(express.static(path.join(__dirname, '..')));
 
 /**
- * Returns dynamic version string based on Vercel Git Commit SHA, Deployment ID, or local file mtime
+ * Returns dynamic version & build date details based on Vercel environment or file stat
  */
-function getDynamicVersion() {
-    if (process.env.VERCEL_GIT_COMMIT_SHA) {
-        return process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7);
+function getDynamicBuildInfo() {
+    const commitSha = process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7) : null;
+    const deploymentId = process.env.VERCEL_DEPLOYMENT_ID ? process.env.VERCEL_DEPLOYMENT_ID.substring(0, 7) : null;
+
+    let buildDateObj = null;
+    if (process.env.VERCEL_BUILD_TIME) {
+        const t = Number(process.env.VERCEL_BUILD_TIME);
+        if (!isNaN(t) && t > 0) buildDateObj = new Date(t);
     }
-    if (process.env.VERCEL_DEPLOYMENT_ID) {
-        return process.env.VERCEL_DEPLOYMENT_ID;
+
+    if (!buildDateObj) {
+        try {
+            const indexPath = path.join(__dirname, '..', 'index.html');
+            const stat = fs.statSync(indexPath);
+            buildDateObj = stat.mtime;
+        } catch (e) {
+            buildDateObj = new Date();
+        }
     }
+
+    const version = commitSha || deploymentId || `dev-${Math.floor(buildDateObj.getTime())}`;
+
+    const optionsId = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short',
+        timeZone: 'Asia/Jakarta'
+    };
+
+    const optionsEn = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short',
+        timeZone: 'Asia/Jakarta'
+    };
+
+    let buildDateId = '';
+    let buildDateEn = '';
+
     try {
-        const indexPath = path.join(__dirname, '..', 'index.html');
-        const stat = fs.statSync(indexPath);
-        return `dev-${Math.floor(stat.mtimeMs)}`;
+        buildDateId = buildDateObj.toLocaleString('id-ID', optionsId);
+        buildDateEn = buildDateObj.toLocaleString('en-US', optionsEn);
     } catch (e) {
-        return 'dev';
+        buildDateId = buildDateObj.toISOString();
+        buildDateEn = buildDateObj.toISOString();
     }
+
+    return {
+        version,
+        timestamp: buildDateObj.getTime(),
+        buildDateId,
+        buildDateEn,
+        buildDateIso: buildDateObj.toISOString()
+    };
 }
 
 // API version endpoint for client auto-update and cache invalidation
@@ -65,7 +115,7 @@ app.get('/api/version', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.json({ version: getDynamicVersion(), timestamp: Date.now() });
+    res.json(getDynamicBuildInfo());
 });
 
 // Proxy /realesrgan requests to target model host directly

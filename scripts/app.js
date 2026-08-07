@@ -2606,7 +2606,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    window.renderFooterBuildDate = function(buildData) {
+        const valElements = document.querySelectorAll('.footer-build-date-val');
+        if (!valElements.length) return;
+
+        let dateText = '';
+        const currentLang = (window.currentLang || localStorage.getItem('chros_lang') || 'id');
+        const isId = currentLang === 'id';
+
+        if (buildData && (buildData.buildDateId || buildData.buildDateEn)) {
+            dateText = isId ? (buildData.buildDateId || buildData.buildDateEn) : (buildData.buildDateEn || buildData.buildDateId);
+        } else {
+            const fallbackDate = new Date(document.lastModified || Date.now());
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short'
+            };
+            try {
+                dateText = fallbackDate.toLocaleString(isId ? 'id-ID' : 'en-US', options);
+            } catch (e) {
+                dateText = fallbackDate.toISOString();
+            }
+        }
+
+        valElements.forEach(el => {
+            el.textContent = dateText;
+        });
+    };
+
     const checkAppVersion = async () => {
+        window.renderFooterBuildDate(window.cachedBuildData);
         if (!navigator.onLine) return;
         try {
             const res = await fetch(`${API_URL}/version?_t=${Date.now()}`, {
@@ -2616,6 +2651,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) return;
             const data = await res.json();
             if (data && data.version) {
+                window.cachedBuildData = data;
+                window.renderFooterBuildDate(data);
                 const storedVersion = localStorage.getItem('chros_app_version');
                 if (storedVersion && storedVersion !== data.version) {
                     console.log(`[Version] New release detected: ${data.version} (current: ${storedVersion}). Invalidate cache & reload...`);
