@@ -1763,6 +1763,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let moovArr = Array.from(moovBox);
 
+        const findParentBefore = (typeStr, startIdx) => {
+            const charCodes = Array.from(typeStr).map(c => c.charCodeAt(0));
+            for (let i = startIdx; i >= 8; i--) {
+                if (moovArr[i+4] === charCodes[0] && moovArr[i+5] === charCodes[1] && moovArr[i+6] === charCodes[2] && moovArr[i+7] === charCodes[3]) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+
         // 1. Remove Track 3 (tmcd/timecode track) if present
         const trakIndices = [];
         for (let i = 0; i <= moovArr.length - 8; i++) {
@@ -1776,22 +1786,76 @@ document.addEventListener('DOMContentLoaded', () => {
             moovArr.splice(t3.start, t3.size);
         }
 
-        // 2. Inject 9,909 dummy entries into Track 2 (Audio) stsz box
-        const stszIndices = [];
+        // 2. In Track 1 (Video), remove sdtp if present
+        let sdtpIdx = -1;
         for (let i = 0; i <= moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 115 && moovArr[i+7] === 122) {
-                stszIndices.push(i);
+            if (moovArr[i+4] === 115 && moovArr[i+5] === 100 && moovArr[i+6] === 116 && moovArr[i+7] === 112) {
+                sdtpIdx = i;
+                break;
+            }
+        }
+        if (sdtpIdx >= 0) {
+            const sdtpSz = (moovArr[sdtpIdx]<<24) | (moovArr[sdtpIdx+1]<<16) | (moovArr[sdtpIdx+2]<<8) | moovArr[sdtpIdx+3];
+            const stblPos = findParentBefore('stbl', sdtpIdx);
+            const minfPos = findParentBefore('minf', stblPos);
+            const mdiaPos = findParentBefore('mdia', minfPos);
+            const allTraks = [];
+            for (let i = 0; i <= moovArr.length - 8; i++) {
+                if (moovArr[i+4] === 116 && moovArr[i+5] === 114 && moovArr[i+6] === 97 && moovArr[i+7] === 107) {
+                    allTraks.push(i);
+                }
+            }
+            const trak1Pos = allTraks.length >= 1 ? allTraks[0] : -1;
+
+            moovArr.splice(sdtpIdx, sdtpSz);
+            for (const p of [stblPos, minfPos, mdiaPos, trak1Pos]) {
+                if (p >= 0) {
+                    const s = (moovArr[p]<<24) | (moovArr[p+1]<<16) | (moovArr[p+2]<<8) | moovArr[p+3];
+                    const newS = s - sdtpSz;
+                    moovArr[p]   = (newS >> 24) & 0xff;
+                    moovArr[p+1] = (newS >> 16) & 0xff;
+                    moovArr[p+2] = (newS >> 8) & 0xff;
+                    moovArr[p+3] = newS & 0xff;
+                }
             }
         }
 
-        if (stszIndices.length >= 2) {
-            const audioStszStart = stszIndices[1];
-            const origStszSize = (moovArr[audioStszStart]<<24) | (moovArr[audioStszStart+1]<<16) | (moovArr[audioStszStart+2]<<8) | moovArr[audioStszStart+3];
+        // 3. In Track 2 (Audio): expand stsz, stsc, and stco
+        const allTraks = [];
+        for (let i = 0; i <= moovArr.length - 8; i++) {
+            if (moovArr[i+4] === 116 && moovArr[i+5] === 114 && moovArr[i+6] === 97 && moovArr[i+7] === 107) {
+                allTraks.push(i);
+            }
+        }
+
+        if (allTraks.length >= 2) {
+            const trak2Start = allTraks[1];
+            const allStsz = [];
+            const allStsc = [];
+            const allStco = [];
+            for (let i = trak2Start; i <= moovArr.length - 8; i++) {
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 115 && moovArr[i+7] === 122) allStsz.push(i);
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 115 && moovArr[i+7] === 99) allStsc.push(i);
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 99 && moovArr[i+7] === 111) allStco.push(i);
+            }
+
+            const audioStszStart = allStsz[0];
+            const audioStscStart = allStsc[0];
+            const audioStcoStart = allStco[0];
+
+            const origStszSz = (moovArr[audioStszStart]<<24) | (moovArr[audioStszStart+1]<<16) | (moovArr[audioStszStart+2]<<8) | moovArr[audioStszStart+3];
             const origSampleCnt = (moovArr[audioStszStart+16]<<24) | (moovArr[audioStszStart+17]<<16) | (moovArr[audioStszStart+18]<<8) | moovArr[audioStszStart+19];
 
-            const dummyEntriesCnt = 9909;
-            const newSampleCnt = origSampleCnt + dummyEntriesCnt;
+            const origStscSz = (moovArr[audioStscStart]<<24) | (moovArr[audioStscStart+1]<<16) | (moovArr[audioStscStart+2]<<8) | moovArr[audioStscStart+3];
+            const origStscEntries = (moovArr[audioStscStart+12]<<24) | (moovArr[audioStscStart+13]<<16) | (moovArr[audioStscStart+14]<<8) | moovArr[audioStscStart+15];
 
+            const origStcoSz = (moovArr[audioStcoStart]<<24) | (moovArr[audioStcoStart+1]<<16) | (moovArr[audioStcoStart+2]<<8) | moovArr[audioStcoStart+3];
+            const origStcoCnt = (moovArr[audioStcoStart+12]<<24) | (moovArr[audioStcoStart+13]<<16) | (moovArr[audioStcoStart+14]<<8) | moovArr[audioStcoStart+15];
+
+            const dummyEntriesCnt = origSampleCnt * 9;
+            const newSampleCnt = origSampleCnt * 10;
+
+            // A. Expand audio stsz
             moovArr[audioStszStart+16] = (newSampleCnt >> 24) & 0xff;
             moovArr[audioStszStart+17] = (newSampleCnt >> 16) & 0xff;
             moovArr[audioStszStart+18] = (newSampleCnt >> 8) & 0xff;
@@ -1801,88 +1865,154 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let d = 0; d < dummyEntriesCnt; d++) {
                 dummyBytes.push(0x00, 0x00, 0x00, 0x08);
             }
-
-            const stszPayloadEnd = audioStszStart + origStszSize;
+            const stszPayloadEnd = audioStszStart + origStszSz;
             moovArr.splice(stszPayloadEnd, 0, ...dummyBytes);
-            const addedLen = dummyBytes.length;
+            const stszAdded = dummyBytes.length;
+            const newStszSz = origStszSz + stszAdded;
+            moovArr[audioStszStart]   = (newStszSz >> 24) & 0xff;
+            moovArr[audioStszStart+1] = (newStszSz >> 16) & 0xff;
+            moovArr[audioStszStart+2] = (newStszSz >> 8) & 0xff;
+            moovArr[audioStszStart+3] = newStszSz & 0xff;
 
-            const findParentBoxBefore = (typeStr, startIdx) => {
-                const charCodes = Array.from(typeStr).map(c => c.charCodeAt(0));
-                for (let i = startIdx; i >= 8; i--) {
-                    if (moovArr[i+4] === charCodes[0] && moovArr[i+5] === charCodes[1] && moovArr[i+6] === charCodes[2] && moovArr[i+7] === charCodes[3]) {
-                        return i;
-                    }
+            // Re-find stsc in track 2 after stsz insertion
+            const reStsc = [];
+            for (let i = trak2Start; i <= moovArr.length - 8; i++) {
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 115 && moovArr[i+7] === 99) reStsc.push(i);
+            }
+            const curStscStart = reStsc[0];
+
+            // B. Expand audio stsc (add entry: chunk origStcoCnt+1, samplesPerChunk dummyEntriesCnt, sampleDescr 1)
+            const newStscEntry = [
+                ((origStcoCnt + 1) >> 24) & 0xff, ((origStcoCnt + 1) >> 16) & 0xff, ((origStcoCnt + 1) >> 8) & 0xff, (origStcoCnt + 1) & 0xff,
+                (dummyEntriesCnt >> 24) & 0xff, (dummyEntriesCnt >> 16) & 0xff, (dummyEntriesCnt >> 8) & 0xff, dummyEntriesCnt & 0xff,
+                0x00, 0x00, 0x00, 0x01
+            ];
+            const stscPayloadEnd = curStscStart + origStscSz;
+            moovArr.splice(stscPayloadEnd, 0, ...newStscEntry);
+            const stscAdded = newStscEntry.length; // 12 bytes
+            const newStscSz = origStscSz + stscAdded;
+            moovArr[curStscStart]   = (newStscSz >> 24) & 0xff;
+            moovArr[curStscStart+1] = (newStscSz >> 16) & 0xff;
+            moovArr[curStscStart+2] = (newStscSz >> 8) & 0xff;
+            moovArr[curStscStart+3] = newStscSz & 0xff;
+            const newStscEntries = origStscEntries + 1;
+            moovArr[curStscStart+12] = (newStscEntries >> 24) & 0xff;
+            moovArr[curStscStart+13] = (newStscEntries >> 16) & 0xff;
+            moovArr[curStscStart+14] = (newStscEntries >> 8) & 0xff;
+            moovArr[curStscStart+15] = newStscEntries & 0xff;
+
+            // Re-find stco in track 2 after stsc insertion
+            const reStco = [];
+            for (let i = trak2Start; i <= moovArr.length - 8; i++) {
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 99 && moovArr[i+7] === 111) reStco.push(i);
+            }
+            const curStcoStart = reStco[0];
+
+            // C. Expand audio stco (add placeholder for last chunk)
+            const newStcoEntry = [0x00, 0x00, 0x00, 0x00];
+            const stcoPayloadEnd = curStcoStart + origStcoSz;
+            moovArr.splice(stcoPayloadEnd, 0, ...newStcoEntry);
+            const stcoAdded = newStcoEntry.length; // 4 bytes
+            const newStcoSz = origStcoSz + stcoAdded;
+            moovArr[curStcoStart]   = (newStcoSz >> 24) & 0xff;
+            moovArr[curStcoStart+1] = (newStcoSz >> 16) & 0xff;
+            moovArr[curStcoStart+2] = (newStcoSz >> 8) & 0xff;
+            moovArr[curStcoStart+3] = newStcoSz & 0xff;
+            const newStcoCnt = origStcoCnt + 1;
+            moovArr[curStcoStart+12] = (newStcoCnt >> 24) & 0xff;
+            moovArr[curStcoStart+13] = (newStcoCnt >> 16) & 0xff;
+            moovArr[curStcoStart+14] = (newStcoCnt >> 8) & 0xff;
+            moovArr[curStcoStart+15] = newStcoCnt & 0xff;
+
+            // D. Update parent containers of Track 2
+            const totalAddedTrak2 = stszAdded + stscAdded + stcoAdded;
+            const stblStart = findParentBefore('stbl', audioStszStart);
+            const minfStart = findParentBefore('minf', stblStart > 0 ? stblStart : audioStszStart);
+            const mdiaStart = findParentBefore('mdia', minfStart > 0 ? minfStart : audioStszStart);
+
+            for (const pos of [stblStart, minfStart, mdiaStart, trak2Start]) {
+                if (pos >= 0) {
+                    const oldSz = (moovArr[pos]<<24) | (moovArr[pos+1]<<16) | (moovArr[pos+2]<<8) | moovArr[pos+3];
+                    const newSz = oldSz + totalAddedTrak2;
+                    moovArr[pos]   = (newSz >> 24) & 0xff;
+                    moovArr[pos+1] = (newSz >> 16) & 0xff;
+                    moovArr[pos+2] = (newSz >> 8) & 0xff;
+                    moovArr[pos+3] = newSz & 0xff;
                 }
-                return -1;
-            };
+            }
 
-            const stblStart = findParentBoxBefore('stbl', audioStszStart);
-            const minfStart = findParentBoxBefore('minf', stblStart > 0 ? stblStart : audioStszStart);
-            const mdiaStart = findParentBoxBefore('mdia', minfStart > 0 ? minfStart : audioStszStart);
-            
-            let trak2Start = -1;
-            const allTraks = [];
+            // 4. Update moov total size header
+            const newMoovSize = moovArr.length;
+            moovArr[0] = (newMoovSize >> 24) & 0xff;
+            moovArr[1] = (newMoovSize >> 16) & 0xff;
+            moovArr[2] = (newMoovSize >> 8) & 0xff;
+            moovArr[3] = newMoovSize & 0xff;
+
+            // 5. Universal FastStart stco shift
+            const newMdatOffset = ftypBox.length + newMoovSize;
+            const newMdatEnd = newMdatOffset + newMdatBox.length;
+
+            const allStcoFinal = [];
             for (let i = 0; i <= moovArr.length - 8; i++) {
-                if (moovArr[i+4] === 116 && moovArr[i+5] === 114 && moovArr[i+6] === 97 && moovArr[i+7] === 107) {
-                    allTraks.push(i);
+                if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 99 && moovArr[i+7] === 111) {
+                    allStcoFinal.push(i);
                 }
             }
-            if (allTraks.length >= 2) {
-                trak2Start = allTraks[1];
-            }
 
-            const parentPositions = [audioStszStart, stblStart, minfStart, mdiaStart, trak2Start].filter(p => p >= 0);
-            for (const pos of parentPositions) {
-                const oldSz = (moovArr[pos]<<24) | (moovArr[pos+1]<<16) | (moovArr[pos+2]<<8) | moovArr[pos+3];
-                const newSz = oldSz + addedLen;
-                moovArr[pos]   = (newSz >> 24) & 0xff;
-                moovArr[pos+1] = (newSz >> 16) & 0xff;
-                moovArr[pos+2] = (newSz >> 8) & 0xff;
-                moovArr[pos+3] = newSz & 0xff;
-            }
-        }
-
-        // 3. Update moov total size header
-        const newMoovSize = moovArr.length;
-        moovArr[0] = (newMoovSize >> 24) & 0xff;
-        moovArr[1] = (newMoovSize >> 16) & 0xff;
-        moovArr[2] = (newMoovSize >> 8) & 0xff;
-        moovArr[3] = newMoovSize & 0xff;
-
-        // 4. Universal FastStart stco shift
-        const newMdatOffset = ftypBox.length + newMoovSize;
-        for (let i = 0; i <= moovArr.length - 8; i++) {
-            if (moovArr[i+4] === 115 && moovArr[i+5] === 116 && moovArr[i+6] === 99 && moovArr[i+7] === 111) {
-                const cnt = (moovArr[i+12]<<24) | (moovArr[i+13]<<16) | (moovArr[i+14]<<8) | moovArr[i+15];
-                for (let e = 0; e < cnt; e++) {
-                    const idx = i + 16 + (e * 4);
-                    if (idx + 4 <= moovArr.length) {
-                        const oldVal = (moovArr[idx]<<24) | (moovArr[idx+1]<<16) | (moovArr[idx+2]<<8) | moovArr[idx+3];
-                        const newVal = oldVal - origMdatOffset + newMdatOffset - zeroStrip;
-                        moovArr[idx]   = (newVal >> 24) & 0xff;
-                        moovArr[idx+1] = (newVal >> 16) & 0xff;
-                        moovArr[idx+2] = (newVal >> 8) & 0xff;
-                        moovArr[idx+3] = newVal & 0xff;
-                    }
+            // Video stco (Track 1)
+            if (allStcoFinal.length >= 1) {
+                const vStco = allStcoFinal[0];
+                const vCnt = (moovArr[vStco+12]<<24) | (moovArr[vStco+13]<<16) | (moovArr[vStco+14]<<8) | moovArr[vStco+15];
+                for (let e = 0; e < vCnt; e++) {
+                    const idx = vStco + 16 + (e * 4);
+                    const oldVal = (moovArr[idx]<<24) | (moovArr[idx+1]<<16) | (moovArr[idx+2]<<8) | moovArr[idx+3];
+                    const newVal = oldVal - origMdatOffset + newMdatOffset - zeroStrip;
+                    moovArr[idx]   = (newVal >> 24) & 0xff;
+                    moovArr[idx+1] = (newVal >> 16) & 0xff;
+                    moovArr[idx+2] = (newVal >> 8) & 0xff;
+                    moovArr[idx+3] = newVal & 0xff;
                 }
             }
+
+            // Audio stco (Track 2)
+            if (allStcoFinal.length >= 2) {
+                const aStco = allStcoFinal[1];
+                const aCnt = (moovArr[aStco+12]<<24) | (moovArr[aStco+13]<<16) | (moovArr[aStco+14]<<8) | moovArr[aStco+15];
+                for (let e = 0; e < aCnt - 1; e++) {
+                    const idx = aStco + 16 + (e * 4);
+                    const oldVal = (moovArr[idx]<<24) | (moovArr[idx+1]<<16) | (moovArr[idx+2]<<8) | moovArr[idx+3];
+                    const newVal = oldVal - origMdatOffset + newMdatOffset - zeroStrip;
+                    moovArr[idx]   = (newVal >> 24) & 0xff;
+                    moovArr[idx+1] = (newVal >> 16) & 0xff;
+                    moovArr[idx+2] = (newVal >> 8) & 0xff;
+                    moovArr[idx+3] = newVal & 0xff;
+                }
+                // Last chunk points to newMdatEnd!
+                const lastAudioChunkIdx = aStco + 16 + ((aCnt - 1) * 4);
+                moovArr[lastAudioChunkIdx]   = (newMdatEnd >> 24) & 0xff;
+                moovArr[lastAudioChunkIdx+1] = (newMdatEnd >> 16) & 0xff;
+                moovArr[lastAudioChunkIdx+2] = (newMdatEnd >> 8) & 0xff;
+                moovArr[lastAudioChunkIdx+3] = newMdatEnd & 0xff;
+            }
+
+            // 6. Tail alignment padding matching dummy sample count
+            const paddingTotal = dummyEntriesCnt * 8;
+            const paddingBuf = new Uint8Array(paddingTotal);
+            const unit = [0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00];
+            for (let p = 0; p < paddingTotal; p += 8) {
+                paddingBuf.set(unit, p);
+            }
+
+            const finalResult = new Uint8Array(ftypBox.length + moovArr.length + newMdatBox.length + paddingBuf.length);
+            finalResult.set(ftypBox, 0);
+            finalResult.set(new Uint8Array(moovArr), ftypBox.length);
+            finalResult.set(newMdatBox, ftypBox.length + moovArr.length);
+            finalResult.set(paddingBuf, ftypBox.length + moovArr.length + newMdatBox.length);
+
+            return finalResult;
         }
 
-        // 5. Append 79,272 bytes tail alignment padding
-        const paddingTotal = 79272;
-        const paddingBuf = new Uint8Array(paddingTotal);
-        const unit = [0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00];
-        for (let p = 0; p < paddingTotal; p += 8) {
-            paddingBuf.set(unit, p);
-        }
-
-        const finalResult = new Uint8Array(ftypBox.length + moovArr.length + newMdatBox.length + paddingBuf.length);
-        finalResult.set(ftypBox, 0);
-        finalResult.set(new Uint8Array(moovArr), ftypBox.length);
-        finalResult.set(newMdatBox, ftypBox.length + moovArr.length);
-        finalResult.set(paddingBuf, ftypBox.length + moovArr.length + newMdatBox.length);
-
-        return finalResult;
+        return new Uint8Array(inputBuffer);
     }
     window.patchMp4HDMethod = patchMp4HDMethod;
 
