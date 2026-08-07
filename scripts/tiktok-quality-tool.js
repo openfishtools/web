@@ -1512,16 +1512,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aStscBox = findChild(aStbl, 'stsc');
                 const aStszBox = findChild(aStbl, 'stsz');
                 const aStcoBox = findChild(aStbl, 'stco') || findChild(aStbl, 'co64');
-                const aMdhdBox = findDescendant(audioTrak, ['mdia', 'mdhd']);
                 const aChunkCounts = new Array(aSamples.length).fill(1);
                 aChunkCounts.push(fakeSampleCount);
                 const aSizes = aSamples.map(s => s.size);
-                const aSampleDelta = aStts.length ? aStts[0][1] : 1024;
                 replacements.set(aStcoBox, buildStco(aAbsOffsets));
                 replacements.set(aStscBox, buildStscFromChunkMap(aChunkCounts));
                 replacements.set(aStszBox, buildStsz(aSizes, fakeSampleCount));
-                replacements.set(aSttsBox, buildStts(aStts, 0, aSampleDelta));
-                replacements.set(aMdhdBox, buildMdhd(aMdhdBox, aTimescale, aStts.reduce((sum, entry) => sum + entry[0] * entry[1], 0)));
+                replacements.set(aSttsBox, buildStts(aStts, 0, 0));
             }
             const moovFinal = rebuildBox(moov, replacements);
             moovHeaderLen = moovFinal.byteLength;
