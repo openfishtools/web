@@ -1096,16 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessing = false;
         }
     }
-    const FAKE_SAMPLE_SIZE       = 10;
-    const FAKE_SAMPLE_BYTES      = new Uint8Array([
-        0x00, 0x00, 0x00, 0x06, // length of NAL unit
-        0x0C,                   // NAL unit header (forbidden_zero_bit=0, nal_ref_idc=00, nal_unit_type=12: Filler)
-        0xFF, 0xFF, 0xFF, 0xFF, // filler byte payload
-        0x80                    // rbsp trailing bits
-    ]);
-    const VIDEO_TIMESCALE        = 90000;
-    const VIDEO_DURATION         = 2269500;
-    const VIDEO_EDIT_MEDIA_TIME  = 0;
+    const FAKE_SAMPLE_BYTES = new Uint8Array([0x00, 0x00, 0x00, 0x06, 0x0C, 0xFF, 0xFF, 0xFF, 0xFF, 0x80]);
+    const FAKE_SAMPLE_SIZE = 10;
     const CONTAINER_BOXES = new Set([
         'moov', 'trak', 'mdia', 'minf', 'stbl',
         'edts', 'dinf', 'udta', 'meta', 'ilst',
@@ -1167,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return boxes;
     }
     function findChild(box, type) {
-        return box.children.find(c => c.type === type) || null;
+        return box ? box.children.find(c => c.type === type) || null : null;
     }
     function findDescendant(box, typePath) {
         let cur = box;
@@ -1184,6 +1176,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const hdlr = findDescendant(trak, ['mdia', 'hdlr']);
         if (!hdlr || hdlr.offset + 20 > hdlr.end) return null;
         return getBoxType(hdlr.data, hdlr.offset + 16);
+    }
+    function getTimescale(trak) {
+        const mdhd = findDescendant(trak, ['mdia', 'mdhd']);
+        if (!mdhd) return 90000;
+        const ver = mdhd.data[mdhd.offset + 8];
+        if (ver === 0) {
+            return mdhd.view.getUint32(mdhd.offset + 20, false);
+        } else {
+            return mdhd.view.getUint32(mdhd.offset + 28, false);
+        }
     }
     function parseStsz(stsz) {
         const sampleSize = stsz.view.getUint32(stsz.offset + 12, false);
@@ -1232,47 +1234,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return rows;
     }
-    function getChunkSampleCounts(trak) {
-        const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
-        const stsc = findChild(stbl, 'stsc');
-        const stco = findChild(stbl, 'stco') || findChild(stbl, 'co64');
-        if (!stsc || !stco) return [];
-        const rows = parseStsc(stsc);
-        const chunkCount = stco.view.getUint32(stco.offset + 12, false);
-        const counts = [];
-        for (let i = 0; i < rows.length; i++) {
-            const firstChunk = rows[i][0] - 1;
-            const nextChunk = i + 1 < rows.length ? rows[i + 1][0] - 1 : chunkCount;
-            for (let chunk = firstChunk; chunk < nextChunk; chunk++) counts[chunk] = rows[i][1];
-        }
-        return counts;
-    }
-    function buildChunkOffsets(sampleOffsets, chunkSampleCounts) {
-        const offsets = [];
-        let sampleIndex = 0;
-        for (const sampleCount of chunkSampleCounts) {
-            if (sampleIndex >= sampleOffsets.length) break;
-            offsets.push(sampleOffsets[sampleIndex]);
-            sampleIndex += sampleCount;
-        }
-        while (sampleIndex < sampleOffsets.length) offsets.push(sampleOffsets[sampleIndex++]);
-        return offsets;
-    }
-    function buildVideoChunkSampleCounts(sampleCount) {
-        if (!sampleCount) return [];
-        const targetChunks = Math.max(1, Math.floor(sampleCount * 23 / 32));
-        const doubleChunks = sampleCount - targetChunks;
-        const counts = new Array(targetChunks).fill(1);
-        let accumulator = -doubleChunks;
-        for (let i = 0; i < targetChunks; i++) {
-            accumulator += doubleChunks;
-            if (accumulator >= targetChunks) {
-                counts[i] = 2;
-                accumulator -= targetChunks;
-            }
-        }
-        return counts;
-    }
     function parseStts(stts) {
         const count = stts.view.getUint32(stts.offset + 12, false);
         const tableStart = stts.offset + 16;
@@ -1285,16 +1246,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
         }
         return entries;
-    }
-    function getTimescale(trak) {
-        const mdhd = findDescendant(trak, ['mdia', 'mdhd']);
-        if (!mdhd) return 90000;
-        const ver = mdhd.data[mdhd.offset + 8];
-        if (ver === 0) {
-            return mdhd.view.getUint32(mdhd.offset + 20, false);
-        } else {
-            return mdhd.view.getUint32(mdhd.offset + 28, false);
-        }
     }
     function extractSampleLocations(trak) {
         const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
@@ -1326,17 +1277,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return locations;
     }
-    function getSampleTimestamps(sttsEntries, timescale) {
-        const timestamps = [];
-        let currTime = 0.0;
-        for (const [count, delta] of sttsEntries) {
-            const dt = delta / timescale;
-            for (let i = 0; i < count; i++) {
-                timestamps.push(currTime);
-                currTime += dt;
-            }
+    function inputChunkCounts(trak) {
+        const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
+        const stscBox = findChild(stbl, 'stsc');
+        const stcoBox = findChild(stbl, 'stco') || findChild(stbl, 'co64');
+        if (!stscBox || !stcoBox) return [];
+        const rows = parseStsc(stscBox);
+        const offsets = parseStco(stcoBox);
+        const counts = [];
+        for (let i = 0; i < rows.length; i++) {
+            const first = rows[i][0] - 1;
+            const last = i + 1 < rows.length ? rows[i + 1][0] - 1 : offsets.length;
+            for (let chunk = first; chunk < last; chunk++) counts.push(rows[i][1]);
         }
-        return timestamps;
+        return counts;
+    }
+    function videoChunkCounts(sampleCount) {
+        const chunkCount = Math.max(1, Math.round(sampleCount * 23 / 32));
+        const doubleCount = sampleCount - chunkCount;
+        return Array.from({ length: chunkCount }, (_, i) => Math.floor((i + 1) * doubleCount / chunkCount) > Math.floor(i * doubleCount / chunkCount) ? 2 : 1);
+    }
+    function chunkOffsets(sampleOffsets, counts) {
+        const result = [];
+        let sample = 0;
+        for (const count of counts) {
+            if (sample >= sampleOffsets.length) break;
+            result.push(sampleOffsets[sample]);
+            sample += count;
+        }
+        return result;
     }
     function makeBox(type, payload) {
         const size = 8 + payload.byteLength;
@@ -1350,10 +1319,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function concatBytes(parts) {
         let totalLen = 0;
-        for (const p of parts) totalLen += p.byteLength;
+        for (const p of parts) totalLen += (p ? p.byteLength : 0);
         const result = new Uint8Array(totalLen);
         let off = 0;
         for (const p of parts) {
+            if (!p) continue;
             result.set(new Uint8Array(p.buffer || p, p.byteOffset || 0, p.byteLength), off);
             off += p.byteLength;
         }
@@ -1362,86 +1332,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function boxBytes(box) {
         return new Uint8Array(box.data.buffer, box.data.byteOffset + box.offset, box.size);
     }
-    function boxPayload(box) {
-        return new Uint8Array(box.data.buffer, box.data.byteOffset + box.contentStart, box.end - box.contentStart);
-    }
     function writeU32BE(arr, offset, value) {
         const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
         dv.setUint32(offset, value, false);
-    }
-    function buildMdhd(box, dynamicTimescale, dynamicDuration) {
-        const payload = new Uint8Array(boxPayload(box));
-        const version = payload[0];
-        if (version === 0) {
-            writeU32BE(payload, 12, dynamicTimescale);
-            writeU32BE(payload, 16, dynamicDuration);
-        } else if (version === 1) {
-            writeU32BE(payload, 20, dynamicTimescale);
-            const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-            dv.setBigUint64(24, BigInt(dynamicDuration), false);
-        }
-        return makeBox('mdhd', payload);
-    }
-    function buildStts(originalSttsEntries, fakeSampleCount, dynamicSampleDelta) {
-        if (!fakeSampleCount) {
-            let totalLen = 8 + originalSttsEntries.length * 8;
-            const payload = new Uint8Array(totalLen);
-            writeU32BE(payload, 4, originalSttsEntries.length);
-            let off = 8;
-            for (const [count, delta] of originalSttsEntries) {
-                writeU32BE(payload, off, count);
-                writeU32BE(payload, off + 4, delta);
-                off += 8;
-            }
-            return makeBox('stts', payload);
-        } else {
-            let entries = [...originalSttsEntries, [fakeSampleCount, dynamicSampleDelta]];
-            const payload = new Uint8Array(8 + entries.length * 8);
-            writeU32BE(payload, 4, entries.length);
-            let off = 8;
-            for (const [count, delta] of entries) {
-                writeU32BE(payload, off, count);
-                writeU32BE(payload, off + 4, delta);
-                off += 8;
-            }
-            return makeBox('stts', payload);
-        }
-    }
-    function buildStsz(originalSizes, fakeSampleCount) {
-        const total = originalSizes.length + (fakeSampleCount || 0);
-        const payload = new Uint8Array(12 + total * 4);
-        writeU32BE(payload, 8, total);
-        let off = 12;
-        for (const s of originalSizes) { writeU32BE(payload, off, s); off += 4; }
-        if (fakeSampleCount) {
-            for (let i = 0; i < fakeSampleCount; i++) {
-                writeU32BE(payload, off, FAKE_SAMPLE_SIZE); off += 4;
-            }
-        }
-        return makeBox('stsz', payload);
-    }
-    function buildStscFromChunkMap(chunkSampleCounts) {
-        const rows = [];
-        let startChunk = 1;
-        let prevCount = chunkSampleCounts[0];
-        for (let i = 1; i < chunkSampleCounts.length; i++) {
-            if (chunkSampleCounts[i] !== prevCount) {
-                rows.push([startChunk, prevCount, 1]);
-                startChunk = i + 1;
-                prevCount = chunkSampleCounts[i];
-            }
-        }
-        rows.push([startChunk, prevCount, 1]);
-        const payload = new Uint8Array(8 + rows.length * 12);
-        writeU32BE(payload, 4, rows.length);
-        let off = 8;
-        for (const [fc, spc, sdi] of rows) {
-            writeU32BE(payload, off, fc);
-            writeU32BE(payload, off + 4, spc);
-            writeU32BE(payload, off + 8, sdi);
-            off += 12;
-        }
-        return makeBox('stsc', payload);
     }
     function buildStco(newOffsets) {
         const payload = new Uint8Array(8 + newOffsets.length * 4);
@@ -1454,12 +1347,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stco', payload);
     }
+    function buildStsc(counts) {
+        const rows = [];
+        let firstChunk = 1;
+        let previous = counts[0];
+        for (let i = 1; i < counts.length; i++) {
+            if (counts[i] !== previous) {
+                rows.push([firstChunk, previous, 1]);
+                firstChunk = i + 1;
+                previous = counts[i];
+            }
+        }
+        if (counts.length) rows.push([firstChunk, previous, 1]);
+        const payload = new Uint8Array(8 + rows.length * 12);
+        writeU32BE(payload, 4, rows.length);
+        let off = 8;
+        for (const [fc, spc, sdi] of rows) {
+            writeU32BE(payload, off, fc);
+            writeU32BE(payload, off + 4, spc);
+            writeU32BE(payload, off + 8, sdi);
+            off += 12;
+        }
+        return makeBox('stsc', payload);
+    }
+    function buildStsz(sizes) {
+        const payload = new Uint8Array(12 + sizes.length * 4);
+        writeU32BE(payload, 8, sizes.length);
+        let off = 12;
+        for (const s of sizes) { writeU32BE(payload, off, s); off += 4; }
+        return makeBox('stsz', payload);
+    }
+    function buildStts(entries) {
+        const payload = new Uint8Array(8 + entries.length * 8);
+        writeU32BE(payload, 4, entries.length);
+        let off = 8;
+        for (const [count, delta] of entries) {
+            writeU32BE(payload, off, count);
+            writeU32BE(payload, off + 4, delta);
+            off += 8;
+        }
+        return makeBox('stts', payload);
+    }
     function rebuildBox(box, replacements) {
         if (replacements.has(box)) return replacements.get(box);
         if (!box.children.length) return boxBytes(box);
         const prefix = new Uint8Array(box.data.buffer, box.data.byteOffset + box.prefixStart, box.prefixEnd - box.prefixStart);
         const parts  = [prefix];
-        for (const child of box.children) parts.push(rebuildBox(child, replacements));
+        for (const child of box.children) {
+            const r = rebuildBox(child, replacements);
+            if (r) parts.push(r);
+        }
         return makeBox(box.type, concatBytes(parts));
     }
     function patchMp4(inputData, _logFn) {
@@ -1473,55 +1410,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const ftyp = findTopLevel(topLevel, 'ftyp');
         const moov = findTopLevel(topLevel, 'moov');
         const mdat = findTopLevel(topLevel, 'mdat');
-        if (!ftyp || !moov || !mdat) {
-            throw new Error('Invalid MP4 structure: missing ftyp, moov, or mdat.');
-        }
+        if (!ftyp || !moov || !mdat) throw new Error('Missing required MP4 boxes.');
         const traks = moov.children.filter(c => c.type === 'trak');
         const videoTrak = traks.find(c => handlerTypeForTrak(c) === 'vide');
         const audioTrak = traks.find(c => handlerTypeForTrak(c) === 'soun');
         if (!videoTrak) throw new Error('Video track not found.');
         const vSamples = extractSampleLocations(videoTrak);
         const aSamples = audioTrak ? extractSampleLocations(audioTrak) : [];
-        const aChunkSampleCounts = audioTrak ? getChunkSampleCounts(audioTrak) : [];
+        const videoInputCounts = inputChunkCounts(videoTrak);
+        const audioInputCounts = audioTrak ? inputChunkCounts(audioTrak) : [];
         const vSttsBox = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stts']);
         const aSttsBox = audioTrak ? findDescendant(audioTrak, ['mdia', 'minf', 'stbl', 'stts']) : null;
         const vStts = parseStts(vSttsBox);
         const aStts = aSttsBox ? parseStts(aSttsBox) : [];
-        const vTimescale = getTimescale(videoTrak);
-        const aTimescale = audioTrak ? getTimescale(audioTrak) : 44100;
-        const vPts = getSampleTimestamps(vStts, vTimescale);
-        const aPts = audioTrak ? getSampleTimestamps(aStts, aTimescale) : [];
-        _log(`Extracted ${vSamples.length} video samples, ${aSamples.length} audio samples.`);
-        const allItems = [];
-        for (let i = 0; i < vSamples.length; i++) {
-            allItems.push({ type: 'v', idx: i, pts: vPts[i] || 0, loc: vSamples[i] });
-        }
-        for (let i = 0; i < aSamples.length; i++) {
-            allItems.push({ type: 'a', idx: i, pts: aPts[i] || 0, loc: aSamples[i] });
-        }
-        allItems.sort((a, b) => (a.pts - b.pts) || (a.type === 'a' ? -1 : 1));
-        let mdatPayloadSize = 0;
-        for (const item of allItems) mdatPayloadSize += item.loc.size;
-        const fakeSampleCount = (aSamples.length > 0 ? aSamples.length : vSamples.length) * 9;
-        const fakeTotalBytes  = fakeSampleCount * FAKE_SAMPLE_SIZE;
-        const newMdatPayload = new Uint8Array(mdatPayloadSize + fakeTotalBytes);
+        const items = [
+            ...vSamples.map((loc, i) => ({ track: 'v', idx: i, loc })),
+            ...aSamples.map((loc, i) => ({ track: 'a', idx: i, loc }))
+        ];
+        items.sort((a, b) => a.loc.offset - b.loc.offset);
+        let mediaSize = 0;
+        for (const item of items) mediaSize += item.loc.size;
+        const fakeCount = (aSamples.length || vSamples.length) * 9;
+        const fakeBytesLen = fakeCount * FAKE_SAMPLE_SIZE;
+        const mdatPayload = new Uint8Array(mediaSize + fakeBytesLen);
         let writeOffset = 0;
         const newVOffsets = new Array(vSamples.length);
         const newAOffsets = new Array(aSamples.length);
-        for (const item of allItems) {
+        for (const item of items) {
             const srcOffset = item.loc.offset;
             const sz = item.loc.size;
-            newMdatPayload.set(data.subarray(srcOffset, srcOffset + sz), writeOffset);
-            if (item.type === 'v') newVOffsets[item.idx] = writeOffset;
+            mdatPayload.set(data.subarray(srcOffset, srcOffset + sz), writeOffset);
+            if (item.track === 'v') newVOffsets[item.idx] = writeOffset;
             else newAOffsets[item.idx] = writeOffset;
             writeOffset += sz;
         }
-        const fakeStartInMdat = writeOffset;
-        for (let i = 0; i < fakeSampleCount; i++) {
-            newMdatPayload.set(FAKE_SAMPLE_BYTES, writeOffset);
+        const fakeOffset = writeOffset;
+        for (let i = 0; i < fakeCount; i++) {
+            mdatPayload.set(FAKE_SAMPLE_BYTES, writeOffset);
             writeOffset += FAKE_SAMPLE_SIZE;
         }
-        _log(`Rebuilt mdat payload: ${newMdatPayload.byteLength} bytes (${fakeSampleCount} fake samples appended).`);
+        const videoCounts = Math.max(...videoInputCounts) <= 2 ? videoInputCounts : videoChunkCounts(vSamples.length);
+        const audioCounts = Math.max(...audioInputCounts) <= 3 ? audioInputCounts : new Array(aSamples.length).fill(1);
         const preservedTopLevel = topLevel
             .filter(b => !['ftyp', 'moov', 'mdat'].includes(b.type))
             .map(boxBytes);
@@ -1530,64 +1459,54 @@ document.addEventListener('DOMContentLoaded', () => {
         let moovHeaderLen = moov.size;
         let finalOutput = null;
         let patchResultStats = null;
-        for (let pass = 1; pass <= 3; pass++) {
+        for (let pass = 0; pass < 3; pass++) {
             const mdatStartOffset = ftypBytes.byteLength + moovHeaderLen + preservedBytes.byteLength + 8;
-            const vChunkCounts = buildVideoChunkSampleCounts(vSamples.length);
-            const aChunkCounts = aChunkSampleCounts.length ? aChunkSampleCounts : new Array(aSamples.length).fill(1);
-            const vAbsOffsets = buildChunkOffsets(newVOffsets.map(rel => rel + mdatStartOffset), vChunkCounts);
-            const aAbsOffsets = buildChunkOffsets(newAOffsets.map(rel => rel + mdatStartOffset), aChunkCounts);
-            if (audioTrak) {
-                aAbsOffsets.push(fakeStartInMdat + mdatStartOffset);
-            } else {
-                vAbsOffsets.push(fakeStartInMdat + mdatStartOffset);
-            }
+            const replacements = new Map();
             const vStbl = findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
+            const vStcoBox = findChild(vStbl, 'stco') || findChild(vStbl, 'co64');
             const vStscBox = findChild(vStbl, 'stsc');
             const vStszBox = findChild(vStbl, 'stsz');
-            const vStcoBox = findChild(vStbl, 'stco') || findChild(vStbl, 'co64');
-            const replacements = new Map([
-                [vStcoBox, buildStco(vAbsOffsets)],
-                [vStscBox, buildStscFromChunkMap(vChunkCounts)],
-                [vStszBox, buildStsz(vSamples.map(s => s.size), 0)],
-            ]);
+            replacements.set(vStcoBox, buildStco(chunkOffsets(newVOffsets.map(x => x + mdatStartOffset), videoCounts)));
+            replacements.set(vStscBox, buildStsc(videoCounts));
+            replacements.set(vStszBox, buildStsz(vSamples.map(x => x.size)));
             if (audioTrak) {
                 const aStbl = findDescendant(audioTrak, ['mdia', 'minf', 'stbl']);
+                const aStcoBox = findChild(aStbl, 'stco') || findChild(aStbl, 'co64');
                 const aStscBox = findChild(aStbl, 'stsc');
                 const aStszBox = findChild(aStbl, 'stsz');
-                const aStcoBox = findChild(aStbl, 'stco') || findChild(aStbl, 'co64');
-                const outputAChunkCounts = [...aChunkCounts, fakeSampleCount];
-                const aSizes = aSamples.map(s => s.size);
-                replacements.set(aStcoBox, buildStco(aAbsOffsets));
-                replacements.set(aStscBox, buildStscFromChunkMap(outputAChunkCounts));
-                replacements.set(aStszBox, buildStsz(aSizes, fakeSampleCount));
-                replacements.set(aSttsBox, buildStts(aStts, 0, 0));
+                replacements.set(aStcoBox, buildStco([...newAOffsets.map(x => x + mdatStartOffset), fakeOffset + mdatStartOffset]));
+                replacements.set(aStscBox, buildStsc([...audioCounts, fakeCount]));
+                replacements.set(aStszBox, buildStsz([...aSamples.map(x => x.size), ...new Array(fakeCount).fill(FAKE_SAMPLE_SIZE)]));
+                replacements.set(aSttsBox, buildStts(aStts));
+                const audioEdts = findChild(audioTrak, 'edts');
+                if (audioEdts) replacements.set(audioEdts, null);
             }
             const moovFinal = rebuildBox(moov, replacements);
             moovHeaderLen = moovFinal.byteLength;
-            if (pass === 3) {
-                const newMdatBox = makeBox('mdat', newMdatPayload);
+            if (pass === 2) {
+                const newMdatBox = makeBox('mdat', mdatPayload);
                 finalOutput = concatBytes([ftypBytes, moovFinal, preservedBytes, newMdatBox]);
+                const vTimescale = getTimescale(videoTrak);
                 const inputFps = Math.round(vTimescale / (vStts[0] ? vStts[0][1] : 1000));
                 patchResultStats = {
                     output: finalOutput,
                     realSamples: vSamples.length,
-                    fakeSamples: fakeSampleCount,
+                    fakeSamples: fakeCount,
                     timescale: vTimescale,
                     sampleDelta: vStts[0] ? vStts[0][1] : 1000,
-                    duration: (vSamples.length + fakeSampleCount) * (vStts[0] ? vStts[0][1] : 1000),
-                    chunkCount: vAbsOffsets.length,
+                    duration: (vSamples.length + fakeCount) * (vStts[0] ? vStts[0][1] : 1000),
+                    chunkCount: videoCounts.length,
                     inputFps,
                     patchedFps: inputFps
                 };
             }
         }
-        _log(`Universal MP4 patch completed successfully. Total output: ${finalOutput.byteLength} bytes.`);
+        _log(`V3 MP4 patch completed successfully. Total output: ${finalOutput.byteLength} bytes.`);
         return patchResultStats;
     }
     async function processVideoV2(file, mode = 'hd') {
         if (isProcessing) return;
         isProcessing = true;
-        const isOff = mode === 'off';
         const modeLabel = mode === 'off' ? 'OFF' : mode === 'fast' ? 'Compatibility (720p)' : 'Quality (1080p)';
         btnStart.classList.add('hidden');
         progressContainer.classList.remove('hidden');

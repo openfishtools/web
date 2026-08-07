@@ -76,7 +76,7 @@ npm run dev         # Run with nodemon for development
 
 ### Client-Side Tools
 Semua tools berjalan di browser (tidak ada server processing):
-1. TikTok Quality Patcher (binary MP4 patching)
+1. TikTok Quality Patcher V3 (Pure JS Binary MP4 patcher with 10-byte filler NAL units, adaptive video chunking, and edts cleanup)
 2. Video Compressor (FFmpeg WASM)
 3. Audio Extractor (FFmpeg WASM)
 4. Image Sequence to Video (JSZip + FFmpeg)
@@ -103,6 +103,7 @@ Semua tools berjalan di browser (tidak ada server processing):
 | Method | Route | Auth | Purpose |
 |--------|-------|------|---------|
 | GET | `/api/get-ip` | No | Client IP detection |
+| GET | `/api/version` | No | App version & Vercel build date (`buildDateId`, `buildDateEn`, `buildDateIso`) |
 | GET | `/api/tiktok-fps` | No | TikTok video FPS/metadata |
 | GET | `/api/tiktok-resolve` | No | TikTok URL resolution |
 | GET | `/api/proxy` | No | Generic HTTP proxy |
