@@ -2614,25 +2614,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentLang = (window.currentLang || localStorage.getItem('chros_lang') || 'id');
         const isId = currentLang === 'id';
 
-        if (buildData && (buildData.buildDateId || buildData.buildDateEn)) {
-            dateText = isId ? (buildData.buildDateId || buildData.buildDateEn) : (buildData.buildDateEn || buildData.buildDateId);
+        if (buildData && buildData.version) {
+            dateText = buildData.version;
         } else {
-            const fallbackDate = new Date(document.lastModified || Date.now());
-            const options = {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                timeZoneName: 'short'
-            };
-            try {
-                dateText = fallbackDate.toLocaleString(isId ? 'id-ID' : 'en-US', options);
-            } catch (e) {
-                dateText = fallbackDate.toISOString();
-            }
+            dateText = `dev-${Math.random().toString(36).slice(2, 10)}`;
         }
 
         valElements.forEach(el => {
