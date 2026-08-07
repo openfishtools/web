@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chros-offline-v1.4.7';
+const CACHE_NAME = 'chros-offline-v1.4.8';
 
 const CORE_ASSETS = [
     '/',
@@ -24,21 +24,21 @@ const CORE_ASSETS = [
 ];
 
 const VERSIONED_ASSETS = [
-    '/styles/main.css?v=1.2.6',
-    '/styles/responsive.css?v=1.2.6',
-    '/scripts/i18n.js?v=1.2.6',
-    '/scripts/app.js?v=1.2.6',
-    '/scripts/ffmpeg-tool.js?v=1.2.6',
-    '/scripts/audio-extractor-tool.js?v=1.2.6',
-    '/scripts/tiktok-quality-tool.js?v=1.2.6',
-    '/scripts/tiktok-stats-tool.js?v=1.2.6',
-    '/scripts/tiktok-downloader.js?v=1.2.6',
-    '/scripts/upscale-gpu-enhancer.js?v=1.2.6',
-    '/scripts/upscale-tool.js?v=1.2.6',
-    '/scripts/video-interpolation.js?v=1.2.6',
-    '/scripts/image-sequence-tool.js?v=1.2.6',
-    '/scripts/fivemb-generator.js?v=1.2.6',
-    '/scripts/ae-to-am-beatmark-tool.js?v=1.2.6'
+    '/styles/main.css?v=1.4.8',
+    '/styles/responsive.css?v=1.4.8',
+    '/scripts/i18n.js?v=1.4.8',
+    '/scripts/app.js?v=1.4.8',
+    '/scripts/ffmpeg-tool.js?v=1.4.8',
+    '/scripts/audio-extractor-tool.js?v=1.4.8',
+    '/scripts/tiktok-quality-tool.js?v=1.4.8',
+    '/scripts/tiktok-stats-tool.js?v=1.4.8',
+    '/scripts/tiktok-downloader.js?v=1.4.8',
+    '/scripts/upscale-gpu-enhancer.js?v=1.4.8',
+    '/scripts/upscale-tool.js?v=1.4.8',
+    '/scripts/video-interpolation.js?v=1.4.8',
+    '/scripts/image-sequence-tool.js?v=1.4.8',
+    '/scripts/fivemb-generator.js?v=1.4.8',
+    '/scripts/ae-to-am-beatmark-tool.js?v=1.4.8'
 ];
 
 self.addEventListener('install', (event) => {
