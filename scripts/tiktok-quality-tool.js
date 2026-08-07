@@ -1510,12 +1510,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 aChunkCounts.push(fakeSampleCount);
                 const aSizes = aSamples.map(s => s.size);
                 const aSampleDelta = aStts.length ? aStts[0][1] : 1024;
-                const aDynamicDuration = (aSamples.length + fakeSampleCount) * aSampleDelta;
                 replacements.set(aStcoBox, buildStco(aAbsOffsets));
                 replacements.set(aStscBox, buildStscFromChunkMap(aChunkCounts));
                 replacements.set(aStszBox, buildStsz(aSizes, fakeSampleCount));
-                replacements.set(aSttsBox, buildStts(aStts, fakeSampleCount, aSampleDelta));
-                replacements.set(aMdhdBox, buildMdhd(aMdhdBox, aTimescale, aDynamicDuration));
+                replacements.set(aSttsBox, buildStts(aStts, 0, aSampleDelta));
+                replacements.set(aMdhdBox, buildMdhd(aMdhdBox, aTimescale, aStts.reduce((sum, entry) => sum + entry[0] * entry[1], 0)));
             }
             const moovFinal = rebuildBox(moov, replacements);
             moovHeaderLen = moovFinal.byteLength;
@@ -1961,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawOutput = new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
             let finalResultBytes;
             try {
-                finalResultBytes = patchMp4HDMethod(rawOutput.buffer, true);
+                finalResultBytes = patchMp4HDMethod(rawOutput, true);
             } catch (pErr) {
                 log(`  [Notice] Dynamic patch fallback: ${pErr.message}`);
                 finalResultBytes = concatBytes([rawOutput, paddingBuf]);

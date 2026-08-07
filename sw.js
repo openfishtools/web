@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chros-offline-v1.5.0';
+const CACHE_NAME = 'chros-offline-v1.5.1';
 
 const CORE_ASSETS = [
     '/',
@@ -30,7 +30,7 @@ const VERSIONED_ASSETS = [
     '/scripts/app.js?v=1.4.8',
     '/scripts/ffmpeg-tool.js?v=1.4.8',
     '/scripts/audio-extractor-tool.js?v=1.4.8',
-    '/scripts/tiktok-quality-tool.js?v=1.4.8',
+    '/scripts/tiktok-quality-tool.js?v=1.5.1',
     '/scripts/tiktok-stats-tool.js?v=1.4.8',
     '/scripts/tiktok-downloader.js?v=1.4.8',
     '/scripts/upscale-gpu-enhancer.js?v=1.4.8',

@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalResultBytes = rawOutput;
             if (typeof window.patchMp4HDMethod === 'function') {
                 try {
-                    finalResultBytes = window.patchMp4HDMethod(rawOutput.buffer, true);
+                    finalResultBytes = window.patchMp4HDMethod(rawOutput, true);
                 } catch (patchErr) {
                     console.warn('V3 patcher fallback in video compressor:', patchErr);
                 }
