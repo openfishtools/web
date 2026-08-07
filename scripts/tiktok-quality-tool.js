@@ -448,7 +448,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Reset tool state & memory references
         resetToolState();
 
-        // 2. Clear browser Cache Storage API (ServiceWorker & HTTP Caches)
+        // 2. Unregister Service Workers
+        if ('serviceWorker' in navigator) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const reg of registrations) {
+                    await reg.unregister();
+                }
+            } catch (e) {}
+        }
+
+        // 3. Clear browser Cache Storage API (ServiceWorker & HTTP Caches)
         if ('caches' in window) {
             try {
                 const cacheNames = await caches.keys();
@@ -456,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
 
-        // 3. Clear SessionStorage & LocalStorage temporary data
+        // 4. Clear SessionStorage & LocalStorage temporary data
         try {
             sessionStorage.clear();
             const keysToRemove = [];
@@ -469,12 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
             keysToRemove.forEach(k => localStorage.removeItem(k));
         } catch (e) {}
 
-        // 4. Reset ArrayBuffers & release JS memory
+        // 5. Reset ArrayBuffers & release JS memory
         currentFileBuffer = null;
         selectedFile = null;
 
-        // 5. Visual UI Feedback
-        statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; Memory & browser cache thoroughly cleared!</span>`;
+        // 6. Visual UI Feedback
+        statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; Service Worker & cache thoroughly cleared!</span>`;
         const icon = btnClearCache ? btnClearCache.querySelector('.material-symbols-rounded') : null;
         if (icon) {
             icon.style.transition = 'transform 0.5s ease';
