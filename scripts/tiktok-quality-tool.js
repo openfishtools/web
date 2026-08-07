@@ -1232,6 +1232,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return rows;
     }
+    function getChunkSampleCounts(trak) {
+        const stbl = findDescendant(trak, ['mdia', 'minf', 'stbl']);
+        const stsc = findChild(stbl, 'stsc');
+        const stco = findChild(stbl, 'stco') || findChild(stbl, 'co64');
+        if (!stsc || !stco) return [];
+        const rows = parseStsc(stsc);
+        const chunkCount = stco.view.getUint32(stco.offset + 12, false);
+        const counts = [];
+        for (let i = 0; i < rows.length; i++) {
+            const firstChunk = rows[i][0] - 1;
+            const nextChunk = i + 1 < rows.length ? rows[i + 1][0] - 1 : chunkCount;
+            for (let chunk = firstChunk; chunk < nextChunk; chunk++) counts[chunk] = rows[i][1];
+        }
+        return counts;
+    }
+    function buildChunkOffsets(sampleOffsets, chunkSampleCounts) {
+        const offsets = [];
+        let sampleIndex = 0;
+        for (const sampleCount of chunkSampleCounts) {
+            if (sampleIndex >= sampleOffsets.length) break;
+            offsets.push(sampleOffsets[sampleIndex]);
+            sampleIndex += sampleCount;
+        }
+        while (sampleIndex < sampleOffsets.length) offsets.push(sampleOffsets[sampleIndex++]);
+        return offsets;
+    }
+    function buildVideoChunkSampleCounts(sampleCount) {
+        if (!sampleCount) return [];
+        const targetChunks = Math.max(1, Math.floor(sampleCount * 23 / 32));
+        const doubleChunks = sampleCount - targetChunks;
+        const counts = new Array(targetChunks).fill(1);
+        let accumulator = -doubleChunks;
+        for (let i = 0; i < targetChunks; i++) {
+            accumulator += doubleChunks;
+            if (accumulator >= targetChunks) {
+                counts[i] = 2;
+                accumulator -= targetChunks;
+            }
+        }
+        return counts;
+    }
     function parseStts(stts) {
         const count = stts.view.getUint32(stts.offset + 12, false);
         const tableStart = stts.offset + 16;
@@ -1441,6 +1482,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!videoTrak) throw new Error('Video track not found.');
         const vSamples = extractSampleLocations(videoTrak);
         const aSamples = audioTrak ? extractSampleLocations(audioTrak) : [];
+        const aChunkSampleCounts = audioTrak ? getChunkSampleCounts(audioTrak) : [];
         const vSttsBox = findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stts']);
         const aSttsBox = audioTrak ? findDescendant(audioTrak, ['mdia', 'minf', 'stbl', 'stts']) : null;
         const vStts = parseStts(vSttsBox);
@@ -1490,8 +1532,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let patchResultStats = null;
         for (let pass = 1; pass <= 3; pass++) {
             const mdatStartOffset = ftypBytes.byteLength + moovHeaderLen + preservedBytes.byteLength + 8;
-            const vAbsOffsets = newVOffsets.map(rel => rel + mdatStartOffset);
-            const aAbsOffsets = newAOffsets.map(rel => rel + mdatStartOffset);
+            const vChunkCounts = buildVideoChunkSampleCounts(vSamples.length);
+            const aChunkCounts = aChunkSampleCounts.length ? aChunkSampleCounts : new Array(aSamples.length).fill(1);
+            const vAbsOffsets = buildChunkOffsets(newVOffsets.map(rel => rel + mdatStartOffset), vChunkCounts);
+            const aAbsOffsets = buildChunkOffsets(newAOffsets.map(rel => rel + mdatStartOffset), aChunkCounts);
             if (audioTrak) {
                 aAbsOffsets.push(fakeStartInMdat + mdatStartOffset);
             } else {
@@ -1501,7 +1545,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const vStscBox = findChild(vStbl, 'stsc');
             const vStszBox = findChild(vStbl, 'stsz');
             const vStcoBox = findChild(vStbl, 'stco') || findChild(vStbl, 'co64');
-            const vChunkCounts = new Array(vSamples.length).fill(1);
             const replacements = new Map([
                 [vStcoBox, buildStco(vAbsOffsets)],
                 [vStscBox, buildStscFromChunkMap(vChunkCounts)],
@@ -1512,11 +1555,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aStscBox = findChild(aStbl, 'stsc');
                 const aStszBox = findChild(aStbl, 'stsz');
                 const aStcoBox = findChild(aStbl, 'stco') || findChild(aStbl, 'co64');
-                const aChunkCounts = new Array(aSamples.length).fill(1);
-                aChunkCounts.push(fakeSampleCount);
+                const outputAChunkCounts = [...aChunkCounts, fakeSampleCount];
                 const aSizes = aSamples.map(s => s.size);
                 replacements.set(aStcoBox, buildStco(aAbsOffsets));
-                replacements.set(aStscBox, buildStscFromChunkMap(aChunkCounts));
+                replacements.set(aStscBox, buildStscFromChunkMap(outputAChunkCounts));
                 replacements.set(aStszBox, buildStsz(aSizes, fakeSampleCount));
                 replacements.set(aSttsBox, buildStts(aStts, 0, 0));
             }
