@@ -1,3 +1,12 @@
 # Exclude giant WASM binaries and AI models from Vercel deployments to save bandwidth & deployment size
 assets/ffmpeg/
 assets/models/
+cloudflared.exe
+REFRENCE/
+tools/
+run.bat
+run.command
+run_without_obfuscate.bat
+server.py
+*.mp4
+*.py
