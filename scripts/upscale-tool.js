@@ -323,7 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isImageMode && video.readyState < 2) return;
         const params = getPresetParams(activePreset);
         if (enhanceOrder === 'before') {
-            gpuEnhancer.process(source, params, canvas);
+            if (gpuEnhancer) gpuEnhancer.process(source, params, canvas);
+            else { canvas.width = dims.w; canvas.height = dims.h; canvas.getContext('2d').drawImage(source, 0, 0); }
         } else {
             canvas.width = dims.w;
             canvas.height = dims.h;
@@ -918,9 +919,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 await engine.renderFrame(canvas, onFrameProgress);
             } else {
                 await engine.renderFrame(source, onFrameProgress);
-                if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
-                gpuEnhancer.process(canvas, params, enhanceCanvas);
-                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                if (gpuEnhancer) {
+                    if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+                    gpuEnhancer.process(canvas, params, enhanceCanvas);
+                    canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                }
             }
             setProgress(100, 'Preview Ready');
             btnPreview.classList.add('active');
@@ -1066,13 +1069,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (enhanceOrder === 'before') {
                 if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
-                gpuEnhancer.process(source, params, enhanceCanvas);
+                if (gpuEnhancer) gpuEnhancer.process(source, params, enhanceCanvas);
+                else { const ctx2 = enhanceCanvas.getContext('2d'); enhanceCanvas.width = source.naturalWidth || source.width; enhanceCanvas.height = source.naturalHeight || source.height; ctx2.drawImage(source, 0, 0); }
                 await engine.renderFrame(enhanceCanvas, onFrameProgress);
             } else {
                 await engine.renderFrame(source, onFrameProgress);
-                if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
-                gpuEnhancer.process(canvas, params, enhanceCanvas);
-                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                if (gpuEnhancer) {
+                    if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+                    gpuEnhancer.process(canvas, params, enhanceCanvas);
+                    canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                }
             }
 
             setProgress(97, 'Generating output...');
@@ -1296,12 +1302,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 if (orderBefore) {
-                    gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
-                    await engine.renderFrame(enhanceCanvas, onFrameProgress);
+                    if (gpuEnhancer) gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
+                    await engine.renderFrame(gpuEnhancer ? enhanceCanvas : seekCanvas, onFrameProgress);
                 } else {
                     await engine.renderFrame(seekCanvas, onFrameProgress);
-                    gpuEnhancer.process(canvas, params, enhanceCanvas);
-                    canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                    if (gpuEnhancer) {
+                        gpuEnhancer.process(canvas, params, enhanceCanvas);
+                        canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                    }
                 }
 
                 let frameCanvas = canvas;
@@ -1552,13 +1560,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = getPresetParams(activePreset);
         if (enhanceOrder === 'before') {
             if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
-            gpuEnhancer.process(img, params, enhanceCanvas);
+            if (gpuEnhancer) gpuEnhancer.process(img, params, enhanceCanvas);
+            else { const ctx2 = enhanceCanvas.getContext('2d'); enhanceCanvas.width = img.naturalWidth || img.width; enhanceCanvas.height = img.naturalHeight || img.height; ctx2.drawImage(img, 0, 0); }
             await engine.renderFrame(enhanceCanvas, onProgress);
         } else {
             await engine.renderFrame(img, onProgress);
-            if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
-            gpuEnhancer.process(canvas, params, enhanceCanvas);
-            canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+            if (gpuEnhancer) {
+                if (!enhanceCanvas) enhanceCanvas = document.createElement('canvas');
+                gpuEnhancer.process(canvas, params, enhanceCanvas);
+                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+            }
         }
 
         let outCanvas = document.createElement('canvas');
@@ -1641,12 +1652,14 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             if (orderBefore) {
-                gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
-                await engine.renderFrame(enhanceCanvas, onFrameProgress);
+                if (gpuEnhancer) gpuEnhancer.process(seekCanvas, params, enhanceCanvas);
+                await engine.renderFrame(gpuEnhancer ? enhanceCanvas : seekCanvas, onFrameProgress);
             } else {
                 await engine.renderFrame(seekCanvas, onFrameProgress);
-                gpuEnhancer.process(canvas, params, enhanceCanvas);
-                canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                if (gpuEnhancer) {
+                    gpuEnhancer.process(canvas, params, enhanceCanvas);
+                    canvas.getContext('2d').drawImage(enhanceCanvas, 0, 0);
+                }
             }
 
             let frameCanvas = canvas;
