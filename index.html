@@ -685,7 +685,7 @@
                                 <div class="flex align-center gap-6 mt-2 flex-wrap">
                                     <span class="tool-subtitle-text" data-i18n="tool_downloader_desc">
                                         Powered By TikWm</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
+                                    <span class="tool-ver-badge">1.0.1</span>
                                 </div>
                             </div>
                         </div>
@@ -1316,6 +1316,40 @@
         </div>
     </div>
 
+    <div id="ad-consent-modal" class="hidden">
+        <div class="warning-modal-card">
+            <div class="warning-modal-header">
+                <div class="warning-modal-icon" style="background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container);">
+                    <span class="material-symbols-rounded icon-24">volunteer_activism</span>
+                </div>
+                <div class="warning-modal-title" data-i18n="ad_consent_title">Suka pakai cutefish?</div>
+            </div>
+            <div class="warning-modal-content" data-i18n-html="ad_consent_desc">
+            </div>
+            <div class="warning-modal-footer" id="ad-consent-btns">
+                <button class="warning-btn warning-btn-cancel" id="btn-ad-decline" data-i18n="ad_consent_decline">Nanti aja</button>
+                <button class="warning-btn warning-btn-proceed" id="btn-ad-accept" data-i18n="ad_consent_accept">Oke, Donasi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="compress-oom-warning-modal" class="hidden">
+        <div class="warning-modal-card">
+            <div class="warning-modal-header">
+                <div class="warning-modal-icon" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">
+                    <span class="material-symbols-rounded icon-24">memory</span>
+                </div>
+                <div class="warning-modal-title" data-i18n="compress_oom_title">Video Too Large</div>
+            </div>
+            <div class="warning-modal-content" data-i18n-html="compress_oom_desc">
+            </div>
+            <div class="warning-modal-footer">
+                <button class="warning-btn warning-btn-cancel" id="btn-compress-oom-cancel" data-i18n="compress_oom_cancel">Cancel</button>
+                <button class="warning-btn warning-btn-proceed" id="btn-compress-oom-proceed" data-i18n="compress_oom_proceed">Proceed Anyway</button>
+            </div>
+        </div>
+    </div>
+
     <div id="legal-modal" class="mini-popup-overlay">
         <div class="mini-popup legal-popup">
             <div class="bottom-sheet-drag-handle"></div>
@@ -1352,7 +1386,7 @@
     <script src="scripts/upscale-tool.js?v=1.5.0"></script>
     <script src="scripts/video-interpolation.js?v=1.5.0"></script>
     <script src="scripts/tiktok-stats-tool.js?v=1.5.0"></script>
-    <script src="scripts/tiktok-downloader-tool.js?v=1.5.0"></script>
+    <script src="scripts/tiktok-downloader.js?v=1.5.0"></script>
     <script src="scripts/webcodecs-tool.js?v=1.5.0"></script>
 </body>
 </html>

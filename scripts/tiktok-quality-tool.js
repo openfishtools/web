@@ -34,6 +34,66 @@ document.addEventListener('DOMContentLoaded', () => {
     let compressMode = 'off';
     const MAX_FILE_MB_HARD = 1500;
     const COMPRESS_WARN_MB = 30;
+    const MOBILE_OOM_THRESHOLD_MB = 70;
+    const PC_OOM_THRESHOLD_MB = 100;
+
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    function getDeviceInfo() {
+        const isMobile = isMobileDevice();
+        const deviceType = isMobile ? 'Mobile' : 'PC/Desktop';
+        const cpuCores = navigator.hardwareConcurrency || 'Unknown';
+        return { deviceType, cpuCores };
+    }
+
+    function showCompressOomWarning(fileMB, fps, w, h) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('compress-oom-warning-modal');
+            const btnCancel = document.getElementById('btn-compress-oom-cancel');
+            const btnProceed = document.getElementById('btn-compress-oom-proceed');
+            if (!modal) { resolve(false); return; }
+
+            const deviceInfo = getDeviceInfo();
+            const descEl = modal.querySelector('.warning-modal-content');
+            if (descEl) {
+                const resLabel = (w > 0 && h > 0) ? `${w}×${h}` : 'N/A';
+                const fpsLabel = fps ? `${fps} fps` : 'N/A';
+                const sizeLabel = `${fileMB.toFixed(1)} MB`;
+                let aspectRatio = 'N/A';
+                if (w > 0 && h > 0) {
+                    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+                    const d = gcd(w, h);
+                    aspectRatio = `${w / d}:${h / d}`;
+                }
+                descEl.innerHTML = window.getTranslation('compress_oom_desc') +
+                    `<a href="https://play.google.com/store/apps/details?id=com.pandavideocompressor&hl=en&pli=1" target="_blank" rel="noopener" class="oom-app-card"><img src="https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/4f/86/d8/4f86d827-1ace-22c0-2ced-e4c3d172eecf/Placeholder.mill/200x200bb-75.webp" class="oom-app-icon" alt="Panda"><div class="oom-app-info"><div class="oom-app-name">Panda Video Compress & Convert</div><div class="oom-app-tag">Mobile</div></div><span class="material-symbols-rounded oom-app-arrow">open_in_new</span></a>` +
+                    `<a href="https://handbrake.fr/" target="_blank" rel="noopener" class="oom-app-card"><img src="https://user-images.githubusercontent.com/21181118/90317679-9b8bde00-df1a-11ea-9fe3-6c2df9dc5638.png" class="oom-app-icon oom-app-icon-contain" alt="HandBrake"><div class="oom-app-info"><div class="oom-app-name">HandBrake</div><div class="oom-app-tag">Desktop</div></div><span class="material-symbols-rounded oom-app-arrow">open_in_new</span></a>` +
+                    `<div class="oom-info-grid">` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">smartphone</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_device')}</div><div class="oom-info-value">${deviceInfo.deviceType}</div></div></div>` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">developer_board</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_cpu')}</div><div class="oom-info-value">${deviceInfo.cpuCores} cores</div></div></div>` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">video_file</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_filesize')}</div><div class="oom-info-value">${sizeLabel}</div></div></div>` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">speed</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_fps')}</div><div class="oom-info-value">${fpsLabel}</div></div></div>` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">aspect_ratio</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_resolution')}</div><div class="oom-info-value">${resLabel}</div></div></div>` +
+                    `<div class="oom-info-item"><span class="material-symbols-rounded oom-info-icon">crop</span><div><div class="oom-info-label">${window.getTranslation('compress_oom_aspect')}</div><div class="oom-info-value">${aspectRatio}</div></div></div>` +
+                    `</div>`;
+            }
+
+            if (typeof window.applyTranslations === 'function') window.applyTranslations();
+            modal.classList.remove('hidden');
+            modal.classList.add('visible');
+
+            const close = (result) => {
+                modal.classList.remove('visible');
+                modal.classList.add('hidden');
+                resolve(result);
+            };
+
+            btnCancel.onclick = () => close(false);
+            btnProceed.onclick = () => close(true);
+        });
+    }
     function escapeHTML(str) {
         if (!str) return '';
         return String(str)
@@ -201,6 +261,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function showV3WarningModal(onProceed, onCancel) {
         if (onProceed) onProceed();
     }
+
+    let adConsentShown = false;
+    function showAdConsentModal() {
+        const modal = document.getElementById('ad-consent-modal');
+        const btnAccept = document.getElementById('btn-ad-accept');
+        const btnDecline = document.getElementById('btn-ad-decline');
+        if (!modal || adConsentShown) return;
+        adConsentShown = true;
+
+        if (typeof window.applyTranslations === 'function') window.applyTranslations();
+
+        modal.classList.remove('hidden');
+        modal.classList.add('visible');
+
+        const close = () => {
+            modal.classList.remove('visible');
+            modal.classList.add('hidden');
+        };
+
+        btnDecline.onclick = close;
+        btnAccept.onclick = () => {
+            close();
+            window.open('https://saweria.co/cutefishaep', '_blank');
+        };
+    }
+
+    function closeAdConsentModal() {
+        const modal = document.getElementById('ad-consent-modal');
+        if (modal) { modal.classList.remove('visible'); modal.classList.add('hidden'); }
+    }
+
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return;
         logSection('UNCAUGHT ERROR');
@@ -433,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!option || isProcessing) return;
             const targetMode = option.dataset.mode;
             if (targetMode === 'off' && checkIfSelectedFileRequiresCompress()) {
-                showStatusError('Mode OFF tidak dapat digunakan untuk video ini (Wajib Compress ON).');
+                showStatusError(window.getTranslation('tktk_err_mode_off') || 'Mode OFF tidak dapat digunakan untuk video ini');
                 setCompressMode('on');
                 return;
             }
@@ -704,7 +795,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         || 'FPS tidak bulat ({fps} fps). Akan dinormalisasi ke {target} fps.';
                     errFpsEl.textContent = template.replace('{fps}', fps).replace('{target}', options.targetFps);
                 } else {
-                    errFpsEl.textContent = 'Exceeds 120 fps limit (max 120fps). Must be compressed.';
+                    errFpsEl.textContent = (window.getTranslation && window.getTranslation('tktk_err_fps_over120'))
+                        || 'FPS melebihi 120 fps (maks 120 fps). Harus dikompresi.';
                 }
             }
         }
@@ -759,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (tktk.btnProceed) {
-        tktk.btnProceed.addEventListener('click', () => {
+        tktk.btnProceed.addEventListener('click', async () => {
             closeAnalysisModal();
             let fps = null, w = 0, h = 0;
             if (currentFileBuffer) {
@@ -769,12 +861,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res) { w = res.width; h = res.height; }
                 } catch (e) {}
             }
+            if (w === 0 || h === 0 || fps === null) {
+                await new Promise(resolve => {
+                    const url = URL.createObjectURL(selectedFile);
+                    const vid = document.createElement('video');
+                    vid.preload = 'metadata';
+                    vid.muted = true;
+                    vid.src = url;
+                    const done = () => { URL.revokeObjectURL(url); resolve(); };
+                    vid.onloadedmetadata = () => {
+                        if (vid.videoWidth && vid.videoHeight) { w = vid.videoWidth; h = vid.videoHeight; }
+                        if (fps === null && vid.duration > 0) {
+                            if ('mozParsedFrames' in vid && vid.mozParsedFrames > 0) {
+                                fps = Math.round(vid.mozParsedFrames / vid.duration);
+                            } else {
+                                fps = 60;
+                            }
+                        }
+                        done();
+                    };
+                    vid.onerror = done;
+                    setTimeout(done, 2000);
+                    vid.load();
+                });
+            }
             const fileMB = selectedFile ? (selectedFile.size / (1024 * 1024)) : 0;
             const opts = computeVideoProcessingOptions(w, h, fps, fileMB);
             if (opts.resNeedsCompress || opts.fpsNeedsCompress || fileMB > COMPRESS_WARN_MB) {
                 setCompressMode('on');
             }
-            // Unlock main process button after user agrees to standards
+
+            const isMobile = isMobileDevice();
+            const threshold = isMobile ? MOBILE_OOM_THRESHOLD_MB : PC_OOM_THRESHOLD_MB;
+
+            if (fileMB > threshold) {
+                showCompressOomWarning(fileMB, fps, w, h).then((proceed) => {
+                    if (proceed) {
+                        btnStart.classList.remove('hidden');
+                        btnStart.disabled = false;
+                        statusText.innerHTML = `<span style="color: var(--md-sys-color-primary); font-weight: 500;">Ready to Process</span>`;
+                    } else {
+                        selectedFile = null;
+                        currentFileBuffer = null;
+                        btnStart.classList.add('hidden');
+                        statusText.innerHTML = '';
+                    }
+                });
+                return;
+            }
+
             btnStart.classList.remove('hidden');
             btnStart.disabled = false;
             statusText.innerHTML = `<span style="color: var(--md-sys-color-primary); font-weight: 500;">Ready to Process</span>`;
@@ -850,19 +985,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
         const startProcess = async () => {
             isProcessing = false;
-            if (currentVersion === 'v1') {
-                await processVideoV1(selectedFile);
-                return;
-            }
-            if (currentVersion === 'v3') {
+            adConsentShown = false;
+            setTimeout(() => showAdConsentModal(), 1500);
+            try {
+                if (currentVersion === 'v1') {
+                    await processVideoV1(selectedFile);
+                    return;
+                }
+                if (currentVersion === 'v3') {
+                    await processVideoV3(selectedFile, compressMode);
+                    return;
+                }
+                if (compressMode === 'off') {
+                    await runAnalysis(selectedFile);
+                    return;
+                }
                 await processVideoV3(selectedFile, compressMode);
-                return;
+            } finally {
+                closeAdConsentModal();
             }
-            if (compressMode === 'off') {
-                await runAnalysis(selectedFile);
-                return;
-            }
-            await processVideoV3(selectedFile, compressMode);
         };
         checkIosWarningAndProceed(startProcess);
     });

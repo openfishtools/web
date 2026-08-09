@@ -1,5 +1,5 @@
 @echo off
-title CHROS Local Server (No Obfuscation) + Cloudflare Tunnel
+title cutefish Local Server (No Obfuscation) + Cloudflare Tunnel
 
 :: Check and remove dist folder if exists to force serving raw un-obfuscated scripts
 if exist "%~dp0dist" (
@@ -38,9 +38,9 @@ echo ==========================================
 
 echo.
 echo ==========================================
-echo 🚀 Starting CHROS Local Node.js Server...
+echo 🚀 Starting cutefish Local Node.js Server...
 echo ==========================================
-start "CHROS Node.js Server" cmd /k "npm start"
+start "cutefish Node.js Server" cmd /k "npm start"
 
 echo.
 echo ==========================================

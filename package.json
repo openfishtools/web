@@ -1,7 +1,7 @@
 {
   "name": "chros-web",
   "version": "1.2.2",
-  "description": "CHROS - The Ultimate Resource Hub for Video Editors",
+  "description": "cutefish - The Ultimate Resource Hub for Video Editors",
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",

@@ -3,7 +3,7 @@
 cd "$(dirname "$0")"
 
 echo "=================================================="
-echo "CHROS Local Server + Cloudflare Tunnel for macOS"
+echo "cutefish Local Server + Cloudflare Tunnel for macOS"
 echo "=================================================="
 
 # Check if cloudflared binary exists
@@ -47,7 +47,7 @@ npm run obfuscate
 
 echo ""
 echo "=========================================="
-echo "🚀 Starting CHROS Local Node.js Server..."
+echo "🚀 Starting cutefish Local Node.js Server..."
 echo "=========================================="
 # Run the node server in the background
 npm start &

@@ -2776,11 +2776,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isCached = await checkOfflineAssetsCached();
         if (isCached) {
-            console.log('[CHROS Offline] All required offline assets are already cached.');
+            console.log('[cutefish Offline] All required offline assets are already cached.');
             return;
         }
 
-        console.log('[CHROS Offline] Offline assets missing — triggering download prompt (5s)...');
+        console.log('[cutefish Offline] Offline assets missing — triggering download prompt (5s)...');
         promptTimer = setTimeout(() => {
             showDownloadPrompt();
         }, 5000);
@@ -2950,7 +2950,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.addEventListener('offline', () => {
-        console.log('[CHROS Network] Connection status: OFFLINE');
+        console.log('[cutefish Network] Connection status: OFFLINE');
         isOfflineState = true;
         showOfflineBanner('offline');
         updateOfflineTabNavigation(true);
@@ -2958,7 +2958,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('online', () => {
-        console.log('[CHROS Network] Connection status: ONLINE (was offline:', isOfflineState, ')');
+        console.log('[cutefish Network] Connection status: ONLINE (was offline:', isOfflineState, ')');
         if (isOfflineState) {
             isOfflineState = false;
             showOfflineBanner('connected');
@@ -2977,17 +2977,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (isOfflineState) {
-        console.log('[CHROS Network] Page loaded in OFFLINE state');
+        console.log('[cutefish Network] Page loaded in OFFLINE state');
         showOfflineBanner('offline');
         updateOfflineTabNavigation(true);
     } else {
-        console.log('[CHROS Network] Page loaded in ONLINE state');
+        console.log('[cutefish Network] Page loaded in ONLINE state');
         updateOfflineTabNavigation(false);
         setTimeout(triggerDownloadPrompt, 1000);
     }
 
     window.testOfflineNotice = (mode = 'offline') => {
-        console.log('[CHROS DevTools Test]', mode);
+        console.log('[cutefish DevTools Test]', mode);
         if (mode === 'offline') {
             showOfflineBanner('offline');
             updateOfflineTabNavigation(true);

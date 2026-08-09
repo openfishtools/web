@@ -13,9 +13,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPreset = 'medium';
     let isCompressing = false;
 
-    const MAX_FILE_MB = 800;        // Soft-warn if file > 800 MB
-    const MAX_FILE_MB_HARD = 1500;  // Hard-block if file > 1.5 GB
-    const MAX_DIMENSION = 3840;     // Auto-downscale if width or height > 4K (3840)
+    const MAX_FILE_MB = 800;
+    const MAX_FILE_MB_HARD = 1500;
+    const MAX_DIMENSION = 3840;
+    const MOBILE_OOM_THRESHOLD_MB = 70;
+    const PC_OOM_THRESHOLD_MB = 100;
+
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    function showCompressOomWarning(fileMB) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('compress-oom-warning-modal');
+            const btnCancel = document.getElementById('btn-compress-oom-cancel');
+            const btnProceed = document.getElementById('btn-compress-oom-proceed');
+            if (!modal) { resolve(false); return; }
+
+            if (typeof window.applyTranslations === 'function') window.applyTranslations();
+            modal.classList.remove('hidden');
+            modal.classList.add('visible');
+
+            const close = (result) => {
+                modal.classList.remove('visible');
+                modal.classList.add('hidden');
+                resolve(result);
+            };
+
+            btnCancel.onclick = () => close(false);
+            btnProceed.onclick = () => close(true);
+        });
+    }
 
     if (presetDesc) {
         presetDesc.innerHTML = window.getTranslation('ffmpeg_preset_' + selectedPreset + '_desc');
@@ -110,6 +138,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <span style="color: var(--md-sys-color-on-surface-variant); font-size: 13px;">${infoLine}</span>`;
             btnStart.classList.remove('hidden');
+            return;
+        }
+
+        const isMobile = isMobileDevice();
+        const threshold = isMobile ? MOBILE_OOM_THRESHOLD_MB : PC_OOM_THRESHOLD_MB;
+
+        if (fileMB > threshold) {
+            statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${infoLine}</span>`;
+            showCompressOomWarning(fileMB).then((proceed) => {
+                if (proceed) {
+                    btnStart.classList.remove('hidden');
+                } else {
+                    btnStart.classList.add('hidden');
+                    selectedFile = null;
+                    statusText.innerHTML = `<span style="color: var(--md-sys-color-on-surface-variant);">${window.getTranslation('status_idle')}</span>`;
+                }
+            });
             return;
         }
 

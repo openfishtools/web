@@ -1,5 +1,5 @@
 @echo off
-title CHROS Local Server + Cloudflare Tunnel
+title cutefish Local Server + Cloudflare Tunnel
 
 :: Check if cloudflared.exe exists in the current directory
 if not exist "%~dp0cloudflared.exe" (
@@ -31,9 +31,9 @@ call npm run obfuscate
 
 echo.
 echo ==========================================
-echo 🚀 Starting CHROS Local Node.js Server...
+echo 🚀 Starting cutefish Local Node.js Server...
 echo ==========================================
-start "CHROS Node.js Server" cmd /k "npm start"
+start "cutefish Node.js Server" cmd /k "npm start"
 
 echo.
 echo ==========================================

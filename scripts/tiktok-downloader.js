@@ -106,7 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("No video URL available.");
             }
 
-            const response = await fetch(videoUrl);
+            const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(videoUrl)}`;
+            const response = await fetch(proxyUrl);
 
             if (!response.ok) {
                 throw new Error("Download failed: " + response.status);
