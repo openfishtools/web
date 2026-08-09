@@ -4918,6 +4918,7 @@ body {
 #tiktok-v3-warning-modal,
 #ad-consent-modal,
 #compress-oom-warning-modal,
+#tiktok-upload-guide-modal,
 #offline-resource-modal {
     position: fixed;
     inset: 0;
@@ -4935,17 +4936,20 @@ body {
 #tiktok-v3-warning-modal.visible,
 #ad-consent-modal.visible,
 #compress-oom-warning-modal.visible,
+#tiktok-upload-guide-modal.visible,
 #offline-resource-modal.visible {
     display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
 }
 #ad-consent-modal .warning-modal-card,
-#compress-oom-warning-modal .warning-modal-card {
+#compress-oom-warning-modal .warning-modal-card,
+#tiktok-upload-guide-modal .warning-modal-card {
     animation: none;
 }
 #ad-consent-modal.visible .warning-modal-card,
-#compress-oom-warning-modal.visible .warning-modal-card {
+#compress-oom-warning-modal.visible .warning-modal-card,
+#tiktok-upload-guide-modal.visible .warning-modal-card {
     animation: adModalPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 .oom-app-card {
@@ -5100,6 +5104,100 @@ body {
 }
 .warning-btn:hover {
     opacity: 0.9;
+}
+
+.upload-guide-card {
+    max-width: 480px;
+}
+.upload-guide-icon {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+.upload-guide-content {
+    margin-bottom: 24px;
+}
+.ug-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ug-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--md-sys-color-surface-container);
+    border: 1.5px solid var(--md-sys-color-outline-variant);
+    transition: border-color 0.25s cubic-bezier(0.2, 0, 0, 1), background 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+.ug-step:hover {
+    border-color: var(--md-sys-color-outline);
+}
+.ug-step-done {
+    border-color: rgba(56, 106, 64, 0.4);
+    background: rgba(56, 106, 64, 0.08);
+}
+.ug-badge {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ug-badge .material-symbols-rounded {
+    font-size: 22px;
+}
+.ug-badge-done {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+.ug-body {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+}
+.ug-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+.ug-desc {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--md-sys-color-on-surface-variant);
+}
+.ug-desc strong {
+    color: var(--md-sys-color-on-surface);
+    font-weight: 600;
+}
+.ug-link {
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px solid currentColor;
+    transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+.ug-link:hover {
+    opacity: 0.8;
+}
+.ug-file {
+    display: inline-block;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    word-break: break-all;
+    vertical-align: baseline;
 }
 
 .fivemb-layer-item {

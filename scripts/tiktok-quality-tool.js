@@ -292,6 +292,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal) { modal.classList.remove('visible'); modal.classList.add('hidden'); }
     }
 
+    function showUploadGuideModal(filename) {
+        const modal = document.getElementById('tiktok-upload-guide-modal');
+        const body = document.getElementById('upload-guide-body');
+        const btnClose = document.getElementById('btn-upload-guide-close');
+        const btnUpload = document.getElementById('btn-upload-guide-upload');
+        if (!modal) return;
+        if (typeof window.translateUI === 'function') window.translateUI();
+        let html = window.getTranslation('upload_guide_body');
+        const safeName = filename ? escapeHTML(filename) : '';
+        body.innerHTML = html.replace(/\{filename\}/g, safeName);
+        modal.classList.remove('hidden');
+        modal.classList.add('visible');
+        const close = () => {
+            modal.classList.remove('visible');
+            modal.classList.add('hidden');
+        };
+        btnClose.onclick = close;
+        btnUpload.onclick = () => {
+            close();
+            window.open('https://www.tiktok.com/tiktokstudio/upload', '_blank', 'noopener');
+        };
+    }
+
     window.addEventListener('error', (e) => {
         if (!logsEl || logsEl.textContent === '') return;
         logSection('UNCAUGHT ERROR');
@@ -2118,6 +2141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressText.textContent = window.getTranslation('status_completed');
                 btnStart.classList.remove('hidden');
                 isProcessing = false;
+                showUploadGuideModal(filename);
                 return;
             } catch (jsErr) {
                 log(`  [Notice] Pure JS patch notice: ${jsErr.message}`);
@@ -2203,7 +2227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     '-vf', procOpts.vfString,
                     '-vsync', 'cfr',
                     '-c:v', 'libx264',
-                    '-preset', 'fast',
+                    '-preset', 'veryfast',
                     '-crf', '22',
                     '-maxrate', '12M',
                     '-bufsize', '20M',
@@ -2281,6 +2305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             progressPercent.textContent = '100%';
             progressText.textContent = window.getTranslation('status_completed');
             btnStart.classList.remove('hidden');
+            showUploadGuideModal(filename);
 
         } catch (error) {
             log(`  !! Process Error: ${escapeHTML(error.message)}`);
