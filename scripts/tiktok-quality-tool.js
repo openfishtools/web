@@ -1476,6 +1476,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function boxPayload(box) {
         return box.data.subarray(box.contentStart, box.end);
     }
+    function readU32BE(arr, offset) {
+        return ((arr[offset] << 24) | (arr[offset + 1] << 16) | (arr[offset + 2] << 8) | arr[offset + 3]) >>> 0;
+    }
     function parseBoxes(data, view, start, end, parentPath) {
         const boxes = [];
         let offset = start;
