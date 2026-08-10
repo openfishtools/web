@@ -114,7 +114,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
+dist/*
 downloads/
 eggs/
 .eggs/
@@ -137,6 +137,7 @@ MANIFEST
 cloudflared*
 .npm-local-cache/
 backend/
-dist/
+dist/*
+!dist/scripts/
 
 
