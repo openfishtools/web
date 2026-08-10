@@ -10,3 +10,6 @@ run_without_obfuscate.bat
 server.py
 *.mp4
 *.py
+
+# Exclude raw source scripts — only obfuscated dist/scripts/ is served
+scripts/

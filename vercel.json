@@ -61,6 +61,12 @@
       ]
     },
     {
+      "source": "/dist/scripts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
       "source": "/styles/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
@@ -75,4 +81,3 @@
     }
   ]
 }
-
