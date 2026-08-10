@@ -1473,6 +1473,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function childStartForBox(box) {
         return box.type === 'meta' ? box.contentStart + 4 : box.contentStart;
     }
+    function boxPayload(box) {
+        return box.data.subarray(box.contentStart, box.end);
+    }
     function parseBoxes(data, view, start, end, parentPath) {
         const boxes = [];
         let offset = start;
@@ -2175,6 +2178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadFFmpegHelper(ffmpeg, toBlobURL);
 
             log(`  [1/3] Loading video data...`);
+            const preParseBuffer = currentFileBuffer ? currentFileBuffer.slice(0) : null;
             await ffmpeg.writeFile('input.mp4', new Uint8Array(currentFileBuffer));
 
             const fileMB = file.size / (1024 * 1024);
@@ -2206,10 +2210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const threads = fileMB > 50 ? '2' : safeThreads;
 
                 let vInfoFps = null, vInfoW = 0, vInfoH = 0;
-                if (currentFileBuffer) {
+                if (preParseBuffer) {
                     try {
-                        vInfoFps = parseFpsFromMp4(currentFileBuffer);
-                        const r = parseResolutionFromMp4(currentFileBuffer);
+                        vInfoFps = parseFpsFromMp4(preParseBuffer);
+                        const r = parseResolutionFromMp4(preParseBuffer);
                         if (r) { vInfoW = r.width; vInfoH = r.height; }
                     } catch (e) {}
                 }
