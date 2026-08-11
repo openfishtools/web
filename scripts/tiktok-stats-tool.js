@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statsBitrate = document.getElementById('stats-bitrate');
     const statsDuration = document.getElementById('stats-duration');
     const statsSize = document.getElementById('stats-size');
+    const statsMethod = document.getElementById('stats-method');
 
     let isRunning = false;
 
@@ -59,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
             if (!response.ok) {
-                throw new Error("Unable to resolve TikTok video URL.");
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);
             }
 
             const metadata = await response.json();
@@ -110,12 +112,33 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus("");
             resultsContainer.classList.remove('hidden');
 
+            displayMethod(videoMeta && videoMeta.comment ? videoMeta.comment.trim() : '');
+
         } catch (err) {
             console.error(err);
             showStatus(err.message || "Analysis failed.", "var(--md-sys-color-error)");
         } finally {
             isRunning = false;
             btnAnalyse.disabled = false;
+        }
+    }
+
+    function displayMethod(comment) {
+        if (!comment) {
+            statsMethod.textContent = 'Unknown';
+            return;
+        }
+        if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?$/.test(comment)) {
+            statsMethod.innerHTML = '';
+            const a = document.createElement('a');
+            a.href = 'https://' + comment;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.className = 'stats-method-link';
+            a.textContent = comment;
+            statsMethod.appendChild(a);
+        } else {
+            statsMethod.textContent = comment;
         }
     }
 

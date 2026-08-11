@@ -235,20 +235,6 @@ const PresetSchema = new mongoose.Schema({
 });
 const Preset = mongoose.models.Preset || mongoose.model('Preset', PresetSchema);
 
-const TikTokCacheSchema = new mongoose.Schema({
-    url: { type: String, unique: true },
-    play: String,
-    cover: String,
-    title: String,
-    author_unique_id: String,
-    author_nickname: String,
-    size: Number,
-    duration: Number,
-    fps: Number,
-    updatedAt: { type: Date, default: Date.now }
-});
-const TikTokCache = mongoose.models.TikTokCache || mongoose.model('TikTokCache', TikTokCacheSchema);
-
 const ResourceSchema = new mongoose.Schema({
     title: String,
     category: { type: mongoose.Schema.Types.Mixed, default: [] }, // String[] (multi-select)
@@ -334,9 +320,93 @@ function parseVideoMetadataFromBuffer(buffer) {
         return null;
     }
     
+    function findBoxAny(start, max, target) {
+        let offset = start;
+        while (offset < max - 8) {
+            const size = view.getUint32(offset);
+            if (size <= 0 || offset + size > max) break;
+            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+            if (type === target) return { offset, size };
+            offset += size;
+        }
+        return null;
+    }
+    
+    function extractTextFromBox(boxOffset, boxSize) {
+        const headerEnd = boxOffset + 8;
+        const payloadStart = headerEnd + 4;
+        const payloadEnd = boxOffset + boxSize;
+        if (payloadStart >= payloadEnd) return '';
+        const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset + payloadStart, payloadEnd - payloadStart);
+        let str = '';
+        for (let i = 0; i < bytes.length; i++) {
+            if (bytes[i] >= 0x20 && bytes[i] < 0x7F) str += String.fromCharCode(bytes[i]);
+        }
+        return str.trim();
+    }
+    
+    function extractCommentFromILST(ilstOffset, ilstSize) {
+        const ilstPriority = ['\u00A9cmt', '\u00A9ART', '\u00A9grp'];
+        const ilstExtra = ['\u00A9desc', '\u00A9name', '\u00A9atom'];
+        const vals = {};
+
+        function readItemValue(item) {
+            const data = findBoxAny(item.offset + 8, item.offset + item.size, 'data');
+            if (!data) return '';
+            const dEnd = data.offset + data.size;
+            const dPayload = data.offset + 16;
+            if (dPayload >= dEnd) return '';
+            const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset + dPayload, dEnd - dPayload);
+            let value = '';
+            for (let i = 0; i < bytes.length; i++) {
+                if (bytes[i] >= 0x20 && bytes[i] < 0x7F) value += String.fromCharCode(bytes[i]);
+            }
+            return value.trim();
+        }
+
+        for (const k of [...ilstPriority, ...ilstExtra]) {
+            const item = findBoxAny(ilstOffset + 8, ilstOffset + ilstSize, k);
+            if (item) {
+                const value = readItemValue(item);
+                if (value) vals[k] = value;
+            }
+        }
+
+        let offset = ilstOffset + 8;
+        while (offset < ilstOffset + ilstSize - 8) {
+            const size = view.getUint32(offset);
+            if (size <= 0 || offset + size > ilstOffset + ilstSize) break;
+            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+            if (!vals[type]) {
+                const value = readItemValue({ offset, size });
+                if (value) vals[type] = value;
+            }
+            offset += size;
+        }
+
+        const domainRe = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,}))/i;
+        for (const k of ilstPriority) {
+            if (vals[k]) {
+                const m = vals[k].match(domainRe);
+                if (m) return m[1];
+            }
+        }
+        for (const k of ilstPriority) {
+            if (vals[k]) return vals[k];
+        }
+        for (const k of ilstExtra) {
+            if (vals[k]) return vals[k];
+        }
+        for (const value of Object.values(vals)) {
+            if (value) return value;
+        }
+        return '';
+    }
+    
     let fps = null;
     let width = 0;
     let height = 0;
+    let comment = '';
     
     let offset = moovOffset + 8;
     while (offset < moovOffset + moovSize - 8) {
@@ -372,14 +442,68 @@ function parseVideoMetadataFromBuffer(buffer) {
                             fps = Math.round(rawFps * 1000) / 1000;
                         }
                     }
-                    break;
                 }
             }
         }
+        
+        if (type === 'udta' && !comment) {
+            const udtaEnd = offset + size;
+            let uOff = offset + 8;
+            while (uOff < udtaEnd - 8) {
+                const uSize = view.getUint32(uOff);
+                if (uSize <= 0 || uOff + uSize > udtaEnd) break;
+                const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
+                if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
+                    comment = extractTextFromBox(uOff, uSize);
+                    if (comment) break;
+                }
+                if (uType === 'meta') {
+                    const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
+                    if (ilst) {
+                        const cmt = extractCommentFromILST(ilst.offset, ilst.size);
+                        if (cmt) { comment = cmt; break; }
+                    }
+                }
+                uOff += uSize;
+            }
+        }
+        
         offset += size;
     }
     
-    return { fps, width, height };
+    if (!comment) {
+        let tOff = 0;
+        while (tOff < buffer.byteLength - 8) {
+            const tSize = view.getUint32(tOff);
+            if (tSize <= 0 || tOff + tSize > buffer.byteLength) break;
+            const tType = String.fromCharCode(view.getUint8(tOff + 4), view.getUint8(tOff + 5), view.getUint8(tOff + 6), view.getUint8(tOff + 7));
+            if (tType === 'udta') {
+                const udtaEnd = tOff + tSize;
+                let uOff = tOff + 8;
+                while (uOff < udtaEnd - 8) {
+                    const uSize = view.getUint32(uOff);
+                    if (uSize <= 0 || uOff + uSize > udtaEnd) break;
+                    const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
+                    if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
+                        comment = extractTextFromBox(uOff, uSize);
+                        if (comment) break;
+                    }
+                    if (uType === 'meta') {
+                        const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
+                        if (ilst) {
+                            const cmt = extractCommentFromILST(ilst.offset, ilst.size);
+                            if (cmt) { comment = cmt; break; }
+                        }
+                    }
+                    uOff += uSize;
+                }
+                if (comment) break;
+            }
+            tOff += tSize;
+        }
+    }
+    
+    return { fps, width, height, comment };
 }
 
 app.get('/api/get-ip', (req, res) => {
@@ -392,18 +516,18 @@ app.get('/api/tiktok-fps', async (req, res) => {
         return res.status(400).json({ error: 'Missing url' });
     }
 
-    if (!url.includes('tiktokcdn')) {
-        return res.json({ fps: null, width: 0, height: 0 });
+    if (!isAllowedTikTokMediaUrl(url)) {
+        return res.json({ fps: null, width: 0, height: 0, comment: '' });
     }
 
     try {
         let response = await fetch(url, {
-            headers: { 'Range': 'bytes=0-524287', 'User-Agent': 'Mozilla/5.0' },
+            headers: { 'Range': 'bytes=0-2097151', 'User-Agent': 'Mozilla/5.0' },
             signal: AbortSignal.timeout(5000)
         });
 
         if (!response.ok && response.status !== 206) {
-            return res.json({ fps: null, width: 0, height: 0 });
+            return res.json({ fps: null, width: 0, height: 0, comment: '' });
         }
 
         let buffer = Buffer.from(await response.arrayBuffer());
@@ -411,7 +535,7 @@ app.get('/api/tiktok-fps', async (req, res) => {
 
         if (!meta) {
             response = await fetch(url, {
-                headers: { 'Range': 'bytes=-524288', 'User-Agent': 'Mozilla/5.0' },
+                headers: { 'Range': 'bytes=-2097152', 'User-Agent': 'Mozilla/5.0' },
                 signal: AbortSignal.timeout(5000)
             });
             if (response.ok || response.status === 206) {
@@ -420,9 +544,9 @@ app.get('/api/tiktok-fps', async (req, res) => {
             }
         }
 
-        res.json(meta || { fps: null, width: 0, height: 0 });
+        res.json(meta || { fps: null, width: 0, height: 0, comment: '' });
     } catch (e) {
-        res.json({ fps: null, width: 0, height: 0 });
+        res.json({ fps: null, width: 0, height: 0, comment: '' });
     }
 });
 
@@ -437,6 +561,16 @@ function isAllowedTikTokResolveHost(hostname) {
         h === 'www.tikwm.com' ||
         h === 'tikwm.com'
     );
+}
+
+function isAllowedTikTokMediaUrl(rawUrl) {
+    try {
+        const hostname = new URL(rawUrl).hostname.toLowerCase();
+        const suffixes = ['tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokv.com', 'tikwm.com', 'ibytedtos.com', 'byteoversea.com', 'muscdn.com'];
+        return suffixes.some((suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`));
+    } catch {
+        return false;
+    }
 }
 
 async function extractTikTokFromPage(pageUrl) {
@@ -505,26 +639,6 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
-        const bypassCache = req.query.nocache === '1';
-        if (!bypassCache) {
-            const cached = await TikTokCache.findOne({ url: pageUrl });
-            // Check fresh cache (4 hours)
-            if (cached && (Date.now() - cached.updatedAt.getTime() < 4 * 60 * 60 * 1000)) {
-                return res.json({
-                    id: cached.id || '',
-                    play: cached.play,
-                    cover: cached.cover,
-                    title: cached.title,
-                    author_unique_id: cached.author_unique_id || '',
-                    author_nickname: cached.author_nickname || '',
-                    size: cached.size || 0,
-                    duration: cached.duration || 0,
-                    fps: cached.fps || null,
-                    cached: true
-                });
-            }
-        }
-
         // Strategy: Try multiple methods
         let result = null;
         let lastError = null;
@@ -593,37 +707,12 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             }
         }
 
-        // If we got a result, cache and return it
+        // If we got a result, return it
         if (result) {
-            await TikTokCache.findOneAndUpdate(
-                { url: pageUrl },
-                { ...result, updatedAt: new Date() },
-                { upsert: true }
-            );
             return res.json(result);
         }
 
-        // Method 3: Try old cache if available (even if expired)
-        const oldCache = await TikTokCache.findOne({ url: pageUrl });
-        if (oldCache) {
-            console.warn(`[TikTok Resolve] Using expired cache for ${pageUrl}`);
-            return res.json({
-                id: oldCache.id || '',
-                play: oldCache.play,
-                cover: oldCache.cover,
-                title: oldCache.title,
-                author_unique_id: oldCache.author_unique_id || '',
-                author_nickname: oldCache.author_nickname || '',
-                size: oldCache.size || 0,
-                duration: oldCache.duration || 0,
-                fps: oldCache.fps || null,
-                is_fallback: true,
-                cached: true,
-                warning: 'API temporarily unavailable, using old cached version'
-            });
-        }
-
-        // All methods failed
+        // All live methods failed
         console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
         res.status(404).json({ 
             error: 'Video unavailable', 

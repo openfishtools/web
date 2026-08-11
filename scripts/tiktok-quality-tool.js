@@ -1728,6 +1728,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return makeBox('stts', payload);
     }
+    function buildCommentItem(comment) {
+        const text = new TextEncoder().encode(comment);
+        const dataPayload = new Uint8Array(8 + text.byteLength);
+        dataPayload.set(text, 8);
+        return makeBox('\u00A9cmt', makeBox('data', dataPayload));
+    }
+    function buildCommentMetadata() {
+        const item = buildCommentItem('Patch by cutefish.my.id');
+        const ilst = makeBox('ilst', item);
+        return makeBox('meta', concatBytes([new Uint8Array(4), ilst]));
+    }
+    function addCommentMetadata(moov, replacements) {
+        const udta = findChild(moov, 'udta');
+        if (!udta) {
+            const moovBytes = rebuildBox(moov, replacements);
+            const rebuiltMoov = makeBox('moov', concatBytes([
+                moovBytes.subarray(8),
+                makeBox('udta', buildCommentMetadata())
+            ]));
+            replacements.set(moov, rebuiltMoov);
+            return;
+        }
+
+        const meta = findChild(udta, 'meta');
+        if (!meta) {
+            const udtaPrefix = new Uint8Array(udta.data.buffer, udta.data.byteOffset + udta.offset + 8, udta.prefixEnd - udta.contentStart);
+            const udtaChildren = udta.children.map(boxBytes);
+            replacements.set(udta, makeBox('udta', concatBytes([udtaPrefix, ...udtaChildren, buildCommentMetadata()])));
+            return;
+        }
+
+        const ilst = findChild(meta, 'ilst');
+        if (ilst) {
+            const items = ilst.children.filter((item) => item.type !== '\u00A9cmt').map(boxBytes);
+            replacements.set(ilst, makeBox('ilst', concatBytes([...items, buildCommentItem('Patch by cutefish.my.id')])));
+            return;
+        }
+
+        const metaPrefix = new Uint8Array(meta.data.buffer, meta.data.byteOffset + meta.offset + 8, meta.prefixEnd - meta.contentStart);
+        const metaChildren = meta.children.map(boxBytes);
+        replacements.set(meta, makeBox('meta', concatBytes([metaPrefix, ...metaChildren, makeBox('ilst', buildCommentItem('Patch by cutefish.my.id'))])));
+    }
     function rebuildBox(box, replacements) {
         if (replacements.has(box)) return replacements.get(box);
         if (!box.children.length) return boxBytes(box);
@@ -1822,6 +1864,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const audioEdts = findChild(audioTrak, 'edts');
                 if (audioEdts) replacements.set(audioEdts, null);
             }
+            addCommentMetadata(moov, replacements);
             const moovFinal = rebuildBox(moov, replacements);
             moovHeaderLen = moovFinal.byteLength;
             if (pass === 2) {

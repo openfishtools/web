@@ -5709,6 +5709,14 @@ body {
     align-items: center;
     gap: 8px;
 }
+.stats-method-link {
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.stats-method-link:hover {
+    text-decoration: underline;
+}
 
 .btn-danger-container {
     background: var(--md-sys-color-error-container);

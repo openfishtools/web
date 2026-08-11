@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
             if (!response.ok) {
-                throw new Error("Unable to resolve TikTok video URL.");
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);
             }
 
             currentMeta = await response.json();
