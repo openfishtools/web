@@ -643,27 +643,60 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         let result = null;
         let lastError = null;
 
-        // Method 1: Try TikWM API mirrors
-        const mirrors = [
-            `https://api.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
-        ];
+        // Method 1: Try TikWM API endpoints
         const apiKey = process.env.TIKWM_API_KEY;
+        const mirrors = [];
+
+        // If paid API key is present for tikwmapi.com
+        if (apiKey) {
+            mirrors.push({
+                url: `https://tikwmapi.com/api/?key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(pageUrl)}`,
+                method: 'GET'
+            });
+        }
+
+        // Free TikWM endpoints (GET)
+        mirrors.push({
+            url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
+            method: 'GET'
+        });
+        mirrors.push({
+            url: `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
+            method: 'GET'
+        });
+
+        // Free TikWM POST fallback
+        mirrors.push({
+            url: `https://www.tikwm.com/api/`,
+            method: 'POST',
+            body: new URLSearchParams({ url: pageUrl, hd: '1' })
+        });
+
+        const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
         for (let idx = 0; idx < mirrors.length; idx++) {
-            const upstream = mirrors[idx];
+            const mirror = mirrors[idx];
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 4000);
+                const timeout = setTimeout(() => controller.abort(), 8000);
                 
-                const fetchOptions = {
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                const fetchHeaders = {
+                    'User-Agent': browserUserAgent,
+                    'Accept': 'application/json, text/plain, */*'
                 };
-                if (apiKey) {
-                    fetchOptions.headers['x-api-key'] = apiKey;
+
+                const fetchOptions = {
+                    method: mirror.method || 'GET',
+                    headers: fetchHeaders,
+                    signal: controller.signal
+                };
+
+                if (mirror.method === 'POST' && mirror.body) {
+                    fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+                    fetchOptions.body = mirror.body;
                 }
-                
-                const r = await fetch(upstream, { ...fetchOptions, signal: controller.signal });
+
+                const r = await fetch(mirror.url, fetchOptions);
                 clearTimeout(timeout);
                 const json = await r.json().catch(() => ({}));
                 
@@ -713,126 +746,6 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         }
 
         // All live methods failed
-        console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
-        res.status(404).json({ 
-            error: 'Video unavailable', 
-            details: lastError,
-            hint: 'Try alternative URL format or video might be private/deleted'
-        });
-    } catch (err) {
-        console.error(`[TikTok Resolve] Unexpected error: ${err.message}`);
-        res.status(500).json({ error: 'Resolve failed', details: err.message });
-    }
-});
-
-function normalizeProxyUrl(raw) {
-    try {
-        const u = new URL(raw);
-        if (u.hostname === 'github.com') {
-            const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
-            if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
-        }
-        if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
-            const m = u.pathname.match(/^\/([^/]+)$/);
-            if (m) return `https://pastebin.com/raw${u.pathname}`;
-        }
-    } catch (e) {}
-    return raw;
-}
-
-app.get('/api/proxy', async (req, res) => {
-    const targetUrl = req.query.url;
-    if (!targetUrl || typeof targetUrl !== 'string') {
-        return res.status(400).json({ error: 'Missing url query parameter' });
-    }
-    const resolvedUrl = normalizeProxyUrl(targetUrl);
-    try {
-        const response = await fetch(resolvedUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*'
-            },
-            signal: AbortSignal.timeout(15000)
-        });
-        if (!response.ok) {
-            return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
-        }
-        const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        const buffer = await response.arrayBuffer();
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(Buffer.from(buffer));
-    } catch (err) {
-        res.status(500).json({ error: 'Proxy request failed', details: err.message });
-    }
-});
-
-
-
-app.post('/api/admin/login', async (req, res) => {
-    const { username, password } = req.body || {};
-    if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
-    try {
-        const admin = await Admin.findOne({ username }).lean();
-        if (!admin || !await bcrypt.compare(password, admin.passwordHash)) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        // Single active session enforcement: delete any previous active sessions
-        await Session.deleteMany({});
-
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + ADMIN_SESSION_MS);
-        
-        await Session.create({ token, expiresAt });
-        
-        res.json({ token, expiresIn: ADMIN_SESSION_MS });
-    } catch (err) {
-        res.status(500).json({ error: 'Login failed' });
-    }
-});
-
-app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true }));
-
-app.post('/api/admin/heartbeat', requireAdmin, (req, res) => res.json({ ok: true }));
-
-app.post('/api/admin/logout', requireAdmin, async (req, res) => {
-    const h = req.headers.authorization;
-    if (h && h.startsWith('Bearer ')) {
-        const token = h.slice(7);
-        await Session.deleteOne({ token });
-    }
-    res.json({ ok: true });
-});
-
-app.get('/api/socials', async (req, res) => res.json(await Social.find().sort({ order: 1, _id: 1 })));
-app.post('/api/socials', requireAdmin, async (req, res) => res.json(await new Social(req.body).save()));
-app.put('/api/socials/reorder', requireAdmin, async (req, res) => {
-    try {
-        const { items } = req.body;
-        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
-        const ops = items.map(item => ({
-            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
-        }));
-        await Social.bulkWrite(ops);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-app.put('/api/socials/:id', requireAdmin, async (req, res) => res.json(await Social.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
-    await Social.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-});
-
-// Contacts CRUD
-app.get('/api/contacts', async (req, res) => res.json(await Contact.find().sort({ order: 1, _id: 1 })));
-app.post('/api/contacts', requireAdmin, async (req, res) => res.json(await new Contact(req.body).save()));
-app.put('/api/contacts/reorder', requireAdmin, async (req, res) => {
-    try {
-        const { items } = req.body;
-        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
         const ops = items.map(item => ({
             updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
         }));
