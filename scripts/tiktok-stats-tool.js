@@ -43,51 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnAnalyse.click();
         }
     });
-document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
-
-    const inputUrl = document.getElementById('tool-tiktok-stats-input');
-    const btnAnalyse = document.getElementById('btn-analyse-tiktok');
-    const statusText = document.getElementById('tool-tiktok-stats-status');
-    const resultsContainer = document.getElementById('tiktok-stats-results');
-
-    const statsCover = document.getElementById('stats-video-cover');
-    const statsCreatorName = document.getElementById('stats-creator-name');
-    const statsCreatorHandle = document.getElementById('stats-creator-handle');
-    const statsCaption = document.getElementById('stats-caption');
-    const statsResolution = document.getElementById('stats-resolution');
-    const statsFps = document.getElementById('stats-fps');
-    const statsBitrate = document.getElementById('stats-bitrate');
-    const statsDuration = document.getElementById('stats-duration');
-    const statsSize = document.getElementById('stats-size');
-    const statsMethod = document.getElementById('stats-method');
-
-    let isRunning = false;
-
-    btnAnalyse.addEventListener('click', () => {
-        let url = inputUrl.value.trim();
-        if (url) {
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                if (url.includes('tiktok.com')) {
-                    url = 'https://' + url;
-                } else if (url.startsWith('efishaep/') || url.includes('/video/')) {
-                    url = 'https://www.tiktok.com/@' + url;
-                } else {
-                    url = 'https://www.tiktok.com/' + url;
-                }
-            }
-            analyseTikTokVideo(url);
-        } else {
-            showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
-        }
-    });
-
-    inputUrl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            btnAnalyse.click();
-        }
-    });
 
     function showStatus(message, color = "var(--md-sys-color-primary)") {
         statusText.textContent = message;

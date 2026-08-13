@@ -10,53 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressPercent = document.getElementById('tiktok-dl-progress-percent');
 
     let currentMeta = null;
-
-    btnDownload.addEventListener('click', async () => {
-        let url = inputUrl.value.trim();
-        if (!url) {
-            showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
-            return;
-        }
-
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            if (url.includes('tiktok.com')) {
-                url = 'https://' + url;
-            } else {
-                url = 'https://www.tiktok.com/' + url;
-            }
-        }
-
-        if (currentMeta) {
-            downloadVideo();
-        } else {
-            resolveAndDownload(url);
-        }
-    });
-
-    inputUrl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            btnDownload.click();
-        }
-    });
-
-    function showStatus(message, color = "var(--md-sys-color-primary)") {
-        statusText.textContent = message;
-        statusText.style.color = color;
-    }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
-
-    const inputUrl = document.getElementById('tool-tiktok-dl-input');
-    const btnDownload = document.getElementById('btn-download-tiktok');
-    const statusText = document.getElementById('tool-tiktok-dl-status');
-    const progressContainer = document.getElementById('tiktok-dl-progress-container');
-    const progressFill = document.getElementById('tiktok-dl-progress-fill');
-    const progressText = document.getElementById('tiktok-dl-progress-text');
-    const progressPercent = document.getElementById('tiktok-dl-progress-percent');
-
-    let currentMeta = null;
+    let statusTimer = null;
 
     btnDownload.addEventListener('click', async () => {
         let url = inputUrl.value.trim();
@@ -98,13 +52,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text) progressText.textContent = text;
     }
 
+    function startCooldown(seconds = 3) {
+        btnDownload.disabled = true;
+        let left = seconds;
+        btnDownload.textContent = `Wait (${left}s)...`;
+        const timer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+                clearInterval(timer);
+                btnDownload.disabled = false;
+                btnDownload.textContent = "Download HD";
+            } else {
+                btnDownload.textContent = `Wait (${left}s)...`;
+            }
+        }, 1000);
+    }
+
     async function resolveAndDownload(pageUrl) {
         btnDownload.disabled = true;
         btnDownload.textContent = "Loading...";
-        
+
         let mirrorStep = 1;
         showStatus("Fetching video details (trying mirror 1)...");
-        const statusTimer = setInterval(() => {
+        if (statusTimer) clearInterval(statusTimer);
+        statusTimer = setInterval(() => {
             mirrorStep++;
             if (mirrorStep === 2) {
                 showStatus("Trying mirror 2 (SSSTik)...");
@@ -120,10 +91,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
-            clearInterval(statusTimer);
+            if (statusTimer) clearInterval(statusTimer);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.details
+                    ? `Unable to resolve video: ${errorData.details}`
+                    : (errorData.error || `Unable to resolve TikTok video URL (${response.status}).`);
+                throw new Error(errorMsg);
+            }
+
+            const metadata = await response.json();
+            if (!metadata || !metadata.play) {
+                throw new Error("Could not extract stream URL for this video.");
+            }
+
+            currentMeta = metadata;
+            await downloadVideo();
+
+        } catch (err) {
+            console.error(err);
+            showStatus(err.message || "Download failed.", "var(--md-sys-color-error)");
+            progressContainer.classList.add('hidden');
+            startCooldown(3);
+        } finally {
+            if (statusTimer) clearInterval(statusTimer);
+        }
+    }
+
+    async function downloadVideo() {
+        if (!currentMeta) return;
+
+        btnDownload.disabled = true;
         btnDownload.textContent = "Downloading...";
         showStatus("");
         progressContainer.classList.remove('hidden');
@@ -189,8 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus(err.message || "Download failed.", "var(--md-sys-color-error)");
             progressContainer.classList.add('hidden');
         } finally {
-            btnDownload.disabled = false;
-            btnDownload.textContent = "Download HD";
+            startCooldown(3);
         }
     }
 });

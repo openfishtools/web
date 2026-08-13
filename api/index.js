@@ -711,12 +711,27 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000).unref?.();
 
+function isThumbnailOrImageUrl(req) {
+    const targetUrl = req.query.url;
+    if (req.query.type === 'image' || req.query.thumb === '1') return true;
+    if (!targetUrl || typeof targetUrl !== 'string') return false;
+    if (/\.(png|jpe?g|webp|gif|svg|bmp|ico|avif)(\?|#|$)/i.test(targetUrl)) return true;
+    const lower = targetUrl.toLowerCase();
+    if (lower.includes('byteoversea') || lower.includes('ibyteimg') || lower.includes('googleusercontent') || lower.includes('wsrv.nl') || lower.includes('imgur') || lower.includes('/obj/') || lower.includes('thumb') || lower.includes('/tos-')) return true;
+    return false;
+}
+
 function createRateLimiter(options = {}) {
     const windowMs = options.windowMs || 30 * 1000;
     const maxRequests = options.maxRequests || 5;
     const message = options.message || 'Too many requests. Please wait a moment before trying again.';
+    const skip = options.skip;
 
     return (req, res, next) => {
+        if (skip && typeof skip === 'function' && skip(req)) {
+            return next();
+        }
+
         const ip = getClientIp(req) || 'unknown';
         const routeKey = `${req.path}:${ip}`;
         const now = Date.now();
@@ -744,7 +759,12 @@ function createRateLimiter(options = {}) {
 }
 
 const tiktokResolveLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 5, message: 'Rate limit reached: Max 5 video resolve requests per 30 seconds.' });
-const proxyLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 20, message: 'Rate limit reached: Max 20 proxy requests per 30 seconds.' });
+const proxyLimiter = createRateLimiter({
+    windowMs: 30 * 1000,
+    maxRequests: 20,
+    message: 'Rate limit reached: Max 20 proxy requests per 30 seconds.',
+    skip: isThumbnailOrImageUrl
+});
 
 app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
     const raw = req.query.url;
