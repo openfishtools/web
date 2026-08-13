@@ -43,6 +43,51 @@ document.addEventListener('DOMContentLoaded', () => {
             btnAnalyse.click();
         }
     });
+document.addEventListener('DOMContentLoaded', () => {
+    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
+
+    const inputUrl = document.getElementById('tool-tiktok-stats-input');
+    const btnAnalyse = document.getElementById('btn-analyse-tiktok');
+    const statusText = document.getElementById('tool-tiktok-stats-status');
+    const resultsContainer = document.getElementById('tiktok-stats-results');
+
+    const statsCover = document.getElementById('stats-video-cover');
+    const statsCreatorName = document.getElementById('stats-creator-name');
+    const statsCreatorHandle = document.getElementById('stats-creator-handle');
+    const statsCaption = document.getElementById('stats-caption');
+    const statsResolution = document.getElementById('stats-resolution');
+    const statsFps = document.getElementById('stats-fps');
+    const statsBitrate = document.getElementById('stats-bitrate');
+    const statsDuration = document.getElementById('stats-duration');
+    const statsSize = document.getElementById('stats-size');
+    const statsMethod = document.getElementById('stats-method');
+
+    let isRunning = false;
+
+    btnAnalyse.addEventListener('click', () => {
+        let url = inputUrl.value.trim();
+        if (url) {
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                if (url.includes('tiktok.com')) {
+                    url = 'https://' + url;
+                } else if (url.startsWith('efishaep/') || url.includes('/video/')) {
+                    url = 'https://www.tiktok.com/@' + url;
+                } else {
+                    url = 'https://www.tiktok.com/' + url;
+                }
+            }
+            analyseTikTokVideo(url);
+        } else {
+            showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
+        }
+    });
+
+    inputUrl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btnAnalyse.click();
+        }
+    });
 
     function showStatus(message, color = "var(--md-sys-color-primary)") {
         statusText.textContent = message;
@@ -55,13 +100,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnAnalyse.disabled = true;
         resultsContainer.classList.add('hidden');
-        showStatus("Fetching video details...");
+        
+        let mirrorStep = 1;
+        showStatus("Fetching video details (trying mirror 1)...");
+        const statusTimer = setInterval(() => {
+            mirrorStep++;
+            if (mirrorStep === 2) {
+                showStatus("Trying mirror 2 (SSSTik)...");
+            } else if (mirrorStep === 3) {
+                showStatus("Trying mirror 3 (TikWM)...");
+            } else if (mirrorStep >= 4) {
+                showStatus("Trying mirror 4 (Direct extract)...");
+            }
+        }, 3100);
 
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
+            clearInterval(statusTimer);
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);
+                const errorMsg = errorData.details 
+                    ? `Unable to resolve video: ${errorData.details}`
+                    : (errorData.error || `Unable to resolve TikTok video URL (${response.status}).`);
+                throw new Error(errorMsg);
             }
 
             const metadata = await response.json();
@@ -118,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(err);
             showStatus(err.message || "Analysis failed.", "var(--md-sys-color-error)");
         } finally {
+            clearInterval(statusTimer);
             isRunning = false;
             btnAnalyse.disabled = false;
         }

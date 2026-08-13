@@ -237,13 +237,12 @@ const Preset = mongoose.models.Preset || mongoose.model('Preset', PresetSchema);
 
 const ResourceSchema = new mongoose.Schema({
     title: String,
-    category: { type: mongoose.Schema.Types.Mixed, default: [] }, // String[] (multi-select)
+    category: { type: mongoose.Schema.Types.Mixed, default: [] },
     dev: String,
     instruction: String,
     icon: String,
-    info: String, // size/info text
-    os: { type: mongoose.Schema.Types.Mixed, default: [] }, // [{name: String, versions: [{label, url}]}]
-    // Legacy fallback fields
+    info: String,
+    os: { type: mongoose.Schema.Types.Mixed, default: [] },
     version: String,
     url: String,
     order: { type: Number, default: 0 },
@@ -251,44 +250,12 @@ const ResourceSchema = new mongoose.Schema({
 });
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
 
-
 const LikeSchema = new mongoose.Schema({
     presetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Preset' },
     ip: String,
     timestamp: { type: Date, default: Date.now }
 });
 const Like = mongoose.models.Like || mongoose.model('Like', LikeSchema);
-
-function normalizeClientIp(raw) {
-    if (raw == null) return '';
-    let ip = String(raw).trim();
-    if (!ip) return '';
-    const lower = ip.toLowerCase();
-    if (lower.startsWith('::ffff:')) {
-        ip = ip.slice(7);
-    }
-    if (lower === '::1' || ip === '::1') {
-        ip = '127.0.0.1';
-    }
-    return ip;
-}
-
-function getClientIp(req) {
-    if (req.headers['cf-connecting-ip']) return normalizeClientIp(req.headers['cf-connecting-ip']);
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) return normalizeClientIp(String(forwarded).split(',')[0]);
-    return normalizeClientIp(req.socket.remoteAddress || '');
-}
-
-function ipLookupVariants(raw) {
-    const n = normalizeClientIp(raw);
-    if (!n) return [];
-    const set = new Set([n, String(raw).trim()]);
-    if (n.includes('.') && !n.includes(':')) {
-        set.add(`::ffff:${n}`);
-    }
-    return [...set];
-}
 
 function parseVideoMetadataFromBuffer(buffer) {
     let moovOffset = -1;
@@ -566,17 +533,99 @@ function isAllowedTikTokResolveHost(hostname) {
 function isAllowedTikTokMediaUrl(rawUrl) {
     try {
         const hostname = new URL(rawUrl).hostname.toLowerCase();
-        const suffixes = ['tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokv.com', 'tikwm.com', 'ibytedtos.com', 'byteoversea.com', 'muscdn.com'];
+        const suffixes = ['tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokv.com', 'tikwm.com', 'tikcdn.io', 'ssstik.io', 'tikwmapi.com', 'ibytedtos.com', 'byteoversea.com', 'muscdn.com'];
         return suffixes.some((suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`));
     } catch {
         return false;
     }
 }
 
+async function extractFromSSSTik(pageUrl) {
+    try {
+        const homeController = new AbortController();
+        const homeTimeout = setTimeout(() => homeController.abort(), 3000);
+        
+        const homeRes = await fetch('https://ssstik.io/en', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+            },
+            signal: homeController.signal
+        });
+        clearTimeout(homeTimeout);
+        
+        const homeHtml = await homeRes.text();
+        const ttMatch = homeHtml.match(/s_tt\s*=\s*["']([^"']+)["']/i) || homeHtml.match(/name="tt"\s+value="([^"]+)"/i);
+        const tt = ttMatch ? ttMatch[1] : '1';
+
+        let cookieHeader = '';
+        if (typeof homeRes.headers.getSetCookie === 'function') {
+            cookieHeader = homeRes.headers.getSetCookie().join('; ');
+        } else {
+            cookieHeader = homeRes.headers.get('set-cookie') || '';
+        }
+
+        const dlController = new AbortController();
+        const dlTimeout = setTimeout(() => dlController.abort(), 3000);
+
+        const fetchHeaders = {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Referer': 'https://ssstik.io/en',
+            'Origin': 'https://ssstik.io'
+        };
+        if (cookieHeader) fetchHeaders['Cookie'] = cookieHeader;
+
+        const res = await fetch('https://ssstik.io/abc?url=dl', {
+            method: 'POST',
+            headers: fetchHeaders,
+            body: new URLSearchParams({ id: pageUrl, locale: 'en', tt: tt }),
+            signal: dlController.signal
+        });
+        clearTimeout(dlTimeout);
+
+        if (!res.ok) return null;
+
+        const html = await res.text();
+        const downloadMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*without_watermark/i) || 
+                              html.match(/href="(https:\/\/[^"]+)"[^>]*download/i) ||
+                              html.match(/href="(https:\/\/tikcdn\.io\/[^\"]+)"/i);
+
+        if (!downloadMatch) return null;
+
+        const playUrl = downloadMatch[1];
+        const hdMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*direct/i);
+        const coverMatch = html.match(/class="result_author"[^>]*src="([^"]+)"/i);
+        const nicknameMatch = html.match(/<h2>([^<]+)<\/h2>/i);
+        const titleMatch = html.match(/<p class="maintext">([^<]*)<\/p>/i);
+        const videoIdMatch = pageUrl.match(/\/video\/(\d+)/);
+        const authorHandleMatch = pageUrl.match(/@([a-zA-Z0-9._-]+)/);
+
+        return {
+            id: videoIdMatch ? videoIdMatch[1] : '',
+            play: playUrl,
+            hdplay: hdMatch ? hdMatch[1] : playUrl,
+            wmplay: '',
+            cover: coverMatch ? coverMatch[1] : '',
+            title: titleMatch ? titleMatch[1].trim() : '',
+            author_unique_id: authorHandleMatch ? authorHandleMatch[1] : '',
+            author_nickname: nicknameMatch ? nicknameMatch[1].trim() : '',
+            size: 0,
+            duration: 0,
+            w: 0,
+            h: 0,
+            is_fallback: false,
+            method: 'ssstik'
+        };
+    } catch (e) {
+        console.error('[SSSTik Extract] Error:', e.message);
+        return null;
+    }
+}
+
 async function extractTikTokFromPage(pageUrl) {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeout = setTimeout(() => controller.abort(), 3000);
         
         const pageResponse = await fetch(pageUrl, {
             headers: {
@@ -626,7 +675,78 @@ async function extractTikTokFromPage(pageUrl) {
     }
 }
 
-app.get('/api/tiktok-resolve', async (req, res) => {
+function normalizeClientIp(raw) {
+    if (raw == null) return '';
+    let ip = String(raw).trim();
+    if (!ip) return '';
+    const lower = ip.toLowerCase();
+    if (lower.startsWith('::ffff:')) {
+        ip = ip.slice(7);
+    }
+    if (lower === '::1' || ip === '::1') {
+        ip = '127.0.0.1';
+    }
+    return ip;
+}
+
+function getClientIp(req) {
+    if (req.headers['cf-connecting-ip']) return normalizeClientIp(req.headers['cf-connecting-ip']);
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) return normalizeClientIp(String(forwarded).split(',')[0]);
+    return normalizeClientIp(req.socket.remoteAddress || '');
+}
+
+/**
+ * Lightweight in-memory IP rate limiter middleware
+ * Protects endpoints against spamming and rate limits
+ */
+const rateLimitMap = new Map();
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of rateLimitMap.entries()) {
+        if (now > record.resetTime) {
+            rateLimitMap.delete(key);
+        }
+    }
+}, 5 * 60 * 1000).unref?.();
+
+function createRateLimiter(options = {}) {
+    const windowMs = options.windowMs || 30 * 1000;
+    const maxRequests = options.maxRequests || 5;
+    const message = options.message || 'Too many requests. Please wait a moment before trying again.';
+
+    return (req, res, next) => {
+        const ip = getClientIp(req) || 'unknown';
+        const routeKey = `${req.path}:${ip}`;
+        const now = Date.now();
+
+        let record = rateLimitMap.get(routeKey);
+        if (!record || now > record.resetTime) {
+            record = { count: 1, resetTime: now + windowMs };
+            rateLimitMap.set(routeKey, record);
+            return next();
+        }
+
+        record.count++;
+        if (record.count > maxRequests) {
+            const retryAfterSec = Math.ceil((record.resetTime - now) / 1000);
+            res.setHeader('Retry-After', retryAfterSec);
+            return res.status(429).json({
+                error: message,
+                details: `Rate limit reached (${maxRequests} reqs / ${Math.round(windowMs / 1000)}s). Please wait ${retryAfterSec} seconds.`,
+                retryAfter: retryAfterSec
+            });
+        }
+
+        next();
+    };
+}
+
+const tiktokResolveLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 5, message: 'Rate limit reached: Max 5 video resolve requests per 30 seconds.' });
+const proxyLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 20, message: 'Rate limit reached: Max 20 proxy requests per 30 seconds.' });
+
+app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
     let pageUrl = raw.trim();
@@ -639,67 +759,21 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
-        // Strategy: Try multiple methods
         let result = null;
         let lastError = null;
 
-        // Method 1: Try TikWM API endpoints
+        // Method 1: Paid TikWM API (if TIKWM_API_KEY is configured)
         const apiKey = process.env.TIKWM_API_KEY;
-        const mirrors = [];
-
-        // If paid API key is present for tikwmapi.com
         if (apiKey) {
-            mirrors.push({
-                url: `https://tikwmapi.com/api/?key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(pageUrl)}`,
-                method: 'GET'
-            });
-        }
-
-        // Free TikWM endpoints (GET)
-        mirrors.push({
-            url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
-            method: 'GET'
-        });
-        mirrors.push({
-            url: `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
-            method: 'GET'
-        });
-
-        // Free TikWM POST fallback
-        mirrors.push({
-            url: `https://www.tikwm.com/api/`,
-            method: 'POST',
-            body: new URLSearchParams({ url: pageUrl, hd: '1' })
-        });
-
-        const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-        for (let idx = 0; idx < mirrors.length; idx++) {
-            const mirror = mirrors[idx];
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000);
-                
-                const fetchHeaders = {
-                    'User-Agent': browserUserAgent,
-                    'Accept': 'application/json, text/plain, */*'
-                };
-
-                const fetchOptions = {
-                    method: mirror.method || 'GET',
-                    headers: fetchHeaders,
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                const r = await fetch(`https://tikwmapi.com/api/?key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(pageUrl)}`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
                     signal: controller.signal
-                };
-
-                if (mirror.method === 'POST' && mirror.body) {
-                    fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
-                    fetchOptions.body = mirror.body;
-                }
-
-                const r = await fetch(mirror.url, fetchOptions);
+                });
                 clearTimeout(timeout);
                 const json = await r.json().catch(() => ({}));
-                
                 if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                     const d = json.data;
                     result = {
@@ -716,18 +790,88 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                         w: d.w || 0,
                         h: d.h || 0,
                         is_fallback: false,
-                        method: 'tikwm'
+                        method: 'tikwmapi_key'
                     };
-                    break;
                 }
-                
-                lastError = `TikWM Mirror ${idx + 1}: ${r.status}`;
             } catch (e) {
-                lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
+                lastError = `Paid Key: ${e.message}`;
             }
         }
 
-        // Method 2: Try direct page extraction
+        // Method 2: SSSTik Resolver (High Speed & Reliability)
+        if (!result) {
+            try {
+                result = await extractFromSSSTik(pageUrl);
+            } catch (e) {
+                lastError = `SSSTik: ${e.message}`;
+            }
+        }
+
+        // Method 3: Free TikWM Mirrors
+        if (!result) {
+            const mirrors = [
+                { url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
+                { url: `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
+                { url: `https://www.tikwm.com/api/`, method: 'POST', body: new URLSearchParams({ url: pageUrl, hd: '1' }) }
+            ];
+
+            const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+            for (let idx = 0; idx < mirrors.length; idx++) {
+                const mirror = mirrors[idx];
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 3000);
+                    
+                    const fetchHeaders = {
+                        'User-Agent': browserUserAgent,
+                        'Accept': 'application/json, text/plain, */*'
+                    };
+
+                    const fetchOptions = {
+                        method: mirror.method || 'GET',
+                        headers: fetchHeaders,
+                        signal: controller.signal
+                    };
+
+                    if (mirror.method === 'POST' && mirror.body) {
+                        fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+                        fetchOptions.body = mirror.body;
+                    }
+
+                    const r = await fetch(mirror.url, fetchOptions);
+                    clearTimeout(timeout);
+                    const json = await r.json().catch(() => ({}));
+                    
+                    if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
+                        const d = json.data;
+                        result = {
+                            id: d.id || '',
+                            play: d.play || d.hdplay || '',
+                            hdplay: d.hdplay || '',
+                            wmplay: d.wmplay || '',
+                            cover: d.cover || d.origin_cover || '',
+                            title: d.title || '',
+                            author_unique_id: d.author?.unique_id || '',
+                            author_nickname: d.author?.nickname || '',
+                            size: d.size || 0,
+                            duration: d.duration || 0,
+                            w: d.w || 0,
+                            h: d.h || 0,
+                            is_fallback: false,
+                            method: 'tikwm'
+                        };
+                        break;
+                    }
+                    
+                    lastError = `TikWM Mirror ${idx + 1}: ${r.status}`;
+                } catch (e) {
+                    lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
+                }
+            }
+        }
+
+        // Method 4: Direct TikTok Page Extraction Fallback
         if (!result) {
             try {
                 result = await extractTikTokFromPage(pageUrl);
@@ -746,21 +890,59 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         }
 
         // All live methods failed
-        const ops = items.map(item => ({
-            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
-        }));
-        await Contact.bulkWrite(ops);
-        res.json({ success: true });
+        console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
+        return res.status(404).json({ 
+            error: 'Video unavailable', 
+            details: lastError || 'All mirrors failed or timed out',
+            hint: 'Try alternative URL format or video might be private/deleted'
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`[TikTok Resolve] Unexpected error: ${err.message}`);
+        return res.status(500).json({ error: 'Resolve failed', details: err.message });
     }
 });
-app.put('/api/contacts/:id', requireAdmin, async (req, res) => res.json(await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true })));
-app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
-    await Contact.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-});
 
+function normalizeProxyUrl(raw) {
+    try {
+        const u = new URL(raw);
+        if (u.hostname === 'github.com') {
+            const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+            if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
+        }
+        if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
+            const m = u.pathname.match(/^\/([^/]+)$/);
+            if (m) return `https://pastebin.com/raw${u.pathname}`;
+        }
+    } catch (e) {}
+    return raw;
+}
+
+app.get('/api/proxy', proxyLimiter, async (req, res) => {
+    const targetUrl = req.query.url;
+    if (!targetUrl || typeof targetUrl !== 'string') {
+        return res.status(400).json({ error: 'Missing url query parameter' });
+    }
+    const resolvedUrl = normalizeProxyUrl(targetUrl);
+    try {
+        const response = await fetch(resolvedUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*'
+            },
+            signal: AbortSignal.timeout(15000)
+        });
+        if (!response.ok) {
+            return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
+        }
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.send(Buffer.from(buffer));
+    } catch (err) {
+        res.status(500).json({ error: 'Proxy request failed', details: err.message });
+    }
+});
 
 app.get('/api/presets', async (req, res) => {
     try {
