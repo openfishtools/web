@@ -144,17 +144,24 @@ document.addEventListener('DOMContentLoaded', () => {
             statsMethod.textContent = 'Unknown';
             return;
         }
-        if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?$/.test(comment)) {
+        let cleanText = comment.trim();
+        if (/^Lavf/i.test(cleanText)) {
+            statsMethod.textContent = `FFmpeg (${cleanText})`;
+            return;
+        }
+        // Strict web domain check (must end with alphabetic TLD like .com, .io, .org, NOT numbers like .100)
+        const isDomain = /^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,10}$/.test(cleanText);
+        if (isDomain) {
             statsMethod.innerHTML = '';
             const a = document.createElement('a');
-            a.href = 'https://' + comment;
+            a.href = 'https://' + cleanText;
             a.target = '_blank';
             a.rel = 'noopener';
             a.className = 'stats-method-link';
-            a.textContent = comment;
+            a.textContent = cleanText;
             statsMethod.appendChild(a);
         } else {
-            statsMethod.textContent = comment;
+            statsMethod.textContent = cleanText;
         }
     }
 
