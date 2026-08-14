@@ -365,12 +365,10 @@ function parseVideoMetadataFromBuffer(buffer) {
             if (vals[k]) return vals[k];
         }
         for (const value of Object.values(vals)) {
-            if (value) return value;
+            if (value && !/^Lavf/i.test(value) && !/^FFmpeg/i.test(value) && !/^HandBrake/i.test(value)) return value;
         }
         return '';
     }
-    
-    let fps = null;
     let width = 0;
     let height = 0;
     let comment = '';
@@ -974,6 +972,100 @@ app.get('/api/proxy', proxyLimiter, async (req, res) => {
         res.send(Buffer.from(buffer));
     } catch (err) {
         res.status(500).json({ error: 'Proxy request failed', details: err.message });
+    }
+});
+
+// Socials CRUD Endpoints
+app.get('/api/socials', async (req, res) => {
+    try {
+        const items = await Social.find().sort({ order: 1, _id: 1 });
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch socials' });
+    }
+});
+app.post('/api/socials', requireAdmin, async (req, res) => {
+    try {
+        const item = await new Social(req.body).save();
+        res.json(item);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.put('/api/socials/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Social.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.put('/api/socials/:id', requireAdmin, async (req, res) => {
+    try {
+        const updated = await Social.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
+    try {
+        await Social.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Contacts CRUD Endpoints
+app.get('/api/contacts', async (req, res) => {
+    try {
+        const items = await Contact.find().sort({ order: 1, _id: 1 });
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch contacts' });
+    }
+});
+app.post('/api/contacts', requireAdmin, async (req, res) => {
+    try {
+        const item = await new Contact(req.body).save();
+        res.json(item);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.put('/api/contacts/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
+        const ops = items.map(item => ({
+            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
+        }));
+        await Contact.bulkWrite(ops);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.put('/api/contacts/:id', requireAdmin, async (req, res) => {
+    try {
+        const updated = await Contact.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
+    try {
+        await Contact.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
