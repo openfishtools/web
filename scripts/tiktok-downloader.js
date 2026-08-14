@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressPercent = document.getElementById('tiktok-dl-progress-percent');
 
     let currentMeta = null;
-    let statusTimer = null;
 
     btnDownload.addEventListener('click', async () => {
         let url = inputUrl.value.trim();
@@ -52,68 +51,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text) progressText.textContent = text;
     }
 
-    function startCooldown(seconds = 3) {
-        btnDownload.disabled = true;
-        let left = seconds;
-        btnDownload.textContent = `Wait (${left}s)...`;
-        const timer = setInterval(() => {
-            left--;
-            if (left <= 0) {
-                clearInterval(timer);
-                btnDownload.disabled = false;
-                btnDownload.textContent = "Download HD";
-            } else {
-                btnDownload.textContent = `Wait (${left}s)...`;
-            }
-        }, 1000);
-    }
-
     async function resolveAndDownload(pageUrl) {
         btnDownload.disabled = true;
         btnDownload.textContent = "Loading...";
-
-        let mirrorStep = 1;
-        showStatus("Fetching video details (trying mirror 1: TikWM)...");
-        if (statusTimer) clearInterval(statusTimer);
-        statusTimer = setInterval(() => {
-            mirrorStep++;
-            if (mirrorStep === 2) {
-                showStatus("Trying mirror 2 (Direct extract)...");
-            } else if (mirrorStep >= 3) {
-                showStatus("Trying mirror 3 (SSSTik)...");
-            }
-        }, 5100);
-
+        showStatus("");
         progressContainer.classList.add('hidden');
         setProgress(0);
 
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
-            if (statusTimer) clearInterval(statusTimer);
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const errorMsg = errorData.details
-                    ? `Unable to resolve video: ${errorData.details}`
-                    : (errorData.error || `Unable to resolve TikTok video URL (${response.status}).`);
-                throw new Error(errorMsg);
+                throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);
             }
 
-            const metadata = await response.json();
-            if (!metadata || !metadata.play) {
-                throw new Error("Could not extract stream URL for this video.");
+            currentMeta = await response.json();
+            if (!currentMeta || !currentMeta.play && !currentMeta.hdplay) {
+                throw new Error("Could not extract video stream.");
             }
 
-            currentMeta = metadata;
-            await downloadVideo();
+            btnDownload.disabled = false;
+            btnDownload.textContent = "Download HD";
+            
+            if (currentMeta.is_fallback || currentMeta.warning) {
+                showStatus(
+                    currentMeta.warning || "Using cached version - API may be temporarily unavailable",
+                    "var(--md-sys-color-tertiary)"
+                );
+            }
+            
+            downloadVideo();
 
         } catch (err) {
             console.error(err);
-            showStatus(err.message || "Download failed.", "var(--md-sys-color-error)", "var(--md-sys-color-error)");
-            progressContainer.classList.add('hidden');
-            startCooldown(3);
-        } finally {
-            if (statusTimer) clearInterval(statusTimer);
+            showStatus(err.message || "Resolution failed.", "var(--md-sys-color-error)");
+            btnDownload.disabled = false;
+            btnDownload.textContent = "Download HD";
         }
     }
 
@@ -186,7 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus(err.message || "Download failed.", "var(--md-sys-color-error)");
             progressContainer.classList.add('hidden');
         } finally {
-            startCooldown(3);
+            btnDownload.disabled = false;
+            btnDownload.textContent = "Download HD";
         }
     }
 });

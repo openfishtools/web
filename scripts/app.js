@@ -209,40 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const parseAmXml = (xmlText) => {
-        const sanitized = amSanitizeXmlText(xmlText);
         const parser = new DOMParser();
-        let xmlDoc = parser.parseFromString(sanitized, 'text/xml');
-        
-        let scene = null;
-        if (xmlDoc && xmlDoc.documentElement) {
-            if (xmlDoc.documentElement.tagName.toLowerCase() === 'scene') {
-                scene = xmlDoc.documentElement;
-            } else {
-                const allNodes = xmlDoc.getElementsByTagName('*');
-                for (let i = 0; i < allNodes.length; i++) {
-                    if (allNodes[i].tagName.toLowerCase() === 'scene') {
-                        scene = allNodes[i];
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!scene) {
-            try {
-                const htmlDoc = parser.parseFromString(sanitized, 'text/html');
-                if (htmlDoc) {
-                    const allNodes = htmlDoc.getElementsByTagName('*');
-                    for (let i = 0; i < allNodes.length; i++) {
-                        if (allNodes[i].tagName.toLowerCase() === 'scene') {
-                            scene = allNodes[i];
-                            break;
-                        }
-                    }
-                }
-            } catch (_) {}
-        }
-
+        const xmlDoc = parser.parseFromString(amSanitizeXmlText(xmlText), 'text/xml');
+        const scene = xmlDoc.documentElement.tagName.toLowerCase() === 'scene'
+            ? xmlDoc.documentElement
+            : xmlDoc.querySelector('scene');
         if (!scene) throw new Error('Scene not found.');
 
         const durationMs = Number(scene.getAttribute('totalTime')) || 3000;
@@ -814,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let parsed = amXmlCache.get(id);
         if (!parsed) {
             try {
-                const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(xmlUrl)}&type=xml`;
+                const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(xmlUrl)}`;
                 const resp = await fetch(proxyUrl);
                 if (!resp.ok) throw new Error('fetch failed');
                 const text = await resp.text();
@@ -883,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (presetFeedView) {
             presetFeedView.querySelectorAll('.tiktok-slide').forEach(slide => {
                 resetAmXmlSlide(slide);
-                pauseSlideVideo(slide);
+                unloadSlideVideo(slide);
             });
             presetFeedView.querySelectorAll('.tiktok-media-host').forEach(host => {
                 const v = host.querySelector('video');
@@ -1176,13 +1147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return ip;
     };
 
-    const createTikTokLoadingSkeleton = (mode = 'video') => {
-        if (mode === 'image') {
-            return '<div class="tiktok-media-skeleton"><div class="tiktok-skel-spinner-wrapper"><div class="tiktok-skel-spinner-ring"></div><span class="material-symbols-rounded tiktok-skel-icon">image</span></div><span class="tiktok-skel-text">Loading thumbnail...</span></div>';
-        }
-        return '<div class="tiktok-media-skeleton"><div class="tiktok-skel-spinner-wrapper"><div class="tiktok-skel-spinner-ring"></div><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div><span class="tiktok-skel-text">Loading video...</span></div>';
-    };
-
     const presetMediaInnerHtml = (media, name) => {
         const label = escapeHtmlAttr(name || 'Preset');
         const m = media == null ? '' : String(media).trim();
@@ -1193,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous" referrerpolicy="no-referrer"></video>`;
         }
         if (isTikTokLikeUrl(m)) {
-            return `<div class="tiktok-media-host" data-tiktok-url="${escapeHtmlAttr(m)}" role="group" aria-label="${label}">${createTikTokLoadingSkeleton('video')}</div>`;
+            return `<div class="tiktok-media-host" data-tiktok-url="${escapeHtmlAttr(m)}" role="group" aria-label="${label}"><div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div></div>`;
         }
         return `<img src="${escapeHtmlAttr(m)}" alt="${label}" referrerpolicy="no-referrer">`;
     };
@@ -1211,8 +1175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const io = new IntersectionObserver((entries) => {
             entries.forEach(async (en) => {
                 const el = en.target;
-                const targetReadyState = mode === 'video' ? 'video-ready' : 'image-ready';
-                if (!en.isIntersecting || el.dataset.tiktokState === targetReadyState || el.dataset.tiktokState === 'loading') return;
+                if (!en.isIntersecting || el.dataset.tiktokState) return;
                 
                 const src = el.dataset.tiktokUrl;
                 if (!src) return;
@@ -1221,96 +1184,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const resolveWithRetry = async (retryCount = 0, bypassCache = false) => {
                     try {
-                        const shouldBypass = bypassCache || (mode === 'video');
-                        const url = `${API_URL}/tiktok-resolve?url=${encodeURIComponent(src)}&mode=${mode}${shouldBypass ? '&nocache=1' : ''}`;
+                        const url = `${API_URL}/tiktok-resolve?url=${encodeURIComponent(src)}${bypassCache ? '&nocache=1' : ''}`;
                         const r = await fetch(url);
+                        if (r.status === 404 && retryCount < 3) {
+                            await new Promise(res => setTimeout(res, 1000));
+                            return resolveWithRetry(retryCount + 1);
+                        }
                         
                         const j = await r.json().catch(() => ({}));
                         
-                        if (!r.ok || (!j.play && !j.cover && !j.is_fallback)) {
+                        if (!r.ok || (!j.play && !j.is_fallback)) {
                             el.dataset.tiktokState = 'error';
-                            el.innerHTML = '<div class="tiktok-media-error" style="cursor:pointer" title="Click to load video stream"><span class="material-symbols-rounded" style="font-size:36px;margin-bottom:8px">refresh</span><span>Click to load video stream</span></div>';
-                            el.querySelector('.tiktok-media-error')?.addEventListener('click', (ev) => {
-                                ev.stopPropagation();
-                                el.innerHTML = createTikTokLoadingSkeleton(mode);
-                                delete el.dataset.tiktokState;
-                                resolveWithRetry(0, true);
-                            });
+                            el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
                         } else {
-                            if (mode === 'image') {
-                                el.innerHTML = '';
-                                const rawCover = j.cover || '';
-                                const imgUrl = rawCover ? (rawCover.startsWith('http') ? `${API_URL}/proxy?url=${encodeURIComponent(rawCover)}&type=image` : rawCover) : '';
-                                if (imgUrl) {
-                                    const img = document.createElement('img');
-                                    img.src = imgUrl;
-                                    img.alt = j.title || 'TikTok Preset Cover';
-                                    img.className = 'preset-card-img';
-                                    img.loading = 'lazy';
-                                    img.onerror = () => {
-                                        el.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">image</span></div>';
-                                    };
-                                    el.appendChild(img);
-                                } else {
-                                    el.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">image</span></div>';
-                                }
-                                el.dataset.tiktokState = 'image-ready';
-                                return;
-                            }
-
-                            if (!j.play) {
-                                el.innerHTML = '';
+                            el.innerHTML = '';
+                            if ((mode === 'image' || j.is_fallback) && j.cover) {
+                                const img = document.createElement('img');
+                                img.src = j.cover;
+                                img.alt = j.title || 'Preset';
+                                img.setAttribute('referrerpolicy', 'no-referrer');
+                                el.appendChild(img);
                                 if (mode === 'video') {
-                                    if (retryCount < 2) {
-                                        await new Promise(res => setTimeout(res, 500));
-                                        return resolveWithRetry(retryCount + 1, true);
+                                    const videoId = j.id || getTikTokId(src);
+                                    if (videoId) {
+                                        el.innerHTML = `<iframe src="https://www.tiktok.com/embed/${videoId}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+                                    } else {
+                                        const link = document.createElement('a');
+                                        link.href = src;
+                                        link.target = '_blank';
+                                        link.className = 'tiktok-fallback-link';
+                                        link.innerHTML = '<span class="material-symbols-rounded">open_in_new</span><span>View on TikTok</span>';
+                                        el.appendChild(link);
                                     }
-                                    el.innerHTML = '<div class="tiktok-media-error" style="cursor:pointer" title="Click to retry video stream"><span class="material-symbols-rounded" style="font-size:36px;margin-bottom:8px">refresh</span><span>Click to load video stream</span></div>';
-                                    el.querySelector('.tiktok-media-error')?.addEventListener('click', (ev) => {
-                                        ev.stopPropagation();
-                                        el.innerHTML = createTikTokLoadingSkeleton(mode);
-                                        delete el.dataset.tiktokState;
-                                        resolveWithRetry(0, true);
-                                    });
-                                    el.dataset.tiktokState = 'error';
-                                    return;
-                                }
-                                const rawCover = j.cover || '';
-                                const imgUrl = rawCover ? (rawCover.startsWith('http') ? `${API_URL}/proxy?url=${encodeURIComponent(rawCover)}&type=image` : rawCover) : '';
-                                if (imgUrl) {
-                                    const img = document.createElement('img');
-                                    img.src = imgUrl;
-                                    img.alt = j.title || 'Preset';
-                                    img.setAttribute('referrerpolicy', 'no-referrer');
-                                    el.appendChild(img);
-                                } else {
-                                    el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
                                 }
                             } else {
                                 const v = document.createElement('video');
-                                const streamUrl = (j.play && (j.play.includes('tikcdn.io') || j.play.includes('ssstik'))) 
-                                    ? `${API_URL}/proxy?url=${encodeURIComponent(j.play)}` 
-                                    : j.play;
-                                v.src = streamUrl;
-                                v.muted = true;
+                                v.src = j.play;
+                                v.muted = globalMuted;
                                 v.loop = true;
                                 v.playsInline = true;
                                 v.autoplay = true;
-                                v.style.opacity = '0';
-                                v.style.transition = 'opacity 0.25s cubic-bezier(0.2, 0, 0, 1)';
                                 v.setAttribute('playsinline', '');
+                                v.setAttribute('crossorigin', 'anonymous');
                                 v.setAttribute('referrerpolicy', 'no-referrer');
-
-                                const revealVideo = () => {
-                                    v.style.opacity = '1';
-                                    const skel = el.querySelector('.tiktok-media-skeleton');
-                                    if (skel) skel.remove();
-                                };
-                                v.addEventListener('loadeddata', revealVideo);
-                                v.addEventListener('playing', revealVideo);
-
+                                if (!globalMuted) v.volume = 1;
                                 el.appendChild(v);
-                                el.dataset.tiktokState = 'video-ready';
  
                                 const slide = el.closest('.tiktok-slide');
                                 const muteBtn = slide?.querySelector('.video-mute-btn');
@@ -1335,22 +1253,26 @@ document.addEventListener('DOMContentLoaded', () => {
                                         el.innerHTML = '';
                                         el.dataset.tiktokState = 'loading';
                                         resolveWithRetry(retryCount + 1, true);
-                                    } else if (j.cover) {
-                                        el.innerHTML = '';
-                                        const rawCover = j.cover;
-                                        const imgUrl = rawCover.startsWith('http') ? `${API_URL}/proxy?url=${encodeURIComponent(rawCover)}&type=image` : rawCover;
-                                        const img = document.createElement('img');
-                                        img.src = imgUrl;
-                                        img.alt = j.title || 'Preset';
-                                        img.setAttribute('referrerpolicy', 'no-referrer');
-                                        el.appendChild(img);
-                                        el.dataset.tiktokState = 'ready';
                                     } else {
-                                        el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
-                                        el.dataset.tiktokState = 'error';
+                                        const videoId = j.id || getTikTokId(src);
+                                        if (videoId) {
+                                            el.innerHTML = `<iframe src="https://www.tiktok.com/embed/${videoId}" style="width:100%; height:100%; border:none;" allow="autoplay; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+                                            el.dataset.tiktokState = 'ready';
+                                        } else if (j.cover) {
+                                            el.innerHTML = '';
+                                            const img = document.createElement('img');
+                                            img.src = j.cover;
+                                            img.alt = j.title || 'Preset';
+                                            img.setAttribute('referrerpolicy', 'no-referrer');
+                                            el.appendChild(img);
+                                            el.dataset.tiktokState = 'ready';
+                                        } else {
+                                            el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
+                                            el.dataset.tiktokState = 'error';
+                                        }
                                     }
                                 };
-
+ 
                                 v.play().catch((err) => {
                                     v.muted = true;
                                     if (muteBtn) {
@@ -1411,13 +1333,23 @@ document.addEventListener('DOMContentLoaded', () => {
         amResetVideoFrame(slide);
     };
 
-    const pauseSlideVideo = (slide) => {
+    const unloadSlideVideo = (slide) => {
         if (!slide) return;
         slide.querySelectorAll('video').forEach(v => {
             try {
-                if (!v.paused) v.pause();
+                v.pause();
+                if (v.src) v.dataset.originalSrc = v.src;
+                v.removeAttribute('src');
+                v.load();
             } catch (_) {}
         });
+        const host = slide.querySelector('.tiktok-media-host');
+        if (host) {
+            host.removeAttribute('data-tiktok-state');
+            host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
+        }
+        const pauseIcon = slide.querySelector('.overlay-pause');
+        if (pauseIcon) pauseIcon.textContent = 'pause';
     };
 
     const ensureSlideVideoLoaded = (slide) => {
@@ -1461,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const s = slides[i];
                 if (s === bestSlide) continue;
                 if (s.dataset.id) resetAmXmlSlide(s);
-                pauseSlideVideo(s);
+                unloadSlideVideo(s);
             }
 
             scrollRoot.querySelectorAll(`${slideSelector} video`).forEach(v => {

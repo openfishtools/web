@@ -81,8 +81,7 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
-    // Bypass API requests and all cross-origin external requests (e.g. tikcdn.io, tiktokcdn.com, saweria.co)
-    if (url.pathname.startsWith('/api/') || url.origin !== self.location.origin) return;
+    if (url.pathname.startsWith('/api/')) return;
 
     if (event.request.mode === 'navigate') {
         event.respondWith(
