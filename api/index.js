@@ -643,25 +643,20 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         let result = null;
         let lastError = null;
 
-        // Method 1: Try TikWM API mirrors
+        // Method 1: Try TikWM API mirror (free, no API key required)
         const mirrors = [
-            `https://api.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
             `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
         ];
-        const apiKey = process.env.TIKWM_API_KEY;
 
         for (let idx = 0; idx < mirrors.length; idx++) {
             const upstream = mirrors[idx];
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 4000);
+                const timeout = setTimeout(() => controller.abort(), 12000);
                 
                 const fetchOptions = {
                     headers: { 'User-Agent': 'Mozilla/5.0' }
                 };
-                if (apiKey) {
-                    fetchOptions.headers['x-api-key'] = apiKey;
-                }
                 
                 const r = await fetch(upstream, { ...fetchOptions, signal: controller.signal });
                 clearTimeout(timeout);
