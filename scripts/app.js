@@ -4,6 +4,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
     let globalMuted = false;
     let loadedPresetsCache = [];
+    let feedPresets = [];
+    let feedBuiltCount = 0;
+    let feedLazyHandler = null;
+    let explorePresets = [];
+    let exploreBuiltCount = 0;
+    let tiktokResolveQueue = Promise.resolve();
+    const enqueueTikTokResolve = (task) => {
+        const run = tiktokResolveQueue.then(task, task);
+        tiktokResolveQueue = run.then(
+            () => new Promise(res => setTimeout(res, 500)),
+            () => new Promise(res => setTimeout(res, 500))
+        );
+        return run;
+    };
+
+    let tiktokThumbQueue = Promise.resolve();
+    const enqueueTikTokThumb = (task) => {
+        const run = tiktokThumbQueue.then(task, task);
+        tiktokThumbQueue = run.then(
+            () => new Promise(res => setTimeout(res, 60)),
+            () => new Promise(res => setTimeout(res, 60))
+        );
+        return run;
+    };
 
     const safeFetchJson = async (url, options) => {
         try {
@@ -860,18 +884,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 const v = host.querySelector('video');
                 if (v) {
                     v.pause();
-                    v.src = '';
+                    v.removeAttribute('src');
                     try { v.load(); } catch(e){}
                 }
                 const iframe = host.querySelector('iframe');
                 if (iframe) iframe.src = '';
-                host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
+                host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span><span class="tiktok-skel-log" data-skel-log>Fetching video playback</span></div>';
                 delete host.dataset.tiktokState;
             });
+            presetFeedView.querySelectorAll('.video-mute-btn .material-symbols-rounded').forEach(icon => {
+                icon.textContent = 'volume_off';
+            });
+            presetFeedView.querySelectorAll('.video-interaction-overlay .overlay-pause').forEach(icon => {
+                icon.textContent = 'pause';
+            });
             const feedContainer = document.getElementById('preset-feed');
-            if (feedContainer && feedContainer._scrollVideoIo) {
-                feedContainer._scrollVideoIo.disconnect();
-                feedContainer._scrollVideoIo = null;
+            if (feedContainer) {
+                if (feedContainer._scrollVideoIo) {
+                    feedContainer._scrollVideoIo.disconnect();
+                    feedContainer._scrollVideoIo = null;
+                }
+                if (feedContainer._hydrateIo) {
+                    feedContainer._hydrateIo.disconnect();
+                    feedContainer._hydrateIo = null;
+                }
+                if (feedLazyHandler) {
+                    feedContainer.removeEventListener('scroll', feedLazyHandler);
+                    feedLazyHandler = null;
+                }
+                feedContainer.scrollTop = 0;
             }
         }
 
@@ -923,6 +964,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const foundPreset = loadedPresetsCache.find(p => p._id === targetId || String(p.presetId) === String(targetId));
         const shortOrFullId = foundPreset ? (foundPreset.presetId || foundPreset._id) : targetId;
         history.pushState(null, null, `/${shortOrFullId}`);
+
+        if (feedContainer) {
+            const targetIdx = feedPresets.findIndex(p => p._id === targetId || String(p.presetId) === String(targetId));
+            if (targetIdx >= feedBuiltCount) {
+                const chunk = feedPresets.slice(feedBuiltCount, targetIdx + 1).map(buildFeedSlideHtml).join('');
+                feedContainer.insertAdjacentHTML('beforeend', chunk);
+                feedBuiltCount = targetIdx + 1;
+                setupTikTokInteractions(feedContainer);
+                updateScrollingTitles(feedContainer);
+            }
+        }
 
         lastClickedId = targetId;
         lastClickedRect = clickedEl ? clickedEl.getBoundingClientRect() : null;
@@ -1157,9 +1209,81 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<video src="${escapeHtmlAttr(m)}" muted loop playsinline autoplay crossorigin="anonymous" referrerpolicy="no-referrer"></video>`;
         }
         if (isTikTokLikeUrl(m)) {
-            return `<div class="tiktok-media-host" data-tiktok-url="${escapeHtmlAttr(m)}" role="group" aria-label="${label}"><div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div></div>`;
+            return `<div class="tiktok-media-host" data-tiktok-url="${escapeHtmlAttr(m)}" role="group" aria-label="${label}"><div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span><span class="tiktok-skel-log" data-skel-log>Fetching video playback</span></div></div>`;
         }
         return `<img src="${escapeHtmlAttr(m)}" alt="${label}" referrerpolicy="no-referrer">`;
+    };
+
+    const buildFeedSlideHtml = (p) => {
+        const dsa = escapeHtmlAttr;
+        const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+        const swIconsHtml = swArr.map(sw => {
+            const icon = badgeIcons[sw];
+            return icon ? `<img src="${icon}" class="tiktok-title-icon" alt="${sw}">` : '';
+        }).join('');
+        const swArr2 = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
+        const hasAmXml = swArr2.includes('AM') && !!p.amXmlUrl;
+        const xmlAttr = hasAmXml ? `data-am-xml-url="${dsa(p.amXmlUrl)}"` : '';
+
+        return `
+        <article class="tiktok-slide preset-post"
+            data-id="${p._id}"
+            data-short-id="${p.presetId || p._id}"
+            data-name="${dsa(p.name)}"
+            data-size="${dsa(p.size)}"
+            data-type="${dsa(p.type)}"
+            data-version="${dsa(p.version)}"
+            data-software="${dsa(Array.isArray(p.software) ? p.software.join(',') : (p.software || ''))}"
+            ${xmlAttr}>
+            <div class="tiktok-slide-media post-media-container">
+                ${presetMediaInnerHtml(p.media, p.name)}
+                <div class="tiktok-slide-gradient" aria-hidden="true"></div>
+                <button type="button" class="video-mute-btn" aria-label="Toggle mute" style="position: absolute; top: max(12px, env(safe-area-inset-top, 12px)); right: 12px; z-index: 160; background: rgba(0, 0, 0, 0.45); border: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;">
+                    <span class="material-symbols-rounded" style="font-size: 24px;">volume_off</span>
+                </button>
+                ${!hasAmXml ? `<div class="video-interaction-overlay"><span class="material-symbols-rounded overlay-pause">pause</span></div>` : ''}
+            </div>
+            ${hasAmXml ? `<div class="am-xml-loading-badge">
+                <span class="material-symbols-rounded spin" style="font-size:16px">sync</span>
+                <span class="am-xml-badge-text">Loading AM Preview...</span>
+            </div>` : ''}
+            ${hasAmXml ? '<div class="am-xml-overlay"></div>' : ''}
+            <div class="tiktok-slide-ui">
+                <div class="tiktok-rail">
+                    <button type="button" class="tiktok-rail-btn action-btn ${p.liked ? 'liked' : ''}" data-action="like">
+                        <span class="material-symbols-rounded">${p.liked ? 'favorite' : 'favorite_border'}</span>
+                        <span class="action-label">${p.likes || 0}</span>
+                    </button>
+                    <button type="button" class="tiktok-rail-btn action-btn" data-action="source">
+                        <span class="material-symbols-rounded">open_in_new</span>
+                        <span class="action-label">Source</span>
+                    </button>
+                </div>
+                <div class="tiktok-bottom">
+                    <div class="tiktok-info">
+                        <div class="tiktok-title-row">
+                            <div class="tiktok-title-icons">${swIconsHtml}</div>
+                            <div class="tiktok-title-wrapper">
+                                <h3 class="tiktok-title">${dsa(p.name)}</h3>
+                            </div>
+                        </div>
+                        <div class="tiktok-meta">
+                            <div class="meta-item">
+                                <span>${dsa(p.size || 'N/A')}</span>
+                            </div>
+                            <span class="meta-dot">•</span>
+                            <div class="meta-item">
+                                <span>${dsa(p.version || 'v1.0')}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="tiktok-download-btn-full" data-action="download">
+                        Download
+                    </button>
+                </div>
+            </div>
+        </article>
+    `;
     };
 
     const hydrateTikTokHosts = async (root, mode = 'video') => {
@@ -1181,11 +1305,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!src) return;
                 
                  el.dataset.tiktokState = 'loading';
-                
+
+                const setSkelLog = (msg) => {
+                    const logEl = el.querySelector('[data-skel-log]');
+                    if (logEl) logEl.textContent = msg;
+                };
+
+                const resolveThumbnail = async () => {
+                    try {
+                        setSkelLog('Fetching video thumbnail');
+                        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(src)}`;
+                        const r = await enqueueTikTokThumb(() => fetch(`${API_URL}/proxy?url=${encodeURIComponent(oembedUrl)}`));
+                        const j = await r.json().catch(() => ({}));
+                        if (!r.ok || !j.thumbnail_url) {
+                            el.dataset.tiktokState = 'error';
+                            el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
+                        } else {
+                            setSkelLog('Loading thumbnail');
+                            el.innerHTML = '';
+                            const img = document.createElement('img');
+                            img.src = j.thumbnail_url;
+                            img.alt = j.title || 'Preset';
+                            img.setAttribute('referrerpolicy', 'no-referrer');
+                            el.appendChild(img);
+                            el.dataset.tiktokState = 'ready';
+                        }
+                    } catch (err) {
+                        el.dataset.tiktokState = 'error';
+                        el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
+                    }
+                };
+
                 const resolveWithRetry = async (retryCount = 0, bypassCache = false) => {
                     try {
+                        setSkelLog(retryCount > 0 ? `Retrying video resolve (${retryCount}/3)` : 'Fetching video playback');
                         const url = `${API_URL}/tiktok-resolve?url=${encodeURIComponent(src)}${bypassCache ? '&nocache=1' : ''}`;
-                        const r = await fetch(url);
+                        const r = await enqueueTikTokResolve(() => fetch(url));
                         if (r.status === 404 && retryCount < 3) {
                             await new Promise(res => setTimeout(res, 1000));
                             return resolveWithRetry(retryCount + 1);
@@ -1197,6 +1352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             el.dataset.tiktokState = 'error';
                             el.innerHTML = '<div class="tiktok-media-error"><span class="material-symbols-rounded">broken_image</span><span>Video unavailable</span></div>';
                         } else {
+                            setSkelLog('Loading video stream');
                             el.innerHTML = '';
                             if ((mode === 'image' || j.is_fallback) && j.cover) {
                                 const img = document.createElement('img');
@@ -1293,7 +1449,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
-                await resolveWithRetry();
+                if (mode === 'image') {
+                    await resolveThumbnail();
+                } else {
+                    await resolveWithRetry();
+                }
                 io.unobserve(el);
             });
         }, { threshold: 0.1 });
@@ -1346,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const host = slide.querySelector('.tiktok-media-host');
         if (host) {
             host.removeAttribute('data-tiktok-state');
-            host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span></div>';
+            host.innerHTML = '<div class="tiktok-media-skeleton"><span class="material-symbols-rounded tiktok-skel-icon">smart_display</span><span class="tiktok-skel-log" data-skel-log>Fetching video playback</span></div>';
         }
         const pauseIcon = slide.querySelector('.overlay-pause');
         if (pauseIcon) pauseIcon.textContent = 'pause';
@@ -2125,9 +2285,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (feedContainer) disconnectScrollVideoIo(feedContainer);
         
         if (presets.length === 0) {
+            if (exploreGrid._exploreScrollRoot) {
+                exploreGrid._exploreScrollRoot.removeEventListener('scroll', exploreGrid._exploreLazyHandler);
+            }
             exploreGrid.innerHTML = `<div class="empty-state">No presets found for ${filterSoftware}</div>`;
         } else {
-            exploreGrid.innerHTML = presets.map(p => {
+            const exploreItemHtml = (p) => {
                 const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
                 const badgesHtml = swArr.map(sw => {
                     const icon = badgeIcons[sw];
@@ -2146,81 +2309,69 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
-            }).join('');
-            exploreGrid.setAttribute('data-loaded', 'true');
+            };
+            const appendExploreItems = (count) => {
+                if (!exploreGrid || exploreBuiltCount >= explorePresets.length) return false;
+                const chunk = explorePresets.slice(exploreBuiltCount, exploreBuiltCount + count);
+                if (!chunk.length) return false;
+                exploreGrid.insertAdjacentHTML('beforeend', chunk.map(exploreItemHtml).join(''));
+                exploreBuiltCount += chunk.length;
+                hydrateTikTokHosts(exploreGrid, 'image');
+                return exploreBuiltCount < explorePresets.length;
+            };
+            const presetSection = document.getElementById('preset');
+            if (exploreGrid._exploreScrollRoot) {
+                exploreGrid._exploreScrollRoot.removeEventListener('scroll', exploreGrid._exploreLazyHandler);
+            }
+            explorePresets = presets.slice();
+            exploreBuiltCount = 0;
+            exploreGrid.innerHTML = '';
+            appendExploreItems(4);
+            let exploreLastTriggerY = 0;
+            let exploreLastLoadAt = 0;
+            const onExploreLazyScroll = () => {
+                if (!exploreGrid || exploreBuiltCount >= explorePresets.length) return;
+                const now = Date.now();
+                if (now - exploreLastLoadAt < 600) return;
+                const scrollRoot = presetSection || exploreGrid;
+                const bottom = scrollRoot.scrollTop + scrollRoot.clientHeight;
+                if (bottom >= scrollRoot.scrollHeight - 400 && scrollRoot.scrollTop > exploreLastTriggerY) {
+                    exploreLastTriggerY = scrollRoot.scrollTop;
+                    exploreLastLoadAt = now;
+                    appendExploreItems(4);
+                }
+            };
+            (presetSection || exploreGrid).addEventListener('scroll', onExploreLazyScroll, { passive: true });
+            exploreGrid._exploreScrollRoot = presetSection || exploreGrid;
+            exploreGrid._exploreLazyHandler = onExploreLazyScroll;
         }
         if (feedContainer) {
-            const dsa = escapeHtmlAttr;
-            feedContainer.innerHTML = presets.map((p) => {
-                const swArr = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
-                const swIconsHtml = swArr.map(sw => {
-                    const icon = badgeIcons[sw];
-                    return icon ? `<img src="${icon}" class="tiktok-title-icon" alt="${sw}">` : '';
-                }).join('');
-                const swArr2 = Array.isArray(p.software) ? p.software : (p.software ? [p.software] : []);
-                const hasAmXml = swArr2.includes('AM') && !!p.amXmlUrl;
-                const xmlAttr = hasAmXml ? `data-am-xml-url="${dsa(p.amXmlUrl)}"` : '';
-
-                return `
-                <article class="tiktok-slide preset-post"
-                    data-id="${p._id}"
-                    data-short-id="${p.presetId || p._id}"
-                    data-name="${dsa(p.name)}"
-                    data-size="${dsa(p.size)}"
-                    data-type="${dsa(p.type)}"
-                    data-version="${dsa(p.version)}"
-                    data-software="${dsa(Array.isArray(p.software) ? p.software.join(',') : (p.software || ''))}"
-                    ${xmlAttr}>
-                    <div class="tiktok-slide-media post-media-container">
-                        ${presetMediaInnerHtml(p.media, p.name)}
-                        <div class="tiktok-slide-gradient" aria-hidden="true"></div>
-                        <button type="button" class="video-mute-btn" aria-label="Toggle mute" style="position: absolute; top: max(12px, env(safe-area-inset-top, 12px)); right: 12px; z-index: 160; background: rgba(0, 0, 0, 0.45); border: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;">
-                            <span class="material-symbols-rounded" style="font-size: 24px;">volume_off</span>
-                        </button>
-                        ${!hasAmXml ? `<div class="video-interaction-overlay"><span class="material-symbols-rounded overlay-pause">pause</span></div>` : ''}
-                    </div>
-                    ${hasAmXml ? `<div class="am-xml-loading-badge">
-                        <span class="material-symbols-rounded spin" style="font-size:16px">sync</span>
-                        <span class="am-xml-badge-text">Loading AM Preview...</span>
-                    </div>` : ''}
-                    ${hasAmXml ? '<div class="am-xml-overlay"></div>' : ''}
-                    <div class="tiktok-slide-ui">
-                        <div class="tiktok-rail">
-                            <button type="button" class="tiktok-rail-btn action-btn ${p.liked ? 'liked' : ''}" data-action="like">
-                                <span class="material-symbols-rounded">${p.liked ? 'favorite' : 'favorite_border'}</span>
-                                <span class="action-label">${p.likes || 0}</span>
-                            </button>
-                            <button type="button" class="tiktok-rail-btn action-btn" data-action="source">
-                                <span class="material-symbols-rounded">open_in_new</span>
-                                <span class="action-label">Source</span>
-                            </button>
-                        </div>
-                        <div class="tiktok-bottom">
-                            <div class="tiktok-info">
-                                <div class="tiktok-title-row">
-                                    <div class="tiktok-title-icons">${swIconsHtml}</div>
-                                    <div class="tiktok-title-wrapper">
-                                        <h3 class="tiktok-title">${dsa(p.name)}</h3>
-                                    </div>
-                                </div>
-                                <div class="tiktok-meta">
-                                    <div class="meta-item">
-                                        <span>${dsa(p.size || 'N/A')}</span>
-                                    </div>
-                                    <span class="meta-dot">•</span>
-                                    <div class="meta-item">
-                                        <span>${dsa(p.version || 'v1.0')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" class="tiktok-download-btn-full" data-action="download">
-                                Download
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            `;
-            }).join('');
+            const appendFeedSlides = (count) => {
+                if (!feedContainer || feedBuiltCount >= feedPresets.length) return false;
+                const chunk = feedPresets.slice(feedBuiltCount, feedBuiltCount + count);
+                if (!chunk.length) return false;
+                feedContainer.insertAdjacentHTML('beforeend', chunk.map(buildFeedSlideHtml).join(''));
+                feedBuiltCount += chunk.length;
+                setupTikTokInteractions(feedContainer);
+                updateScrollingTitles(feedContainer);
+                hydrateTikTokHosts(feedContainer, 'video');
+                return feedBuiltCount < feedPresets.length;
+            };
+            feedPresets = presets.slice();
+            feedBuiltCount = 0;
+            feedContainer.innerHTML = '';
+            appendFeedSlides(3);
+            const onFeedLazyScroll = () => {
+                if (!feedContainer || feedBuiltCount >= feedPresets.length) return;
+                const nearBottom = feedContainer.scrollTop + feedContainer.clientHeight >= feedContainer.scrollHeight - 600;
+                if (nearBottom) appendFeedSlides(3);
+            };
+            if (feedLazyHandler) {
+                feedContainer.removeEventListener('scroll', feedLazyHandler);
+                feedLazyHandler = null;
+            }
+            feedContainer.addEventListener('scroll', onFeedLazyScroll, { passive: true });
+            feedLazyHandler = onFeedLazyScroll;
         }
         await hydrateTikTokHosts(exploreGrid, 'image');
         await hydrateTikTokHosts(feedContainer, 'video');
