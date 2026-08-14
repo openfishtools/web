@@ -57,17 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.classList.add('hidden');
         
         let mirrorStep = 1;
-        showStatus("Fetching video details (trying mirror 1)...");
+        showStatus("Fetching video details (trying mirror 1: TikWM)...");
         const statusTimer = setInterval(() => {
             mirrorStep++;
             if (mirrorStep === 2) {
-                showStatus("Trying mirror 2 (SSSTik)...");
-            } else if (mirrorStep === 3) {
-                showStatus("Trying mirror 3 (TikWM)...");
-            } else if (mirrorStep >= 4) {
-                showStatus("Trying mirror 4 (Direct extract)...");
+                showStatus("Trying mirror 2 (Direct extract)...");
+            } else if (mirrorStep >= 3) {
+                showStatus("Trying mirror 3 (SSSTik)...");
             }
-        }, 3100);
+        }, 5100);
 
         try {
             const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);

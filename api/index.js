@@ -605,7 +605,8 @@ async function extractFromSSSTik(pageUrl) {
             play: playUrl,
             hdplay: hdMatch ? hdMatch[1] : playUrl,
             wmplay: '',
-            cover: coverMatch ? coverMatch[1] : '',
+            cover: '', // Do NOT use SSSTik avatar picture as video cover!
+            author_avatar: coverMatch ? coverMatch[1] : '',
             title: titleMatch ? titleMatch[1].trim() : '',
             author_unique_id: authorHandleMatch ? authorHandleMatch[1] : '',
             author_nickname: nicknameMatch ? nicknameMatch[1].trim() : '',
@@ -625,11 +626,11 @@ async function extractFromSSSTik(pageUrl) {
 async function extractTikTokFromPage(pageUrl) {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
+        const timeout = setTimeout(() => controller.abort(), 6000);
         
         const pageResponse = await fetch(pageUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
             },
             signal: controller.signal
         });
@@ -660,7 +661,7 @@ async function extractTikTokFromPage(pageUrl) {
             play: videoData.downloadAddr || videoData.playAddr || '',
             hdplay: videoData.playAddr || videoData.downloadAddr || '',
             wmplay: '',
-            cover: videoData.dynamicCover || videoData.originCover || '',
+            cover: videoData.dynamicCover || videoData.originCover || videoData.cover || '',
             title: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.desc || '',
             author_unique_id: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.uniqueId || '',
             author_nickname: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.nickname || '',
@@ -787,7 +788,7 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
         if (apiKey) {
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 3000);
+                const timeout = setTimeout(() => controller.abort(), 8000);
                 const r = await fetch(`https://tikwmapi.com/api/?key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(pageUrl)}`, {
                     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
                     signal: controller.signal
@@ -818,16 +819,7 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
             }
         }
 
-        // Method 2: SSSTik Resolver (High Speed & Reliability)
-        if (!result) {
-            try {
-                result = await extractFromSSSTik(pageUrl);
-            } catch (e) {
-                lastError = `SSSTik: ${e.message}`;
-            }
-        }
-
-        // Method 3: Free TikWM Mirrors
+        // Method 2: Free TikWM Mirrors (Rich metadata: Cover, Duration, Size, Author)
         if (!result) {
             const mirrors = [
                 { url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
@@ -841,7 +833,7 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
                 const mirror = mirrors[idx];
                 try {
                     const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 3000);
+                    const timeout = setTimeout(() => controller.abort(), 8000);
                     
                     const fetchHeaders = {
                         'User-Agent': browserUserAgent,
@@ -891,7 +883,7 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
             }
         }
 
-        // Method 4: Direct TikTok Page Extraction Fallback
+        // Method 3: Direct TikTok Page Extraction (Rich metadata fallback)
         if (!result) {
             try {
                 result = await extractTikTokFromPage(pageUrl);
@@ -901,6 +893,27 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
                 }
             } catch (e) {
                 lastError = `Direct Extract: ${e.message}`;
+            }
+        }
+
+        // Method 4: SSSTik Resolver (Stream fallback)
+        if (!result) {
+            try {
+                result = await extractFromSSSTik(pageUrl);
+                if (result) {
+                    // Enrich SSSTik result with direct page metadata if possible
+                    const pageMeta = await extractTikTokFromPage(pageUrl).catch(() => null);
+                    if (pageMeta) {
+                        if (pageMeta.cover) result.cover = pageMeta.cover;
+                        if (pageMeta.duration) result.duration = pageMeta.duration;
+                        if (pageMeta.w) result.w = pageMeta.w;
+                        if (pageMeta.h) result.h = pageMeta.h;
+                        if (pageMeta.author_unique_id) result.author_unique_id = pageMeta.author_unique_id;
+                        if (pageMeta.author_nickname) result.author_nickname = pageMeta.author_nickname;
+                    }
+                }
+            } catch (e) {
+                lastError = `SSSTik: ${e.message}`;
             }
         }
 

@@ -73,18 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
         btnDownload.textContent = "Loading...";
 
         let mirrorStep = 1;
-        showStatus("Fetching video details (trying mirror 1)...");
+        showStatus("Fetching video details (trying mirror 1: TikWM)...");
         if (statusTimer) clearInterval(statusTimer);
         statusTimer = setInterval(() => {
             mirrorStep++;
             if (mirrorStep === 2) {
-                showStatus("Trying mirror 2 (SSSTik)...");
-            } else if (mirrorStep === 3) {
-                showStatus("Trying mirror 3 (TikWM)...");
-            } else if (mirrorStep >= 4) {
-                showStatus("Trying mirror 4 (Direct extract)...");
+                showStatus("Trying mirror 2 (Direct extract)...");
+            } else if (mirrorStep >= 3) {
+                showStatus("Trying mirror 3 (SSSTik)...");
             }
-        }, 3100);
+        }, 5100);
 
         progressContainer.classList.add('hidden');
         setProgress(0);
@@ -111,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
-            showStatus(err.message || "Download failed.", "var(--md-sys-color-error)");
+            showStatus(err.message || "Download failed.", "var(--md-sys-color-error)", "var(--md-sys-color-error)");
             progressContainer.classList.add('hidden');
             startCooldown(3);
         } finally {
