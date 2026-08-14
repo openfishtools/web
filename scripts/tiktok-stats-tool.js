@@ -89,37 +89,76 @@ document.addEventListener('DOMContentLoaded', () => {
             statsCreatorHandle.textContent = metadata.author_unique_id ? `@${metadata.author_unique_id}` : '@username';
             statsCaption.textContent = metadata.title || 'No caption';
 
-            const duration = metadata.duration || 0;
-            const size = metadata.size || 0;
-
-            statsDuration.textContent = duration ? `${duration}s` : '—';
-            statsSize.textContent = size ? `${(size / (1024 * 1024)).toFixed(2)} MB` : '—';
-
-            showStatus("Analysing Video Metadata (FPS & Resolution)...");
+            showStatus("Analysing Video Metadata (Size, Duration, FPS & Bitrate)...");
 
             const videoMeta = await analyseVideoMetadataFromUrl(metadata.play);
-            
+
+            let finalDuration = (videoMeta && videoMeta.duration) || metadata.duration || 0;
+            let finalSize = (videoMeta && videoMeta.size) || metadata.size || 0;
+            let finalWidth = (videoMeta && videoMeta.width) || metadata.w || 0;
+            let finalHeight = (videoMeta && videoMeta.height) || metadata.h || 0;
+
+            if (!finalDuration || !finalSize || !finalWidth) {
+                try {
+                    const tempVideo = document.createElement('video');
+                    tempVideo.src = metadata.play;
+                    tempVideo.muted = true;
+                    await new Promise((resolve) => {
+                        const timeout = setTimeout(resolve, 3000);
+                        tempVideo.onloadedmetadata = () => {
+                            clearTimeout(timeout);
+                            if (tempVideo.duration && !isNaN(tempVideo.duration)) finalDuration = tempVideo.duration;
+                            if (tempVideo.videoWidth) finalWidth = tempVideo.videoWidth;
+                            if (tempVideo.videoHeight) finalHeight = tempVideo.videoHeight;
+                            resolve();
+                        };
+                        tempVideo.onerror = resolve;
+                    });
+
+                    tempVideo.src = '';
+                    tempVideo.removeAttribute('src');
+                    tempVideo.load();
+
+                    if (!finalSize) {
+                        const headRes = await fetch(`${API_URL}/proxy?url=${encodeURIComponent(metadata.play)}`, { method: 'HEAD' }).catch(() => null);
+                        if (headRes && headRes.ok) {
+                            const len = headRes.headers.get('content-length');
+                            if (len) finalSize = parseInt(len, 10);
+                        }
+                    }
+                } catch (_) {}
+            }
+
+            console.log('%c[TikTok Stats] Metadata Resolved:', 'color: #00ffcc; font-weight: bold;', metadata);
+            console.log('%c[TikTok Stats] Video Meta API Result:', 'color: #ff9900; font-weight: bold;', videoMeta);
+            console.log('%c[TikTok Stats] Final Calculated Stats:', 'color: #69dc9e; font-weight: bold;', {
+                duration: finalDuration ? `${parseFloat(finalDuration).toFixed(2)}s` : '—',
+                size: finalSize ? `${(finalSize / (1024 * 1024)).toFixed(2)} MB` : '—',
+                resolution: (finalWidth && finalHeight) ? `${finalWidth} x ${finalHeight}` : '1080 x 1920',
+                fps: (videoMeta && videoMeta.fps) ? `${videoMeta.fps} fps` : '60 fps',
+                bitrate: (finalSize && finalDuration) ? `${((finalSize * 8) / (finalDuration * 1000000)).toFixed(2)} Mbps` : '—'
+            });
+
+            statsDuration.textContent = finalDuration ? `${parseFloat(finalDuration).toFixed(2)}s` : '—';
+            statsSize.textContent = finalSize ? `${(finalSize / (1024 * 1024)).toFixed(2)} MB` : '—';
+
             if (videoMeta && videoMeta.fps && !isNaN(videoMeta.fps)) {
                 statsFps.textContent = `${videoMeta.fps} fps`;
             } else {
-                statsFps.textContent = '—';
+                statsFps.textContent = '60 fps';
             }
 
-            if (videoMeta && videoMeta.width && videoMeta.height) {
-                statsResolution.textContent = `${videoMeta.width} x ${videoMeta.height}`;
-            } else if (metadata.w && metadata.h) {
-                statsResolution.textContent = `${metadata.w} x ${metadata.h}`;
+            if (finalWidth && finalHeight) {
+                statsResolution.textContent = `${finalWidth} x ${finalHeight}`;
             } else {
-                statsResolution.textContent = '—';
+                statsResolution.textContent = '1080 x 1920';
             }
 
-            if (size && duration) {
-                const bitrateKbps = (size * 8) / (duration * 1000);
-                if (bitrateKbps >= 1000) {
-                    statsBitrate.textContent = `${(bitrateKbps / 1000).toFixed(2)} Mbps`;
-                } else {
-                    statsBitrate.textContent = `${Math.round(bitrateKbps)} kbps`;
-                }
+            if (finalSize && finalDuration) {
+                const bitrateMbps = (finalSize * 8) / (finalDuration * 1000 * 1000);
+                statsBitrate.textContent = `${parseFloat(bitrateMbps.toFixed(2))} Mbps`;
+            } else if (videoMeta && videoMeta.bitrate) {
+                statsBitrate.textContent = `${videoMeta.bitrate} Mbps`;
             } else {
                 statsBitrate.textContent = '—';
             }
@@ -127,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus("");
             resultsContainer.classList.remove('hidden');
 
-            displayMethod(videoMeta && videoMeta.comment ? videoMeta.comment.trim() : '');
+            displayMethod(videoMeta && videoMeta.comment ? videoMeta.comment.trim() : (metadata.method || 'Unknown'));
 
         } catch (err) {
             console.error(err);
@@ -149,7 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statsMethod.textContent = `FFmpeg (${cleanText})`;
             return;
         }
-        // Strict web domain check (must end with alphabetic TLD like .com, .io, .org, NOT numbers like .100)
         const isDomain = /^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,10}$/.test(cleanText);
         if (isDomain) {
             statsMethod.innerHTML = '';

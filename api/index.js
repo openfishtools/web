@@ -13,24 +13,26 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 if (dns.setDefaultResultOrder) {
     dns.setDefaultResultOrder('ipv4first');
 }
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
+const { Readable } = require('stream');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
 
 const app = express();
 app.use(cors());
-const fs = require('fs');
 app.use(express.json());
 
-// Set security headers for WebGPU / SharedArrayBuffer
+// Set security headers for cross-origin resources
 app.use((req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
 });
 
@@ -41,9 +43,6 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..')));
 
-/**
- * Returns dynamic version & build date details based on Vercel environment or file stat
- */
 function getDynamicBuildInfo() {
     const commitSha = process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7) : null;
     const deploymentId = process.env.VERCEL_DEPLOYMENT_ID ? process.env.VERCEL_DEPLOYMENT_ID.substring(0, 7) : null;
@@ -539,86 +538,90 @@ function isAllowedTikTokMediaUrl(rawUrl) {
 }
 
 async function extractFromSSSTik(pageUrl) {
-    try {
-        const homeController = new AbortController();
-        const homeTimeout = setTimeout(() => homeController.abort(), 3000);
-        
-        const homeRes = await fetch('https://ssstik.io/en', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-            },
-            signal: homeController.signal
-        });
-        clearTimeout(homeTimeout);
-        
-        const homeHtml = await homeRes.text();
-        const ttMatch = homeHtml.match(/s_tt\s*=\s*["']([^"']+)["']/i) || homeHtml.match(/name="tt"\s+value="([^"]+)"/i);
-        const tt = ttMatch ? ttMatch[1] : '1';
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            const homeController = new AbortController();
+            const homeTimeout = setTimeout(() => homeController.abort(), 5000);
+            
+            const homeRes = await fetch('https://ssstik.io/en', {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                signal: homeController.signal
+            });
+            clearTimeout(homeTimeout);
+            
+            const homeHtml = await homeRes.text();
+            const ttMatch = homeHtml.match(/s_tt\s*=\s*["']([^"']+)["']/i) || homeHtml.match(/name="tt"\s+value="([^"]+)"/i);
+            const tt = ttMatch ? ttMatch[1] : '1';
 
-        let cookieHeader = '';
-        if (typeof homeRes.headers.getSetCookie === 'function') {
-            cookieHeader = homeRes.headers.getSetCookie().join('; ');
-        } else {
-            cookieHeader = homeRes.headers.get('set-cookie') || '';
+            let cookieHeader = '';
+            if (typeof homeRes.headers.getSetCookie === 'function') {
+                cookieHeader = homeRes.headers.getSetCookie().join('; ');
+            } else {
+                cookieHeader = homeRes.headers.get('set-cookie') || '';
+            }
+
+            const dlController = new AbortController();
+            const dlTimeout = setTimeout(() => dlController.abort(), 5000);
+
+            const fetchHeaders = {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Referer': 'https://ssstik.io/en',
+                'Origin': 'https://ssstik.io'
+            };
+            if (cookieHeader) fetchHeaders['Cookie'] = cookieHeader;
+
+            const res = await fetch('https://ssstik.io/abc?url=dl', {
+                method: 'POST',
+                headers: fetchHeaders,
+                body: new URLSearchParams({ id: pageUrl, locale: 'en', tt: tt }),
+                signal: dlController.signal
+            });
+            clearTimeout(dlTimeout);
+
+            if (res.ok) {
+                const html = await res.text();
+                const downloadMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*without_watermark/i) || 
+                                      html.match(/href="(https:\/\/[^"]+)"[^>]*download/i) ||
+                                      html.match(/href="(https:\/\/tikcdn\.io\/[^\"]+)"/i);
+
+                if (downloadMatch) {
+                    const playUrl = downloadMatch[1];
+                    const hdMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*direct/i);
+                    const coverMatch = html.match(/class="result_author"[^>]*src="([^"]+)"/i);
+                    const nicknameMatch = html.match(/<h2>([^<]+)<\/h2>/i);
+                    const titleMatch = html.match(/<p class="maintext">([^<]*)<\/p>/i);
+                    const videoIdMatch = pageUrl.match(/\/video\/(\d+)/);
+                    const authorHandleMatch = pageUrl.match(/@([a-zA-Z0-9._-]+)/);
+
+                    return {
+                        id: videoIdMatch ? videoIdMatch[1] : '',
+                        play: playUrl,
+                        hdplay: hdMatch ? hdMatch[1] : playUrl,
+                        wmplay: '',
+                        cover: '', // Do NOT use SSSTik avatar picture as video cover!
+                        author_avatar: coverMatch ? coverMatch[1] : '',
+                        title: titleMatch ? titleMatch[1].trim() : '',
+                        author_unique_id: authorHandleMatch ? authorHandleMatch[1] : '',
+                        author_nickname: nicknameMatch ? nicknameMatch[1].trim() : '',
+                        size: 0,
+                        duration: 0,
+                        w: 0,
+                        h: 0,
+                        is_fallback: false,
+                        method: 'ssstik'
+                    };
+                }
+            }
+        } catch (e) {
+            console.error(`[SSSTik Extract Attempt ${attempt}] Error:`, e.message);
         }
-
-        const dlController = new AbortController();
-        const dlTimeout = setTimeout(() => dlController.abort(), 3000);
-
-        const fetchHeaders = {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Referer': 'https://ssstik.io/en',
-            'Origin': 'https://ssstik.io'
-        };
-        if (cookieHeader) fetchHeaders['Cookie'] = cookieHeader;
-
-        const res = await fetch('https://ssstik.io/abc?url=dl', {
-            method: 'POST',
-            headers: fetchHeaders,
-            body: new URLSearchParams({ id: pageUrl, locale: 'en', tt: tt }),
-            signal: dlController.signal
-        });
-        clearTimeout(dlTimeout);
-
-        if (!res.ok) return null;
-
-        const html = await res.text();
-        const downloadMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*without_watermark/i) || 
-                              html.match(/href="(https:\/\/[^"]+)"[^>]*download/i) ||
-                              html.match(/href="(https:\/\/tikcdn\.io\/[^\"]+)"/i);
-
-        if (!downloadMatch) return null;
-
-        const playUrl = downloadMatch[1];
-        const hdMatch = html.match(/href="(https:\/\/[^"]+)"[^>]*class="[^\"]*direct/i);
-        const coverMatch = html.match(/class="result_author"[^>]*src="([^"]+)"/i);
-        const nicknameMatch = html.match(/<h2>([^<]+)<\/h2>/i);
-        const titleMatch = html.match(/<p class="maintext">([^<]*)<\/p>/i);
-        const videoIdMatch = pageUrl.match(/\/video\/(\d+)/);
-        const authorHandleMatch = pageUrl.match(/@([a-zA-Z0-9._-]+)/);
-
-        return {
-            id: videoIdMatch ? videoIdMatch[1] : '',
-            play: playUrl,
-            hdplay: hdMatch ? hdMatch[1] : playUrl,
-            wmplay: '',
-            cover: '', // Do NOT use SSSTik avatar picture as video cover!
-            author_avatar: coverMatch ? coverMatch[1] : '',
-            title: titleMatch ? titleMatch[1].trim() : '',
-            author_unique_id: authorHandleMatch ? authorHandleMatch[1] : '',
-            author_nickname: nicknameMatch ? nicknameMatch[1].trim() : '',
-            size: 0,
-            duration: 0,
-            w: 0,
-            h: 0,
-            is_fallback: false,
-            method: 'ssstik'
-        };
-    } catch (e) {
-        console.error('[SSSTik Extract] Error:', e.message);
-        return null;
+        if (attempt < 2) await new Promise(r => setTimeout(r, 300));
     }
+    return null;
 }
 
 async function extractTikTokFromPage(pageUrl) {
@@ -765,7 +768,23 @@ const proxyLimiter = createRateLimiter({
     skip: isThumbnailOrImageUrl
 });
 
+const resolvedVideoCache = new Map();
+function getCachedResolve(urlKey) {
+    const entry = resolvedVideoCache.get(urlKey);
+    if (entry && Date.now() < entry.expireAt) {
+        return entry.data;
+    }
+    if (entry) resolvedVideoCache.delete(urlKey);
+    return null;
+}
+function setCachedResolve(urlKey, data) {
+    if (data && data.play) {
+        resolvedVideoCache.set(urlKey, { data, expireAt: Date.now() + 2 * 3600 * 1000 });
+    }
+}
+
 app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
     let pageUrl = raw.trim();
@@ -776,6 +795,15 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Invalid url' });
     }
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
+
+    const bypassCache = req.query.nocache === '1';
+    if (!bypassCache) {
+        const cached = getCachedResolve(pageUrl);
+        if (cached) {
+            console.log(`[TikTok Resolve API] Serving cached SSSTik video stream for: ${pageUrl}`);
+            return res.json(cached);
+        }
+    }
 
     try {
         let result = null;
@@ -817,106 +845,99 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
             }
         }
 
-        // Method 2: Free TikWM Mirrors (Rich metadata: Cover, Duration, Size, Author)
+        const isVideoMode = req.query.mode === 'video' || req.query.nocache === '1';
+
         if (!result) {
-            const mirrors = [
-                { url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
-                { url: `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
-                { url: `https://www.tikwm.com/api/`, method: 'POST', body: new URLSearchParams({ url: pageUrl, hd: '1' }) }
-            ];
+            if (isVideoMode) {
+                // Video mode: 100% Direct MP4 stream resolution (SSSTik, TikWM, Direct Extract). ZERO oEmbed involved.
+                const ssstikTask = extractFromSSSTik(pageUrl).catch(e => { lastError = `SSSTik: ${e.message}`; return null; });
+                const pageTask = extractTikTokFromPage(pageUrl).catch(e => { lastError = `PageExtract: ${e.message}`; return null; });
+                const tikwmTask = (async () => {
+                    const mirrors = [
+                        { url: `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' },
+                        { url: `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`, method: 'GET' }
+                    ];
+                    for (const mirror of mirrors) {
+                        try {
+                            const controller = new AbortController();
+                            const timeout = setTimeout(() => controller.abort(), 5000);
+                            const r = await fetch(mirror.url, {
+                                method: mirror.method,
+                                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                                signal: controller.signal
+                            });
+                            clearTimeout(timeout);
+                            const json = await r.json().catch(() => ({}));
+                            if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
+                                const d = json.data;
+                                return {
+                                    id: d.id || '',
+                                    play: d.play || d.hdplay || '',
+                                    hdplay: d.hdplay || '',
+                                    wmplay: d.wmplay || '',
+                                    cover: d.cover || d.origin_cover || '',
+                                    title: d.title || '',
+                                    author_unique_id: d.author?.unique_id || '',
+                                    author_nickname: d.author?.nickname || '',
+                                    size: d.size || 0,
+                                    duration: d.duration || 0,
+                                    w: d.w || 0,
+                                    h: d.h || 0,
+                                    is_fallback: false,
+                                    method: 'tikwm'
+                                };
+                            }
+                        } catch (e) {
+                            lastError = `TikWM: ${e.message}`;
+                        }
+                    }
+                    return null;
+                })();
 
-            const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+                const [ssstikRes, pageRes, tikwmRes] = await Promise.all([ssstikTask, pageTask, tikwmTask]);
 
-            for (let idx = 0; idx < mirrors.length; idx++) {
-                const mirror = mirrors[idx];
+                if (ssstikRes && ssstikRes.play) {
+                    result = { ...ssstikRes, is_fallback: false, method: 'ssstik' };
+                } else if (tikwmRes && tikwmRes.play) {
+                    result = { ...tikwmRes, is_fallback: false, method: 'tikwm' };
+                } else if (pageRes && pageRes.play) {
+                    result = { ...pageRes, is_fallback: false, method: 'direct_extract' };
+                }
+            } else {
+                // Thumbnail image mode: Official oEmbed (Fast 80ms cover image)
                 try {
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 8000);
-                    
-                    const fetchHeaders = {
-                        'User-Agent': browserUserAgent,
-                        'Accept': 'application/json, text/plain, */*'
-                    };
-
-                    const fetchOptions = {
-                        method: mirror.method || 'GET',
-                        headers: fetchHeaders,
-                        signal: controller.signal
-                    };
-
-                    if (mirror.method === 'POST' && mirror.body) {
-                        fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
-                        fetchOptions.body = mirror.body;
+                    const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(pageUrl)}`, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                        signal: AbortSignal.timeout(3000)
+                    });
+                    if (r.ok) {
+                        const j = await r.json();
+                        if (j && (j.thumbnail_url || j.title)) {
+                            result = {
+                                id: j.embed_product_id || '',
+                                cover: j.thumbnail_url || '',
+                                title: j.title || '',
+                                author_unique_id: j.author_unique_id || '',
+                                author_nickname: j.author_name || '',
+                                w: j.thumbnail_width || 0,
+                                h: j.thumbnail_height || 0,
+                                play: '',
+                                hdplay: '',
+                                is_fallback: true,
+                                method: 'oembed'
+                            };
+                        }
                     }
-
-                    const r = await fetch(mirror.url, fetchOptions);
-                    clearTimeout(timeout);
-                    const json = await r.json().catch(() => ({}));
-                    
-                    if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
-                        const d = json.data;
-                        result = {
-                            id: d.id || '',
-                            play: d.play || d.hdplay || '',
-                            hdplay: d.hdplay || '',
-                            wmplay: d.wmplay || '',
-                            cover: d.cover || d.origin_cover || '',
-                            title: d.title || '',
-                            author_unique_id: d.author?.unique_id || '',
-                            author_nickname: d.author?.nickname || '',
-                            size: d.size || 0,
-                            duration: d.duration || 0,
-                            w: d.w || 0,
-                            h: d.h || 0,
-                            is_fallback: false,
-                            method: 'tikwm'
-                        };
-                        break;
-                    }
-                    
-                    lastError = `TikWM Mirror ${idx + 1}: ${r.status}`;
-                } catch (e) {
-                    lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
-                }
-            }
-        }
-
-        // Method 3: Direct TikTok Page Extraction (Rich metadata fallback)
-        if (!result) {
-            try {
-                result = await extractTikTokFromPage(pageUrl);
-                if (result) {
-                    result.is_fallback = false;
-                    result.method = 'direct_extract';
-                }
-            } catch (e) {
-                lastError = `Direct Extract: ${e.message}`;
-            }
-        }
-
-        // Method 4: SSSTik Resolver (Stream fallback)
-        if (!result) {
-            try {
-                result = await extractFromSSSTik(pageUrl);
-                if (result) {
-                    // Enrich SSSTik result with direct page metadata if possible
-                    const pageMeta = await extractTikTokFromPage(pageUrl).catch(() => null);
-                    if (pageMeta) {
-                        if (pageMeta.cover) result.cover = pageMeta.cover;
-                        if (pageMeta.duration) result.duration = pageMeta.duration;
-                        if (pageMeta.w) result.w = pageMeta.w;
-                        if (pageMeta.h) result.h = pageMeta.h;
-                        if (pageMeta.author_unique_id) result.author_unique_id = pageMeta.author_unique_id;
-                        if (pageMeta.author_nickname) result.author_nickname = pageMeta.author_nickname;
-                    }
-                }
-            } catch (e) {
-                lastError = `SSSTik: ${e.message}`;
+                } catch (e) {}
             }
         }
 
         // If we got a result, return it
         if (result) {
+            console.log(`[TikTok Resolve API] Resolved ${pageUrl} -> Method: "${result.method || 'unknown'}" | Stream MP4: ${result.play ? 'AVAILABLE' : 'NONE'}`);
+            if (result.play) {
+                setCachedResolve(pageUrl, result);
+            }
             return res.json(result);
         }
 
@@ -930,6 +951,147 @@ app.get('/api/tiktok-resolve', tiktokResolveLimiter, async (req, res) => {
     } catch (err) {
         console.error(`[TikTok Resolve] Unexpected error: ${err.message}`);
         return res.status(500).json({ error: 'Resolve failed', details: err.message });
+    }
+});
+
+app.get('/api/tiktok-fps', async (req, res) => {
+    const videoUrl = req.query.url;
+    if (!videoUrl || typeof videoUrl !== 'string') {
+        return res.status(400).json({ error: 'Missing url parameter' });
+    }
+
+    try {
+        const streamUrl = normalizeProxyUrl(videoUrl);
+        const requestHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://ssstik.io/en'
+        };
+        
+        let contentLength = 0;
+        try {
+            const headRes = await fetch(streamUrl, {
+                method: 'HEAD',
+                headers: requestHeaders,
+                signal: AbortSignal.timeout(4000)
+            });
+            contentLength = parseInt(headRes.headers.get('content-length') || '0', 10);
+        } catch (_) {}
+
+        let durationSec = 0;
+        let width = 0;
+        let height = 0;
+        let fps = 0;
+
+        try {
+            const rangeRes = await fetch(streamUrl, {
+                headers: {
+                    ...requestHeaders,
+                    'Range': 'bytes=0-524288'
+                },
+                signal: AbortSignal.timeout(6000)
+            });
+            
+            if (!contentLength && rangeRes.headers.get('content-range')) {
+                const match = rangeRes.headers.get('content-range').match(/\/(\d+)$/);
+                if (match) contentLength = parseInt(match[1], 10);
+            }
+
+            if (rangeRes.ok) {
+                const buffer = Buffer.from(await rangeRes.arrayBuffer());
+                
+                const mvhdIdx = buffer.indexOf('mvhd');
+                let timescale = 0;
+                let durationUnits = 0;
+                if (mvhdIdx !== -1) {
+                    const version = buffer[mvhdIdx + 4];
+                    if (version === 0 && mvhdIdx + 24 <= buffer.length) {
+                        timescale = buffer.readUInt32BE(mvhdIdx + 16);
+                        durationUnits = buffer.readUInt32BE(mvhdIdx + 20);
+                    } else if (version === 1 && mvhdIdx + 32 <= buffer.length) {
+                        timescale = buffer.readUInt32BE(mvhdIdx + 24);
+                        durationUnits = Number(buffer.readBigUInt64BE(mvhdIdx + 28));
+                    }
+                    if (timescale > 0 && durationUnits > 0) {
+                        durationSec = durationUnits / timescale;
+                    }
+                }
+
+                const tkhdIdx = buffer.indexOf('tkhd');
+                if (tkhdIdx !== -1) {
+                    const version = buffer[tkhdIdx + 4];
+                    const wOffset = version === 0 ? tkhdIdx + 76 : tkhdIdx + 88;
+                    if (wOffset + 8 <= buffer.length) {
+                        const wRaw = buffer.readUInt32BE(wOffset);
+                        const hRaw = buffer.readUInt32BE(wOffset + 4);
+                        const parsedW = Math.round(wRaw / 65536);
+                        const parsedH = Math.round(hRaw / 65536);
+                        if (parsedH >= 360 && parsedH <= 4320) {
+                            height = parsedH;
+                            width = (parsedW >= 240 && parsedW <= 4320) ? parsedW : Math.round((parsedH * 9) / 16);
+                        }
+                    }
+                }
+
+                let comment = '';
+                
+                // 1. Search for vid: video ID tag
+                const vidIdx = buffer.indexOf('vid:v');
+                if (vidIdx !== -1) {
+                    let endIdx = vidIdx;
+                    while (endIdx < buffer.length && buffer[endIdx] >= 32 && buffer[endIdx] <= 126) endIdx++;
+                    comment = buffer.toString('utf8', vidIdx, endIdx);
+                }
+
+                // 2. Search for Lavf / FFmpeg encoder tag
+                if (!comment) {
+                    const lavfIdx = buffer.indexOf('Lavf');
+                    if (lavfIdx !== -1) {
+                        let endIdx = lavfIdx;
+                        while (endIdx < buffer.length && buffer[endIdx] >= 32 && buffer[endIdx] <= 126) endIdx++;
+                        comment = buffer.toString('utf8', lavfIdx, endIdx);
+                    }
+                }
+
+                // 3. Helper to parse MP4 iTunes-style 4-byte atom tags
+                const extractAtomTag = (tagStr) => {
+                    const idx = buffer.indexOf(tagStr);
+                    if (idx !== -1 && idx + 12 < buffer.length) {
+                        const dataLen = buffer.readUInt32BE(idx + 4);
+                        if (dataLen > 8 && idx + dataLen <= buffer.length) {
+                            return buffer.toString('utf8', idx + 12, idx + dataLen).replace(/[\x00-\x1F\x7F-\xFF]/g, '').trim();
+                        }
+                    }
+                    return '';
+                };
+
+                // 4. Search ©ART (Artist), ©too (Tool), ©cmt (Comment), ©nam (Title)
+                if (!comment) comment = extractAtomTag('\xa9ART');
+                if (!comment) comment = extractAtomTag('\xa9too');
+                if (!comment) comment = extractAtomTag('\xa9cmt');
+                if (!comment) comment = extractAtomTag('\xa9nam');
+
+                req.extractedMp4Comment = comment;
+            }
+        } catch (_) {}
+
+        if (!fps) fps = 60;
+
+        let bitrateMbps = 0;
+        if (contentLength > 0 && durationSec > 0) {
+            bitrateMbps = (contentLength * 8) / (durationSec * 1000 * 1000);
+        }
+
+        return res.json({
+            fps: fps || 60,
+            width: width || 1080,
+            height: height || 1920,
+            duration: durationSec ? parseFloat(durationSec.toFixed(2)) : 0,
+            size: contentLength || 0,
+            bitrate: bitrateMbps ? parseFloat(bitrateMbps.toFixed(2)) : 0,
+            comment: req.extractedMp4Comment || ''
+        });
+    } catch (e) {
+        return res.status(500).json({ error: 'FPS calculation failed', details: e.message });
     }
 });
 
@@ -955,23 +1117,58 @@ app.get('/api/proxy', proxyLimiter, async (req, res) => {
     }
     const resolvedUrl = normalizeProxyUrl(targetUrl);
     try {
+        const fetchHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Referer': 'https://ssstik.io/en'
+        };
+
+        if (req.headers['range']) {
+            fetchHeaders['Range'] = req.headers['range'];
+        }
+
         const response = await fetch(resolvedUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*'
-            },
+            headers: fetchHeaders,
             signal: AbortSignal.timeout(15000)
         });
-        if (!response.ok) {
+
+        if (!response.ok && response.status !== 206) {
             return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
         }
-        const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        const buffer = await response.arrayBuffer();
+
+        let contentType = response.headers.get('content-type') || (req.query.type === 'image' ? 'image/jpeg' : 'video/mp4');
+        if (contentType === 'application/octet-stream' || contentType.includes('binary') || !contentType.startsWith('video/')) {
+            if (req.query.type !== 'image') contentType = 'video/mp4';
+        }
+
+        const contentLength = response.headers.get('content-length');
+        const contentRange = response.headers.get('content-range');
+
+        res.status(response.status);
         res.setHeader('Content-Type', contentType);
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(Buffer.from(buffer));
+        res.setHeader('Accept-Ranges', 'bytes');
+
+        if (contentLength) res.setHeader('Content-Length', contentLength);
+        if (contentRange) res.setHeader('Content-Range', contentRange);
+
+        if (response.body) {
+            const nodeStream = Readable.fromWeb(response.body);
+            nodeStream.on('error', (_) => {
+                if (!res.headersSent) res.status(500).end();
+            });
+            res.on('close', () => {
+                try { nodeStream.destroy(); } catch (_) {}
+            });
+            nodeStream.pipe(res);
+        } else {
+            const buffer = await response.arrayBuffer();
+            res.send(Buffer.from(buffer));
+        }
     } catch (err) {
-        res.status(500).json({ error: 'Proxy request failed', details: err.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Proxy request failed', details: err.message });
+        }
     }
 });
 
