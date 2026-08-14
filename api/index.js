@@ -757,11 +757,11 @@ function createRateLimiter(options = {}) {
     };
 }
 
-const tiktokResolveLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 5, message: 'Rate limit reached: Max 5 video resolve requests per 30 seconds.' });
+const tiktokResolveLimiter = createRateLimiter({ windowMs: 30 * 1000, maxRequests: 100, message: 'Rate limit reached: Max 100 video resolve requests per 30 seconds.' });
 const proxyLimiter = createRateLimiter({
     windowMs: 30 * 1000,
-    maxRequests: 20,
-    message: 'Rate limit reached: Max 20 proxy requests per 30 seconds.',
+    maxRequests: 50,
+    message: 'Rate limit reached: Max 50 proxy requests per 30 seconds.',
     skip: isThumbnailOrImageUrl
 });
 

@@ -1,3 +1,8 @@
+@font-face {
+  font-family: 'brand-icons';
+  src: local('bootstrap-icons');
+}
+
 .brand-icon {
   font-family: 'bootstrap-icons' !important;
   speak: never;
