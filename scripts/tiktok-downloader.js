@@ -11,19 +11,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentMeta = null;
 
+    function isTikTokUrl(raw) {
+        if (!raw || typeof raw !== 'string') return false;
+        let u = raw.trim();
+        if (!u.startsWith('http://') && !u.startsWith('https://')) {
+            u = 'https://' + u;
+        }
+        try {
+            const parsed = new URL(u);
+            const host = parsed.hostname.toLowerCase();
+            const validHosts = ['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'tikwm.com'];
+            return validHosts.some(h => host === h || host.endsWith('.' + h));
+        } catch {
+            return false;
+        }
+    }
+
     btnDownload.addEventListener('click', async () => {
-        let url = inputUrl.value.trim();
-        if (!url) {
+        let rawInput = inputUrl.value.trim();
+        if (!rawInput) {
             showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
             return;
         }
 
+        if (!isTikTokUrl(rawInput)) {
+            showStatus("URL is not a valid TikTok link.", "var(--md-sys-color-error)");
+            return;
+        }
+
+        let url = rawInput;
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            if (url.includes('tiktok.com')) {
-                url = 'https://' + url;
-            } else {
-                url = 'https://www.tiktok.com/' + url;
-            }
+            url = 'https://' + url;
         }
 
         if (currentMeta) {
@@ -66,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             currentMeta = await response.json();
-            if (!currentMeta || !currentMeta.play && !currentMeta.hdplay) {
+            if (!currentMeta || (!currentMeta.play && !currentMeta.hdplay)) {
                 throw new Error("Could not extract video stream.");
             }
 
@@ -100,8 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setProgress(0, "Preparing...");
 
         try {
-            const isHD = currentMeta.hdplay && currentMeta.hdplay.includes('tiktokcdn');
-            const videoUrl = isHD ? currentMeta.hdplay : currentMeta.play;
+            const videoUrl = (currentMeta.hdplay && currentMeta.hdplay.startsWith('http')) ? currentMeta.hdplay : (currentMeta.play || currentMeta.hdplay);
 
             if (!videoUrl) {
                 throw new Error("No video URL available.");

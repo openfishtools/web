@@ -559,24 +559,114 @@ function isAllowedTikTokResolveHost(hostname) {
         h === 'vm.tiktok.com' ||
         h === 'vt.tiktok.com' ||
         h === 'www.tikwm.com' ||
-        h === 'tikwm.com'
+        h === 'tikwm.com' ||
+        h === 'ssstik.io' ||
+        h === 'www.ssstik.io'
     );
 }
 
 function isAllowedTikTokMediaUrl(rawUrl) {
     try {
         const hostname = new URL(rawUrl).hostname.toLowerCase();
-        const suffixes = ['tiktok.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokv.com', 'tikwm.com', 'ibytedtos.com', 'byteoversea.com', 'muscdn.com'];
+        const suffixes = [
+            'tiktok.com',
+            'tiktokcdn.com',
+            'tiktokcdn-us.com',
+            'tiktokv.com',
+            'tikwm.com',
+            'ibytedtos.com',
+            'byteoversea.com',
+            'muscdn.com',
+            'tikcdn.io',
+            'ssstik.io'
+        ];
         return suffixes.some((suffix) => hostname === suffix || hostname.endsWith(`.${suffix}`));
     } catch {
         return false;
     }
 }
 
+async function extractTikTokFromSSSTik(pageUrl) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+
+        const pageRes = await fetch('https://ssstik.io/en', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            },
+            signal: controller.signal
+        });
+        const html = await pageRes.text();
+        clearTimeout(timeout);
+
+        const ttMatch = html.match(/s_version\s*=\s*"([^"]+)"/) || html.match(/tt:'([^']+)'/) || html.match(/name="tt"\s+value="([^"]+)"/);
+        const tt = ttMatch ? ttMatch[1] : '';
+
+        const postController = new AbortController();
+        const postTimeout = setTimeout(() => postController.abort(), 8000);
+
+        const postRes = await fetch('https://ssstik.io/abc?url=dl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'HX-Request': 'true',
+                'HX-Trigger': '_gcaptcha_pt',
+                'HX-Target': 'target',
+                'HX-Current-URL': 'https://ssstik.io/en'
+            },
+            body: new URLSearchParams({
+                id: pageUrl,
+                locale: 'en',
+                tt: tt
+            }).toString(),
+            signal: postController.signal
+        });
+        clearTimeout(postTimeout);
+
+        if (!postRes.ok) return null;
+        const resHtml = await postRes.text();
+
+        const downloadLinks = [...resHtml.matchAll(/href="(https:\/\/[^"]+)"/g)]
+            .map(m => m[1])
+            .filter(l => !l.includes('ssstik.io') && (l.includes('tikcdn.io') || l.includes('tiktok') || l.includes('download') || l.includes('http')));
+
+        if (!downloadLinks.length) return null;
+
+        const urlMatch = pageUrl.match(/\/video\/(\d+)/);
+        const videoId = urlMatch ? urlMatch[1] : '';
+        const titleMatch = resHtml.match(/<p class="maintext[^>]*>([^<]+)<\/p>/);
+        const authorMatch = resHtml.match(/@([a-zA-Z0-9_.-]+)/);
+        const imgMatch = resHtml.match(/<img[^>]+src="([^"]+)"[^>]*class="result_author"/);
+
+        return {
+            id: videoId || '',
+            play: downloadLinks[0] || '',
+            hdplay: downloadLinks[1] || downloadLinks[0] || '',
+            wmplay: '',
+            cover: imgMatch ? imgMatch[1] : '',
+            title: titleMatch ? titleMatch[1].trim() : '',
+            author_unique_id: authorMatch ? authorMatch[1] : '',
+            author_nickname: '',
+            size: 0,
+            duration: 0,
+            w: 0,
+            h: 0,
+            is_fallback: false,
+            method: 'ssstik'
+        };
+    } catch (e) {
+        console.error('[SSSTik Extract] Error:', e.message);
+        return null;
+    }
+}
+
 async function extractTikTokFromPage(pageUrl) {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeout = setTimeout(() => controller.abort(), 6000);
         
         const pageResponse = await fetch(pageUrl, {
             headers: {
@@ -595,26 +685,39 @@ async function extractTikTokFromPage(pageUrl) {
         const urlMatch = finalUrl.match(/\/video\/(\d+)/);
         const videoId = urlMatch ? urlMatch[1] : '';
 
-        // Try to extract from __UNIVERSAL_DATA_FOR_REHYDRATION__
-        const jsonMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/);
+        const jsonMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/) ||
+                          html.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/) ||
+                          html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/);
         if (!jsonMatch) return null;
         
-        const pageData = JSON.parse(jsonMatch[1]);
-        const videoData = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.videoData;
+        let pageData = null;
+        try {
+            pageData = JSON.parse(jsonMatch[1]);
+        } catch {
+            return null;
+        }
+
+        const videoData = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.videoData ||
+                          pageData?.ItemModule?.[videoId] ||
+                          pageData?.props?.pageProps?.itemInfo?.itemStruct?.video;
         
         if (!videoData || (!videoData.downloadAddr && !videoData.playAddr)) {
             return null;
         }
+
+        const authorObj = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author ||
+                          pageData?.ItemModule?.[videoId]?.author ||
+                          pageData?.props?.pageProps?.itemInfo?.itemStruct?.author;
         
         return {
             id: videoId || '',
             play: videoData.downloadAddr || videoData.playAddr || '',
             hdplay: videoData.playAddr || videoData.downloadAddr || '',
             wmplay: '',
-            cover: videoData.dynamicCover || videoData.originCover || '',
-            title: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.desc || '',
-            author_unique_id: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.uniqueId || '',
-            author_nickname: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author?.nickname || '',
+            cover: videoData.dynamicCover || videoData.originCover || videoData.cover || '',
+            title: pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.desc || videoData.desc || '',
+            author_unique_id: authorObj?.uniqueId || (typeof authorObj === 'string' ? authorObj : ''),
+            author_nickname: authorObj?.nickname || '',
             size: 0,
             duration: videoData.duration || 0,
             w: videoData.width || 0,
@@ -639,37 +742,40 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
-        // Strategy: Try multiple methods
         let result = null;
         let lastError = null;
 
-        // Method 1: Try TikWM API mirror (free, no API key required)
         const mirrors = [
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
+            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
+            `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
         ];
 
         for (let idx = 0; idx < mirrors.length; idx++) {
             const upstream = mirrors[idx];
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 12000);
+                const timeout = setTimeout(() => controller.abort(), 8000);
                 
-                const fetchOptions = {
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                };
-                
-                const r = await fetch(upstream, { ...fetchOptions, signal: controller.signal });
+                const r = await fetch(upstream, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                    signal: controller.signal
+                });
                 clearTimeout(timeout);
                 const json = await r.json().catch(() => ({}));
                 
                 if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                     const d = json.data;
+                    const playUrl = d.play || d.hdplay || '';
+                    const hdUrl = d.hdplay || '';
+                    const wmUrl = d.wmplay || '';
+                    const covUrl = d.cover || d.origin_cover || '';
+
                     result = {
                         id: d.id || '',
-                        play: d.play || d.hdplay || '',
-                        hdplay: d.hdplay || '',
-                        wmplay: d.wmplay || '',
-                        cover: d.cover || d.origin_cover || '',
+                        play: playUrl.startsWith('http') ? playUrl : (playUrl ? `https://www.tikwm.com${playUrl}` : ''),
+                        hdplay: hdUrl.startsWith('http') ? hdUrl : (hdUrl ? `https://www.tikwm.com${hdUrl}` : ''),
+                        wmplay: wmUrl ? (wmUrl.startsWith('http') ? wmUrl : `https://www.tikwm.com${wmUrl}`) : '',
+                        cover: covUrl ? (covUrl.startsWith('http') ? covUrl : `https://www.tikwm.com${covUrl}`) : '',
                         title: d.title || '',
                         author_unique_id: d.author?.unique_id || '',
                         author_nickname: d.author?.nickname || '',
@@ -683,13 +789,59 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     break;
                 }
                 
-                lastError = `TikWM Mirror ${idx + 1}: ${r.status}`;
+                lastError = `TikWM Mirror ${idx + 1}: ${json.msg || json.code || r.status}`;
             } catch (e) {
                 lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
             }
         }
 
-        // Method 2: Try direct page extraction
+        const rapidApiKey = process.env.TIKWM_API_KEY || process.env.RAPIDAPI_KEY || process.env.TIKTOK_API_KEY;
+        if (!result && rapidApiKey) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000);
+                const r = await fetch(`https://tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com/index?url=${encodeURIComponent(pageUrl)}`, {
+                    headers: {
+                        'x-rapidapi-key': rapidApiKey,
+                        'x-rapidapi-host': 'tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com',
+                        'User-Agent': 'Mozilla/5.0'
+                    },
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+                const json = await r.json().catch(() => ({}));
+                if (r.ok && (json.play || json.hdplay || (json.data && (json.data.play || json.data.hdplay)))) {
+                    const d = json.data || json;
+                    result = {
+                        id: d.id || '',
+                        play: d.play || d.hdplay || '',
+                        hdplay: d.hdplay || '',
+                        wmplay: d.wmplay || '',
+                        cover: d.cover || '',
+                        title: d.title || '',
+                        author_unique_id: d.author?.unique_id || '',
+                        author_nickname: d.author?.nickname || '',
+                        size: d.size || 0,
+                        duration: d.duration || 0,
+                        w: d.w || 0,
+                        h: d.h || 0,
+                        is_fallback: false,
+                        method: 'rapidapi'
+                    };
+                }
+            } catch (e) {
+                lastError = `RapidAPI: ${e.message}`;
+            }
+        }
+
+        if (!result) {
+            try {
+                result = await extractTikTokFromSSSTik(pageUrl);
+            } catch (e) {
+                lastError = `SSSTik: ${e.message}`;
+            }
+        }
+
         if (!result) {
             try {
                 result = await extractTikTokFromPage(pageUrl);
@@ -702,12 +854,10 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             }
         }
 
-        // If we got a result, return it
         if (result) {
             return res.json(result);
         }
 
-        // All live methods failed
         console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
         res.status(404).json({ 
             error: 'Video unavailable', 

@@ -19,22 +19,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isRunning = false;
 
-    btnAnalyse.addEventListener('click', () => {
-        let url = inputUrl.value.trim();
-        if (url) {
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                if (url.includes('tiktok.com')) {
-                    url = 'https://' + url;
-                } else if (url.startsWith('efishaep/') || url.includes('/video/')) {
-                    url = 'https://www.tiktok.com/@' + url;
-                } else {
-                    url = 'https://www.tiktok.com/' + url;
-                }
-            }
-            analyseTikTokVideo(url);
-        } else {
-            showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
+    function isTikTokUrl(raw) {
+        if (!raw || typeof raw !== 'string') return false;
+        let u = raw.trim();
+        if (!u.startsWith('http://') && !u.startsWith('https://')) {
+            u = 'https://' + u;
         }
+        try {
+            const parsed = new URL(u);
+            const host = parsed.hostname.toLowerCase();
+            const validHosts = ['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'tikwm.com'];
+            return validHosts.some(h => host === h || host.endsWith('.' + h));
+        } catch {
+            return false;
+        }
+    }
+
+    btnAnalyse.addEventListener('click', () => {
+        let rawInput = inputUrl.value.trim();
+        if (!rawInput) {
+            showStatus("Please enter a valid TikTok video URL.", "var(--md-sys-color-error)");
+            return;
+        }
+
+        if (!isTikTokUrl(rawInput)) {
+            showStatus("URL is not a valid TikTok link.", "var(--md-sys-color-error)");
+            return;
+        }
+
+        let url = rawInput;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+        }
+
+        analyseTikTokVideo(url);
     });
 
     inputUrl.addEventListener('keydown', (e) => {
@@ -65,7 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const metadata = await response.json();
-            if (!metadata || !metadata.play) {
+            const streamUrl = metadata ? (metadata.play || metadata.hdplay) : null;
+            if (!metadata || !streamUrl) {
                 throw new Error("Could not extract stream URL for this video.");
             }
 
@@ -82,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             showStatus("Analysing Video Metadata (FPS & Resolution)...");
 
-            const videoMeta = await analyseVideoMetadataFromUrl(metadata.play);
+            const videoMeta = await analyseVideoMetadataFromUrl(streamUrl);
             
             if (videoMeta && videoMeta.fps && !isNaN(videoMeta.fps)) {
                 statsFps.textContent = `${videoMeta.fps} fps`;
