@@ -209,11 +209,40 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const parseAmXml = (xmlText) => {
+        const sanitized = amSanitizeXmlText(xmlText);
         const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(amSanitizeXmlText(xmlText), 'text/xml');
-        const scene = xmlDoc.documentElement.tagName.toLowerCase() === 'scene'
-            ? xmlDoc.documentElement
-            : xmlDoc.querySelector('scene');
+        let xmlDoc = parser.parseFromString(sanitized, 'text/xml');
+        
+        let scene = null;
+        if (xmlDoc && xmlDoc.documentElement) {
+            if (xmlDoc.documentElement.tagName.toLowerCase() === 'scene') {
+                scene = xmlDoc.documentElement;
+            } else {
+                const allNodes = xmlDoc.getElementsByTagName('*');
+                for (let i = 0; i < allNodes.length; i++) {
+                    if (allNodes[i].tagName.toLowerCase() === 'scene') {
+                        scene = allNodes[i];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!scene) {
+            try {
+                const htmlDoc = parser.parseFromString(sanitized, 'text/html');
+                if (htmlDoc) {
+                    const allNodes = htmlDoc.getElementsByTagName('*');
+                    for (let i = 0; i < allNodes.length; i++) {
+                        if (allNodes[i].tagName.toLowerCase() === 'scene') {
+                            scene = allNodes[i];
+                            break;
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         if (!scene) throw new Error('Scene not found.');
 
         const durationMs = Number(scene.getAttribute('totalTime')) || 3000;
@@ -785,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let parsed = amXmlCache.get(id);
         if (!parsed) {
             try {
-                const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(xmlUrl)}`;
+                const proxyUrl = `${API_URL}/proxy?url=${encodeURIComponent(xmlUrl)}&type=xml`;
                 const resp = await fetch(proxyUrl);
                 if (!resp.ok) throw new Error('fetch failed');
                 const text = await resp.text();

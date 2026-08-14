@@ -1106,6 +1106,16 @@ function normalizeProxyUrl(raw) {
             const m = u.pathname.match(/^\/([^/]+)$/);
             if (m) return `https://pastebin.com/raw${u.pathname}`;
         }
+        if (u.hostname.includes('drive.google.com')) {
+            const fileIdMatch = u.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || u.searchParams.get('id');
+            const fileId = fileIdMatch ? (Array.isArray(fileIdMatch) ? fileIdMatch[1] : fileIdMatch) : null;
+            if (fileId) {
+                return `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`;
+            }
+        }
+        if (u.hostname.includes('dropbox.com')) {
+            return raw.replace('dl=0', 'raw=1').replace('dl=1', 'raw=1');
+        }
     } catch (e) {}
     return raw;
 }
@@ -1136,9 +1146,21 @@ app.get('/api/proxy', proxyLimiter, async (req, res) => {
             return res.status(response.status).json({ error: `Proxy: target returned ${response.status}` });
         }
 
-        let contentType = response.headers.get('content-type') || (req.query.type === 'image' ? 'image/jpeg' : 'video/mp4');
-        if (contentType === 'application/octet-stream' || contentType.includes('binary') || !contentType.startsWith('video/')) {
-            if (req.query.type !== 'image') contentType = 'video/mp4';
+        let contentType = response.headers.get('content-type') || 'text/plain';
+        if (req.query.type === 'image') {
+            contentType = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+        } else if (req.query.type === 'video') {
+            contentType = 'video/mp4';
+        } else if (req.query.type === 'xml') {
+            contentType = 'text/xml';
+        } else {
+            if (contentType === 'application/octet-stream' || contentType.includes('binary')) {
+                if (targetUrl.includes('ssstik') || targetUrl.includes('tikcdn.io') || targetUrl.includes('.mp4')) {
+                    contentType = 'video/mp4';
+                } else if (targetUrl.includes('.xml')) {
+                    contentType = 'text/xml';
+                }
+            }
         }
 
         const contentLength = response.headers.get('content-length');

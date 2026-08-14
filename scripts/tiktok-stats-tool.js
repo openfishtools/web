@@ -84,7 +84,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("Could not extract stream URL for this video.");
             }
 
-            statsCover.src = metadata.cover || '';
+            const rawCover = metadata.cover || '';
+            const coverUrl = rawCover ? (rawCover.startsWith('http') ? `${API_URL}/proxy?url=${encodeURIComponent(rawCover)}&type=image` : rawCover) : '';
+            if (statsCover) {
+                statsCover.src = coverUrl;
+                statsCover.setAttribute('referrerpolicy', 'no-referrer');
+                statsCover.onerror = () => {
+                    if (rawCover && statsCover.src !== rawCover) {
+                        statsCover.src = rawCover;
+                    }
+                };
+            }
             statsCreatorName.textContent = metadata.author_nickname || 'Creator';
             statsCreatorHandle.textContent = metadata.author_unique_id ? `@${metadata.author_unique_id}` : '@username';
             statsCaption.textContent = metadata.title || 'No caption';
