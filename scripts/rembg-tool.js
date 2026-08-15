@@ -322,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function markUnprocessed() {
+        if (!isPreviewed && !lastMatteResult) return;
         isPreviewed = false;
         lastMatteResult = null;
         if (btnPreview) btnPreview.classList.remove('active');
@@ -479,12 +480,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let timelineRafId = null;
+    let targetSeekTime = null;
+    let isVideoSeeking = false;
+
     if (timeline) {
         timeline.addEventListener('input', () => {
-            if (videoEl && videoEl.duration) {
-                videoEl.currentTime = parseFloat(timeline.value);
-                if (timeCurrent) timeCurrent.textContent = formatTime(videoEl.currentTime);
-                markUnprocessed();
+            if (!videoEl || !videoEl.duration) return;
+            const t = parseFloat(timeline.value);
+            if (timeCurrent) timeCurrent.textContent = formatTime(t);
+            targetSeekTime = t;
+
+            if (!timelineRafId) {
+                timelineRafId = requestAnimationFrame(() => {
+                    timelineRafId = null;
+                    if (targetSeekTime !== null && !isVideoSeeking) {
+                        isVideoSeeking = true;
+                        if ('fastSeek' in videoEl) {
+                            videoEl.fastSeek(targetSeekTime);
+                        } else {
+                            videoEl.currentTime = targetSeekTime;
+                        }
+                    }
+                });
+            }
+            if (isPreviewed) markUnprocessed();
+        });
+
+        timeline.addEventListener('change', () => {
+            if (!videoEl || !videoEl.duration) return;
+            const t = parseFloat(timeline.value);
+            targetSeekTime = null;
+            videoEl.currentTime = t;
+            if (isPreviewed) markUnprocessed();
+        });
+
+        videoEl.addEventListener('seeked', () => {
+            isVideoSeeking = false;
+            if (targetSeekTime !== null && Math.abs(videoEl.currentTime - targetSeekTime) > 0.05) {
+                const t = targetSeekTime;
+                targetSeekTime = null;
+                isVideoSeeking = true;
+                videoEl.currentTime = t;
+            } else {
+                targetSeekTime = null;
             }
         });
     }
@@ -916,8 +955,18 @@ document.addEventListener('DOMContentLoaded', () => {
             inferH = 512;
         } else if (modelConfig.type === 'rvm') {
             const scale = settings.qualityScale || 1.0;
-            inferW = Math.max(256, Math.round((srcW * scale) / 64) * 64);
-            inferH = Math.max(256, Math.round((srcH * scale) / 64) * 64);
+            let targetW = srcW * scale;
+            let targetH = srcH * scale;
+            if (settings.isPreview) {
+                const maxPreviewDim = 512;
+                if (targetW > maxPreviewDim || targetH > maxPreviewDim) {
+                    const r = Math.min(maxPreviewDim / targetW, maxPreviewDim / targetH);
+                    targetW = targetW * r;
+                    targetH = targetH * r;
+                }
+            }
+            inferW = Math.max(256, Math.round(targetW / 64) * 64);
+            inferH = Math.max(256, Math.round(targetH / 64) * 64);
         }
 
         if (inputCanvas.width !== inferW || inputCanvas.height !== inferH) {
@@ -1218,6 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await ensureModelSession();
             const res = await processMatte(sourceEl, {
+                isPreview: true,
                 qualityScale: parseFloat(rvmScaleSlider.value),
                 downsampleRatio: parseFloat(rvmDownsampleSlider.value),
                 modnetBoost: parseFloat(modnetBoostSlider.value) / 100,

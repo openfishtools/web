@@ -259,6 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
             this.interpCanvas.width = this.width;
             this.interpCanvas.height = this.height;
             this.interpCtx = this.interpCanvas.getContext('2d');
+
+            const totalPixels = this.width * this.height;
+            const tensorSize = totalPixels * 3;
+            this.floatData0 = new Float32Array(tensorSize);
+            this.floatData1 = new Float32Array(tensorSize);
+            this.targetImgData = this.interpCtx.createImageData(this.width, this.height);
+            this.targetU32 = new Uint32Array(this.targetImgData.data.buffer);
             
             this.isReady = false;
         }
@@ -320,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     try {
                                         const fullLocalUrl = new URL(localModelUrl, window.location.origin).href;
                                         const cRes = new Response(modelBuffer.slice(0), {
-                                            headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(modelBuffer.byteLength) }
+                                             headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(modelBuffer.byteLength) }
                                         });
                                         await cache.put(fullLocalUrl, cRes.clone());
                                         await cache.put(localModelUrl, cRes);
@@ -376,9 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const imgData1 = this.ctx1.getImageData(0, 0, w, h).data;
             
             const totalPixels = w * h;
-            const tensorSize = totalPixels * 3;
-            const floatData0 = new Float32Array(tensorSize);
-            const floatData1 = new Float32Array(tensorSize);
+            const floatData0 = this.floatData0;
+            const floatData1 = this.floatData1;
             
             const rOffset = 0;
             const gOffset = totalPixels;
@@ -416,21 +422,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const outputTensor = results[outKey];
             const outData = outputTensor.data;
             
-            const targetImgData = this.interpCtx.createImageData(w, h);
-            const d = targetImgData.data;
-            
-            for (let i = 0, p = 0; i < totalPixels; i++, p += 4) {
+            const u32 = this.targetU32;
+            for (let i = 0; i < totalPixels; i++) {
                 const r = Math.min(255, Math.max(0, (outData[rOffset + i] * 255.0) | 0));
                 const g = Math.min(255, Math.max(0, (outData[gOffset + i] * 255.0) | 0));
                 const b = Math.min(255, Math.max(0, (outData[bOffset + i] * 255.0) | 0));
-                
-                d[p] = r;
-                d[p + 1] = g;
-                d[p + 2] = b;
-                d[p + 3] = 255;
+                u32[i] = 0xFF000000 | (b << 16) | (g << 8) | r;
             }
             
-            this.interpCtx.putImageData(targetImgData, 0, 0);
+            this.interpCtx.putImageData(this.targetImgData, 0, 0);
             
             const outCtx = outCanvas.getContext('2d');
             outCtx.clearRect(0, 0, origW, origH);
@@ -497,32 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancel.addEventListener('click', () => { cancelProcessing = true; });
     btnReset.addEventListener('click', resetTool);
 
-    async function seekVideoToTime(vid, time) {
-        return new Promise((resolve) => {
-            if (Math.abs(vid.currentTime - time) < 0.005) {
-                resolve();
-                return;
-            }
-            let isDone = false;
-            const onSeeked = () => {
-                if (!isDone) {
-                    isDone = true;
-                    vid.removeEventListener('seeked', onSeeked);
-                    resolve();
-                }
-            };
-            vid.addEventListener('seeked', onSeeked, { once: true });
-            vid.currentTime = time;
-            setTimeout(() => {
-                if (!isDone) {
-                    isDone = true;
-                    vid.removeEventListener('seeked', onSeeked);
-                    resolve();
-                }
-            }, 2000);
-        });
-    }
-
     async function startInterpolation() {
         if (isProcessing) return;
         isProcessing = true;
@@ -550,12 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const width = (videoOriginal.videoWidth || 640) & ~1;
         const height = (videoOriginal.videoHeight || 360) & ~1;
         const duration = videoOriginal.duration || 1;
-        const totalInputFrames = Math.max(1, Math.round(duration * originalFps));
         const outputFps = originalFps * multiplier;
-        const totalOutputFrames = Math.max(1, Math.round(duration * outputFps));
 
         addLog(`[System] Parameter Input: ${width}x${height} @ ${originalFps.toFixed(2)} FPS`);
-        addLog(`[System] Target Output: ${outputFps.toFixed(2)} FPS (${totalOutputFrames} total frames)`);
+        addLog(`[System] Target Output: ${outputFps.toFixed(2)} FPS (${multiplier}x multiplier)`);
 
         const seekCanvas0 = document.createElement('canvas');
         seekCanvas0.width = width;
@@ -578,23 +550,69 @@ document.addEventListener('DOMContentLoaded', () => {
             setProgress(10, 'Inisialisasi session model RIFE...');
             await interpolator.init(addLog);
 
-            setProgress(15, 'Menyiapkan video source...');
+            setProgress(15, 'Menyiapkan source video...');
             await ffmpeg.writeFile('input.mp4', await fetchFile(selectedFile));
 
-            let outFrameIndex = 0;
-            addLog('[System] Memulai kalkulasi interpolasi frame RIFE...');
+            setProgress(20, 'Mengekstrak seluruh frame video (Fast Decoders)...');
+            addLog('[FFmpeg] Mengekstrak seluruh frame video secara simultan...');
 
-            for (let i = 0; i < totalInputFrames - 1; i++) {
+            await ffmpeg.exec([
+                '-i', 'input.mp4',
+                '-r', String(originalFps),
+                '-vf', `scale=${width}:${height}`,
+                '-q:v', '2',
+                'in_%05d.jpg'
+            ]);
+
+            let totalInputFrames = 0;
+            while (true) {
+                const testName = `in_${(totalInputFrames + 1).toString().padStart(5, '0')}.jpg`;
+                try {
+                    const testData = await ffmpeg.readFile(testName);
+                    if (!testData || testData.length === 0) break;
+                    totalInputFrames++;
+                } catch (e) {
+                    break;
+                }
+            }
+
+            if (totalInputFrames < 2) {
+                totalInputFrames = Math.max(1, Math.round(duration * originalFps));
+            }
+
+            const totalOutputFrames = Math.max(1, (totalInputFrames - 1) * multiplier + 1);
+            addLog(`[System] Total frame sumber: ${totalInputFrames} frame | Target output: ${totalOutputFrames} frame`);
+
+            let outFrameIndex = 0;
+            addLog('[System] Memulai komputasi interpolasi frame RIFE AI...');
+
+            let f0Data = null;
+            try {
+                f0Data = await ffmpeg.readFile('in_00001.jpg');
+            } catch (e) {}
+
+            if (f0Data) {
+                const img0 = await createImageBitmap(new Blob([f0Data], { type: 'image/jpeg' }));
+                ctx0.clearRect(0, 0, width, height);
+                ctx0.drawImage(img0, 0, 0, width, height);
+                if (img0.close) img0.close();
+            }
+
+            for (let i = 1; i < totalInputFrames; i++) {
                 if (cancelProcessing) throw new Error('Cancelled');
 
-                const t0 = i / originalFps;
-                const t1 = (i + 1) / originalFps;
+                const nextName = `in_${(i + 1).toString().padStart(5, '0')}.jpg`;
+                let f1Data = null;
+                try {
+                    f1Data = await ffmpeg.readFile(nextName);
+                } catch (e) {}
 
-                await seekVideoToTime(videoOriginal, t0);
-                ctx0.drawImage(videoOriginal, 0, 0, width, height);
-
-                await seekVideoToTime(videoOriginal, t1);
-                ctx1.drawImage(videoOriginal, 0, 0, width, height);
+                if (f1Data) {
+                    const img1 = await createImageBitmap(new Blob([f1Data], { type: 'image/jpeg' }));
+                    ctx1.clearRect(0, 0, width, height);
+                    ctx1.drawImage(img1, 0, 0, width, height);
+                    if (img1.close) img1.close();
+                }
 
                 for (let step = 0; step < multiplier; step++) {
                     const progressVal = step / multiplier;
@@ -612,20 +630,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                ctx0.clearRect(0, 0, width, height);
+                ctx0.drawImage(seekCanvas1, 0, 0);
+
+                try {
+                    await ffmpeg.deleteFile(`in_${i.toString().padStart(5, '0')}.jpg`);
+                } catch (e) {}
+
                 const pct = Math.min(85, Math.round((outFrameIndex / totalOutputFrames) * 85));
-                setProgress(pct, `Memproses frame: ${outFrameIndex}/${totalOutputFrames} (${pct}%)`);
-                if (i % 5 === 0 || i === totalInputFrames - 2) {
-                    addLog(`[RIFE] Frame terinterpolasi hingga urutan ${outFrameIndex}/${totalOutputFrames}`);
+                setProgress(pct, `Menginterpolasi frame: ${outFrameIndex}/${totalOutputFrames} (${pct}%)`);
+                if (i % 5 === 0 || i === totalInputFrames - 1) {
+                    addLog(`[RIFE] Frame terinterpolasi ${outFrameIndex}/${totalOutputFrames}`);
                 }
             }
 
             if (!cancelProcessing) {
-                await seekVideoToTime(videoOriginal, Math.max(0, duration - 0.05));
-                ctx0.drawImage(videoOriginal, 0, 0, width, height);
                 const outBlob = await new Promise(res => seekCanvas0.toBlob(res, 'image/jpeg', 0.92));
                 const ab = await outBlob.arrayBuffer();
                 const outFilename = `frame_${(outFrameIndex++).toString().padStart(5, '0')}.jpg`;
                 await ffmpeg.writeFile(outFilename, new Uint8Array(ab));
+                try {
+                    await ffmpeg.deleteFile(`in_${totalInputFrames.toString().padStart(5, '0')}.jpg`);
+                } catch (e) {}
             }
 
             setProgress(88, 'Menggabungkan audio & encoding output video...');
