@@ -1,4 +1,4 @@
-const APP_VERSION = '1.7.3';
+const APP_VERSION = '1.7.4';
 const CACHE_NAME = `chros-offline-v${APP_VERSION}`;
 
 const CORE_ASSETS = [
@@ -38,7 +38,7 @@ const TOOL_VERSIONS = {
     'ae-to-am-beatmark-tool.js': '1.0.0',
     'upscale-gpu-enhancer.js': '1.0.0',
     'upscale-tool.js': '1.0.0',
-    'video-interpolation.js': '1.0.2',
+    'video-interpolation.js': '1.0.3',
     'rembg-tool.js': '1.3.8',
     'tiktok-stats-tool.js': '1.0.1',
     'tiktok-downloader.js': '1.0.0'
