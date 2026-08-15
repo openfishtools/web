@@ -81,7 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'selfie_segmenter',
             name: 'MediaPipe Selfie Segmenter (~1 MB)',
             localPath: 'assets/models/selfie_segmenter.onnx',
-            remoteUrl: 'https://huggingface.co/onnx-community/mediapipe_selfie_segmentation/resolve/main/onnx/model.onnx',
+            remoteUrls: [
+                'https://huggingface.co/onnx-community/mediapipe_selfie_segmentation/resolve/main/onnx/model.onnx',
+                'https://hf-mirror.com/onnx-community/mediapipe_selfie_segmentation/resolve/main/onnx/model.onnx'
+            ],
             type: 'selfie',
             inputWidth: 256,
             inputHeight: 256,
@@ -92,7 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'rvm_mobilenetv3',
             name: 'Robust Video Matting (~15 MB)',
             localPath: 'assets/models/rvm_mobilenetv3_fp32.onnx',
-            remoteUrl: 'https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/rvm_mobilenetv3_fp32.onnx',
+            remoteUrls: [
+                'https://huggingface.co/LPDoctor/video_matting/resolve/main/rvm_mobilenetv3_fp32.onnx',
+                'https://huggingface.co/eafish/web-onnx/resolve/main/rvm_mobilenetv3_fp32.onnx',
+                'https://hf-mirror.com/LPDoctor/video_matting/resolve/main/rvm_mobilenetv3_fp32.onnx'
+            ],
             type: 'rvm',
             inputWidth: 512,
             inputHeight: 512,
@@ -103,7 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'modnet',
             name: 'MODNet Photographic Matting (~25 MB)',
             localPath: 'assets/models/modnet.onnx',
-            remoteUrl: 'https://github.com/ZHKKKe/MODNet/releases/download/v1.0.0/modnet_photographic_portrait_matting.onnx',
+            remoteUrls: [
+                'https://huggingface.co/gradio/Modnet/resolve/main/modnet.onnx',
+                'https://huggingface.co/TheEeeeLin/HivisionIDPhotos_matting/resolve/main/modnet_photographic_portrait_matting.onnx',
+                'https://hf-mirror.com/gradio/Modnet/resolve/main/modnet.onnx'
+            ],
             type: 'modnet',
             inputWidth: 512,
             inputHeight: 512,
@@ -800,7 +811,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return await tryFetch(modelConfig.localPath, 'Local Storage');
         } catch (localErr) {
             appendLog(`Model lokal belum ada, mengunduh dari remote CDN...`);
-            return await tryFetch(modelConfig.remoteUrl, 'Remote CDN');
+            let lastErr = null;
+            for (const url of (modelConfig.remoteUrls || [])) {
+                try {
+                    return await tryFetch(url, 'Remote CDN');
+                } catch (cdnErr) {
+                    lastErr = cdnErr;
+                }
+            }
+            throw lastErr || new Error('Semua remote CDN gagal dihubungi.');
         }
     }
 

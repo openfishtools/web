@@ -1,4 +1,4 @@
-const APP_VERSION = '1.6.8';
+const APP_VERSION = '1.6.9';
 const CACHE_NAME = `chros-offline-v${APP_VERSION}`;
 
 const CORE_ASSETS = [
@@ -25,9 +25,43 @@ const CORE_ASSETS = [
     '/favicon.ico'
 ];
 
-const VERSIONED_ASSETS = CORE_ASSETS
-    .filter(p => p !== '/' && p !== '/favicon.ico')
-    .map(path => `${path}?v=${APP_VERSION}`);
+const TOOL_VERSIONS = {
+    'main.css': '1.6.9',
+    'responsive.css': '1.6.9',
+    'i18n.js': '1.6.9',
+    'app.js': '1.6.9',
+    'ffmpeg-tool.js': '1.0.0',
+    'tiktok-quality-tool.js': '3.0.4',
+    'audio-extractor-tool.js': '1.0.0',
+    'image-sequence-tool.js': '1.0.0',
+    'fivemb-generator.js': '1.0.0',
+    'ae-to-am-beatmark-tool.js': '1.0.0',
+    'upscale-gpu-enhancer.js': '1.0.0',
+    'upscale-tool.js': '1.0.0',
+    'video-interpolation.js': '1.0.0',
+    'rembg-tool.js': '1.3.6',
+    'tiktok-stats-tool.js': '1.0.1',
+    'tiktok-downloader.js': '1.0.0'
+};
+
+const VERSIONED_ASSETS = [
+    `/styles/main.css?v=${TOOL_VERSIONS['main.css']}`,
+    `/styles/responsive.css?v=${TOOL_VERSIONS['responsive.css']}`,
+    `/scripts/i18n.js?v=${TOOL_VERSIONS['i18n.js']}`,
+    `/scripts/app.js?v=${TOOL_VERSIONS['app.js']}`,
+    `/scripts/ffmpeg-tool.js?v=${TOOL_VERSIONS['ffmpeg-tool.js']}`,
+    `/scripts/tiktok-quality-tool.js?v=${TOOL_VERSIONS['tiktok-quality-tool.js']}`,
+    `/scripts/audio-extractor-tool.js?v=${TOOL_VERSIONS['audio-extractor-tool.js']}`,
+    `/scripts/image-sequence-tool.js?v=${TOOL_VERSIONS['image-sequence-tool.js']}`,
+    `/scripts/fivemb-generator.js?v=${TOOL_VERSIONS['fivemb-generator.js']}`,
+    `/scripts/ae-to-am-beatmark-tool.js?v=${TOOL_VERSIONS['ae-to-am-beatmark-tool.js']}`,
+    `/scripts/upscale-gpu-enhancer.js?v=${TOOL_VERSIONS['upscale-gpu-enhancer.js']}`,
+    `/scripts/upscale-tool.js?v=${TOOL_VERSIONS['upscale-tool.js']}`,
+    `/scripts/video-interpolation.js?v=${TOOL_VERSIONS['video-interpolation.js']}`,
+    `/scripts/rembg-tool.js?v=${TOOL_VERSIONS['rembg-tool.js']}`,
+    `/scripts/tiktok-stats-tool.js?v=${TOOL_VERSIONS['tiktok-stats-tool.js']}`,
+    `/scripts/tiktok-downloader.js?v=${TOOL_VERSIONS['tiktok-downloader.js']}`
+];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
