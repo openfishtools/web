@@ -44,13 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isProcessing) return;
             multiplierChips.forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-            multiplier = parseInt(chip.getAttribute('data-mult'));
+            multiplier = parseInt(chip.getAttribute('data-mult'), 10) || 2;
             updateTargetFps();
         });
     });
 
     function updateTargetFps() {
-        if (originalFps) {
+        if (originalFps && targetFpsEl) {
             targetFpsEl.textContent = `${(originalFps * multiplier).toFixed(2)} FPS`;
         }
     }
@@ -100,18 +100,31 @@ document.addEventListener('DOMContentLoaded', () => {
         gpuDot.textContent = 'sync';
         gpuDot.style.color = 'var(--md-sys-color-primary)';
         gpuDot.classList.add('upscale-spinner');
-        gpuStatus.textContent = window.getTranslation('interp_checking_gpu');
+        if (gpuStatus) {
+            gpuStatus.textContent = typeof window.getTranslation === 'function' ? window.getTranslation('interp_checking_gpu') : 'WebGPU: Memeriksa...';
+        }
         
-        await new Promise(resolve => setTimeout(resolve, 800));
+        let hasWebGPU = false;
+        if (navigator.gpu) {
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter) hasWebGPU = true;
+            } catch (e) {
+                hasWebGPU = false;
+            }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        const hasWebGPU = navigator.gpu ? true : false;
         if (hasWebGPU) {
             gpuDot.textContent = 'check_circle';
             gpuDot.style.color = '#4CAF50';
             gpuDot.classList.remove('upscale-spinner');
-            gpuStatus.textContent = window.getTranslation('interp_ready_gpu');
+            if (gpuStatus) {
+                gpuStatus.textContent = typeof window.getTranslation === 'function' ? window.getTranslation('interp_ready_gpu') : 'WebGPU: Tersedia';
+            }
             
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 500));
             checkScreen.classList.add('hidden');
             workspace.classList.remove('hidden');
             logsContainer.classList.remove('hidden');
@@ -124,14 +137,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             videoOriginal.onloadedmetadata = async () => {
                 originalFps = await detectFps(videoOriginal);
-                inputFpsEl.textContent = `${originalFps.toFixed(2)} FPS`;
+                if (inputFpsEl) inputFpsEl.textContent = `${originalFps.toFixed(2)} FPS`;
                 updateTargetFps();
             };
         } else {
             gpuDot.textContent = 'cancel';
             gpuDot.style.color = '#F44336';
             gpuDot.classList.remove('upscale-spinner');
-            gpuStatus.textContent = window.getTranslation('interp_failed_gpu');
+            if (gpuStatus) {
+                gpuStatus.textContent = typeof window.getTranslation === 'function' ? window.getTranslation('interp_failed_gpu') : 'WebGPU: Tidak Tersedia';
+            }
         }
     }
 
@@ -172,104 +187,212 @@ document.addEventListener('DOMContentLoaded', () => {
         return 30;
     }
 
+    async function loadFFmpegLibraries() {
+        if (window.FFmpegWASM && window.FFmpegUtil) return true;
+        if (typeof window.loadFFmpegLibraries === 'function') {
+            const ok = await window.loadFFmpegLibraries();
+            if (ok) return true;
+        }
+
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve(true);
+            s.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(s);
+        });
+
+        try {
+            if (!window.FFmpegUtil) {
+                await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+            }
+            if (!window.FFmpegWASM) {
+                const [ffmpegRes, workerRes] = await Promise.all([
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'),
+                    fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js')
+                ]);
+                if (ffmpegRes.ok && workerRes.ok) {
+                    const ffmpegCode = await ffmpegRes.text();
+                    const workerCode = await workerRes.text();
+                    const stripSourceMap = code => code.replace(/\/\/# sourceMappingURL=\S+/g, '');
+                    const workerBlobUrl = URL.createObjectURL(new Blob([stripSourceMap(workerCode)], { type: 'text/javascript' }));
+                    const patchedCode = stripSourceMap(ffmpegCode)
+                        .replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
+                        .replace(/u:e=>e+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
+                        .replace(/u:e=>e+"\x2effmpeg\x2ejs"/g, `u:()=>"${workerBlobUrl}"`);
+                    const ffmpegBlobUrl = URL.createObjectURL(new Blob([patchedCode], { type: 'text/javascript' }));
+                    await loadScript(ffmpegBlobUrl);
+                }
+            }
+            if (window.FFmpegWASM && window.FFmpegUtil) return true;
+        } catch (cdnErr) {}
+
+        try {
+            if (!window.FFmpegWASM) await loadScript('assets/ffmpeg/ffmpeg.js');
+            if (!window.FFmpegUtil) await loadScript('assets/ffmpeg/index.js');
+            if (window.FFmpegWASM && window.FFmpegUtil) return true;
+        } catch (localErr) {}
+
+        return !!(window.FFmpegWASM && window.FFmpegUtil);
+    }
+
     class RIFEInterpolator {
         constructor(width, height) {
-            this.width = width;
-            this.height = height;
+            this.origWidth = width;
+            this.origHeight = height;
+            this.width = Math.ceil(width / 32) * 32;
+            this.height = Math.ceil(height / 32) * 32;
             this.session = null;
             this.device = null;
-            this.canvas = document.createElement('canvas');
-            this.canvas.width = width;
-            this.canvas.height = height;
-            this.ctx = this.canvas.getContext('2d');
+            
+            this.canvas0 = document.createElement('canvas');
+            this.canvas0.width = this.width;
+            this.canvas0.height = this.height;
+            this.ctx0 = this.canvas0.getContext('2d', { willReadFrequently: true });
+            
+            this.canvas1 = document.createElement('canvas');
+            this.canvas1.width = this.width;
+            this.canvas1.height = this.height;
+            this.ctx1 = this.canvas1.getContext('2d', { willReadFrequently: true });
+            
+            this.interpCanvas = document.createElement('canvas');
+            this.interpCanvas.width = this.width;
+            this.interpCanvas.height = this.height;
+            this.interpCtx = this.interpCanvas.getContext('2d');
+            
             this.isReady = false;
         }
 
         async init(onLog) {
             try {
                 if (!navigator.gpu) {
-                    throw new Error('WebGPU is not supported on this browser.');
+                    throw new Error('WebGPU tidak didukung pada browser ini.');
                 }
                 
                 const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) throw new Error('Gagal menginisialisasi GPU adapter.');
                 this.device = await adapter.requestDevice();
                 
-                onLog('[RIFE] Initializing ONNX Runtime Web session with WebGPU...');
+                onLog('[RIFE] Menginisialisasi session ONNX Runtime WebGPU...');
                 
-                const cdnModelUrl = 'https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx';
                 const localModelUrl = 'assets/models/rife47_ensemble_True_scale_1_sim.onnx';
+                const remoteUrls = [
+                    'https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx',
+                    'https://hf-mirror.com/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx'
+                ];
                 
-                let loadedSession = null;
-                if (!navigator.onLine || ('caches' in window)) {
-                    try {
-                        const cache = await caches.open('chros-offline-v1');
-                        const fullLocalUrl = new URL(localModelUrl, window.location.origin).href;
-                        const match = await cache.match(fullLocalUrl);
-                        if (match || !navigator.onLine) {
-                            onLog('[RIFE] Loading model from offline cache...');
-                            loadedSession = await ort.InferenceSession.create(localModelUrl, {
-                                executionProviders: ['webgpu'],
-                                preferredOutputFormat: 'RGB'
-                            });
-                            onLog('[RIFE] Offline cached model loaded successfully.');
-                        }
-                    } catch (cacheErr) {}
+                let modelBuffer = null;
+                const cacheName = 'chros-offline-assets-v1';
+                let cache = null;
+                if ('caches' in window) {
+                    try { cache = await caches.open(cacheName); } catch (e) {}
                 }
 
-                if (!loadedSession) {
+                if (cache) {
                     try {
-                        console.log('🚀 [RIFE Model] Downloading ONNX model from CDN (Hugging Face):', cdnModelUrl);
-                        onLog('[RIFE] Initializing model from CDN...');
-                        loadedSession = await ort.InferenceSession.create(cdnModelUrl, {
-                            executionProviders: ['webgpu'],
-                            preferredOutputFormat: 'RGB'
-                        });
-                        console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from CDN (Hugging Face Hub)');
-                        onLog('[RIFE] CDN model loaded successfully.');
-                    } catch (cdnErr) {
-                        console.warn('⚠️ [RIFE Model] CDN model load failed, using LOCAL fallback:', localModelUrl, cdnErr);
-                        onLog('[RIFE] CDN model failed, loading from local fallback...');
-                        loadedSession = await ort.InferenceSession.create(localModelUrl, {
-                            executionProviders: ['webgpu'],
-                            preferredOutputFormat: 'RGB'
-                        });
-                        console.log('✅ [RIFE Model] Loaded ONNX model SUCCESSFULLY from LOCAL fallback');
-                        onLog('[RIFE] Local model loaded successfully.');
+                        const fullLocalUrl = new URL(localModelUrl, window.location.origin).href;
+                        const match = await cache.match(fullLocalUrl) || await cache.match(localModelUrl);
+                        if (match) {
+                            onLog('[RIFE] Memuat model RIFE dari offline cache...');
+                            modelBuffer = await match.arrayBuffer();
+                        }
+                    } catch (ce) {}
+                }
+
+                if (!modelBuffer) {
+                    try {
+                        onLog('[RIFE] Mengunduh model RIFE dari storage lokal...');
+                        const res = await fetch(localModelUrl);
+                        if (res.ok) {
+                            modelBuffer = await res.arrayBuffer();
+                        }
+                    } catch (le) {}
+                }
+
+                if (!modelBuffer) {
+                    for (const rUrl of remoteUrls) {
+                        try {
+                            onLog('[RIFE] Mengunduh model RIFE dari remote CDN...');
+                            const res = await fetch(rUrl);
+                            if (res.ok) {
+                                modelBuffer = await res.arrayBuffer();
+                                if (cache) {
+                                    try {
+                                        const fullLocalUrl = new URL(localModelUrl, window.location.origin).href;
+                                        const cRes = new Response(modelBuffer.slice(0), {
+                                            headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(modelBuffer.byteLength) }
+                                        });
+                                        await cache.put(fullLocalUrl, cRes.clone());
+                                        await cache.put(localModelUrl, cRes);
+                                    } catch (ce) {}
+                                }
+                                break;
+                            }
+                        } catch (re) {}
                     }
                 }
+
+                if (!modelBuffer) {
+                    throw new Error('Gagal mengunduh model ONNX RIFE.');
+                }
+
+                let loadedSession = null;
+                try {
+                    loadedSession = await ort.InferenceSession.create(modelBuffer.slice(0), {
+                        executionProviders: [{ name: 'webgpu', powerPreference: 'high-performance' }, 'wasm'],
+                        graphOptimizationLevel: 'all'
+                    });
+                } catch (gpuErr) {
+                    onLog('[RIFE] WebGPU session gagal, mencoba fallback WASM...');
+                    loadedSession = await ort.InferenceSession.create(modelBuffer.slice(0), {
+                        executionProviders: ['wasm'],
+                        graphOptimizationLevel: 'all'
+                    });
+                }
+
                 this.session = loadedSession;
-                
                 this.isReady = true;
-                onLog('[RIFE] ONNX WebGPU Model loaded successfully.');
+                onLog('[RIFE] Model AI RIFE v4.7 siap digunakan.');
             } catch (err) {
-                onLog(`[RIFE Error] Failed to load RIFE ONNX: ${err.message}`);
+                onLog(`[RIFE Error] Gagal memuat model RIFE: ${err.message}`);
                 throw err;
             }
         }
 
-        async interpolate(canvas0, canvas1, progressVal, outCanvas) {
+        async interpolate(srcCanvas0, srcCanvas1, progressVal, outCanvas) {
             if (!this.isReady) throw new Error('RIFE session is not initialized');
             
             const w = this.width;
             const h = this.height;
+            const origW = this.origWidth;
+            const origH = this.origHeight;
             
-            const imgData0 = canvas0.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
-            const imgData1 = canvas1.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+            this.ctx0.clearRect(0, 0, w, h);
+            this.ctx0.drawImage(srcCanvas0, 0, 0, origW, origH, 0, 0, w, h);
+            const imgData0 = this.ctx0.getImageData(0, 0, w, h).data;
             
-            const tensorSize = w * h * 3;
+            this.ctx1.clearRect(0, 0, w, h);
+            this.ctx1.drawImage(srcCanvas1, 0, 0, origW, origH, 0, 0, w, h);
+            const imgData1 = this.ctx1.getImageData(0, 0, w, h).data;
+            
+            const totalPixels = w * h;
+            const tensorSize = totalPixels * 3;
             const floatData0 = new Float32Array(tensorSize);
             const floatData1 = new Float32Array(tensorSize);
             
-            let idx = 0;
-            for (let i = 0; i < imgData0.length; i += 4) {
-                floatData0[idx] = imgData0[i] / 255.0;     // R
-                floatData0[idx + w*h] = imgData0[i+1] / 255.0; // G
-                floatData0[idx + w*h*2] = imgData0[i+2] / 255.0; // B
+            const rOffset = 0;
+            const gOffset = totalPixels;
+            const bOffset = totalPixels * 2;
+            const inv255 = 1.0 / 255.0;
+
+            for (let i = 0, p = 0; i < totalPixels; i++, p += 4) {
+                floatData0[rOffset + i] = imgData0[p] * inv255;
+                floatData0[gOffset + i] = imgData0[p + 1] * inv255;
+                floatData0[bOffset + i] = imgData0[p + 2] * inv255;
                 
-                floatData1[idx] = imgData1[i] / 255.0;
-                floatData1[idx + w*h] = imgData1[i+1] / 255.0;
-                floatData1[idx + w*h*2] = imgData1[i+2] / 255.0;
-                idx++;
+                floatData1[rOffset + i] = imgData1[p] * inv255;
+                floatData1[gOffset + i] = imgData1[p + 1] * inv255;
+                floatData1[bOffset + i] = imgData1[p + 2] * inv255;
             }
             
             const t0 = new ort.Tensor('float32', floatData0, [1, 3, h, w]);
@@ -277,9 +400,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const timeTensor = new ort.Tensor('float32', new Float32Array([progressVal]), [1]);
             
             const inputs = this.session.inputNames;
-            const name0 = inputs.includes('img0') ? 'img0' : (inputs.includes('input_0') ? 'input_0' : inputs[0]);
-            const name1 = inputs.includes('img1') ? 'img1' : (inputs.includes('input_1') ? 'input_1' : inputs[1]);
-            const nameTime = inputs.includes('timestep') ? 'timestep' : (inputs.includes('time') ? 'time' : inputs[2]);
+            const name0 = inputs.find(n => n.includes('0') || n.includes('img0') || n.includes('src')) || inputs[0];
+            const name1 = inputs.find(n => n.includes('1') || n.includes('img1')) || inputs[1];
+            const nameTime = inputs.find(n => n.includes('time') || n.includes('timestep')) || (inputs.length > 2 ? inputs[2] : null);
             
             const feeds = {};
             feeds[name0] = t0;
@@ -289,71 +412,85 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const results = await this.session.run(feeds);
-            const outputTensor = results[this.session.outputNames[0]];
+            const outKey = this.session.outputNames[0];
+            const outputTensor = results[outKey];
             const outData = outputTensor.data;
             
-            const outCtx = outCanvas.getContext('2d');
-            const targetImgData = outCtx.createImageData(w, h);
+            const targetImgData = this.interpCtx.createImageData(w, h);
             const d = targetImgData.data;
             
-            let pixIdx = 0;
-            for (let i = 0; i < w * h; i++) {
-                const r = Math.min(255, Math.max(0, Math.round(outData[i] * 255.0)));
-                const g = Math.min(255, Math.max(0, Math.round(outData[i + w*h] * 255.0)));
-                const b = Math.min(255, Math.max(0, Math.round(outData[i + w*h*2] * 255.0)));
+            for (let i = 0, p = 0; i < totalPixels; i++, p += 4) {
+                const r = Math.min(255, Math.max(0, (outData[rOffset + i] * 255.0) | 0));
+                const g = Math.min(255, Math.max(0, (outData[gOffset + i] * 255.0) | 0));
+                const b = Math.min(255, Math.max(0, (outData[bOffset + i] * 255.0) | 0));
                 
-                d[pixIdx] = r;
-                d[pixIdx + 1] = g;
-                d[pixIdx + 2] = b;
-                d[pixIdx + 3] = 255; // Alpha
-                pixIdx += 4;
+                d[p] = r;
+                d[p + 1] = g;
+                d[p + 2] = b;
+                d[p + 3] = 255;
             }
             
-            outCtx.putImageData(targetImgData, 0, 0);
+            this.interpCtx.putImageData(targetImgData, 0, 0);
+            
+            const outCtx = outCanvas.getContext('2d');
+            outCtx.clearRect(0, 0, origW, origH);
+            outCtx.drawImage(this.interpCanvas, 0, 0, w, h, 0, 0, origW, origH);
         }
     }
 
     async function getFFmpeg() {
         if (ffmpegInstance) return ffmpegInstance;
+        const ready = await loadFFmpegLibraries();
+        if (!ready || !window.FFmpegWASM || !window.FFmpegUtil) {
+            throw new Error('Library FFmpeg WASM gagal dimuat.');
+        }
+
         const { FFmpeg } = window.FFmpegWASM;
         const { toBlobURL } = window.FFmpegUtil;
         let ffmpeg = new FFmpeg();
         ffmpeg.on('log', ({ message }) => {
-            console.log('[FFmpeg Interp Log]', message);
+            if (message && !message.includes('frame=') && !message.includes('fps=')) {
+                console.log('[FFmpeg Interp]', message);
+            }
         });
+        
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         const localBaseURL = window.location.origin + '/assets/ffmpeg';
+        let loaded = false;
+
         try {
-            console.log('Loading single-threaded FFmpeg from CDN...');
             const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
             const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
             await ffmpeg.load({ coreURL, wasmURL });
-            console.log('Single-threaded FFmpeg loaded from CDN successfully.');
+            loaded = true;
         } catch (err) {
-            console.warn('CDN FFmpeg load failed, trying local fallback:', err);
             try {
                 const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
                 const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
                 await ffmpeg.load({ coreURL, wasmURL });
-                console.log('Single-threaded FFmpeg loaded from local fallback.');
-            } catch (localErr) {
-                console.error('Failed to load FFmpeg:', localErr);
-                throw localErr;
-            }
+                loaded = true;
+            } catch (localErr) {}
         }
+
+        if (!loaded) {
+            throw new Error('Gagal menginisialisasi core FFmpeg WASM.');
+        }
+
         ffmpegInstance = ffmpeg;
-        return ffmpeg;
+        return ffmpegInstance;
     }
 
     function addLog(msg) {
-        logsEl.textContent += msg + '\n';
+        if (!logsEl) return;
+        const time = new Date().toTimeString().split(' ')[0];
+        logsEl.textContent += `[${time}] ${msg}\n`;
         logsEl.scrollTop = logsEl.scrollHeight;
     }
 
     function setProgress(percent, msg) {
-        progressFill.style.width = `${percent}%`;
-        progressPercent.textContent = `${percent}%`;
-        progressText.textContent = msg;
+        if (progressFill) progressFill.style.width = `${percent}%`;
+        if (progressPercent) progressPercent.textContent = `${percent}%`;
+        if (progressText) progressText.textContent = msg;
     }
 
     btnProcess.addEventListener('click', startInterpolation);
@@ -362,16 +499,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function seekVideoToTime(vid, time) {
         return new Promise((resolve) => {
-            if (Math.abs(vid.currentTime - time) < 0.001) {
+            if (Math.abs(vid.currentTime - time) < 0.005) {
                 resolve();
                 return;
             }
+            let isDone = false;
             const onSeeked = () => {
-                vid.removeEventListener('seeked', onSeeked);
-                resolve();
+                if (!isDone) {
+                    isDone = true;
+                    vid.removeEventListener('seeked', onSeeked);
+                    resolve();
+                }
             };
-            vid.addEventListener('seeked', onSeeked);
+            vid.addEventListener('seeked', onSeeked, { once: true });
             vid.currentTime = time;
+            setTimeout(() => {
+                if (!isDone) {
+                    isDone = true;
+                    vid.removeEventListener('seeked', onSeeked);
+                    resolve();
+                }
+            }, 2000);
         });
     }
 
@@ -387,8 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCancel.classList.remove('hidden');
         logsEl.textContent = '';
 
-        addLog('[System] Initializing Video Interpolation pipeline...');
-        setProgress(5, 'Loading FFmpeg...');
+        addLog('[System] Memulai pipeline Video Interpolation...');
+        setProgress(5, 'Memuat engine FFmpeg...');
 
         let ffmpeg;
         try {
@@ -399,15 +547,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const width = videoOriginal.videoWidth;
-        const height = videoOriginal.videoHeight;
-        const duration = videoOriginal.duration;
-        const totalInputFrames = Math.round(duration * originalFps);
+        const width = (videoOriginal.videoWidth || 640) & ~1;
+        const height = (videoOriginal.videoHeight || 360) & ~1;
+        const duration = videoOriginal.duration || 1;
+        const totalInputFrames = Math.max(1, Math.round(duration * originalFps));
         const outputFps = originalFps * multiplier;
-        const totalOutputFrames = Math.round(duration * outputFps);
+        const totalOutputFrames = Math.max(1, Math.round(duration * outputFps));
 
-        addLog(`[System] Input parameters: ${width}x${height} at ${originalFps.toFixed(2)} FPS`);
-        addLog(`[System] Output target: ${outputFps.toFixed(2)} FPS (${totalOutputFrames} frames total)`);
+        addLog(`[System] Parameter Input: ${width}x${height} @ ${originalFps.toFixed(2)} FPS`);
+        addLog(`[System] Target Output: ${outputFps.toFixed(2)} FPS (${totalOutputFrames} total frames)`);
 
         const seekCanvas0 = document.createElement('canvas');
         seekCanvas0.width = width;
@@ -427,14 +575,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const { fetchFile } = window.FFmpegUtil;
 
         try {
-            setProgress(10, 'Initializing RIFE model session...');
+            setProgress(10, 'Inisialisasi session model RIFE...');
             await interpolator.init(addLog);
 
-            setProgress(15, 'Writing source to virtual storage...');
+            setProgress(15, 'Menyiapkan video source...');
             await ffmpeg.writeFile('input.mp4', await fetchFile(selectedFile));
 
             let outFrameIndex = 0;
-            addLog('[System] Beginning RIFE frame synthesis loop...');
+            addLog('[System] Memulai kalkulasi interpolasi frame RIFE...');
 
             for (let i = 0; i < totalInputFrames - 1; i++) {
                 if (cancelProcessing) throw new Error('Cancelled');
@@ -443,41 +591,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const t1 = (i + 1) / originalFps;
 
                 await seekVideoToTime(videoOriginal, t0);
-                ctx0.drawImage(videoOriginal, 0, 0);
+                ctx0.drawImage(videoOriginal, 0, 0, width, height);
 
                 await seekVideoToTime(videoOriginal, t1);
-                ctx1.drawImage(videoOriginal, 0, 0);
+                ctx1.drawImage(videoOriginal, 0, 0, width, height);
 
                 for (let step = 0; step < multiplier; step++) {
                     const progressVal = step / multiplier;
-                    await interpolator.interpolate(seekCanvas0, seekCanvas1, progressVal, outputCanvas);
-
-                    const outBlob = await new Promise(res => outputCanvas.toBlob(res, 'image/jpeg', 0.92));
-                    const ab = await outBlob.arrayBuffer();
-                    const outFilename = `frame_${(outFrameIndex++).toString().padStart(5, '0')}.jpg`;
-                    await ffmpeg.writeFile(outFilename, new Uint8Array(ab));
+                    if (progressVal === 0) {
+                        const outBlob = await new Promise(res => seekCanvas0.toBlob(res, 'image/jpeg', 0.92));
+                        const ab = await outBlob.arrayBuffer();
+                        const outFilename = `frame_${(outFrameIndex++).toString().padStart(5, '0')}.jpg`;
+                        await ffmpeg.writeFile(outFilename, new Uint8Array(ab));
+                    } else {
+                        await interpolator.interpolate(seekCanvas0, seekCanvas1, progressVal, outputCanvas);
+                        const outBlob = await new Promise(res => outputCanvas.toBlob(res, 'image/jpeg', 0.92));
+                        const ab = await outBlob.arrayBuffer();
+                        const outFilename = `frame_${(outFrameIndex++).toString().padStart(5, '0')}.jpg`;
+                        await ffmpeg.writeFile(outFilename, new Uint8Array(ab));
+                    }
                 }
 
                 const pct = Math.min(85, Math.round((outFrameIndex / totalOutputFrames) * 85));
-                setProgress(pct, `Processed ${outFrameIndex}/${totalOutputFrames} frames`);
-                if (i % 5 === 0) {
-                    addLog(`[Interpolating] Synthesized frame series up to sequence ${outFrameIndex}`);
+                setProgress(pct, `Memproses frame: ${outFrameIndex}/${totalOutputFrames} (${pct}%)`);
+                if (i % 5 === 0 || i === totalInputFrames - 2) {
+                    addLog(`[RIFE] Frame terinterpolasi hingga urutan ${outFrameIndex}/${totalOutputFrames}`);
                 }
-                
-                await new Promise(resolve => setTimeout(resolve, 30));
             }
 
             if (!cancelProcessing) {
-                await seekVideoToTime(videoOriginal, duration - 0.05);
-                ctx0.drawImage(videoOriginal, 0, 0);
+                await seekVideoToTime(videoOriginal, Math.max(0, duration - 0.05));
+                ctx0.drawImage(videoOriginal, 0, 0, width, height);
                 const outBlob = await new Promise(res => seekCanvas0.toBlob(res, 'image/jpeg', 0.92));
                 const ab = await outBlob.arrayBuffer();
                 const outFilename = `frame_${(outFrameIndex++).toString().padStart(5, '0')}.jpg`;
                 await ffmpeg.writeFile(outFilename, new Uint8Array(ab));
             }
 
-            setProgress(88, 'Muxing audio & encoding final frames...');
-            addLog('[System] Encoding processed frames with FFmpeg...');
+            setProgress(88, 'Menggabungkan audio & encoding output video...');
+            addLog('[System] Encoding frame hasil interpolasi dengan FFmpeg...');
 
             const encodeArgs = [
                 '-r', String(outputFps),
@@ -512,8 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try { await ffmpeg.deleteFile('input.mp4'); } catch(e){}
             try { await ffmpeg.deleteFile('output.mp4'); } catch(e){}
 
-            setProgress(100, 'Finished!');
-            addLog('[Success] Video interpolation completed successfully!');
+            setProgress(100, 'Selesai!');
+            addLog('[Success] Video interpolation berhasil diselesaikan!');
 
             completedPanel.classList.remove('hidden');
             btnCancel.classList.add('hidden');
@@ -533,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             addLog(`[Fatal Error] ${err.message}`);
+            alert(`Gagal memproses interpolasi: ${err.message}`);
             resetUIAfterError();
         } finally {
             isProcessing = false;

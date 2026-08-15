@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let customBgImage = null;
 
     let isProcessing = false;
+    let isPreviewing = false;
     let cancelProcessing = false;
     let isPreviewed = false;
     let lastMatteResult = null;
@@ -829,6 +830,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return currentSession;
         }
 
+        if (currentSession && typeof currentSession.release === 'function') {
+            try { await currentSession.release(); } catch (e) {}
+            currentSession = null;
+        }
+
         const modelConfig = MODEL_CONFIGS[selectedModelId];
         appendLog(`Memuat model ONNX [${modelConfig.name}] (${preferred.toUpperCase()})...`);
 
@@ -1164,12 +1170,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function runPreview(showButtonSpinner = true) {
-        if (!selectedFile || isProcessing) return;
+        if (!selectedFile || isProcessing || isPreviewing) return;
+        isPreviewing = true;
         const sourceEl = fileType === 'video' ? videoEl : imageEl;
         try {
             if (showButtonSpinner && btnPreview) {
                 btnPreview.disabled = true;
                 btnPreview.innerHTML = '<span class="upscale-spinner">⏳</span> <span>Processing...</span>';
+            }
+
+            if (fileType === 'video') {
+                if (videoEl.seeking || videoEl.readyState < 2) {
+                    await new Promise((resolve) => {
+                        let done = false;
+                        const onReady = () => {
+                            if (!done) {
+                                done = true;
+                                videoEl.removeEventListener('seeked', onReady);
+                                videoEl.removeEventListener('loadeddata', onReady);
+                                videoEl.removeEventListener('canplay', onReady);
+                                resolve();
+                            }
+                        };
+                        videoEl.addEventListener('seeked', onReady, { once: true });
+                        videoEl.addEventListener('loadeddata', onReady, { once: true });
+                        videoEl.addEventListener('canplay', onReady, { once: true });
+                        setTimeout(onReady, 800);
+                    });
+                }
+            } else if (fileType === 'image') {
+                if (!imageEl.complete || !imageEl.naturalWidth) {
+                    await new Promise((resolve) => {
+                        imageEl.onload = resolve;
+                        imageEl.onerror = resolve;
+                        setTimeout(resolve, 500);
+                    });
+                }
             }
 
             prevAlpha = null;
@@ -1199,13 +1235,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     comparisonContainer.classList.toggle('checkerboard', bgMode === 'transparent');
                 }
                 updateTransform();
+            } else {
+                throw new Error('Inference model tidak menghasilkan output alpha.');
             }
         } catch (e) {
             appendLog(`Preview error: ${e.message}`);
         } finally {
+            isPreviewing = false;
             if (showButtonSpinner && btnPreview) {
                 btnPreview.disabled = false;
-                btnPreview.innerHTML = '<span class="material-symbols-rounded font-16">visibility</span><span>Preview</span>';
+                const previewLabel = typeof window.getTranslation === 'function' ? window.getTranslation('btn_preview') : 'Preview';
+                btnPreview.innerHTML = `<span class="material-symbols-rounded font-16">visibility</span><span data-i18n="btn_preview">${previewLabel}</span>`;
             }
         }
     }
