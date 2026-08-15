@@ -2819,6 +2819,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    checkAppVersion();
+
     if ('serviceWorker' in navigator) {
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -2830,6 +2832,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         navigator.serviceWorker.register('/sw.js').then((reg) => {
             reg.update();
+            syncToolVersionBadges();
             reg.onupdatefound = () => {
                 const installingWorker = reg.installing;
                 if (installingWorker) {
@@ -2986,6 +2989,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 { path: 'scripts/image-sequence-tool.js', url: 'scripts/image-sequence-tool.js' },
                 { path: 'scripts/fivemb-generator.js', url: 'scripts/fivemb-generator.js' },
                 { path: 'scripts/ae-to-am-beatmark-tool.js', url: 'scripts/ae-to-am-beatmark-tool.js' },
+                { path: 'scripts/rembg-tool.js', url: 'scripts/rembg-tool.js' },
+                { path: 'assets/models/selfie_segmenter.onnx', url: 'assets/models/selfie_segmenter.onnx' },
+                { path: 'assets/models/rvm_mobilenetv3_fp32.onnx', url: 'assets/models/rvm_mobilenetv3_fp32.onnx' },
+                { path: 'assets/models/modnet.onnx', url: 'assets/models/modnet.onnx' },
                 { path: 'assets/jszip/jszip.min.js', url: 'assets/jszip/jszip.min.js' },
                 { path: 'assets/fonts/brand-icons.css', url: 'assets/fonts/brand-icons.css' },
                 { path: 'assets/upscale/upscaleWorker.js', url: 'assets/upscale/upscaleWorker.js' },

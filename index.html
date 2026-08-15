@@ -1028,6 +1028,204 @@
                         </div>
                     </div>
 
+                    <!-- Remove Background (AI Matting) Card -->
+                    <div class="card" id="rembg-card">
+                        <div class="flex align-center gap-16 mb-16">
+                            <span class="material-symbols-rounded tool-header-icon">person_remove</span>
+                            <div class="flex-1">
+                                <h3 class="tool-title" data-i18n="tool_rembg_title">Remove Background</h3>
+                                <div class="flex align-center gap-6 mt-2 flex-wrap">
+                                    <span class="tool-subtitle-text" data-i18n="tool_rembg_desc">AI Matting</span>
+                                    <span class="tool-ver-badge">1.3.5</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="drag-drop-area" id="rembg-drop-area">
+                            <span class="material-symbols-rounded">perm_media</span>
+                            <span data-i18n="tool_rembg_drop">Drag &amp; drop video or image here or click to select</span>
+                            <input type="file" id="rembg-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" hidden>
+                        </div>
+
+                        <div id="rembg-workspace" class="upscale-workspace hidden">
+                            <div class="upscale-preview-grid">
+                                <div class="upscale-comparison-container checkerboard" id="rembg-comparison-container">
+                                    <div class="upscale-comparison-wrapper" id="rembg-comparison-wrapper">
+                                        <div class="upscale-canvas-clip" id="rembg-original-clip">
+                                            <div class="upscale-transform-layer" id="rembg-transform-layer">
+                                                <video id="rembg-video" loop crossorigin="anonymous" muted playsinline></video>
+                                                <img id="rembg-image" class="hidden w-full h-full obj-contain pointer-none" crossorigin="anonymous">
+                                            </div>
+                                        </div>
+                                        <div class="upscale-canvas-clip" id="rembg-canvas-clip">
+                                            <div class="upscale-transform-layer" id="rembg-canvas-transform-layer">
+                                                <canvas id="rembg-canvas"></canvas>
+                                            </div>
+                                            <div id="rembg-unprocessed-overlay" class="upscale-unprocessed-overlay show">
+                                                <div class="unprocessed-title">Unprocessed</div>
+                                                <div class="unprocessed-subtitle">Press preview to view background removal</div>
+                                            </div>
+                                        </div>
+                                        <div class="upscale-slider-line" id="rembg-slider-line">
+                                            <div class="upscale-slider-handle">&#9664; &#9654;</div>
+                                        </div>
+                                        <div class="upscale-slider-label left">Original</div>
+                                        <div class="upscale-slider-label right" id="rembg-slider-label-right">Removed BG</div>
+                                        <div class="upscale-zoom-badge hidden" id="rembg-zoom-badge">Zoom: 1x</div>
+                                    </div>
+                                </div>
+
+                                <div class="upscale-controls">
+                                    <p class="upscale-controls-title" data-i18n="tool_rembg_model_title">AI Model</p>
+                                    <div class="upscale-preset-list" id="rembg-model-list">
+                                        <button type="button" class="upscale-preset-btn active" data-model="selfie_segmenter">MediaPipe (~1MB)</button>
+                                        <button type="button" class="upscale-preset-btn" data-model="rvm_mobilenetv3">RVM (~15MB)</button>
+                                        <button type="button" class="upscale-preset-btn" data-model="modnet">MODNet (~25MB)</button>
+                                    </div>
+
+                                    <p class="upscale-controls-title mt-4">Hardware</p>
+                                    <div class="upscale-order-toggle" id="rembg-hw-switches">
+                                        <button type="button" class="upscale-order-btn active" data-hw="cpu">CPU</button>
+                                        <button type="button" class="upscale-order-btn" data-hw="gpu" id="rembg-hw-gpu-btn">GPU</button>
+                                    </div>
+
+                                    <p class="upscale-controls-title mt-4" data-i18n="tool_rembg_bg_title">Background</p>
+                                    <div class="upscale-preset-list" id="rembg-bg-list">
+                                        <button type="button" class="upscale-preset-btn active" data-bg="transparent" data-i18n="tool_rembg_bg_transparent">Transparent</button>
+                                        <button type="button" class="upscale-preset-btn" data-bg="green" data-i18n="tool_rembg_bg_green">Green Screen</button>
+                                        <button type="button" class="upscale-preset-btn" data-bg="color" data-i18n="tool_rembg_bg_color">Solid Color</button>
+                                        <button type="button" class="upscale-preset-btn" data-bg="blur" data-i18n="tool_rembg_bg_blur">Blur</button>
+                                        <button type="button" class="upscale-preset-btn" data-bg="image" data-i18n="tool_rembg_bg_image">Custom Image</button>
+                                    </div>
+
+                                    <div id="rembg-color-picker-row" class="hidden mt-4">
+                                        <div class="flex align-center gap-10">
+                                            <input type="color" id="rembg-color-input" value="#0842a0" class="rembg-color-box">
+                                            <input type="text" id="rembg-color-text" value="#0842a0" class="flex-1 box-border font-13 font-mono">
+                                        </div>
+                                    </div>
+
+                                    <div id="rembg-blur-row" class="hidden mt-4">
+                                        <div class="flex justify-between font-13 font-600 mb-4">
+                                            <span>Blur Radius</span>
+                                            <span id="rembg-blur-val">20px</span>
+                                        </div>
+                                        <input type="range" id="rembg-blur-range" min="5" max="50" step="1" value="20" class="w-full box-border">
+                                    </div>
+
+                                    <div id="rembg-image-row" class="hidden mt-4">
+                                        <div class="drag-drop-area min-h-60" id="rembg-bg-img-drop">
+                                            <span class="material-symbols-rounded font-20">add_photo_alternate</span>
+                                            <span id="rembg-bg-img-label" class="font-12">Select background image</span>
+                                            <input type="file" id="rembg-bg-img-input" accept="image/*" hidden>
+                                        </div>
+                                    </div>
+
+                                    <div id="rembg-rvm-controls" class="hidden mt-4">
+                                        <div class="input-field mb-8">
+                                            <div class="flex justify-between font-13 font-600 mb-4">
+                                                <span>Quality Scale</span>
+                                                <span id="rembg-rvm-scale-val">100% (HD)</span>
+                                            </div>
+                                            <input type="range" id="rembg-rvm-scale" min="0.4" max="1.0" step="0.05" value="1.0" class="w-full box-border">
+                                        </div>
+                                        <div class="input-field mb-0">
+                                            <div class="flex justify-between font-13 font-600 mb-4">
+                                                <span>Downsample Ratio</span>
+                                                <span id="rembg-rvm-downsample-val">0.25</span>
+                                            </div>
+                                            <input type="range" id="rembg-rvm-downsample" min="0.1" max="0.5" step="0.05" value="0.25" class="w-full box-border">
+                                        </div>
+                                    </div>
+
+                                    <div id="rembg-modnet-controls" class="hidden mt-4">
+                                        <div class="input-field mb-8">
+                                            <div class="flex justify-between font-13 font-600 mb-4">
+                                                <span>Matte Boost (Solid Fill)</span>
+                                                <span id="rembg-modnet-boost-val">80%</span>
+                                            </div>
+                                            <input type="range" id="rembg-modnet-boost" min="0" max="100" step="5" value="80" class="w-full box-border">
+                                        </div>
+                                        <div class="input-field mb-0">
+                                            <div class="flex justify-between font-13 font-600 mb-4">
+                                                <span>Background Cutoff</span>
+                                                <span id="rembg-modnet-cutoff-val">10%</span>
+                                            </div>
+                                            <input type="range" id="rembg-modnet-cutoff" min="5" max="50" step="5" value="10" class="w-full box-border">
+                                        </div>
+                                    </div>
+
+                                    <div id="rembg-duration-container">
+                                        <p class="upscale-controls-title mt-4" data-i18n="upscale_duration_title">Duration</p>
+                                        <div class="upscale-timeline">
+                                            <div class="upscale-timeline-times">
+                                                <span id="rembg-time-current">0:00</span>
+                                                <span id="rembg-time-duration">0:00</span>
+                                            </div>
+                                            <input type="range" id="rembg-timeline" min="0" max="100" step="0.01" value="0">
+                                        </div>
+                                    </div>
+
+                                    <div class="upscale-action-row">
+                                        <button type="button" class="btn-upscale" id="rembg-btn-zoom">Zoom: 1x</button>
+                                        <button type="button" class="btn-upscale primary" id="rembg-btn-preview">
+                                            <span class="material-symbols-rounded font-16">visibility</span>
+                                            <span data-i18n="btn_preview">Preview</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Checking Screen -->
+                        <div id="rembg-checking-screen" class="hidden system-checking-card mt-16">
+                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
+                            <div class="system-checking-list">
+                                <div class="system-checking-item">
+                                    <span id="rembg-engine-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
+                                    <span id="rembg-engine-status">AI Model: Checking...</span>
+                                </div>
+                                <div class="system-checking-item">
+                                    <span id="rembg-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
+                                    <span id="rembg-gpu-status">Hardware Engine: Checking...</span>
+                                </div>
+                                <div class="system-checking-item">
+                                    <span id="rembg-ffmpeg-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
+                                    <span id="rembg-ffmpeg-status">FFmpeg WASM: Checking...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="rembg-logs-container" class="hidden process-logs-wrap mt-16">
+                            <div class="process-logs-header">
+                                <span class="process-logs-title" data-i18n="process_logs_title">Process Logs:</span>
+                                <button id="btn-rembg-copy-logs" type="button" class="btn-copy-logs">
+                                    <span class="material-symbols-rounded font-16">content_copy</span>
+                                    <span data-i18n="btn_copy" id="btn-rembg-copy-logs-label">Copy</span>
+                                </button>
+                            </div>
+                            <pre id="rembg-logs" class="process-logs-pre max-h-120"></pre>
+                        </div>
+
+                        <div id="rembg-progress-container" class="hidden mt-16">
+                            <div class="progress-bar-bg progress-track">
+                                <div id="rembg-progress-fill" class="progress-fill"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <span id="rembg-progress-text">Processing...</span>
+                                <span id="rembg-progress-percent">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="upscale-action-buttons mt-16">
+                            <button type="button" class="btn-primary w-full hidden" id="rembg-btn-process" data-i18n="tool_rembg_btn_process">
+                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
+                                Remove Background
+                            </button>
+                            <button type="button" class="btn-primary w-full hidden btn-danger-container" id="rembg-btn-cancel" data-i18n="btn_cancel">Cancel</button>
+                            <button type="button" class="btn-primary w-full hidden mt-8" id="rembg-btn-reset" data-i18n="tool_rembg_btn_another">Process Another Media</button>
+                        </div>
+                    </div>
                 </div>
                 <footer class="app-footer">
                     <div class="footer-links">
@@ -1395,17 +1593,18 @@
     </div>
 
     <script src="assets/jszip/jszip.min.js"></script>
-    <script src="scripts/app.js?v=1.5.0"></script>
-    <script src="scripts/ffmpeg-tool.js?v=1.5.0"></script>
-    <script src="scripts/tiktok-quality-tool.js?v=1.5.0"></script>
-    <script src="scripts/audio-extractor-tool.js?v=1.5.0"></script>
-    <script src="scripts/image-sequence-tool.js?v=1.5.0"></script>
-    <script src="scripts/fivemb-generator.js?v=1.5.0"></script>
-    <script src="scripts/ae-to-am-beatmark-tool.js?v=1.5.0"></script>
-    <script src="scripts/upscale-gpu-enhancer.js?v=1.5.0"></script>
-    <script src="scripts/upscale-tool.js?v=1.5.0"></script>
-    <script src="scripts/video-interpolation.js?v=1.5.0"></script>
-    <script src="scripts/tiktok-stats-tool.js?v=1.5.0"></script>
-    <script src="scripts/tiktok-downloader.js?v=1.5.0"></script>
+    <script src="scripts/app.js?v=1.6.8"></script>
+    <script src="scripts/ffmpeg-tool.js?v=1.6.8"></script>
+    <script src="scripts/tiktok-quality-tool.js?v=1.6.8"></script>
+    <script src="scripts/audio-extractor-tool.js?v=1.6.8"></script>
+    <script src="scripts/image-sequence-tool.js?v=1.6.8"></script>
+    <script src="scripts/fivemb-generator.js?v=1.6.8"></script>
+    <script src="scripts/ae-to-am-beatmark-tool.js?v=1.6.8"></script>
+    <script src="scripts/upscale-gpu-enhancer.js?v=1.6.8"></script>
+    <script src="scripts/upscale-tool.js?v=1.6.8"></script>
+    <script src="scripts/video-interpolation.js?v=1.6.8"></script>
+    <script src="scripts/rembg-tool.js?v=1.6.8"></script>
+    <script src="scripts/tiktok-stats-tool.js?v=1.6.8"></script>
+    <script src="scripts/tiktok-downloader.js?v=1.6.8"></script>
 </body>
 </html>

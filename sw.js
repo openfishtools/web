@@ -1,4 +1,5 @@
-const CACHE_NAME = 'chros-offline-v1.5.1';
+const APP_VERSION = '1.6.8';
+const CACHE_NAME = `chros-offline-v${APP_VERSION}`;
 
 const CORE_ASSETS = [
     '/',
@@ -19,27 +20,14 @@ const CORE_ASSETS = [
     '/scripts/image-sequence-tool.js',
     '/scripts/fivemb-generator.js',
     '/scripts/ae-to-am-beatmark-tool.js',
+    '/scripts/rembg-tool.js',
     '/assets/jszip/jszip.min.js',
     '/favicon.ico'
 ];
 
-const VERSIONED_ASSETS = [
-    '/styles/main.css?v=1.4.8',
-    '/styles/responsive.css?v=1.4.8',
-    '/scripts/i18n.js?v=1.4.8',
-    '/scripts/app.js?v=1.4.8',
-    '/scripts/ffmpeg-tool.js?v=1.4.8',
-    '/scripts/audio-extractor-tool.js?v=1.4.8',
-    '/scripts/tiktok-quality-tool.js?v=1.5.8',
-    '/scripts/tiktok-stats-tool.js?v=1.4.8',
-    '/scripts/tiktok-downloader.js?v=1.4.8',
-    '/scripts/upscale-gpu-enhancer.js?v=1.4.8',
-    '/scripts/upscale-tool.js?v=1.4.8',
-    '/scripts/video-interpolation.js?v=1.4.8',
-    '/scripts/image-sequence-tool.js?v=1.4.8',
-    '/scripts/fivemb-generator.js?v=1.4.8',
-    '/scripts/ae-to-am-beatmark-tool.js?v=1.4.8'
-];
+const VERSIONED_ASSETS = CORE_ASSETS
+    .filter(p => p !== '/' && p !== '/favicon.ico')
+    .map(path => `${path}?v=${APP_VERSION}`);
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

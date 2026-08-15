@@ -186,3 +186,4 @@ MONGODB_URI          # MongoDB connection string
 5. **Syntax Vigilance**: Always verify syntax before saving files.
 6. **Zero-Inline**: Absolutely no inline CSS or JS in HTML files.
 7. **Proactive Cleanup**: Delete unused CSS classes when features are removed.
+8. **Tool & App Versioning**: Selalu update nomor versi badge tool terkait (`.tool-ver-badge` di `index.html`) dan update versi cache aplikasi (`APP_VERSION` di `sw.js`) setiap kali melakukan perubahan, perbaikan, atau update fitur pada suatu tool.
