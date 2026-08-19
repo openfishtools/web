@@ -617,7 +617,7 @@
                                 <div class="flex align-center gap-6 mt-2 flex-wrap">
                                     <span class="tool-subtitle-text" data-i18n="tool_stats_desc">
                                         Metadata &amp; Stream Analyser</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
+                                    <span class="tool-ver-badge">1.1.2</span>
                                 </div>
                             </div>
                         </div>
@@ -647,6 +647,24 @@
                             <div class="stats-details-card">
                                 <div class="stats-detail-row">
                                     <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">calendar_month</span><span data-i18n="stats_upload_date">Upload Date</span></span>
+                                    <strong id="stats-upload-date" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">public</span><span data-i18n="stats_region">Region</span></span>
+                                    <strong id="stats-region" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">security</span><span data-i18n="stats_shadowban">Shadowban</span></span>
+                                    <div id="stats-shadowban" class="text-on-surface">—</div>
+                                </div>
+
+                                <hr class="stats-section-divider">
+
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
                                             class="material-symbols-rounded font-18">aspect_ratio</span><span data-i18n="stats_resolution">Resolution</span></span>
                                     <strong id="stats-resolution" class="text-on-surface">—</strong>
                                 </div>
@@ -674,6 +692,39 @@
                                     <span class="stats-detail-label"><span
                                             class="material-symbols-rounded font-18">build</span><span data-i18n="stats_method">Method</span></span>
                                     <strong id="stats-method" class="text-on-surface">—</strong>
+                                </div>
+
+                                <hr class="stats-section-divider">
+
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">visibility</span><span data-i18n="stats_views">Views</span></span>
+                                    <strong id="stats-views" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">favorite</span><span data-i18n="stats_likes">Likes</span></span>
+                                    <strong id="stats-likes" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">chat_bubble</span><span data-i18n="stats_comments">Comments</span></span>
+                                    <strong id="stats-comments" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">share</span><span data-i18n="stats_shares">Shares</span></span>
+                                    <strong id="stats-shares" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">bookmark</span><span data-i18n="stats_saves">Saves</span></span>
+                                    <strong id="stats-saves" class="text-on-surface">—</strong>
+                                </div>
+                                <div class="stats-detail-row">
+                                    <span class="stats-detail-label"><span
+                                            class="material-symbols-rounded font-18">trending_up</span><span data-i18n="stats_engagement">Engagement</span></span>
+                                    <strong id="stats-engagement" class="text-on-surface">—</strong>
                                 </div>
                             </div>
                         </div>
@@ -1607,7 +1658,7 @@
     <script src="scripts/upscale-tool.js?v=1.0.0"></script>
     <script src="scripts/video-interpolation.js?v=1.0.3"></script>
     <script src="scripts/rembg-tool.js?v=1.3.8"></script>
-    <script src="scripts/tiktok-stats-tool.js?v=1.0.1"></script>
+    <script src="scripts/tiktok-stats-tool.js?v=1.1.2"></script>
     <script src="scripts/tiktok-downloader.js?v=1.0.0"></script>
 </body>
 </html>

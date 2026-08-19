@@ -180,21 +180,35 @@ async function ensurePresetIds() {
 }
 async function connectToDatabase() {
     if (cachedDb) return cachedDb;
+    if (!process.env.MONGODB_URI) {
+        throw new Error('MONGODB_URI environment variable is missing');
+    }
     const db = await mongoose.connect(process.env.MONGODB_URI);
     cachedDb = db;
     await ensurePresetIds();
     return db;
 }
 
-// Middleware to ensure DB connection
-app.use(async (req, res, next) => {
+// Middleware to ensure DB connection only for routes that require it
+async function requireDb(req, res, next) {
+    if (!process.env.MONGODB_URI) {
+        if (req.method === 'GET' && !req.path.startsWith('/api/admin')) {
+            return res.json([]);
+        }
+        return res.status(503).json({ error: 'Database is not configured (MONGODB_URI missing)' });
+    }
     try {
         await connectToDatabase();
         next();
     } catch (err) {
+        if (req.method === 'GET' && !req.path.startsWith('/api/admin')) {
+            return res.json([]);
+        }
         res.status(500).json({ error: 'Database connection failed' });
     }
-});
+}
+
+app.use(['/api/socials', '/api/contacts', '/api/presets', '/api/resources', '/api/admin'], requireDb);
 
 const SocialSchema = new mongoose.Schema({
     name: String,
@@ -779,6 +793,15 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                         title: d.title || '',
                         author_unique_id: d.author?.unique_id || '',
                         author_nickname: d.author?.nickname || '',
+                        author_avatar: d.author?.avatar || '',
+                        region: d.region || '',
+                        create_time: d.create_time || 0,
+                        is_nff_or_nr: !!d.is_nff_or_nr,
+                        play_count: d.play_count || 0,
+                        digg_count: d.digg_count || 0,
+                        comment_count: d.comment_count || 0,
+                        share_count: d.share_count || 0,
+                        collect_count: d.collect_count || 0,
                         size: d.size || 0,
                         duration: d.duration || 0,
                         w: d.w || 0,
@@ -821,6 +844,15 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                         title: d.title || '',
                         author_unique_id: d.author?.unique_id || '',
                         author_nickname: d.author?.nickname || '',
+                        author_avatar: d.author?.avatar || '',
+                        region: d.region || '',
+                        create_time: d.create_time || 0,
+                        is_nff_or_nr: !!d.is_nff_or_nr,
+                        play_count: d.play_count || 0,
+                        digg_count: d.digg_count || 0,
+                        comment_count: d.comment_count || 0,
+                        share_count: d.share_count || 0,
+                        collect_count: d.collect_count || 0,
                         size: d.size || 0,
                         duration: d.duration || 0,
                         w: d.w || 0,
