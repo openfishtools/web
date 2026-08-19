@@ -1,4 +1,4 @@
-const APP_VERSION = '1.7.4';
+const APP_VERSION = '1.9.4';
 const CACHE_NAME = `chros-offline-v${APP_VERSION}`;
 
 const CORE_ASSETS = [
@@ -12,6 +12,8 @@ const CORE_ASSETS = [
     '/scripts/ffmpeg-tool.js',
     '/scripts/audio-extractor-tool.js',
     '/scripts/tiktok-quality-tool.js',
+    '/scripts/tiktok-quality-v1.js',
+    '/scripts/tiktok-quality-v3.js',
     '/scripts/tiktok-stats-tool.js',
     '/scripts/tiktok-downloader.js',
     '/scripts/upscale-gpu-enhancer.js',
@@ -31,7 +33,9 @@ const TOOL_VERSIONS = {
     'i18n.js': '1.6.9',
     'app.js': '1.6.9',
     'ffmpeg-tool.js': '1.0.0',
-    'tiktok-quality-tool.js': '3.0.4',
+    'tiktok-quality-tool.js': '3.4.1',
+    'tiktok-quality-v1.js': '3.4.1',
+    'tiktok-quality-v3.js': '3.4.1',
     'audio-extractor-tool.js': '1.0.0',
     'image-sequence-tool.js': '1.0.0',
     'fivemb-generator.js': '1.0.0',
@@ -51,6 +55,8 @@ const VERSIONED_ASSETS = [
     `/scripts/app.js?v=${TOOL_VERSIONS['app.js']}`,
     `/scripts/ffmpeg-tool.js?v=${TOOL_VERSIONS['ffmpeg-tool.js']}`,
     `/scripts/tiktok-quality-tool.js?v=${TOOL_VERSIONS['tiktok-quality-tool.js']}`,
+    `/scripts/tiktok-quality-v1.js?v=${TOOL_VERSIONS['tiktok-quality-v1.js']}`,
+    `/scripts/tiktok-quality-v3.js?v=${TOOL_VERSIONS['tiktok-quality-v3.js']}`,
     `/scripts/audio-extractor-tool.js?v=${TOOL_VERSIONS['audio-extractor-tool.js']}`,
     `/scripts/image-sequence-tool.js?v=${TOOL_VERSIONS['image-sequence-tool.js']}`,
     `/scripts/fivemb-generator.js?v=${TOOL_VERSIONS['fivemb-generator.js']}`,

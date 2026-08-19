@@ -261,14 +261,13 @@
                 </div>
                 <div class="grid">
                     <div class="card pos-relative overflow-hidden" id="tiktok-patcher-card"
-                        data-v1-patched="false"
-                        data-v2-patched="false">
+                        data-v1-patched="false">
 
-                        <!-- Both-patched overlay (shown when both v1+v2 are patched) -->
+                        <!-- Patched overlay (shown when v1 is patched) -->
                         <div id="tiktok-patched-overlay">
                             <span class="material-symbols-rounded block-icon-danger">block</span>
                             <div class="overlay-patched-title" data-i18n="patcher_overlay_title">Method Patched</div>
-                            <div class="overlay-patched-desc" data-i18n="patcher_overlay_desc">Both V1 and V2 are currently unavailable.</div>
+                            <div class="overlay-patched-desc" data-i18n="patcher_overlay_desc">WMV is currently unavailable. Please use Binary or FPS.</div>
                             <button id="btn-patched-overlay-ignore" data-i18n="patcher_overlay_ignore" class="btn-patched-ignore">Ignore</button>
                         </div>
 
@@ -280,7 +279,7 @@
                                 </div>
                                 <div class="flex align-center gap-6 mt-2 flex-wrap">
                                     <span class="tool-subtitle-text" data-i18n="patcher_subtitle">TikTok HQ Upload</span>
-                                    <span class="tool-ver-badge">3.0.4</span>
+                                    <span class="tool-ver-badge">3.4.1</span>
                                 </div>
                             </div>
                             <div class="flex gap-6 align-center">
@@ -298,23 +297,26 @@
                         </div>
  
                         <div class="mb-14">
-                            <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose version</div>
+                            <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose Method</div>
                             <div class="tiktok-switch-track" id="tiktok-version-switch">
-                                <div class="tiktok-switch-indicator" id="tiktok-version-indicator" style="left: calc(50% + 4px); width: calc(50% - 8px);"></div>
-                                <div class="tiktok-switch-option" data-version="v1">v1</div>
-                                <div class="tiktok-switch-option active" data-version="v3">v3</div>
+                                <div class="tiktok-switch-indicator" id="tiktok-version-indicator" style="left: calc(33.333% + 2px); width: calc(33.333% - 4px);"></div>
+                                <div class="tiktok-switch-option" data-version="v1" data-i18n="patcher_method_wmv">WMV</div>
+                                <div class="tiktok-switch-option active" data-version="v3" data-i18n="patcher_method_binary">BINARY</div>
+                                <div class="tiktok-switch-option" data-version="fps" data-i18n="patcher_method_fps">FPS</div>
                             </div>
                         </div>
 
                         <div id="tiktok-compress-toggle-row" class="mb-14">
                             <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress</div>
                             <div class="tiktok-switch-track" id="tiktok-compress-mode">
-                                <div class="tiktok-switch-indicator" id="tiktok-mode-indicator" style="left: 4px; width: calc(50% - 8px);"></div>
-                                <div class="tiktok-switch-option active" data-mode="off" data-desc="Direct patch | Mem-patch video asli secara langsung tanpa kompresi (0% penurunan kualitas & instan).">OFF</div>
-                                <div class="tiktok-switch-option" data-mode="on" data-desc="HD Compression | Mengompresi video ke kualitas HD tajam dengan ukuran file terkecil dan aman dari Out Of Memory (OOM).">ON</div>
+                                <div class="tiktok-switch-indicator" id="tiktok-mode-indicator" style="left: 4px; width: calc(33.333% - 6px);"></div>
+                                <div class="tiktok-switch-option active" data-mode="off" data-i18n="patcher_mode_off">OFF</div>
+                                <div class="tiktok-switch-option" data-mode="720p" data-i18n="patcher_mode_720p">720P</div>
+                                <div class="tiktok-switch-option" data-mode="1080p" data-i18n="patcher_mode_1080p">1080P</div>
                             </div>
-                            <div class="tiktok-preset-desc" id="tiktok-mode-desc">Direct patch | Mem-patch video asli secara langsung tanpa kompresi (0% penurunan kualitas & instan).</div>
                         </div>
+
+                        <div class="tiktok-preset-desc mb-14" id="tiktok-info-desc" data-i18n-html="patcher_desc_binary_off"></div>
 
                         <div id="tool-tiktok-status" class="mt-4 text-center font-14 font-500 text-primary">
                         </div>
@@ -1452,7 +1454,7 @@
                     <div class="tktk-check-body">
                         <div class="tktk-check-label" data-i18n="tktk_label_size">File Size</div>
                         <div class="tktk-check-value" id="tktk-val-size" data-i18n="tktk_val_analyzing">Analyzing...</div>
-                        <div class="tktk-check-error" id="tktk-err-size">Exceeds 30 MB safe limit for direct patching</div>
+                        <div class="tktk-check-error" id="tktk-err-size">Exceeds 50 MB safe limit for direct patching</div>
                     </div>
                 </div>
             </div>
@@ -1476,7 +1478,7 @@
             <div class="vp-modal-body" id="vp-modal-body"></div>
             <div class="vp-modal-footer">
                 <button class="vp-btn vp-btn-proceed" id="btn-vp-proceed">Proceed Anyway</button>
-                <button class="vp-btn vp-btn-use-v1" id="btn-vp-switch">Use V1</button>
+                <button class="vp-btn vp-btn-use-v1" id="btn-vp-switch">Use WMV</button>
             </div>
         </div>
     </div>
@@ -1490,9 +1492,8 @@
                 <div class="warning-modal-title" data-i18n="ios_warn_title">iOS Compatibility Warning</div>
             </div>
             <div class="warning-modal-content" data-i18n-html="ios_warn_desc">
-                <p>This V2 method may not run or upload perfectly on iOS, iPadOS, and VisionOS devices. You may encounter errors when attempting to upload the patched video via TikTok Studio.</p>
-                <p>For the best experience, we recommend performing the upload on <strong>macOS, Windows, or Android</strong> using desktop browsers like <strong>Chrome, Firefox, or Edge</strong> (excluding Safari).</p>
-                <p>Alternatively, please use the <strong>V1 method</strong> which has been fully stabilized across all devices.</p>
+                <p>This tool is not supported on iOS, iPadOS, and VisionOS devices. Patched videos on iOS may fail to upload via TikTok Studio.</p>
+                <p>For the best experience, please use <strong>macOS, Windows, or Android</strong> devices.</p>
             </div>
             <div class="warning-modal-footer">
                 <button class="warning-btn warning-btn-cancel" id="btn-ios-warning-cancel" data-i18n="ios_warn_cancel">Cancel</button>
@@ -1595,7 +1596,9 @@
     <script src="assets/jszip/jszip.min.js"></script>
     <script src="scripts/app.js?v=1.6.9"></script>
     <script src="scripts/ffmpeg-tool.js?v=1.0.0"></script>
-    <script src="scripts/tiktok-quality-tool.js?v=3.0.4"></script>
+    <script src="scripts/tiktok-quality-tool.js?v=3.4.1"></script>
+    <script src="scripts/tiktok-quality-v1.js?v=3.4.1"></script>
+    <script src="scripts/tiktok-quality-v3.js?v=3.4.1"></script>
     <script src="scripts/audio-extractor-tool.js?v=1.0.0"></script>
     <script src="scripts/image-sequence-tool.js?v=1.0.0"></script>
     <script src="scripts/fivemb-generator.js?v=1.0.0"></script>
