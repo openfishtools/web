@@ -1347,6 +1347,47 @@ document.addEventListener('DOMContentLoaded', () => {
     let cachedResSourceRect = null;
     let isResModalAnimating = false;
 
+    let resourceDeepLinkToken = 0;
+
+    function focusResourceDeepLink(item) {
+        const myToken = ++resourceDeepLinkToken;
+        const alive = () => myToken === resourceDeepLinkToken;
+
+        const tryFocus = (attempt = 0) => {
+            if (!alive()) return;
+            const card = document.querySelector(`.resource-card[data-id="${item._id}"]`);
+            if (!card || card.getClientRects().length === 0) {
+                if (attempt < 24) return setTimeout(() => tryFocus(attempt + 1), 250);
+                return;
+            }
+
+            setTimeout(() => {
+                if (!alive()) return;
+                const scroller = document.getElementById('content-scroller');
+                const rect = card.getBoundingClientRect();
+                const vh = window.innerHeight || document.documentElement.clientHeight;
+                const fullyVisible = rect.top >= 0 && rect.bottom <= vh;
+                if (scroller && !fullyVisible) {
+                    const targetTop = Math.max(0, scroller.scrollTop + rect.top - vh * 0.35);
+                    scroller.scrollTo({ top: targetTop, behavior: 'smooth' });
+                }
+                setTimeout(() => {
+                    if (!alive()) return;
+                    const freshCard = document.querySelector(`.resource-card[data-id="${item._id}"]`);
+                    if (!freshCard || freshCard.getClientRects().length === 0) return;
+                    freshCard.classList.remove('deep-link-flash');
+                    void freshCard.offsetWidth;
+                    freshCard.classList.add('deep-link-flash');
+                    setTimeout(() => {
+                        if (!alive()) return;
+                        openResourceModal(item, freshCard);
+                    }, 650);
+                }, 450);
+            }, 350);
+        };
+        tryFocus();
+    }
+
     const renderResourceCategories = (resources) => {
         const categoryContainer = document.getElementById('resource-categories');
         if (!categoryContainer) return;
@@ -1602,6 +1643,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (item) openResourceModal(item, card);
                 });
             });
+
+            if (window.pendingResourceTitle) {
+                const wanted = String(window.pendingResourceTitle).toLowerCase();
+                window.pendingResourceTitle = null;
+                const match = allResources.find(r => (r.title || '').toLowerCase().includes(wanted));
+                if (match) focusResourceDeepLink(match);
+            }
         } else {
             const noResMsg = (window.getTranslation && window.getTranslation('no_results')) || 'No resources found';
             container.innerHTML = `<div class="empty-state"><span class="material-symbols-rounded empty-state-icon">search_off</span><p class="empty-state-text">${noResMsg}</p></div>`;
@@ -2912,11 +2960,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const navRect = navBar.getBoundingClientRect();
         const itemRect = activeItem.getBoundingClientRect();
-        const leftPos = itemRect.left - navRect.left;
+        const leftPos = itemRect.left - navRect.left + (navBar.scrollLeft || 0);
         const width = itemRect.width;
 
         indicator.style.left = `${leftPos}px`;
         indicator.style.width = `${width}px`;
+    }
+
+    let navScrolledOnce = false;
+
+    function scrollActiveNavIntoView() {
+        const navBar = document.getElementById('floating-nav');
+        const activeItem = navBar ? navBar.querySelector('.floating-nav-item.active') : null;
+        if (!navBar || !activeItem) return;
+        if (navBar.scrollWidth <= navBar.clientWidth + 1) return;
+        const target = activeItem.offsetLeft - (navBar.clientWidth - activeItem.offsetWidth) / 2;
+        const maxScroll = navBar.scrollWidth - navBar.clientWidth;
+        const clamped = Math.max(0, Math.min(target, maxScroll));
+        if (Math.abs(navBar.scrollLeft - clamped) < 1) return;
+        try {
+            navBar.scrollTo({ left: clamped, behavior: navScrolledOnce ? 'smooth' : 'auto' });
+        } catch (e) {
+            navBar.scrollLeft = clamped;
+        }
     }
 
     let navIndicatorRaf = null;
@@ -2935,6 +3001,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         navIndicatorRaf = requestAnimationFrame(step);
+    }
+
+    const floatingNavScrollEl = document.getElementById('floating-nav');
+    if (floatingNavScrollEl) {
+        floatingNavScrollEl.addEventListener('scroll', updateNavIndicator, { passive: true });
     }
 
     let cubeRotationTimer = null;
@@ -2966,6 +3037,9 @@ document.addEventListener('DOMContentLoaded', () => {
             activeViewKey = 'tools';
         } else if (rawHash === 'resource' || rawHash === 'resources') {
             activeViewKey = 'resource';
+        } else if (['fishtoolupdate', 'fishtoolsupdate', 'fishtools'].includes(rawHash)) {
+            activeViewKey = 'resource';
+            window.pendingResourceTitle = 'fishtools';
         } else if (rawHash === 'preset' || rawHash === 'presets') {
             activeViewKey = 'preset';
         } else if (rawHash === 'contact' || rawHash === 'contact-us' || rawHash === 'contacts') {
@@ -2997,6 +3071,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         trackNavIndicator(400);
+        scrollActiveNavIntoView();
+        navScrolledOnce = true;
 
         updateCubeDimensions();
 
@@ -3125,6 +3201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCubeDimensions();
         updateTimelineConnector();
         updateNavIndicator();
+        scrollActiveNavIntoView();
         updateOpenModalsLayout();
         requestAnimationFrame(updateTimelineConnector);
         requestAnimationFrame(updateNavIndicator);
@@ -3148,5 +3225,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCubeDimensions();
         updateTimelineConnector();
         updateNavIndicator();
+        scrollActiveNavIntoView();
     }, 150);
 });

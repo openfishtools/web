@@ -341,6 +341,11 @@ app.get('/api/tiktok-posts', async (req, res) => {
 
     let posts = await fetchTikwmUserFeed(username);
     if (!posts.length) posts = await fetchProfilePagePosts(username);
+
+    if (posts.length) {
+        await refreshPostCoversViaOEmbed(posts);
+    }
+
     if (!posts.length) posts = await resolvePinnedPosts();
 
     if (posts.length > 0) {
@@ -1013,6 +1018,19 @@ async function fetchTikTokOEmbedThumb(pageUrl) {
     } finally {
         clearTimeout(timer);
     }
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function refreshPostCoversViaOEmbed(posts, limit = 6) {
+    const targets = posts.slice(0, limit).filter(p => p && p.url);
+    await Promise.all(targets.map(async (p, i) => {
+        try {
+            if (i > 0) await sleep(i * 120);
+            const thumb = await fetchTikTokOEmbedThumb(p.url);
+            if (thumb) p.cover = thumb;
+        } catch (e) {}
+    }));
 }
 
 async function fetchTikTokEmbedThumb(videoId) {

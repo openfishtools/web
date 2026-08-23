@@ -274,10 +274,17 @@ body.preset-modal-open .floating-nav-bar {
     border-radius: var(--radius-full);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
     z-index: 44;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     padding: 6px;
     gap: 4px;
+    max-width: min(94vw, 520px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     opacity: 1;
@@ -286,6 +293,10 @@ body.preset-modal-open .floating-nav-bar {
                 background-color var(--transition-standard),
                 box-shadow var(--transition-standard);
     will-change: transform, opacity;
+}
+
+.floating-nav-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .floating-nav-bar:hover {
@@ -372,6 +383,14 @@ body.preset-modal-open .floating-nav-bar {
 
 .floating-nav-item:hover {
     color: var(--md-sys-color-on-surface);
+}
+
+.floating-nav-item:first-child {
+    margin-left: auto;
+}
+
+.floating-nav-item:last-child {
+    margin-right: auto;
 }
 
 .main-wrapper {
@@ -3412,9 +3431,17 @@ body.preset-modal-open .floating-nav-bar {
 
     .floating-nav-item {
         height: 38px;
-        padding: 0 14px;
+        padding: 0 11px;
         font-size: 0.82rem;
         gap: 6px;
+    }
+
+    .floating-nav-item.active {
+        padding: 0 15px 0 12px;
+    }
+
+    .floating-nav-item.active .nav-label {
+        max-width: 96px;
     }
 
     .zigzag-item {
@@ -6329,5 +6356,21 @@ body.preset-popup-active .preset-modal-card.expanded {
         border-left: none;
         border-right: none;
         padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px;
+    }
+}
+
+.resource-card.deep-link-flash {
+    animation: resource-deeplink-pulse 0.9s var(--ease-spring-soft, ease-out) 2;
+}
+
+@keyframes resource-deeplink-pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--md-sys-color-primary);
+    }
+    70% {
+        box-shadow: 0 0 0 12px transparent;
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
     }
 }
