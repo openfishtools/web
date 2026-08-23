@@ -1,55 +1,26 @@
 @echo off
-title cutefish Local Server + Cloudflare Tunnel
+title CHROS Next Gen - Server + API
+cd /d "%~dp0"
 
-:: Check if cloudflared.exe exists in the current directory
-if not exist "%~dp0cloudflared.exe" (
-    echo ==========================================
-    echo [Cloudflare] Downloading cloudflared.exe...
-    echo ==========================================
-    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile '%~dp0cloudflared.exe'"
-    if not exist "%~dp0cloudflared.exe" (
-        echo [ERROR] Failed to download cloudflared.exe automatically.
-        echo Please download it manually or check your connection.
-        pause
-        exit /b
-    )
-    echo [Cloudflare] Download complete!
+echo ==========================================
+echo  CHROS Next Gen - Server + API
+echo ==========================================
+echo.
+
+if not exist "%~dp0node_modules" (
+    echo [Setup] Installing dependencies...
+    call npm install
+    echo.
 )
 
-echo.
-echo ==========================================
-echo 📦 Checking and installing dependencies...
-echo ==========================================
-call npm install
+echo [Server] Starting Next Gen API at http://localhost:3000...
+echo [Browser] Opening in default browser...
+start http://localhost:3000
 
-echo.
-echo ==========================================
-echo 🧹 Cleaning old obfuscated files and re-building high-security JS...
-echo ==========================================
-if exist "%~dp0dist\scripts" rmdir /s /q "%~dp0dist\scripts"
-call npm run obfuscate
+node api/index.js
 
-echo.
-echo ==========================================
-echo 🚀 Starting cutefish Local Node.js Server...
-echo ==========================================
-start "cutefish Node.js Server" cmd /k "npm start"
-
-echo.
-echo ==========================================
-echo 🌐 Opening app in default browser...
-echo ==========================================
-start http://localhost:5000
-
-echo.
-echo ==========================================
-echo 🌐 Launching Cloudflare Tunnel...
-echo ==========================================
-echo Please wait a moment for the tunnel link to generate.
-echo Look for a line like: https://xxxx-xxxx.trycloudflare.com
-echo ==========================================
-echo.
-
-"%~dp0cloudflared.exe" tunnel --url http://127.0.0.1:5000
-
-pause
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Server stopped with error.
+    pause
+)

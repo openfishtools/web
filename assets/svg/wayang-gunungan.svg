@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 440" fill="currentColor">
+  <!-- Tangkai Cempurit -->
+  <path d="M146 340 L146 435 C146 438 148 440 150 440 C152 440 154 438 154 435 L154 340 Z" opacity="0.9"/>
+  
+  <!-- Outer Gunungan Silhouette -->
+  <path d="M150 8 C144 32 120 54 102 74 C82 96 60 120 46 150 C32 180 26 214 28 248 C30 282 46 312 72 334 C94 352 122 360 150 360 C178 360 206 352 228 334 C254 312 270 282 272 248 C274 214 268 180 254 150 C240 120 218 96 198 74 C180 54 156 32 150 8 Z" fill-rule="evenodd" d-inner="filigree"/>
+  
+  <!-- Inner Ornate Intricate Tatahan (Cutout Details) -->
+  <!-- Top Peak Spine -->
+  <path d="M150 22 C148 45 142 70 142 95 C142 100 158 100 158 95 C158 70 152 45 150 22 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  
+  <!-- Upper Tree of Life Branches (Cabang Pohon Hayat) -->
+  <path d="M150 70 C135 60 115 65 105 78 C98 87 102 96 112 94 C124 92 136 84 145 78 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M150 70 C165 60 185 65 195 78 C202 87 198 96 188 94 C176 92 164 84 155 78 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  
+  <!-- Secondary Foliage Flares -->
+  <path d="M146 105 C125 95 98 105 82 124 C72 136 78 148 92 144 C110 138 128 124 144 114 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M154 105 C175 95 202 105 218 124 C228 136 222 148 208 144 C190 138 172 124 156 114 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  
+  <path d="M144 135 C115 125 80 140 64 168 C52 186 62 202 78 196 C100 188 122 168 142 148 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M156 135 C185 125 220 140 236 168 C248 186 238 202 222 196 C200 188 178 168 158 148 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Center Banaspati / Kala Motif (Head of the Guardian) -->
+  <path d="M150 155 C138 155 130 165 132 178 C134 190 142 198 150 198 C158 198 166 190 168 178 C170 165 162 155 150 155 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <circle cx="142" cy="174" r="3" fill="currentColor"/>
+  <circle cx="158" cy="174" r="3" fill="currentColor"/>
+  <path d="M144 186 Q150 192 156 186" stroke="currentColor" stroke-width="2" fill="none"/>
+  
+  <!-- Kala Horns & Flanks -->
+  <path d="M132 165 C118 155 105 168 114 182 C122 194 130 188 134 180 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M168 165 C182 155 195 168 186 182 C178 194 170 188 166 180 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Gapura Roof (Atap Rumah Adat / Gapura Majapahit) -->
+  <path d="M150 205 L110 230 L120 238 L150 220 L180 238 L190 230 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M150 224 L124 242 L130 248 L150 234 L170 248 L176 242 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Gapura Doors (Lawang Kembar Gapuran) -->
+  <path d="M125 252 L146 252 L146 325 L125 325 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M154 252 L175 252 L175 325 L154 325 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  
+  <!-- Door Panels Inlay -->
+  <circle cx="135" cy="270" r="4" fill="currentColor"/>
+  <circle cx="165" cy="270" r="4" fill="currentColor"/>
+  <circle cx="135" cy="300" r="4" fill="currentColor"/>
+  <circle cx="165" cy="300" r="4" fill="currentColor"/>
+
+  <!-- Outer Traditional Perforations (Tatahan Ornamen Tepi) -->
+  <!-- Left Side Ornaments -->
+  <path d="M48 240 C52 225 65 215 75 228 C82 238 72 254 58 250 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M60 275 C66 260 82 255 90 268 C96 280 84 294 70 288 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M80 310 C88 296 104 295 110 308 C114 320 100 332 88 324 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Right Side Ornaments -->
+  <path d="M252 240 C248 225 235 215 225 228 C218 238 228 254 242 250 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M240 275 C234 260 218 255 210 268 C204 280 216 294 230 288 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M220 310 C212 296 196 295 190 308 C186 320 200 332 212 324 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+</svg>

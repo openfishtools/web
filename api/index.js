@@ -1,9 +1,11 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();
 
-// Register Vercel OpenTelemetry for serverless function monitoring
 try {
     const { registerOTel } = require('@vercel/otel');
-    registerOTel({ serviceName: 'chros-api' });
+    registerOTel({ serviceName: 'nextgen-api' });
 } catch (e) {
     console.warn('Vercel OTel registration skipped:', e.message);
 }
@@ -15,35 +17,57 @@ if (dns.setDefaultResultOrder) {
 }
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const path = require('path');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
 
 const app = express();
-app.use(cors());
 const fs = require('fs');
 app.use(express.json());
 
-// Set security headers for WebGPU / SharedArrayBuffer
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 8;
+
+function isLoginBlocked(ip) {
+    const rec = loginAttempts.get(ip);
+    if (!rec) return false;
+    if (Date.now() - rec.start > LOGIN_WINDOW_MS) {
+        loginAttempts.delete(ip);
+        return false;
+    }
+    return rec.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordLoginFailure(ip) {
+    const now = Date.now();
+    const rec = loginAttempts.get(ip);
+    if (!rec || now - rec.start > LOGIN_WINDOW_MS) {
+        loginAttempts.set(ip, { start: now, count: 1 });
+        return;
+    }
+    rec.count++;
+    if (loginAttempts.size > 500) {
+        for (const [k, v] of loginAttempts) {
+            if (now - v.start > LOGIN_WINDOW_MS) loginAttempts.delete(k);
+        }
+    }
+}
+
 app.use((req, res, next) => {
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
     next();
 });
 
-// Priority: serve obfuscated frontend scripts from dist/scripts if built
 const distScriptsPath = path.join(__dirname, '..', 'dist', 'scripts');
+const staticNoCache = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
 if (fs.existsSync(distScriptsPath)) {
-    app.use('/scripts', express.static(distScriptsPath));
+    app.use('/scripts', express.static(distScriptsPath, staticNoCache));
 }
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..'), staticNoCache));
 
-/**
- * Returns dynamic version & build date details based on Vercel environment or file stat
- */
 function getDynamicBuildInfo() {
     const commitSha = process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7) : null;
     const deploymentId = process.env.VERCEL_DEPLOYMENT_ID ? process.env.VERCEL_DEPLOYMENT_ID.substring(0, 7) : null;
@@ -110,7 +134,6 @@ function getDynamicBuildInfo() {
     };
 }
 
-// API version endpoint for client auto-update and cache invalidation
 app.get('/api/version', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -118,7 +141,6 @@ app.get('/api/version', (req, res) => {
     res.json(getDynamicBuildInfo());
 });
 
-// Proxy /realesrgan requests to target model host directly
 app.get('/realesrgan/*', async (req, res) => {
     try {
         const targetUrl = `https://upscale.chino.icu${req.originalUrl}`;
@@ -135,10 +157,202 @@ app.get('/realesrgan/*', async (req, res) => {
     }
 });
 
+const TIKTOK_USERNAME = 'cutefishaep';
+const TIKTOK_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const TIKTOK_POSTS_TTL_MS = 5 * 60 * 1000;
+let tiktokPostsCache = null;
+
+function normalizePost(raw, username) {
+    if (!raw || typeof raw !== 'object') return null;
+    const id = String(raw.video_id || raw.id || '').trim();
+    if (!/^\d+$/.test(id)) return null;
+    const author = raw.author || {};
+    const rawUniqueId = author.unique_id || author.uniqueId || '';
+    if (rawUniqueId && String(username) && rawUniqueId.toLowerCase() !== String(username).toLowerCase()) return null;
+    const uniqueId = rawUniqueId || username;
+    const video = raw.video || {};
+    const stats = raw.stats || {};
+    const cover = raw.cover || raw.origin_cover || raw.dynamic_cover || video.cover || video.originCover || video.dynamicCover || '';
+    return {
+        id,
+        title: String(raw.title || raw.desc || '').trim() || 'TikTok Video',
+        cover,
+        url: `https://www.tiktok.com/@${uniqueId}/video/${id}`,
+        author: uniqueId,
+        author_name: author.nickname || uniqueId,
+        play_count: raw.play_count ?? stats.playCount ?? 0,
+        digg_count: raw.digg_count ?? stats.diggCount ?? 0,
+        comment_count: raw.comment_count ?? stats.commentCount ?? 0,
+        share_count: raw.share_count ?? stats.shareCount ?? 0,
+        duration: raw.duration || video.duration || 0,
+        created_at: Number(raw.create_time || raw.createTime || 0) || Math.floor(Date.now() / 1000)
+    };
+}
+
+function sortPostsDesc(posts) {
+    return posts.sort((a, b) => b.created_at - a.created_at);
+}
+
+async function fetchTikwmUserFeed(username) {
+    const mirrors = ['https://www.tikwm.com', 'https://tikwm.com'];
+    for (const base of mirrors) {
+        for (const method of ['GET', 'POST']) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 6000);
+                const options = {
+                    method,
+                    headers: { 'User-Agent': TIKTOK_UA, 'Accept': 'application/json' },
+                    signal: controller.signal
+                };
+                if (method === 'GET') {
+                    options.url = `${base}/api/user/posts?unique_id=${encodeURIComponent(username)}&count=12`;
+                } else {
+                    options.url = `${base}/api/user/posts`;
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = new URLSearchParams({ unique_id: username, count: '12' }).toString();
+                }
+                const r = await fetch(options.url, options);
+                clearTimeout(timeout);
+                if (!r.ok) continue;
+                const json = await r.json().catch(() => null);
+                const videos = json && json.code === 0 && json.data && Array.isArray(json.data.videos) ? json.data.videos : [];
+                const posts = sortPostsDesc(videos.map(v => normalizePost(v, username)).filter(Boolean));
+                if (posts.length > 0) return posts;
+            } catch (e) {}
+        }
+    }
+    return [];
+}
+
+async function fetchProfilePagePosts(username) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        const r = await fetch(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
+            headers: {
+                'User-Agent': TIKTOK_UA,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9'
+            },
+            redirect: 'follow',
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!r.ok) return [];
+        const html = await r.text();
+        const match = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">([\s\S]*?)<\/script>/) ||
+                      html.match(/<script id="SIGI_STATE" type="application\/json">([\s\S]*?)<\/script>/);
+        if (!match) return [];
+        let data = null;
+        try { data = JSON.parse(match[1]); } catch (e) { return []; }
+        let items = [];
+        if (data.__DEFAULT_SCOPE__) {
+            const detail = data.__DEFAULT_SCOPE__['webapp.user-detail'];
+            items = detail && detail.userInfo && Array.isArray(detail.userInfo.itemList) ? detail.userInfo.itemList : [];
+        } else if (data.ItemModule) {
+            items = Object.values(data.ItemModule).filter(i => i && i.id && i.author);
+        }
+        return sortPostsDesc(items.map(v => normalizePost(v, username)).filter(Boolean)).slice(0, 12);
+    } catch (e) {
+        return [];
+    }
+}
+
+const TIKTOK_PINNED_VIDEOS = [
+    { url: 'https://www.tiktok.com/@cutefishaep/video/7675697464044686613', fallbackTitle: 'Rasio nya salah jir', plays: 4264, likes: 361, duration: 12, cover: 'https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oEnozCFiGYDnaApAh0AwW9SAEAiOFIlOABPij~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=8193d10c&x-expires=1787407200&x-signature=nikUQV7scg0NF4a9GJD9hHkmtpg%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
+    { url: 'https://www.tiktok.com/@cutefishaep/video/7674561349594270993', fallbackTitle: 'FishTools 1.3.0 3D MODEL GENERATOR UPDATE!', plays: 13056, likes: 901, duration: 24, cover: 'https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-4863-sg/ogfqsG9ev3DgZBBEhhFUTItRBGipQgBpYiAQ5E~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=a8d5c7b8&x-expires=1787407200&x-signature=%2B%2BLDDwt0QUt3%2FBUmgXg7UoOOQgE%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
+    { url: 'https://www.tiktok.com/@cutefishaep/video/7675050655521721608', fallbackTitle: 'JJ RANDOM', plays: 2961, likes: 146, duration: 15, cover: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-4863-sg/okeotGBBgSARd3LfLGgIgAPTxQE7AeLEVGF3ge~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=c5eaefc3&x-expires=1787407200&x-signature=GyB6%2BaMwzh5wiCjjLeMW6wlnnIQ%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
+    { url: 'https://www.tiktok.com/@cutefishaep/video/7670369520401354004', fallbackTitle: 'JJ HAPPY HAPPY AJALAH', plays: 6559, likes: 312, duration: 16, cover: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oYo1OABKEAAiwtz8vBAwIN1iWUy7I21fG0ZKuo~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=0c5ce17a&x-expires=1787407200&x-signature=U9QbxS7T%2FBTIomUdr9cjfq8Z6MU%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' }
+];
+
+async function resolvePinnedPosts() {
+    const posts = [];
+    for (const item of TIKTOK_PINNED_VIDEOS) {
+        let resolved = false;
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(item.url)}`, {
+                headers: { 'User-Agent': TIKTOK_UA },
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            if (r.ok) {
+                const json = await r.json().catch(() => null);
+                if (json && json.code === 0 && json.data) {
+                    const d = json.data;
+                    posts.push(normalizePost({
+                        id: d.id,
+                        title: d.title,
+                        cover: d.cover || d.origin_cover || d.dynamic_cover,
+                        author: d.author,
+                        play_count: d.play_count,
+                        digg_count: d.digg_count,
+                        comment_count: d.comment_count,
+                        share_count: d.share_count,
+                        duration: d.duration,
+                        create_time: d.create_time
+                    }, TIKTOK_USERNAME) || {
+                        id: item.url.split('/').pop(),
+                        title: item.fallbackTitle,
+                        cover: item.cover,
+                        url: item.url,
+                        author: TIKTOK_USERNAME,
+                        author_name: TIKTOK_USERNAME,
+                        play_count: item.plays,
+                        digg_count: item.likes,
+                        comment_count: 0,
+                        share_count: 0,
+                        duration: item.duration,
+                        created_at: Math.floor(Date.now() / 1000)
+                    });
+                    resolved = true;
+                }
+            }
+        } catch (e) {}
+        if (!resolved) {
+            posts.push({
+                id: item.url.split('/').pop(),
+                title: item.fallbackTitle,
+                cover: item.cover,
+                url: item.url,
+                author: TIKTOK_USERNAME,
+                author_name: TIKTOK_USERNAME,
+                play_count: item.plays,
+                digg_count: item.likes,
+                comment_count: 0,
+                share_count: 0,
+                duration: item.duration,
+                created_at: Math.floor(Date.now() / 1000)
+            });
+        }
+    }
+    return sortPostsDesc(posts);
+}
+
+app.get('/api/tiktok-posts', async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    const username = TIKTOK_USERNAME;
+
+    if (tiktokPostsCache && Date.now() - tiktokPostsCache.at < TIKTOK_POSTS_TTL_MS) {
+        return res.json(tiktokPostsCache.posts);
+    }
+
+    let posts = await fetchTikwmUserFeed(username);
+    if (!posts.length) posts = await fetchProfilePagePosts(username);
+    if (!posts.length) posts = await resolvePinnedPosts();
+
+    if (posts.length > 0) {
+        tiktokPostsCache = { at: Date.now(), posts };
+    }
+
+    res.json(posts);
+});
+
 app.get('/:id([a-fA-F0-9]{24}|\\d+)', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
-
 
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
 
@@ -189,7 +403,6 @@ async function connectToDatabase() {
     return db;
 }
 
-// Middleware to ensure DB connection only for routes that require it
 async function requireDb(req, res, next) {
     if (!process.env.MONGODB_URI) {
         if (req.method === 'GET' && !req.path.startsWith('/api/admin')) {
@@ -251,20 +464,19 @@ const Preset = mongoose.models.Preset || mongoose.model('Preset', PresetSchema);
 
 const ResourceSchema = new mongoose.Schema({
     title: String,
-    category: { type: mongoose.Schema.Types.Mixed, default: [] }, // String[] (multi-select)
+    category: { type: mongoose.Schema.Types.Mixed, default: [] },
     dev: String,
     instruction: String,
     icon: String,
-    info: String, // size/info text
-    os: { type: mongoose.Schema.Types.Mixed, default: [] }, // [{name: String, versions: [{label, url}]}]
-    // Legacy fallback fields
+    info: String,
+    os: { type: mongoose.Schema.Types.Mixed, default: [] },
+
     version: String,
     url: String,
     order: { type: Number, default: 0 },
     hidden: { type: Boolean, default: false }
 });
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
-
 
 const LikeSchema = new mongoose.Schema({
     presetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Preset' },
@@ -312,12 +524,12 @@ function parseVideoMetadataFromBuffer(buffer) {
             break;
         }
     }
-    
+
     if (moovOffset === -1) return null;
-    
+
     const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     const moovSize = view.getUint32(moovOffset);
-    
+
     function findBox(start, max, target) {
         let offset = start;
         while (offset < max - 8) {
@@ -333,7 +545,7 @@ function parseVideoMetadataFromBuffer(buffer) {
         }
         return null;
     }
-    
+
     function findBoxAny(start, max, target) {
         let offset = start;
         while (offset < max - 8) {
@@ -345,7 +557,7 @@ function parseVideoMetadataFromBuffer(buffer) {
         }
         return null;
     }
-    
+
     function extractTextFromBox(boxOffset, boxSize) {
         const headerEnd = boxOffset + 8;
         const payloadStart = headerEnd + 4;
@@ -358,7 +570,7 @@ function parseVideoMetadataFromBuffer(buffer) {
         }
         return str.trim();
     }
-    
+
     function extractCommentFromILST(ilstOffset, ilstSize) {
         const ilstPriority = ['\u00A9cmt', '\u00A9ART', '\u00A9grp'];
         const ilstExtra = ['\u00A9desc', '\u00A9name', '\u00A9atom'];
@@ -416,18 +628,18 @@ function parseVideoMetadataFromBuffer(buffer) {
         }
         return '';
     }
-    
+
     let fps = null;
     let width = 0;
     let height = 0;
     let comment = '';
-    
+
     let offset = moovOffset + 8;
     while (offset < moovOffset + moovSize - 8) {
         const size = view.getUint32(offset);
         if (size <= 0 || offset + size > moovOffset + moovSize) break;
         const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
-        
+
         if (type === 'trak') {
             const hdlr = findBox(offset + 8, offset + size, 'hdlr');
             if (hdlr) {
@@ -440,16 +652,16 @@ function parseVideoMetadataFromBuffer(buffer) {
                         width = view.getUint16(wOffset);
                         height = view.getUint16(wOffset + 4);
                     }
-                    
+
                     const mdhd = findBox(offset + 8, offset + size, 'mdhd');
                     const stsz = findBox(offset + 8, offset + size, 'stsz');
-                    
+
                     if (mdhd && stsz) {
                         const mdhdVersion = view.getUint8(mdhd.offset + 8);
                         let timescale = mdhdVersion === 1 ? view.getUint32(mdhd.offset + 28) : view.getUint32(mdhd.offset + 20);
                         let duration = mdhdVersion === 1 ? Number(view.getBigUint64(mdhd.offset + 32)) : view.getUint32(mdhd.offset + 24);
                         const sampleCount = view.getUint32(stsz.offset + 16);
-                        
+
                         if (duration > 0 && sampleCount > 0 && timescale > 0) {
                             const durationInSeconds = duration / timescale;
                             const rawFps = sampleCount / durationInSeconds;
@@ -459,7 +671,7 @@ function parseVideoMetadataFromBuffer(buffer) {
                 }
             }
         }
-        
+
         if (type === 'udta' && !comment) {
             const udtaEnd = offset + size;
             let uOff = offset + 8;
@@ -481,10 +693,10 @@ function parseVideoMetadataFromBuffer(buffer) {
                 uOff += uSize;
             }
         }
-        
+
         offset += size;
     }
-    
+
     if (!comment) {
         let tOff = 0;
         while (tOff < buffer.byteLength - 8) {
@@ -516,7 +728,7 @@ function parseVideoMetadataFromBuffer(buffer) {
             tOff += tSize;
         }
     }
-    
+
     return { fps, width, height, comment };
 }
 
@@ -681,20 +893,20 @@ async function extractTikTokFromPage(pageUrl) {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 6000);
-        
+
         const pageResponse = await fetch(pageUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             signal: controller.signal
         });
-        
+
         clearTimeout(timeout);
-        
+
         if (!pageResponse.ok) return null;
-        
+
         const html = await pageResponse.text();
-        
+
         const finalUrl = pageResponse.url || pageUrl;
         const urlMatch = finalUrl.match(/\/video\/(\d+)/);
         const videoId = urlMatch ? urlMatch[1] : '';
@@ -703,7 +915,7 @@ async function extractTikTokFromPage(pageUrl) {
                           html.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/) ||
                           html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/);
         if (!jsonMatch) return null;
-        
+
         let pageData = null;
         try {
             pageData = JSON.parse(jsonMatch[1]);
@@ -714,7 +926,7 @@ async function extractTikTokFromPage(pageUrl) {
         const videoData = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.videoData ||
                           pageData?.ItemModule?.[videoId] ||
                           pageData?.props?.pageProps?.itemInfo?.itemStruct?.video;
-        
+
         if (!videoData || (!videoData.downloadAddr && !videoData.playAddr)) {
             return null;
         }
@@ -722,7 +934,7 @@ async function extractTikTokFromPage(pageUrl) {
         const authorObj = pageData?.__DEFAULT_SCOPE__?.[0]?.module?.params?.video?.author ||
                           pageData?.ItemModule?.[videoId]?.author ||
                           pageData?.props?.pageProps?.itemInfo?.itemStruct?.author;
-        
+
         return {
             id: videoId || '',
             play: videoData.downloadAddr || videoData.playAddr || '',
@@ -743,6 +955,142 @@ async function extractTikTokFromPage(pageUrl) {
     }
 }
 
+const tiktokResolveCache = new Map();
+let tiktokThumbLastAt = 0;
+let tiktokResolveLastAt = 0;
+const TIKTOK_RESOLVE_TTL = 30 * 60 * 1000;
+const TIKTOK_RESOLVE_FAIL_TTL = 60 * 1000;
+const TIKTOK_RESOLVE_FAIL_SHORT_TTL = 15 * 1000;
+const TIKTOK_RESOLVE_CACHE_MAX = 300;
+
+function getCachedTikTokResolve(url) {
+    const entry = tiktokResolveCache.get(url);
+    if (!entry) return undefined;
+    if (Date.now() > entry.expires) {
+        tiktokResolveCache.delete(url);
+        return undefined;
+    }
+    return entry.result;
+}
+
+function setCachedTikTokResolve(url, result, failTtl) {
+    if (tiktokResolveCache.size >= TIKTOK_RESOLVE_CACHE_MAX) {
+        tiktokResolveCache.delete(tiktokResolveCache.keys().next().value);
+    }
+    const ttl = result ? TIKTOK_RESOLVE_TTL : (failTtl || TIKTOK_RESOLVE_FAIL_TTL);
+    tiktokResolveCache.set(url, { result, expires: Date.now() + ttl });
+}
+
+async function expandTikTokShortLink(pageUrl) {
+    try {
+        const u = new URL(pageUrl);
+        if (!/^(vt|vm)\./i.test(u.hostname)) return pageUrl;
+        const r = await fetch(pageUrl, {
+            method: 'HEAD',
+            redirect: 'follow',
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            signal: AbortSignal.timeout(6000)
+        });
+        if (r.url && /\/video\/\d+/.test(r.url)) return r.url;
+    } catch (e) {}
+    return pageUrl;
+}
+
+async function fetchTikTokOEmbedThumb(pageUrl) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+        const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(pageUrl)}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            signal: controller.signal
+        });
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        const thumb = j && typeof j.thumbnail_url === 'string' && /^https?:\/\//i.test(j.thumbnail_url) ? j.thumbnail_url : '';
+        return thumb || null;
+    } catch (e) {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function fetchTikTokEmbedThumb(videoId) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+        const r = await fetch(`https://www.tiktok.com/embed/v2/${videoId}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            signal: controller.signal
+        });
+        if (!r.ok) return '';
+        const html = await r.text();
+        const imgs = [...html.matchAll(/<img[^>]+src="(https:[^"]+)"/g)].map(m => m[1]);
+        const pick = imgs.find(src => /tiktokcdn|img\.tiktok|p16|-sign\./i.test(src)) || imgs[0] || '';
+        return pick || '';
+    } catch (e) {
+        return '';
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+app.get('/api/tiktok-thumb', async (req, res) => {
+    const raw = req.query.url;
+    if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
+    let pageUrl = raw.trim();
+    try {
+        const parsed = new URL(pageUrl);
+        if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid url' });
+    }
+
+    const cacheKey = `thumb:${pageUrl}`;
+    if (req.query.nocache !== '1') {
+        const cached = getCachedTikTokResolve(cacheKey);
+        if (cached !== undefined) {
+            if (cached === null) return res.status(404).json({ error: 'Thumbnail unavailable', source: 'cache' });
+            return res.json({ cover: cached.cover, source: cached.source });
+        }
+    }
+
+    let canonical = pageUrl;
+    if (!/\/video\/\d+/.test(canonical)) {
+        canonical = await expandTikTokShortLink(canonical);
+    }
+
+    const videoIdMatch = canonical.match(/\/video\/(\d+)/);
+    const videoId = videoIdMatch ? videoIdMatch[1] : '';
+
+    const nowMs = Date.now();
+    const paceWait = Math.max(0, tiktokThumbLastAt + 130 - nowMs);
+    tiktokThumbLastAt = nowMs + paceWait;
+    if (paceWait > 0) await new Promise(resolve => setTimeout(resolve, paceWait));
+
+    let cover = '';
+    let source = '';
+    for (let attempt = 0; attempt < 2 && !cover; attempt++) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 350));
+        cover = await fetchTikTokOEmbedThumb(canonical);
+        if (cover) source = 'oembed';
+    }
+
+    if (!cover && videoId) {
+        cover = await fetchTikTokEmbedThumb(videoId);
+        if (cover) source = 'embed';
+    }
+
+    if (!cover) {
+        setCachedTikTokResolve(cacheKey, null, TIKTOK_RESOLVE_FAIL_SHORT_TTL);
+        return res.status(404).json({ error: 'Thumbnail unavailable', fallback: 'resolve' });
+    }
+
+    const payload = { cover, source };
+    setCachedTikTokResolve(cacheKey, payload);
+    res.json(payload);
+});
+
 app.get('/api/tiktok-resolve', async (req, res) => {
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
@@ -756,8 +1104,23 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
+        if (req.query.nocache !== '1') {
+            const cached = getCachedTikTokResolve(pageUrl);
+            if (cached !== undefined) {
+                if (cached === null) {
+                    return res.status(404).json({ error: 'Video unavailable', details: 'cached-failure', hint: 'Pass nocache=1 to retry upstream' });
+                }
+                return res.json(cached);
+            }
+        }
+
         let result = null;
         let lastError = null;
+
+        const paceNow = Date.now();
+        const paceWait = Math.max(0, tiktokResolveLastAt + 1100 - paceNow);
+        tiktokResolveLastAt = paceNow + paceWait;
+        if (paceWait > 0) await new Promise(resolve => setTimeout(resolve, paceWait));
 
         const mirrors = [
             `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
@@ -769,14 +1132,14 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 8000);
-                
+
                 const r = await fetch(upstream, {
                     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
                     signal: controller.signal
                 });
                 clearTimeout(timeout);
                 const json = await r.json().catch(() => ({}));
-                
+
                 if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                     const d = json.data;
                     const playUrl = d.play || d.hdplay || '';
@@ -811,7 +1174,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                     };
                     break;
                 }
-                
+
                 lastError = `TikWM Mirror ${idx + 1}: ${json.msg || json.code || r.status}`;
             } catch (e) {
                 lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
@@ -887,12 +1250,14 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         }
 
         if (result) {
+            setCachedTikTokResolve(pageUrl, result);
             return res.json(result);
         }
 
+        setCachedTikTokResolve(pageUrl, null);
         console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
-        res.status(404).json({ 
-            error: 'Video unavailable', 
+        res.status(404).json({
+            error: 'Video unavailable',
             details: lastError,
             hint: 'Try alternative URL format or video might be private/deleted'
         });
@@ -944,30 +1309,37 @@ app.get('/api/proxy', async (req, res) => {
     }
 });
 
-
-
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    if (isLoginBlocked(ip)) {
+        return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
+    }
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+    recordLoginFailure(ip);
+    handleAdminLogin(req, res, username, password);
+});
+
+async function handleAdminLogin(req, res, username, password) {
     try {
         const admin = await Admin.findOne({ username }).lean();
         if (!admin || !await bcrypt.compare(password, admin.passwordHash)) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        
-        // Single active session enforcement: delete any previous active sessions
+        loginAttempts.delete(req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown');
+
         await Session.deleteMany({});
 
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + ADMIN_SESSION_MS);
-        
+
         await Session.create({ token, expiresAt });
-        
+
         res.json({ token, expiresIn: ADMIN_SESSION_MS });
     } catch (err) {
         res.status(500).json({ error: 'Login failed' });
     }
-});
+}
 
 app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true }));
 
@@ -1003,7 +1375,6 @@ app.delete('/api/socials/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-// Contacts CRUD
 app.get('/api/contacts', async (req, res) => res.json(await Contact.find().sort({ order: 1, _id: 1 })));
 app.post('/api/contacts', requireAdmin, async (req, res) => res.json(await new Contact(req.body).save()));
 app.put('/api/contacts/reorder', requireAdmin, async (req, res) => {
@@ -1025,19 +1396,16 @@ app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
 });
 
-
 app.get('/api/presets', async (req, res) => {
     try {
         const ip = getClientIp(req);
         const presets = await Preset.find().sort({ order: 1, _id: -1 }).lean();
-        
-        // Fetch all likes to calculate counts and user status dynamically
+
         const allLikes = await Like.find().lean();
         const userLikedSet = new Set(
             allLikes.filter(l => l.ip === ip).map(l => l.presetId.toString())
         );
 
-        // Count occurrences per presetId
         const counts = allLikes.reduce((acc, curr) => {
             const pid = curr.presetId.toString();
             acc[pid] = (acc[pid] || 0) + 1;
@@ -1114,17 +1482,15 @@ app.post('/api/presets/:id/like', async (req, res) => {
     const presetId = req.params.id;
     try {
         const existingLike = await Like.findOne({ presetId, ip });
-        
+
         if (existingLike) {
             await Like.deleteOne({ _id: existingLike._id });
         } else {
             await new Like({ presetId, ip }).save();
         }
 
-        // Get actual count from the Like collection (Source of Truth)
         const totalLikes = await Like.countDocuments({ presetId });
-        
-        // Sync the Preset model's counter
+
         await Preset.findByIdAndUpdate(presetId, { likes: totalLikes });
 
         res.json({ success: true, likes: totalLikes, liked: !existingLike });
@@ -1150,7 +1516,7 @@ app.put('/api/resources/reorder', requireAdmin, async (req, res) => {
 });
 app.put('/api/resources/:id', requireAdmin, async (req, res) => {
     try {
-        // Try ObjectId match first (admin-created), fallback to string _id (manually inserted)
+
         let result = await Resource.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
         if (!result) result = await Resource.findOneAndUpdate({ _id: req.params.id }, { $set: req.body }, { new: true });
         if (!result) return res.status(404).json({ error: 'Resource not found' });
@@ -1161,7 +1527,7 @@ app.put('/api/resources/:id', requireAdmin, async (req, res) => {
 });
 app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
     try {
-        // Try ObjectId match first, fallback to string _id
+
         let r = await Resource.findById(req.params.id).catch(() => null);
         if (!r) r = await Resource.findOne({ _id: req.params.id });
         if (r) {
@@ -1173,14 +1539,12 @@ app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
     }
 });
 
-// End of API endpoints
-
 module.exports = app;
 
 if (require.main === module) {
-    const port = process.env.PORT || 5000;
+    const port = process.env.NEXTGEN_PORT || 3000;
     app.listen(port, '0.0.0.0', () => {
-        console.log(`🚀 Server running locally at http://localhost:${port}`);
+        console.log(`\x1b[32m[Next Gen API]\x1b[0m Running at \x1b[36mhttp://localhost:${port}\x1b[0m`);
     });
 }
 

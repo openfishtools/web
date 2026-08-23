@@ -1,33 +1,22 @@
-{
+﻿{
   "version": 2,
   "builds": [
     {
       "src": "api/index.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "."
-      }
     }
   ],
   "routes": [
-    {
-      "src": "/scripts/(.*)",
-      "dest": "/dist/scripts/$1"
-    },
     {
       "src": "/api/(.*)",
       "dest": "/api/index.js"
     },
     {
-      "src": "/realesrgan/(.*)",
-      "dest": "https://upscale.chino.icu/realesrgan/$1"
+      "src": "/(.*\\.(js|css|html|ico|png|jpg|jpeg|gif|svg|woff2|woff|ttf|json|wasm|onnx|zip))",
+      "dest": "/$1"
     },
     {
-      "src": "/([a-fA-F0-9]{24}|[0-9]+)",
+      "src": "/(.*)",
       "dest": "/index.html"
     }
   ],
@@ -43,9 +32,7 @@
     {
       "source": "/api/version",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     },
     {
@@ -56,12 +43,6 @@
     },
     {
       "source": "/scripts/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/dist/scripts/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
       ]

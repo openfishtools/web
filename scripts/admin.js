@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.section');
 
-    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
+    const API_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000/api' : '/api';
     const ensureProtocol = (url) => {
         if (!url || url === '#') return '#';
         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:') || url.startsWith('tel:')) return url;
@@ -1086,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             software: softwareArr,
             urls: dlLinks,
             url: firstUrl,
-            version: document.getElementById('modal-preset-version')?.value || 'v1.0',
+            version: document.getElementById('modal-preset-version')?.value || '1.0',
             media: document.getElementById('modal-preset-video')?.value || '',
             plugin: getSelectedPlugins(),
             size: document.getElementById('modal-preset-size')?.value || 'N/A',

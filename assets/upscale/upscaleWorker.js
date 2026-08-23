@@ -1,6 +1,5 @@
 importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
 
-// In-worker Image class definition (matches imageHelper.js)
 class WorkerImage {
   constructor(width, height, data = new Uint8Array(width * height * 4)) {
     this.width = width;
@@ -102,9 +101,8 @@ class WorkerImage {
   }
 }
 
-// In-worker upscale tensor utilities
 function img2tensor(image) {
-  // Directly create tensor from raw Uint8Array (bypassing fromPixels and temporary canvas creation)
+
   const rgba = tf.tensor3d(image.data, [image.height, image.width, 4], 'int32');
   const rgb = rgba.slice([0, 0, 0], [-1, -1, 3]);
   const tensor = rgb.toFloat().div(255).expandDims();
@@ -115,19 +113,17 @@ function img2tensor(image) {
 
 async function tensor2img(tensor) {
   const [_, height, width, __] = tensor.shape;
-  
-  // Pad the 3-channel RGB output to a 4-channel RGBA tensor using mathematical ops on GPU (bypassing toPixels and canvas download)
+
   const rgba = tf.tidy(() => {
     const rgb = tensor.reshape([height, width, 3]).mul(255).clipByValue(0, 255).cast("int32");
     const alpha = tf.fill([height, width, 1], 255, "int32");
     return tf.concat([rgb, alpha], 2);
   });
   tensor.dispose();
-  
-  // Direct GPU buffer copy download (much faster than canvas context rendering/reading)
+
   const data = await rgba.data();
   rgba.dispose();
-  
+
   const uint8Data = new Uint8Array(data);
   const image = new WorkerImage(width, height, uint8Data);
   return image;
@@ -147,7 +143,6 @@ async function upscale(image, model, alpha = false) {
   return resultImage;
 }
 
-// Cache for loaded model and backend initialization status
 let isBackendInitialized = false;
 let cachedModel = null;
 let cachedModelName = "";
@@ -171,7 +166,7 @@ self.addEventListener("message", async (e) => {
     self.postMessage({ info: "Initializing TFJS backend..." });
 
     try {
-      // Helper to safely set environment flags without throwing registry errors
+
       const safeSetFlag = (name, value) => {
         try {
           if (tf.env().flags && name in tf.env().flags) {
@@ -183,13 +178,11 @@ self.addEventListener("message", async (e) => {
       };
 
       await tf.ready();
-      
+
       self.postMessage({ info: `TFJS ready. Setting backend to ${data?.backend || "webgl"}...` });
 
-      // Set performance environment flags after tf.ready() to ensure they are registered
       safeSetFlag('CHECK_COMPUTATION_FOR_ERRORS', false);
-      
-      // WebGL Backend optimizations
+
       safeSetFlag('WEBGL_VERSION', 2);
       safeSetFlag('WEBGL_FORCE_F16_TEXTURES', false);
       safeSetFlag('WEBGL_FORCE_F16_OPERATOR', false);
@@ -285,7 +278,7 @@ self.addEventListener("message", async (e) => {
   const width_ori = input.width;
   const height_ori = input.height;
   input.padToTileSize(data?.tile_size || 64);
-  
+
   let withPadding = false;
   if (input.width !== width_ori || input.height !== height_ori) {
     withPadding = true;
@@ -341,12 +334,10 @@ self.addEventListener("message", async (e) => {
         const tile = new WorkerImage(tile_src_w, tile_src_h);
         tile.getImageCrop(0, 0, inputImg, src_x1, src_y1, src_x2, src_y2);
 
-        // Ensure the input to the model is exactly tile_size x tile_size
         tile.padToTileSize(tile_size);
 
         const scaled = await upscale(tile, model, hasAlpha);
 
-        // Crop the upscaled output back to its original tile source size
         scaled.cropToOriginalSize(tile_src_w * factor, tile_src_h * factor);
 
         output.getImageCrop(
@@ -390,7 +381,6 @@ self.addEventListener("message", async (e) => {
     output.cropToOriginalSize(width_ori * factor, height_ori * factor);
   }
 
-  // Brief pause to allow message delivery
   await new Promise((resolve) => setTimeout(resolve, 10));
 
   self.postMessage(

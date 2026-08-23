@@ -1,1664 +1,672 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark-theme" data-theme="greentea">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cutefishaep</title>
-    <meta name="description" content="cutefishaep is the ultimate resource hub for video editors and creators. Access a curated collection of premium presets, essential editing software, professional plugins, and powerful online tools to supercharge your creative workflow.">
-    <meta name="app-version" content="1.2.2">
+    <title>Wahyu Septi Aji (Chelsea) — Portfolio</title>
+    <meta name="description" content="Portfolio of Wahyu Septi Aji (Chelsea) — Information Systems student, software developer, video editor, and creator of OpenFishTools.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800;900&family=Chakra+Petch:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+Javanese:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="assets/fonts/brand-icons.css">
-    <link rel="stylesheet" href="styles/main.css?v=1.6.9">
-    <link rel="stylesheet" href="styles/responsive.css?v=1.6.9">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="styles/main.css">
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.webgpu.min.js"></script>
-    <script src="scripts/i18n.js?v=1.6.9"></script>
+    <script src="scripts/theme-init.js"></script>
 </head>
-
 <body>
-    <div class="app-container">
-        <nav class="nav-bar">
+    <nav class="floating-nav-bar" id="floating-nav">
+        <div class="floating-nav-indicator" id="floating-nav-indicator"></div>
+        <a href="#preset" class="floating-nav-item" data-route="preset">
+            <span class="material-symbols-rounded nav-icon">description</span>
+            <span class="nav-label" data-i18n="nav_preset">Preset</span>
+        </a>
+        <a href="#home" class="floating-nav-item active" data-route="home">
+            <span class="material-symbols-rounded nav-icon">home</span>
+            <span class="nav-label" data-i18n="nav_home">Home</span>
+        </a>
+        <a href="#social" class="floating-nav-item" data-route="social">
+            <span class="material-symbols-rounded nav-icon">share</span>
+            <span class="nav-label" data-i18n="nav_social">Social</span>
+        </a>
+        <a href="#tools" class="floating-nav-item" data-route="tools">
+            <span class="material-symbols-rounded nav-icon">construction</span>
+            <span class="nav-label" data-i18n="nav_tools">Tools</span>
+        </a>
+        <a href="#resource" class="floating-nav-item" data-route="resource">
+            <span class="material-symbols-rounded nav-icon">folder_zip</span>
+            <span class="nav-label" data-i18n="nav_resource">Resource</span>
+        </a>
+        <a href="#contact" class="floating-nav-item" data-route="contact">
+            <span class="material-symbols-rounded nav-icon">mail</span>
+            <span class="nav-label" data-i18n="nav_contact">Contact</span>
+        </a>
+    </nav>
+    <div class="app-layout">
 
-            <a href="javascript:void(0)" class="nav-item active" data-tab="social">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">public</span>
-                </div>
-                <span class="nav-label" data-i18n="nav_social">Social</span>
-            </a>
-            <a href="javascript:void(0)" class="nav-item" data-tab="preset">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">auto_awesome_motion</span>
-                </div>
-                <span class="nav-label" data-i18n="nav_preset">Preset</span>
-            </a>
-            <a href="javascript:void(0)" class="nav-item" data-tab="resource">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">folder_open</span>
-                </div>
-                <span class="nav-label" data-i18n="nav_resource">Resource</span>
-            </a>
-            <a href="javascript:void(0)" class="nav-item" data-tab="tools">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">build</span>
-                </div>
-                <span class="nav-label" data-i18n="nav_tools">Tools</span>
-            </a>
-            <a href="javascript:void(0)" class="nav-item" data-tab="contact">
-                <div class="nav-icon-wrapper">
-                    <span class="material-symbols-rounded">mail</span>
-                </div>
-                <span class="nav-label" data-i18n="nav_about">Contact Us</span>
-            </a>
-        </nav>
+        <div class="main-wrapper">
 
-        <main class="main-content">
+            <canvas class="batik-canvas" id="batik-canvas" aria-hidden="true"></canvas>
 
-            <div id="offline-banner" class="offline-banner hidden" role="alert">
-                <span class="material-symbols-rounded offline-banner-icon" id="offline-banner-icon">wifi_off</span>
-                <span class="offline-banner-text" id="offline-banner-text" data-i18n="offline_notice">Kamu sedang offline, kamu hanya bisa mengakses Tools</span>
-            </div>
+            <main class="content-scroller" id="content-scroller">
+                <div class="cube-viewport" id="cube-viewport">
+                    <div class="cube-3d-box" id="cube-3d-box">
 
-            <div id="offline-download-prompt" class="offline-download-prompt hidden" role="dialog">
-                <div class="offline-prompt-content">
-                    <span class="material-symbols-rounded offline-prompt-icon">download_for_offline</span>
-                    <div class="offline-prompt-text-wrapper">
-                        <span class="offline-prompt-text" id="offline-prompt-text" data-i18n="offline_download_prompt">Do you want to download required files to work offline?</span>
-                        <div class="offline-progress-bar-container hidden" id="offline-progress-container">
-                            <div class="offline-progress-bar-fill" id="offline-progress-fill"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="offline-prompt-actions" id="offline-prompt-actions">
-                    <button type="button" class="offline-btn offline-btn-download" id="btn-download-offline-assets" data-i18n="btn_download_files">Download</button>
-                    <button type="button" class="offline-btn offline-btn-later" id="btn-later-offline-assets" data-i18n="btn_later">Later</button>
-                </div>
-            </div>
-
-            <section id="social" class="section active">
-                <div class="page-header-row">
-                    <h1 class="page-title" data-i18n="social_title">My Links</h1>
-                    <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle Theme">
-                        <span class="material-symbols-rounded">dark_mode</span>
-                    </button>
-                </div>
-                <div class="grid" id="social-grid">
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                    <div class="skeleton-social-card">
-                        <div class="skeleton-social-icon"></div>
-                        <div class="skeleton-social-name"></div>
-                    </div>
-                </div>
-                <footer class="app-footer">
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="footer-link open-legal-privacy" onclick="window.openLegalModal('privacy'); return false;" data-i18n="footer_privacy">Privacy Policy</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-terms" onclick="window.openLegalModal('terms'); return false;" data-i18n="footer_terms">Terms of Service</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-disclaimer" onclick="window.openLegalModal('disclaimer'); return false;" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
-                    </div>
-                    <div class="footer-copy">
-                        &copy; 2026 cutefishaep. <span>All Rights Reserved.</span>
-                        <div class="footer-build-info"><span data-i18n="footer_build_date">Build date:</span> <span class="footer-build-date-val"></span></div>
-                    </div>
-                </footer>
-            </section>
-
-            <section id="preset" class="section">
-                <div id="preset-explore-view">
-                    <h1 class="page-title" data-i18n="preset_title">Explore</h1>
-                    <div class="chip-group" id="preset-categories">
-                        <div class="chip active" data-software="All">All</div>
-                        <div class="chip" data-software="AE">
-                            <img src="assets/icon/Ae.png" alt="AE" class="chip-icon">
-                            After Effects
-                        </div>
-                        <div class="chip" data-software="AM">
-                            <img src="assets/icon/Am.png" alt="AM" class="chip-icon">
-                            Alight Motion
-                        </div>
-                        <div class="chip" data-software="Blurr">
-                            <img src="assets/icon/Blurr.png" alt="Blurr" class="chip-icon">
-                            Blurr
-                        </div>
-                        <div class="chip" data-software="CC">
-                            <img src="assets/icon/CC.png" alt="CC" class="chip-icon">
-                            CapCut
-                        </div>
-                        <div class="chip" data-software="FM">
-                            <img src="assets/icon/Fm.png" alt="FM" class="chip-icon">
-                            Funimate
-                        </div>
-                        <div class="chip" data-software="Node">
-                            <img src="assets/icon/Node.png" alt="Node" class="chip-icon">
-                            Node Video
-                        </div>
-                    </div>
-                    <div class="preset-explore-grid" id="preset-explore-grid">
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                        <div class="skeleton-card"></div>
-                    </div>
-                </div>
-
-                <div id="preset-feed-view" class="preset-feed-view hidden">
-                    <div class="phone-mockup">
-                        <div class="phone-bezel">
-                            <div class="phone-notch">
-                                <div class="phone-speaker"></div>
-                            </div>
-                            <div class="phone-screen">
-                                <button type="button" class="tiktok-back-btn" id="back-to-explore"
-                                    aria-label="Back to presets">
-                                    <span class="material-symbols-rounded">arrow_back</span>
+                        <div class="app-view cube-face cube-face-1 cube-face-front active-face" id="view-home">
+                    <div class="signpost-overlay" id="signpost-overlay">
+                        <div class="signpost" id="nav-signpost" aria-label="Navigation signpost">
+                            <div class="signpost-inner">
+                                <span class="signpost-cap"></span>
+                                <button type="button" class="sign-arrow arrow-right tone-a" data-target="#tools">
+                                    <span class="material-symbols-rounded sign-arrow-icon">construction</span>
+                                    <span class="sign-arrow-label" data-i18n="nav_tools">Tools</span>
                                 </button>
-                                <div class="preset-feed tiktok-feed" id="preset-feed"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <footer class="app-footer">
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="footer-link open-legal-privacy" onclick="window.openLegalModal('privacy'); return false;" data-i18n="footer_privacy">Privacy Policy</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-terms" onclick="window.openLegalModal('terms'); return false;" data-i18n="footer_terms">Terms of Service</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-disclaimer" onclick="window.openLegalModal('disclaimer'); return false;" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
-                    </div>
-                    <div class="footer-copy">
-                        &copy; 2026 cutefishaep. <span>All Rights Reserved.</span>
-                        <div class="footer-build-info"><span data-i18n="footer_build_date">Build date:</span> <span class="footer-build-date-val"></span></div>
-                    </div>
-                </footer>
-            </section>
-
-            <section id="resource" class="section">
-                <h1 class="page-title" data-i18n="resource_title">Resources</h1>
-                <div class="search-bar">
-                    <span class="material-symbols-rounded">search</span>
-                    <input type="text" id="resource-search" data-i18n="resource_search_placeholder" placeholder="Search resources...">
-                </div>
-                <div class="chip-group" id="resource-categories">
-                </div>
-                <div class="grid" id="resource-grid">
-                    <div class="skeleton-resource-card">
-                        <div class="skeleton-resource-card-icon"></div>
-                        <div class="skeleton-resource-card-info">
-                            <div class="skeleton-resource-card-line"></div>
-                            <div class="skeleton-resource-card-line short"></div>
-                            <div class="skeleton-resource-card-line medium"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-resource-card">
-                        <div class="skeleton-resource-card-icon"></div>
-                        <div class="skeleton-resource-card-info">
-                            <div class="skeleton-resource-card-line"></div>
-                            <div class="skeleton-resource-card-line short"></div>
-                            <div class="skeleton-resource-card-line medium"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-resource-card">
-                        <div class="skeleton-resource-card-icon"></div>
-                        <div class="skeleton-resource-card-info">
-                            <div class="skeleton-resource-card-line"></div>
-                            <div class="skeleton-resource-card-line short"></div>
-                            <div class="skeleton-resource-card-line medium"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-resource-card">
-                        <div class="skeleton-resource-card-icon"></div>
-                        <div class="skeleton-resource-card-info">
-                            <div class="skeleton-resource-card-line"></div>
-                            <div class="skeleton-resource-card-line short"></div>
-                            <div class="skeleton-resource-card-line medium"></div>
-                        </div>
-                    </div>
-                </div>
-                <footer class="app-footer">
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="footer-link open-legal-privacy" onclick="window.openLegalModal('privacy'); return false;" data-i18n="footer_privacy">Privacy Policy</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-terms" onclick="window.openLegalModal('terms'); return false;" data-i18n="footer_terms">Terms of Service</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-disclaimer" onclick="window.openLegalModal('disclaimer'); return false;" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
-                    </div>
-                    <div class="footer-copy">
-                        &copy; 2026 cutefishaep. <span>All Rights Reserved.</span>
-                        <div class="footer-build-info"><span data-i18n="footer_build_date">Build date:</span> <span class="footer-build-date-val"></span></div>
-                    </div>
-                </footer>
-            </section>
-
-            <section id="tools" class="section">
-                <div class="page-header-row">
-                    <h1 class="page-title" data-i18n="tools_title">Tools</h1>
-                </div>
-                <div class="grid">
-                    <div class="card pos-relative overflow-hidden" id="tiktok-patcher-card"
-                        data-v1-patched="false">
-
-                        <!-- Patched overlay (shown when v1 is patched) -->
-                        <div id="tiktok-patched-overlay">
-                            <span class="material-symbols-rounded block-icon-danger">block</span>
-                            <div class="overlay-patched-title" data-i18n="patcher_overlay_title">Method Patched</div>
-                            <div class="overlay-patched-desc" data-i18n="patcher_overlay_desc">WMV is currently unavailable. Please use Binary or FPS.</div>
-                            <button id="btn-patched-overlay-ignore" data-i18n="patcher_overlay_ignore" class="btn-patched-ignore">Ignore</button>
-                        </div>
-
-                        <div class="flex align-center gap-16 mb-20">
-                            <span class="material-symbols-rounded tool-header-icon">high_quality</span>
-                            <div class="flex-1">
-                                <div class="tool-title-row">
-                                    <h3 class="tool-title">Quality Method</h3>
-                                </div>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="patcher_subtitle">TikTok HQ Upload</span>
-                                    <span class="tool-ver-badge">3.4.1</span>
-                                </div>
-                            </div>
-                            <div class="flex gap-6 align-center">
-                                <button id="btn-tiktok-clear-cache" title="Clear cache" aria-label="Clear cache" class="btn-icon-ghost">
-                                    <span class="material-symbols-rounded icon-22">cleaning_services</span>
+                                <button type="button" class="sign-arrow arrow-left tone-b" data-target="#resource">
+                                    <span class="material-symbols-rounded sign-arrow-icon">folder_zip</span>
+                                    <span class="sign-arrow-label" data-i18n="nav_resource">Resource</span>
                                 </button>
+                                <button type="button" class="sign-arrow arrow-right tone-c" data-target="#social">
+                                    <span class="material-symbols-rounded sign-arrow-icon">share</span>
+                                    <span class="sign-arrow-label" data-i18n="nav_social">Social</span>
+                                </button>
+                                <button type="button" class="sign-arrow arrow-left tone-d" data-target="#preset">
+                                    <span class="material-symbols-rounded sign-arrow-icon">description</span>
+                                    <span class="sign-arrow-label" data-i18n="nav_preset">Preset</span>
+                                </button>
+                                <div class="signpost-pole"></div>
                             </div>
                         </div>
+                    </div>
+                    <section class="section hero-fullscreen-section" id="hero">
+                        <div class="hero-fullscreen-inner">
+                            <div class="hero-title-row">
+                                <div class="kinetic-stacked-title">
+                                    <div class="kinetic-greeting-line">
+                                        <span class="kinetic-flip-box" id="greeting-box">
+                                            <span class="flip-layer layer-current" id="greeting-current"></span>
+                                            <span class="flip-layer layer-next" id="greeting-next"></span>
+                                        </span>
+                                    </div>
+                                    <div class="kinetic-name-line">
+                                        <span class="kinetic-flip-box name-box" id="name-box">
+                                            <span class="flip-layer layer-current" id="name-current"></span>
+                                            <span class="flip-layer layer-next" id="name-next"></span>
+                                        </span>
+                                    </div>
+                                </div>
 
-                        <div class="drag-drop-area mb-20" id="tool-tiktok-drop">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span data-i18n="patcher_drop_label">Drag &amp; drop video here or click to select</span>
-                            <input type="file" id="tool-tiktok-input" accept="video/mp4,video/quicktime,video/webm"
-                                hidden>
-                        </div>
- 
-                        <div class="mb-14">
-                            <div class="tiktok-switcher-label" data-i18n="patcher_ver_title">Choose Method</div>
-                            <div class="tiktok-switch-track" id="tiktok-version-switch">
-                                <div class="tiktok-switch-indicator" id="tiktok-version-indicator" style="left: calc(33.333% + 2px); width: calc(33.333% - 4px);"></div>
-                                <div class="tiktok-switch-option" data-version="v1" data-i18n="patcher_method_wmv">WMV</div>
-                                <div class="tiktok-switch-option active" data-version="v3" data-i18n="patcher_method_binary">BINARY</div>
-                                <div class="tiktok-switch-option" data-version="fps" data-i18n="patcher_method_fps">FPS</div>
-                            </div>
-                        </div>
-
-                        <div id="tiktok-compress-toggle-row" class="mb-14">
-                            <div class="tiktok-switcher-label" data-i18n="patcher_compress_title">Compress</div>
-                            <div class="tiktok-switch-track" id="tiktok-compress-mode">
-                                <div class="tiktok-switch-indicator" id="tiktok-mode-indicator" style="left: 4px; width: calc(33.333% - 6px);"></div>
-                                <div class="tiktok-switch-option active" data-mode="off" data-i18n="patcher_mode_off">OFF</div>
-                                <div class="tiktok-switch-option" data-mode="720p" data-i18n="patcher_mode_720p">720P</div>
-                                <div class="tiktok-switch-option" data-mode="1080p" data-i18n="patcher_mode_1080p">1080P</div>
-                            </div>
-                        </div>
-
-                        <div class="tiktok-preset-desc mb-14" id="tiktok-info-desc" data-i18n-html="patcher_desc_binary_off"></div>
-
-                        <div id="tool-tiktok-status" class="mt-4 text-center font-14 font-500 text-primary">
-                        </div>
-
-                        <div id="tiktok-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="tiktok-progress-fill" class="progress-fill">
+                                <div class="theme-switcher-box">
+                                    <div class="theme-palette-pill">
+                                        <button class="mini-palette-btn active" data-color="greentea" title="Greentea" aria-label="Greentea theme"></button>
+                                        <button class="mini-palette-btn" data-color="ocean" title="Ocean Blue" aria-label="Ocean Blue theme"></button>
+                                        <button class="mini-palette-btn" data-color="amethyst" title="Amethyst Purple" aria-label="Amethyst Purple theme"></button>
+                                        <button class="mini-palette-btn" data-color="amber" title="Amber Gold" aria-label="Amber Gold theme"></button>
+                                        <button class="mini-palette-btn" data-color="rose" title="Rose Red" aria-label="Rose Red theme"></button>
+                                    </div>
+                                    <button class="theme-icon-btn" id="theme-toggle" aria-label="Toggle dark and light mode">
+                                        <span class="material-symbols-rounded">light_mode</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="progress-labels">
-                                <span id="tiktok-progress-text">Processing...</span>
-                                <span id="tiktok-progress-percent">0%</span>
+
+                            <div class="hero-identity-card">
+                                <p class="hero-bio-text" data-i18n="hero_bio_text">
+                                    Video editor and software developer. Focused on building high-performance web applications, video processing utilities, and creative tools for editors.
+                                </p>
+
+                                <div class="hero-action-row">
+                                    <a href="#journey" class="md-btn md-btn-primary" id="btn-explore-journey">
+                                        <span class="material-symbols-rounded">arrow_downward</span>
+                                        <span data-i18n="hero_btn_journey">My Journey</span>
+                                    </a>
+                                    <a href="#contact" class="md-btn md-btn-tonal">
+                                        <span class="material-symbols-rounded">mail</span>
+                                        <span data-i18n="hero_btn_contact">Contact Us</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
+                    </section>
 
-                        <div id="tiktok-logs-container" class="hidden process-logs-wrap">
-                            <div class="process-logs-header">
-                                <span class="process-logs-title" data-i18n="process_logs_title">Process Logs:</span>
-                                <button id="btn-copy-logs" title="Copy logs" aria-label="Copy logs" class="btn-copy-logs">
-                                    <span class="material-symbols-rounded font-16">content_copy</span>
-                                    <span id="btn-copy-logs-label" data-i18n="btn_copy">Copy</span>
+                    <section class="section journey-section" id="journey">
+                        <div class="section-header">
+                            <div class="section-pill">
+                                <span class="material-symbols-rounded">timeline</span>
+                                <span data-i18n="journey_pill">Timeline</span>
+                            </div>
+                            <h2 class="section-title" data-i18n="journey_title">My Journey</h2>
+                        </div>
+
+                        <div class="zigzag-timeline-wrapper" id="timeline-wrapper">
+                            <svg class="timeline-dynamic-svg" id="timeline-svg" aria-hidden="true">
+                                <path id="timeline-dynamic-path" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+
+                            <div class="zigzag-item zigzag-left">
+                                <div class="zigzag-marker">
+                                    <span class="material-symbols-rounded">smartphone</span>
+                                </div>
+                                <div class="zigzag-card">
+                                    <div class="card-tag-row">
+                                        <span class="year-badge">2018</span>
+                                        <span class="platform-badge">Kinemaster</span>
+                                    </div>
+                                    <h3 class="timeline-heading" data-i18n="journey_item1_title">It All Started with Kinemaster</h3>
+                                    <p class="timeline-narrative" data-i18n="journey_item1_desc">
+                                        My first editing app was Kinemaster. Back when YouTube was booming and everyone was rushing to become a YouTuber, I made Minecraft content and edited it in Kinemaster. Around the same time, when Musical.ly and TikTok were trending, I also tried slow-mo trends ala Video Star with Kinemaster — though I never uploaded any of it. Childhood trauma: I got bullied just for posting videos on IG, all I wanted was to express myself.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="zigzag-item zigzag-right">
+                                <div class="zigzag-marker">
+                                    <span class="material-symbols-rounded">swap_horiz</span>
+                                </div>
+                                <div class="zigzag-card">
+                                    <div class="card-tag-row">
+                                        <span class="year-badge">2019 - 2020</span>
+                                        <span class="platform-badge">CuteCut · CapCut · Funimate</span>
+                                    </div>
+                                    <h3 class="timeline-heading" data-i18n="journey_item2_title">Transitions &amp; Beat Drop Era</h3>
+                                    <p class="timeline-narrative" data-i18n="journey_item2_desc">
+                                        In 2019, transition editing — aka TCC — was booming. I started using CuteCut for transitions. It had no built-in motion tile, so I hacked around it with an Instagram-style grid app to make mirror grid photos as a motion tile effect. I used CapCut for simple stuff like school assignments, and even tried the jedag-jedug style (it was terrible). I also tried other apps like Funimate and Node Video. Node Video wasn't my thing because of its caching system, but Funimate? Loved it. A VideoStar-meets-CapCut combo — honestly powerful: a full effects and 3D library, plus proper 3D controls like 3D view, nulls, even cameras. Too bad on Android you can't import your own 3D models.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="zigzag-item zigzag-left">
+                                <div class="zigzag-marker">
+                                    <span class="material-symbols-rounded">motion_mode</span>
+                                </div>
+                                <div class="zigzag-card">
+                                    <div class="card-tag-row">
+                                        <span class="year-badge">2020 - 2021</span>
+                                        <span class="platform-badge">Alight Motion</span>
+                                    </div>
+                                    <h3 class="timeline-heading" data-i18n="journey_item3_title">The Alight Motion Glory Days</h3>
+                                    <p class="timeline-narrative" data-i18n-html="journey_item3_desc">
+                                        Approaching 2020 — the corona era — I got into Alight Motion. Jedag-jedug edits on Alight Motion just looked way more proper than CapCut or Avee Player back then. I got my first 5k followers thanks to my Alight Motion edits, and yes, I had a bit of star syndrome — I was shocked I pulled 5k followers from such simple edits. One of the edits that blew up my account is <a href="https://www.tiktok.com/@cutefishrbx/video/6975763680843533570" target="_blank" rel="noopener noreferrer">this one</a>. Ever seen it? Yep, that's my old edit haha
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="zigzag-item zigzag-right highlight-zigzag">
+                                <div class="zigzag-marker glow-marker">
+                                    <span class="material-symbols-rounded">rocket_launch</span>
+                                </div>
+                                <div class="zigzag-card feature-zigzag-card">
+                                    <div class="card-tag-row">
+                                        <span class="year-badge active-badge" data-i18n="journey_item4_year">2021 - Present</span>
+                                        <span class="platform-badge">After Effects</span>
+                                    </div>
+                                    <h3 class="timeline-heading" data-i18n="journey_item4_title">Potato Laptop &amp; After Effects</h3>
+                                    <p class="timeline-narrative" data-i18n-html="journey_item4_desc">
+                                        Armed with a Lenovo S145-14AST laptop with 4GB of RAM (yep, you heard that right), I decided to move to After Effects. My first version was CC 2021 — the HEAVIEST version ever; even compared to CC 2022, 2021 remains the most absurdly heavy one. Honestly, I doubted I could edit in Ae at all — until I found out a lot of people used CS6, the lightest version, super smooth even on potato laptops. I just hated the RAM preview: waiting for everything to render before playing was so annoying. Eventually someone shared CC 2018 and I switched — and surprisingly it's super light, even lighter than Alight Motion on my Redmi 9.
+                                        <br><br>
+                                        I was still editing without plugins, since getting Sapphire back then was painfully hard — I didn't know about software from the high seas yet. My first plugin was Twixtor, and even that was a trial. Eventually I got my hands on every After Effects plugin through the piracy route lol.
+                                        <br><br>
+                                        Time went on and now I use a laptop with a processor that can actually handle After Effects. It's actually an MSI Modern 14 C11M, but my little brother really wanted a laptop for Roblox, so I bought an Axioo Hype 5 AMD and gave him my MSI. A downgrade? Whatever, as long as he's happy.
+                                        <br><br>
+                                        But decent hardware doesn't mean zero problems — besides crashes, I genuinely HATE people who sell plugins at insane prices. Fine if it's one-time payment, but this is a per-month subscription for tools that are literally just simple shortcuts. In my opinion, everyone — rich or poor — deserves to create without financial limits. That's why I built a plugin (well, an extension lol) called <a href="https://github.com/cutefishaep/OpenFishTools" target="_blank" rel="noopener noreferrer">OpenFishTools</a>.
+                                        <br><br>
+                                        It's 100% free and open source. And don't say "it'll become paid eventually" — nope, never. I'm not like that stingy red crab; these tools will be free forever. At most you'll see forked versions of it, or some random person on Shopee selling After Effects tools for like 10k lol.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="section tiktok-latest-section" id="tiktok-latest">
+                        <div class="section-header">
+                            <div class="section-pill">
+                                <i class="bi bi-tiktok"></i>
+                                <span>TikTok</span>
+                            </div>
+                            <h2 class="section-title" data-i18n="tiktok_latest_title">Latest Posts</h2>
+                        </div>
+
+                        <div class="tiktok-posts-grid" id="tiktok-posts-grid">
+                            <div class="tiktok-card-skeleton" data-index="0">
+                                <div class="skeleton-thumb"></div>
+                                <div class="skeleton-body">
+                                    <div class="skeleton-line line-author"></div>
+                                    <div class="skeleton-line line-title"></div>
+                                    <div class="skeleton-line line-meta"></div>
+                                </div>
+                            </div>
+                            <div class="tiktok-card-skeleton" data-index="1">
+                                <div class="skeleton-thumb"></div>
+                                <div class="skeleton-body">
+                                    <div class="skeleton-line line-author"></div>
+                                    <div class="skeleton-line line-title"></div>
+                                    <div class="skeleton-line line-meta"></div>
+                                </div>
+                            </div>
+                            <div class="tiktok-card-skeleton" data-index="2">
+                                <div class="skeleton-thumb"></div>
+                                <div class="skeleton-body">
+                                    <div class="skeleton-line line-author"></div>
+                                    <div class="skeleton-line line-title"></div>
+                                    <div class="skeleton-line line-meta"></div>
+                                </div>
+                            </div>
+                            <div class="tiktok-card-skeleton" data-index="3">
+                                <div class="skeleton-thumb"></div>
+                                <div class="skeleton-body">
+                                    <div class="skeleton-line line-author"></div>
+                                    <div class="skeleton-line line-title"></div>
+                                    <div class="skeleton-line line-meta"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer class="portfolio-footer">
+                        <div class="footer-legal-links">
+                            <button type="button" class="footer-legal-btn" data-doc="privacy" data-i18n="footer_privacy">Privacy Policy</button>
+                            <span class="footer-dot">•</span>
+                            <button type="button" class="footer-legal-btn" data-doc="tos" data-i18n="footer_terms">Terms of Service</button>
+                            <span class="footer-dot">•</span>
+                            <button type="button" class="footer-legal-btn" data-doc="disclaimer" data-i18n="footer_disclaimer">Disclaimer & DMCA</button>
+                        </div>
+                        <p class="footer-simple-text" data-i18n="footer_made_by">Made by cutefishaep</p>
+                    </footer>
+                </div>
+
+                <div class="app-view cube-face cube-face-2 cube-face-right" id="view-social">
+                    <section class="section social-page-section">
+                        <div class="section-header">
+                            <div class="section-pill">
+                                <span class="material-symbols-rounded">share</span>
+                                <span data-i18n="nav_social">Social Media</span>
+                            </div>
+                            <h1 class="section-title" data-i18n="social_connect_title">Connect With Me</h1>
+                        </div>
+
+                        <div class="social-buttons-grid" id="social-buttons-container">
+                            <div class="skeleton-social-btn"></div>
+                            <div class="skeleton-social-btn"></div>
+                            <div class="skeleton-social-btn"></div>
+                            <div class="skeleton-social-btn"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="app-view cube-face cube-face-3" id="view-tools">
+                    <section class="section tools-page-section">
+                        <div class="section-header">
+                            <div class="tools-header-pill-row">
+                                <div class="section-pill">
+                                    <span class="material-symbols-rounded">construction</span>
+                                    <span data-i18n="nav_tools">Tools</span>
+                                </div>
+                                <button type="button" class="btn-tools-clean-cache" id="btn-tools-clean-cache" title="Clear cache & reset memory" data-i18n-title="patcher_clear_cache" aria-label="Clear cache & reset memory">
+                                    <span class="material-symbols-rounded">cleaning_services</span>
                                 </button>
                             </div>
-                            <pre id="tiktok-logs" class="process-logs-pre"></pre>
+                            <h1 class="section-title" data-i18n="tools_creative_title">Creative Tools</h1>
                         </div>
 
-                        <button id="btn-start-tiktok" class="btn-primary w-full hidden mt-16" data-i18n="patcher_btn_process">Process Video</button>
-                    </div>
+                        <div class="tools-search-bar">
+                            <span class="material-symbols-rounded">search</span>
+                            <input type="text" id="tools-search" placeholder="Search tools..." data-i18n="tools_search_placeholder">
+                        </div>
 
-                    <div class="card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">compress</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_compressor_title">Video Compressor</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text">FFmpeg WASM</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
+                        <div class="chip-group" id="tools-categories"></div>
+
+                        <div class="tools-grid" id="tools-grid">
+                            <div class="skeleton-tool-card">
+                                <div class="skeleton-tool-card-icon"></div>
+                                <div class="skeleton-tool-card-info">
+                                    <div class="skeleton-tool-card-line"></div>
+                                    <div class="skeleton-tool-card-line short"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-tool-card">
+                                <div class="skeleton-tool-card-icon"></div>
+                                <div class="skeleton-tool-card-info">
+                                    <div class="skeleton-tool-card-line"></div>
+                                    <div class="skeleton-tool-card-line short"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="drag-drop-area" id="tool-ffmpeg-drop">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span data-i18n="tool_compressor_drop">Drag & drop video here or click to select</span>
-                            <input type="file" id="tool-ffmpeg-input" accept="video/mp4,video/quicktime,video/webm"
-                                hidden>
-                        </div>
+                    </section>
+                </div>
 
-                        <div class="ffmpeg-preset-container">
-                            <div class="preset-switch-group" id="ffmpeg-presets">
-                                <div class="preset-switch" data-preset="slow" data-i18n="preset_slow">Slow</div>
-                                <div class="preset-switch active" data-preset="medium" data-i18n="preset_medium">Medium</div>
-                                <div class="preset-switch" data-preset="fast" data-i18n="preset_fast">Fast</div>
-                            </div>
-                        </div>
-                        <div id="ffmpeg-preset-desc">
-                            <div class="tool-settings-card">
-                                <ul class="tool-settings-list">
-                                    <li class="tool-settings-item"><span
-                                            class="material-symbols-rounded tool-settings-icon">memory</span><strong
-                                            class="tool-settings-label">Codec:</strong>
-                                        H.264 (libx264)</li>
-                                    <li class="tool-settings-item mt-4"><span
-                                            class="material-symbols-rounded tool-settings-icon">speed</span><strong
-                                            class="tool-settings-label">Preset:</strong>
-                                        Medium</li>
-                                    <li class="tool-settings-item mt-4"><span
-                                            class="material-symbols-rounded tool-settings-icon">high_quality</span><strong
-                                            class="tool-settings-label">CRF:</strong>
-                                        20 (High Quality)</li>
-                                </ul>
-                                <hr class="tool-settings-divider">
-                                <div class="tool-settings-info">
-                                    <span class="material-symbols-rounded tool-settings-icon flex-shrink-0 mt-2">info</span>
-                                    <span>Offers a balanced trade-off between encoding speed, file size, and visual
-                                        quality. Recommended for general use.</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="tool-ffmpeg-status" class="mt-16 text-center text-primary font-500 font-14">
-                        </div>
-
-                        <div id="ffmpeg-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="ffmpeg-progress-fill" class="progress-fill">
-                                </div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="ffmpeg-progress-text">Compressing...</span>
-                                <span id="ffmpeg-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <button id="btn-start-compression" class="btn-primary w-full hidden mt-16" data-i18n="tool_compressor_btn">Start Compression</button>
-                    </div>
-
-                    <!-- Audio Extractor Card -->
-                    <div class="card" id="audio-extractor-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">audiotrack</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_audio_extractor_title">Audio Extractor</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_audio_extractor_desc">Video to Audio</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="drag-drop-area" id="tool-audio-drop">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span data-i18n="tool_audio_extractor_drop">Drag &amp; drop video here or click to select</span>
-                            <input type="file" id="tool-audio-input" accept="video/mp4,video/quicktime,video/webm,video/*"
-                                hidden>
-                        </div>
-
-                        <div id="tool-audio-status" class="mt-16 text-center text-primary font-500 font-14 word-break-all">
-                        </div>
-
-                        <div id="audio-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="audio-progress-fill" class="progress-fill">
-                                </div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="audio-progress-text">Extracting...</span>
-                                <span id="audio-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <button id="btn-start-audio" class="btn-primary w-full hidden mt-16" data-i18n="tool_audio_extractor_btn">Extract Audio</button>
-                    </div>
-
-                    <div class="card" id="img-seq-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">movie_creation</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_seq_title">Image Sequence to Video</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_seq_desc">AM Zip Exporter</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="drag-drop-area" id="tool-seq-drop">
-                            <input type="file" id="tool-seq-input" accept=".zip" hidden>
-                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-seq-inner">
+                <div class="app-view cube-face cube-face-4 cube-face-back" id="view-resource">
+                    <section class="section resource-page-section">
+                        <div class="section-header">
+                            <div class="section-pill">
                                 <span class="material-symbols-rounded">folder_zip</span>
-                                <span data-i18n="tool_seq_drop">Drag &amp; drop AM Export .zip here or click to select</span>
+                                <span data-i18n="nav_resource">Resource</span>
                             </div>
+                            <h1 class="section-title" data-i18n="resource_title">Resources</h1>
                         </div>
 
-                        <div class="drag-drop-area mt-12" id="tool-seq-audio-drop">
-                            <input type="file" id="tool-seq-audio-input" accept="audio/*,video/*" hidden>
-                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-seq-audio-inner">
-                                <span class="material-symbols-rounded">audio_file</span>
-                                <span id="tool-seq-audio-label" data-i18n="tool_seq_audio_drop">Drag &amp; drop audio/video here or click to select (Optional)</span>
-                            </div>
+                        <div class="resource-search-bar">
+                            <span class="material-symbols-rounded">search</span>
+                            <input type="text" id="resource-search" placeholder="Search resources..." data-i18n="resource_search_placeholder">
                         </div>
 
-                        <!-- Settings Container -->
-                        <div class="mt-16 text-left flex flex-col gap-12">
-                            <div class="input-field mb-0">
-                                <label for="tool-seq-fps" class="font-13 font-600 block mb-4" data-i18n="tool_seq_fps">Framerate (FPS)</label>
-                                <input type="number" id="tool-seq-fps" value="30" min="1" max="120" class="w-full box-border">
-                            </div>
-                            
-                            <div class="input-field mb-0">
-                                <label for="tool-seq-bitrate" class="font-13 font-600 block mb-4" data-i18n="tool_seq_bitrate">Video Bitrate (Mbps)</label>
-                                <input type="number" id="tool-seq-bitrate" value="30" min="10" max="50" class="w-full box-border">
-                            </div>
-                        </div>
+                        <div class="chip-group" id="resource-categories"></div>
 
-                        <div id="tool-seq-status" class="mt-16 text-center font-14 font-500 text-primary word-break-all">
-                        </div>
-
-                        <div id="seq-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="seq-progress-fill" class="progress-fill">
+                        <div class="resource-grid" id="resource-grid">
+                            <div class="skeleton-resource-card">
+                                <div class="skeleton-resource-card-icon"></div>
+                                <div class="skeleton-resource-card-info">
+                                    <div class="skeleton-resource-card-line"></div>
+                                    <div class="skeleton-resource-card-line short"></div>
+                                    <div class="skeleton-resource-card-line medium"></div>
                                 </div>
                             </div>
-                            <div class="progress-labels">
-                                <span id="seq-progress-text">Processing...</span>
-                                <span id="seq-progress-percent">0%</span>
+                            <div class="skeleton-resource-card">
+                                <div class="skeleton-resource-card-icon"></div>
+                                <div class="skeleton-resource-card-info">
+                                    <div class="skeleton-resource-card-line"></div>
+                                    <div class="skeleton-resource-card-line short"></div>
+                                    <div class="skeleton-resource-card-line medium"></div>
+                                </div>
                             </div>
-                        </div>
-
-                        <button id="btn-start-seq" class="btn-primary w-full hidden mt-16" data-i18n="tool_seq_btn">Convert to Video</button>
-                    </div>
-
-                    <div class="card" id="fivemb-gen-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">cleaning_services</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_fivemb_title">5MB XML Generator</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_fivemb_desc">Alight Motion</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
+                            <div class="skeleton-resource-card">
+                                <div class="skeleton-resource-card-icon"></div>
+                                <div class="skeleton-resource-card-info">
+                                    <div class="skeleton-resource-card-line"></div>
+                                    <div class="skeleton-resource-card-line short"></div>
+                                    <div class="skeleton-resource-card-line medium"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-resource-card">
+                                <div class="skeleton-resource-card-icon"></div>
+                                <div class="skeleton-resource-card-info">
+                                    <div class="skeleton-resource-card-line"></div>
+                                    <div class="skeleton-resource-card-line short"></div>
+                                    <div class="skeleton-resource-card-line medium"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="drag-drop-area" id="tool-fivemb-drop">
-                            <input type="file" id="tool-fivemb-input" accept=".xml" hidden>
-                            <div class="drag-drop-inner flex align-center justify-center gap-8 w-full min-w-0" id="tool-fivemb-inner">
-                                <span class="material-symbols-rounded">code</span>
-                                <span data-i18n="tool_fivemb_drop">Drag &amp; drop Alight Motion XML here to process</span>
-                            </div>
-                        </div>
-
-                        <!-- Layers Container (Initially hidden) -->
-                        <div id="tool-fivemb-layers-container" class="d-none mt-20 border-top-outline pt-16 w-full">
-                            <h4 class="font-15 font-600 mb-12 flex align-center gap-8 text-on-surface">
-                                <span class="material-symbols-rounded font-20">list</span>
-                                <span data-i18n="tool_fivemb_layer_list_title">Select Layers to Replace with Placeholders:</span>
-                            </h4>
-                            
-                            <div class="flex gap-8 mb-12 flex-wrap align-center">
-                                <div id="tool-fivemb-filter-tabs" class="d-none gap-6 flex-wrap flex-grow-1"></div>
-                                <div class="flex gap-6 flex-shrink-0">
-                                    <button type="button" id="tool-fivemb-select-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_select_all">Select All</button>
-                                    <button type="button" id="tool-fivemb-deselect-all" class="btn-fivemb-secondary" data-i18n="tool_fivemb_deselect_all">Deselect All</button>
-                                </div>
-                            </div>
-
-                            <!-- List Scroll Area -->
-                            <div id="tool-fivemb-layers-list" class="max-h-250 overflow-y-auto border-outline rounded-8 p-4 flex flex-col gap-4 bg-surface-low mb-16">
-                                <!-- Dynamic Layer Items will be injected here -->
-                            </div>
-
-                            <button type="button" id="tool-fivemb-btn-export" class="btn-primary w-full flex align-center justify-center gap-8 font-600">
-                                <span class="material-symbols-rounded">download</span>
-                                <span data-i18n="tool_fivemb_btn_export">Process</span>
-                            </button>
-                        </div>
-
-                        <div id="tool-fivemb-status" class="mt-16 text-center font-14 font-500 text-primary word-break-all">
-                        </div>
-                    </div>
-
-                    <div class="card" id="ae-to-am-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">swap_horiz</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_ae_am_title">AE to AM</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_ae_am_desc">Beatmark Converter</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="drag-drop-area" id="tool-ae-am-drop">
-                            <input type="file" id="tool-ae-am-input" accept=".xml,.aepx" hidden>
-                            <span class="material-symbols-rounded">upload_file</span>
-                            <span data-i18n="tool_ae_am_drop">Drag &amp; drop AE XML (.xml/.aepx) here or click to select</span>
-                        </div>
-
-                        <div id="tool-ae-am-config" class="ae-am-config hidden">
-                            <div class="ae-am-config-title" data-i18n="tool_ae_am_config_title">Alight Motion Project Settings</div>
-                            <div class="ae-am-form-grid">
-                                <div class="input-field ae-am-form-full">
-                                    <label for="tool-ae-am-comp" data-i18n="tool_ae_am_comp">Composition</label>
-                                    <select id="tool-ae-am-comp"></select>
-                                </div>
-                                <div class="input-field ae-am-form-full">
-                                    <label for="tool-ae-am-title" data-i18n="tool_ae_am_title_input">Project Title</label>
-                                    <input type="text" id="tool-ae-am-title" placeholder="Project name">
-                                </div>
-                                <div class="input-field">
-                                    <label for="tool-ae-am-width" data-i18n="tool_ae_am_width">Width</label>
-                                    <input type="number" id="tool-ae-am-width" value="1080">
-                                </div>
-                                <div class="input-field">
-                                    <label for="tool-ae-am-height" data-i18n="tool_ae_am_height">Height</label>
-                                    <input type="number" id="tool-ae-am-height" value="1920">
-                                </div>
-                                <div class="input-field">
-                                    <label for="tool-ae-am-fps" data-i18n="tool_ae_am_fps">Frame Rate (FPS)</label>
-                                    <input type="number" id="tool-ae-am-fps" value="30">
-                                </div>
-                                <div class="input-field">
-                                    <label for="tool-ae-am-duration" data-i18n="tool_ae_am_duration">Total Duration (ms)</label>
-                                    <input type="number" id="tool-ae-am-duration" value="5000">
-                                </div>
-                            </div>
-                            <div id="tool-ae-am-beat-summary" class="ae-am-beat-summary"></div>
-                        </div>
-
-                        <div id="tool-ae-am-status" class="mt-16 text-center font-14 font-500 text-primary">
-                        </div>
-
-                        <button id="btn-ae-am-convert" class="btn-primary w-full hidden mt-16" data-i18n="tool_ae_am_btn">Convert &amp; Download XML</button>
-                    </div>
-
-                    <div class="card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">monitoring</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_stats_title">TikTok Statistics</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_stats_desc">
-                                        Metadata &amp; Stream Analyser</span>
-                                    <span class="tool-ver-badge">1.1.2</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="input-field mb-0">
-                            <label for="tool-tiktok-stats-input" data-i18n="tool_stats_url">TikTok Video URL</label>
-                            <input type="text" id="tool-tiktok-stats-input"
-                                placeholder="https://www.tiktok.com/@username/video/..."
-                                class="w-full box-border">
-                        </div>
-
-                        <!-- Analysis Results Container -->
-                        <div id="tiktok-stats-results" class="hidden mt-20 border-top-dashed pt-16">
-                            <div class="stats-preview-container">
-                                <div class="stats-video-cover-wrapper">
-                                    <img id="stats-video-cover" src="" alt="Cover" class="stats-video-cover">
-                                </div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div id="stats-creator-name" class="stats-creator-name">
-                                        Creator</div>
-                                    <div id="stats-creator-handle" class="stats-creator-handle">
-                                        @username</div>
-                                    <div id="stats-caption" class="stats-caption">
-                                        Caption goes here...</div>
-                                </div>
-                            </div>
-
-                            <div class="stats-details-card">
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">calendar_month</span><span data-i18n="stats_upload_date">Upload Date</span></span>
-                                    <strong id="stats-upload-date" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">public</span><span data-i18n="stats_region">Region</span></span>
-                                    <strong id="stats-region" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">security</span><span data-i18n="stats_shadowban">Shadowban</span></span>
-                                    <div id="stats-shadowban" class="text-on-surface">—</div>
-                                </div>
-
-                                <hr class="stats-section-divider">
-
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">aspect_ratio</span><span data-i18n="stats_resolution">Resolution</span></span>
-                                    <strong id="stats-resolution" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">speed</span><span data-i18n="stats_fps">Frame Rate (FPS)</span></span>
-                                    <strong id="stats-fps" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">equalizer</span><span data-i18n="stats_bitrate">Bitrate</span></span>
-                                    <strong id="stats-bitrate" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">schedule</span><span data-i18n="stats_duration">Duration</span></span>
-                                    <strong id="stats-duration" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">save</span><span data-i18n="stats_size">File Size</span></span>
-                                    <strong id="stats-size" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">build</span><span data-i18n="stats_method">Method</span></span>
-                                    <strong id="stats-method" class="text-on-surface">—</strong>
-                                </div>
-
-                                <hr class="stats-section-divider">
-
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">visibility</span><span data-i18n="stats_views">Views</span></span>
-                                    <strong id="stats-views" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">favorite</span><span data-i18n="stats_likes">Likes</span></span>
-                                    <strong id="stats-likes" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">chat_bubble</span><span data-i18n="stats_comments">Comments</span></span>
-                                    <strong id="stats-comments" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">share</span><span data-i18n="stats_shares">Shares</span></span>
-                                    <strong id="stats-shares" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">bookmark</span><span data-i18n="stats_saves">Saves</span></span>
-                                    <strong id="stats-saves" class="text-on-surface">—</strong>
-                                </div>
-                                <div class="stats-detail-row">
-                                    <span class="stats-detail-label"><span
-                                            class="material-symbols-rounded font-18">trending_up</span><span data-i18n="stats_engagement">Engagement</span></span>
-                                    <strong id="stats-engagement" class="text-on-surface">—</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="tool-tiktok-stats-status" class="mt-16 text-center font-14 font-500 text-primary">
-                        </div>
-
-                        <button id="btn-analyse-tiktok" class="btn-primary w-full mt-16" data-i18n="tool_stats_btn">Analyse</button>
-                    </div>
-
-                    <div class="card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">download</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_downloader_title">TikTok Downloader</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_downloader_desc">
-                                        Powered By TikWm</span>
-                                    <span class="tool-ver-badge">1.0.1</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="input-field mb-0">
-                            <label for="tool-tiktok-dl-input" data-i18n="tool_downloader_url">TikTok Video URL</label>
-                            <input type="text" id="tool-tiktok-dl-input"
-                                placeholder="https://www.tiktok.com/@username/video/..."
-                                class="w-full box-border">
-                        </div>
-
-                        <div id="tiktok-dl-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="tiktok-dl-progress-fill" class="progress-fill">
-                                </div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="tiktok-dl-progress-text">Downloading...</span>
-                                <span id="tiktok-dl-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <div id="tool-tiktok-dl-status" class="mt-16 text-center font-14 font-500 text-primary">
-                        </div>
-
-                        <button id="btn-download-tiktok" class="btn-primary w-full mt-16" data-i18n="tool_downloader_btn">Download</button>
-                    </div>
-
-                    <div class="card" id="upscale-video-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">hd</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_upscale_title">Qualitelio Enhancer</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_upscale_desc">Media Upscaler</span>
-                                    <span class="tool-ver-badge">1.0.0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="drag-drop-area" id="upscale-drop-area">
-                            <span class="material-symbols-rounded">perm_media</span>
-                            <span data-i18n="tool_upscale_drop">Drag &amp; drop video or image here or click to select</span>
-                            <input type="file" id="upscale-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" multiple hidden>
-                        </div>
-
-                        <!-- Batch Processing Workspace -->
-                        <div id="upscale-batch-workspace" class="upscale-batch-workspace hidden">
-                            <div class="upscale-batch-header">
-                                <div class="flex align-center justify-between mb-8">
-                                    <div>
-                                        <div class="font-14 font-600 text-on-surface" id="upscale-batch-step-title" data-i18n="upscale_batch_step1_title">Selected Media Files</div>
-                                        <div class="font-11 text-on-surface-variant" id="upscale-batch-count-info">0 files selected</div>
-                                    </div>
-                                    <span class="res-ver-badge-inline">Batch Mode</span>
-                                </div>
-                            </div>
-
-                            <!-- Step 1: File List View -->
-                            <div id="upscale-batch-step1" class="upscale-batch-step">
-                                <div class="upscale-batch-list" id="upscale-batch-list"></div>
-                            </div>
-
-                            <!-- Step 2: Settings View -->
-                            <div id="upscale-batch-step2" class="upscale-batch-step hidden">
-                                <div class="upscale-controls">
-                                    <p class="upscale-controls-title" data-i18n="upscale_preset_title">Enhancement Preset</p>
-                                    <div class="upscale-preset-list" id="upscale-batch-preset-list"></div>
-
-                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_timing_title">Enhance Timing</p>
-                                    <div class="upscale-order-toggle" id="upscale-batch-order-toggle">
-                                        <button type="button" class="upscale-order-btn active" data-order="before" data-i18n="upscale_timing_before">Before Upscale</button>
-                                        <button type="button" class="upscale-order-btn" data-order="after" data-i18n="upscale_timing_after">After Upscale</button>
-                                    </div>
-
-                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_output_title">Output</p>
-                                    <div class="upscale-normalise-row">
-                                        <div>
-                                            <div class="font-13 font-600 text-on-surface" data-i18n="upscale_normalise_title">Normalise Size</div>
-                                            <div class="font-11 text-on-surface-variant mt-2" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
-                                        </div>
-                                        <label class="normalise-switch-wrap" for="upscale-batch-normalise-toggle">
-                                            <input type="checkbox" id="upscale-batch-normalise-toggle">
-                                            <span class="normalise-track"></span>
-                                            <span class="normalise-thumb"></span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="upscale-workspace" class="upscale-workspace hidden">
-                            <div class="upscale-preview-grid">
-                                <div class="upscale-comparison-container" id="upscale-comparison-container">
-                                    <div class="upscale-comparison-wrapper">
-                                        <div class="upscale-transform-layer">
-                                            <video id="upscale-video" loop crossorigin="anonymous" muted playsinline></video>
-                                            <img id="upscale-image" class="hidden w-full h-full obj-contain pointer-none" crossorigin="anonymous">
-                                        </div>
-                                        <div class="upscale-canvas-clip" id="upscale-canvas-clip">
-                                            <div class="upscale-transform-layer">
-                                                <canvas id="upscale-canvas"></canvas>
-                                            </div>
-                                            <div id="upscale-unprocessed-overlay" class="upscale-unprocessed-overlay show">
-                                                <div class="unprocessed-title">Unprocessed</div>
-                                                <div class="unprocessed-subtitle">Press preview to view the processed file</div>
-                                            </div>
-                                        </div>
-                                        <div class="upscale-slider-line" id="upscale-slider-line">
-                                            <div class="upscale-slider-handle">&#9664; &#9654;</div>
-                                        </div>
-                                        <div class="upscale-slider-label left">Original</div>
-                                        <div class="upscale-slider-label right" id="upscale-slider-label-right">Original (1x)</div>
-                                        <div class="upscale-zoom-badge hidden" id="upscale-zoom-badge">Zoom: 1x</div>
-                                    </div>
-                                </div>
-
-                                <div class="upscale-controls">
-                                    <p class="upscale-controls-title" data-i18n="upscale_preset_title">Enhancement Preset</p>
-                                    <div class="upscale-preset-list" id="upscale-preset-list"></div>
-
-                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_timing_title">Enhance Timing</p>
-                                    <div class="upscale-order-toggle">
-                                        <button type="button" class="upscale-order-btn active" data-order="before" data-i18n="upscale_timing_before">Before Upscale</button>
-                                        <button type="button" class="upscale-order-btn" data-order="after" data-i18n="upscale_timing_after">After Upscale</button>
-                                    </div>
-
-                                    <p class="upscale-controls-title mt-4" data-i18n="upscale_output_title">Output</p>
-                                    <div class="upscale-normalise-row">
-                                        <div>
-                                            <div class="font-13 font-600 text-on-surface" data-i18n="upscale_normalise_title">Normalise Size</div>
-                                            <div class="font-11 text-on-surface-variant mt-2" data-i18n="upscale_normalise_desc">Crop center to 1080×1920 · Save as JPG</div>
-                                        </div>
-                                        <label class="normalise-switch-wrap" for="upscale-normalise-toggle">
-                                            <input type="checkbox" id="upscale-normalise-toggle">
-                                            <span class="normalise-track"></span>
-                                            <span class="normalise-thumb"></span>
-                                        </label>
-                                    </div>
-
-                                    <div id="upscale-duration-container">
-                                        <p class="upscale-controls-title mt-4" data-i18n="upscale_duration_title">Duration</p>
-                                        <div class="upscale-timeline">
-                                            <div class="upscale-timeline-times">
-                                                <span id="upscale-time-current">0:00</span>
-                                                <span id="upscale-time-duration">0:00</span>
-                                            </div>
-                                            <input type="range" id="upscale-timeline" min="0" max="100" step="0.01" value="0">
-                                        </div>
-                                    </div>
-
-                                    <div class="upscale-action-row">
-                                        <button type="button" class="btn-upscale" id="upscale-btn-zoom">Zoom: 1x</button>
-                                        <button type="button" class="btn-upscale" id="upscale-btn-preview">
-                                            <span class="material-symbols-rounded font-16">visibility</span>
-                                            <span data-i18n="btn_preview">Preview</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- System Checking Screen -->
-                        <div id="upscale-checking-screen" class="hidden system-checking-card">
-                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
-                            <div class="system-checking-list">
-                                <div class="system-checking-item">
-                                    <span id="upscale-engine-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="upscale-engine-status">AI Engine: Checking...</span>
-                                </div>
-                                <div class="system-checking-item">
-                                    <span id="upscale-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="upscale-gpu-status">GPU Canvas: Checking...</span>
-                                </div>
-                                <div class="system-checking-item">
-                                    <span id="upscale-webcodecs-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="upscale-webcodecs-status">FFmpeg WASM: Checking...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="upscale-logs-container" class="hidden process-logs-wrap">
-                            <div class="process-logs-title mb-8" data-i18n="process_logs_title">Process Logs:</div>
-                            <pre id="upscale-logs" class="process-logs-pre max-h-120"></pre>
-                        </div>
-
-                        <div id="upscale-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="upscale-progress-fill" class="progress-fill"></div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="upscale-progress-text">Processing...</span>
-                                <span id="upscale-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <div id="upscale-completed-panel" class="hidden">
-                            <div class="upscale-completed-player">
-                                <video id="upscale-completed-video" controls loop playsinline class="hidden"></video>
-                                <img id="upscale-completed-image" class="hidden w-full max-h-360 obj-contain">
-                            </div>
-                        </div>
-
-                        <!-- UNIFIED ACTION BUTTONS CONTAINER -->
-                        <div class="upscale-action-buttons mt-16">
-                            <button type="button" class="btn-primary w-full hidden" id="upscale-btn-enhance" data-i18n="tool_upscale_btn">
-                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
-                                Enhance Media
-                            </button>
-                            <button type="button" class="btn-primary w-full hidden" id="upscale-btn-download" data-i18n="btn_upscale_another">Upscale Another</button>
-                            <button type="button" class="btn-primary w-full hidden" id="upscale-batch-btn-next" data-i18n="btn_next_settings">Next</button>
-                            <button type="button" class="btn-primary w-full hidden" id="upscale-batch-btn-start" data-i18n="btn_start_batch">
-                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
-                                Start Batch Processing
-                            </button>
-                            <button type="button" class="btn-primary w-full hidden mt-8" id="upscale-batch-btn-back" data-i18n="btn_back_files">
-                                <span class="material-symbols-rounded font-16 mr-8">arrow_back</span>
-                                Back to Selected Files
-                            </button>
-                            <button type="button" class="btn-primary w-full hidden btn-danger-container" id="upscale-btn-cancel" data-i18n="btn_cancel">Cancel</button>
-                            <button type="button" class="btn-primary w-full hidden btn-success" id="upscale-batch-btn-zip" data-i18n="btn_download_all_zip">
-                                <span class="material-symbols-rounded font-16 mr-8">folder_zip</span>
-                                Download All (.zip)
-                            </button>
-                            <button type="button" class="btn-primary w-full hidden mt-8" id="upscale-batch-btn-reset" data-i18n="btn_upscale_another_batch">
-                                <span class="material-symbols-rounded font-16 mr-8">refresh</span>
-                                Process Another Batch
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Video Interpolation Card -->
-                    <div class="card" id="interpolation-video-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">motion_photos_on</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_interp_title">Video Interpolation</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_interp_desc">FPS Upscaler</span>
-                                    <span class="tool-ver-badge">1.0.3</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="drag-drop-area" id="interp-drop-area">
-                            <span class="material-symbols-rounded">video_file</span>
-                            <span data-i18n="tool_interp_drop">Drag &amp; drop video here or click to select</span>
-                            <input type="file" id="interp-file-input" accept="video/mp4,video/quicktime,video/webm" hidden>
-                        </div>
-
-                        <div id="interp-workspace" class="hidden mt-16">
-                            <!-- Expected vs Target FPS Side-by-side Panel -->
-                            <div class="flex gap-12 mb-16">
-                                <div class="interp-metric-card">
-                                    <div id="interp-input-fps" class="interp-metric-val">—</div>
-                                    <div class="interp-metric-label" data-i18n="interp_input_label">Input</div>
-                                </div>
-                                <div class="interp-metric-card">
-                                    <div id="interp-target-fps" class="interp-metric-val primary">—</div>
-                                    <div class="interp-metric-label" data-i18n="interp_output_label">Output</div>
-                                </div>
-                            </div>
-
-                            <div id="interp-params-wrapper">
-                                <p class="font-14 font-600 mb-8 text-on-surface" data-i18n="interp_multiplier_title">FPS Multiplier</p>
-                                <div class="ffmpeg-preset-container mt-0 mb-16">
-                                    <div class="preset-switch-group" id="interp-multipliers">
-                                        <div class="preset-switch active" data-mult="2">2x</div>
-                                        <div class="preset-switch" data-mult="4">4x</div>
-                                        <div class="preset-switch" data-mult="8">8x</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- WebGPU System Checking Screen -->
-                        <div id="interp-checking-screen" class="hidden system-checking-card">
-                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
-                            <div class="system-checking-list">
-                                <div class="system-checking-item">
-                                    <span id="interp-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="interp-gpu-status">WebGPU: Checking...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="interp-logs-container" class="hidden process-logs-wrap">
-                            <div class="process-logs-title mb-8" data-i18n="process_logs_title">Process Logs:</div>
-                            <pre id="interp-logs" class="process-logs-pre max-h-120"></pre>
-                        </div>
-
-                        <div id="interp-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="interp-progress-fill" class="progress-fill">
-                                </div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="interp-progress-text">Processing...</span>
-                                <span id="interp-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <button type="button" class="btn-primary w-full hidden mt-16" id="interp-btn-process" data-i18n="tool_interp_btn">
-                            <span class="material-symbols-rounded font-16 mr-8">speed</span>
-                            Interpolate Video
-                        </button>
-
-                        <div id="interp-completed-panel" class="hidden mt-16">
-                            <div class="upscale-completed-player pos-relative rounded-12 overflow-hidden bg-black">
-                                <div class="upscale-comparison-container interp-comparison-h w-full pos-relative overflow-hidden" id="interp-comparison-container">
-                                    <div class="upscale-comparison-wrapper pos-absolute inset-0 w-full h-full">
-                                        <!-- Interpolated Output Video (Bottom Layer) -->
-                                        <div class="pos-absolute inset-0 w-full h-full">
-                                            <video id="interp-video-output" loop crossorigin="anonymous" muted playsinline class="w-full h-full obj-contain pointer-none block"></video>
-                                        </div>
-                                        
-                                        <!-- Original Video (Top Clip Layer) -->
-                                        <div id="interp-video-clip" class="interp-clip-layer">
-                                            <video id="interp-video-original" loop crossorigin="anonymous" muted playsinline class="w-full h-full obj-contain pointer-none block"></video>
-                                        </div>
-                                        
-                                        <!-- Slider Line -->
-                                        <div id="interp-slider-line" class="interp-slider-line">
-                                            <div class="upscale-slider-handle interp-slider-handle">◀▶</div>
-                                        </div>
-                                        <div class="upscale-slider-label left interp-slider-label-left" data-i18n="interp_original_label">Original</div>
-                                        <div class="upscale-slider-label right interp-slider-label-right" data-i18n="interp_interpolated_label">Interpolated</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="upscale-reset-row mt-16">
-                            <button type="button" class="btn-primary hidden btn-danger-container" id="interp-btn-cancel" data-i18n="btn_cancel">Cancel</button>
-                            <button type="button" class="btn-primary hidden" id="interp-btn-reset" data-i18n="btn_interp_another">Interpolate Another</button>
-                        </div>
-                    </div>
-
-                    <!-- Remove Background (AI Matting) Card -->
-                    <div class="card" id="rembg-card">
-                        <div class="flex align-center gap-16 mb-16">
-                            <span class="material-symbols-rounded tool-header-icon">person_remove</span>
-                            <div class="flex-1">
-                                <h3 class="tool-title" data-i18n="tool_rembg_title">Remove Background</h3>
-                                <div class="flex align-center gap-6 mt-2 flex-wrap">
-                                    <span class="tool-subtitle-text" data-i18n="tool_rembg_desc">AI Matting</span>
-                                    <span class="tool-ver-badge">1.3.8</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="drag-drop-area" id="rembg-drop-area">
-                            <span class="material-symbols-rounded">perm_media</span>
-                            <span data-i18n="tool_rembg_drop">Drag &amp; drop video or image here or click to select</span>
-                            <input type="file" id="rembg-file-input" accept="video/mp4,video/quicktime,video/webm,image/*" hidden>
-                        </div>
-
-                        <div id="rembg-workspace" class="upscale-workspace hidden">
-                            <div class="upscale-preview-grid">
-                                <div class="upscale-comparison-container checkerboard" id="rembg-comparison-container">
-                                    <div class="upscale-comparison-wrapper" id="rembg-comparison-wrapper">
-                                        <div class="upscale-canvas-clip" id="rembg-original-clip">
-                                            <div class="upscale-transform-layer" id="rembg-transform-layer">
-                                                <video id="rembg-video" loop crossorigin="anonymous" muted playsinline></video>
-                                                <img id="rembg-image" class="hidden w-full h-full obj-contain pointer-none" crossorigin="anonymous">
-                                            </div>
-                                        </div>
-                                        <div class="upscale-canvas-clip" id="rembg-canvas-clip">
-                                            <div class="upscale-transform-layer" id="rembg-canvas-transform-layer">
-                                                <canvas id="rembg-canvas"></canvas>
-                                            </div>
-                                            <div id="rembg-unprocessed-overlay" class="upscale-unprocessed-overlay show">
-                                                <div class="unprocessed-title">Unprocessed</div>
-                                                <div class="unprocessed-subtitle">Press preview to view background removal</div>
-                                            </div>
-                                        </div>
-                                        <div class="upscale-slider-line" id="rembg-slider-line">
-                                            <div class="upscale-slider-handle">&#9664; &#9654;</div>
-                                        </div>
-                                        <div class="upscale-slider-label left">Original</div>
-                                        <div class="upscale-slider-label right" id="rembg-slider-label-right">Removed BG</div>
-                                        <div class="upscale-zoom-badge hidden" id="rembg-zoom-badge">Zoom: 1x</div>
-                                    </div>
-                                </div>
-
-                                <div class="upscale-controls">
-                                    <p class="upscale-controls-title" data-i18n="tool_rembg_model_title">AI Model</p>
-                                    <div class="upscale-preset-list" id="rembg-model-list">
-                                        <button type="button" class="upscale-preset-btn active" data-model="selfie_segmenter">MediaPipe (~1MB)</button>
-                                        <button type="button" class="upscale-preset-btn" data-model="rvm_mobilenetv3">RVM (~15MB)</button>
-                                        <button type="button" class="upscale-preset-btn" data-model="modnet">MODNet (~25MB)</button>
-                                    </div>
-
-                                    <p class="upscale-controls-title mt-4">Hardware</p>
-                                    <div class="upscale-order-toggle" id="rembg-hw-switches">
-                                        <button type="button" class="upscale-order-btn active" data-hw="cpu">CPU</button>
-                                        <button type="button" class="upscale-order-btn" data-hw="gpu" id="rembg-hw-gpu-btn">GPU</button>
-                                    </div>
-
-                                    <p class="upscale-controls-title mt-4" data-i18n="tool_rembg_bg_title">Background</p>
-                                    <div class="upscale-preset-list" id="rembg-bg-list">
-                                        <button type="button" class="upscale-preset-btn active" data-bg="transparent" data-i18n="tool_rembg_bg_transparent">Transparent</button>
-                                        <button type="button" class="upscale-preset-btn" data-bg="green" data-i18n="tool_rembg_bg_green">Green Screen</button>
-                                        <button type="button" class="upscale-preset-btn" data-bg="color" data-i18n="tool_rembg_bg_color">Solid Color</button>
-                                        <button type="button" class="upscale-preset-btn" data-bg="blur" data-i18n="tool_rembg_bg_blur">Blur</button>
-                                        <button type="button" class="upscale-preset-btn" data-bg="image" data-i18n="tool_rembg_bg_image">Custom Image</button>
-                                    </div>
-
-                                    <div id="rembg-color-picker-row" class="hidden mt-4">
-                                        <div class="flex align-center gap-10">
-                                            <input type="color" id="rembg-color-input" value="#0842a0" class="rembg-color-box">
-                                            <input type="text" id="rembg-color-text" value="#0842a0" class="flex-1 box-border font-13 font-mono">
-                                        </div>
-                                    </div>
-
-                                    <div id="rembg-blur-row" class="hidden mt-4">
-                                        <div class="flex justify-between font-13 font-600 mb-4">
-                                            <span>Blur Radius</span>
-                                            <span id="rembg-blur-val">20px</span>
-                                        </div>
-                                        <input type="range" id="rembg-blur-range" min="5" max="50" step="1" value="20" class="w-full box-border">
-                                    </div>
-
-                                    <div id="rembg-image-row" class="hidden mt-4">
-                                        <div class="drag-drop-area min-h-60" id="rembg-bg-img-drop">
-                                            <span class="material-symbols-rounded font-20">add_photo_alternate</span>
-                                            <span id="rembg-bg-img-label" class="font-12">Select background image</span>
-                                            <input type="file" id="rembg-bg-img-input" accept="image/*" hidden>
-                                        </div>
-                                    </div>
-
-                                    <div id="rembg-rvm-controls" class="hidden mt-4">
-                                        <div class="input-field mb-8">
-                                            <div class="flex justify-between font-13 font-600 mb-4">
-                                                <span>Quality Scale</span>
-                                                <span id="rembg-rvm-scale-val">100% (HD)</span>
-                                            </div>
-                                            <input type="range" id="rembg-rvm-scale" min="0.4" max="1.0" step="0.05" value="1.0" class="w-full box-border">
-                                        </div>
-                                        <div class="input-field mb-0">
-                                            <div class="flex justify-between font-13 font-600 mb-4">
-                                                <span>Downsample Ratio</span>
-                                                <span id="rembg-rvm-downsample-val">0.25</span>
-                                            </div>
-                                            <input type="range" id="rembg-rvm-downsample" min="0.1" max="0.5" step="0.05" value="0.25" class="w-full box-border">
-                                        </div>
-                                    </div>
-
-                                    <div id="rembg-modnet-controls" class="hidden mt-4">
-                                        <div class="input-field mb-8">
-                                            <div class="flex justify-between font-13 font-600 mb-4">
-                                                <span>Matte Boost (Solid Fill)</span>
-                                                <span id="rembg-modnet-boost-val">80%</span>
-                                            </div>
-                                            <input type="range" id="rembg-modnet-boost" min="0" max="100" step="5" value="80" class="w-full box-border">
-                                        </div>
-                                        <div class="input-field mb-0">
-                                            <div class="flex justify-between font-13 font-600 mb-4">
-                                                <span>Background Cutoff</span>
-                                                <span id="rembg-modnet-cutoff-val">10%</span>
-                                            </div>
-                                            <input type="range" id="rembg-modnet-cutoff" min="5" max="50" step="5" value="10" class="w-full box-border">
-                                        </div>
-                                    </div>
-
-                                    <div id="rembg-duration-container">
-                                        <p class="upscale-controls-title mt-4" data-i18n="upscale_duration_title">Duration</p>
-                                        <div class="upscale-timeline">
-                                            <div class="upscale-timeline-times">
-                                                <span id="rembg-time-current">0:00</span>
-                                                <span id="rembg-time-duration">0:00</span>
-                                            </div>
-                                            <input type="range" id="rembg-timeline" min="0" max="100" step="0.01" value="0">
-                                        </div>
-                                    </div>
-
-                                    <div class="upscale-action-row">
-                                        <button type="button" class="btn-upscale" id="rembg-btn-zoom">Zoom: 1x</button>
-                                        <button type="button" class="btn-upscale primary" id="rembg-btn-preview">
-                                            <span class="material-symbols-rounded font-16">visibility</span>
-                                            <span data-i18n="btn_preview">Preview</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- System Checking Screen -->
-                        <div id="rembg-checking-screen" class="hidden system-checking-card mt-16">
-                            <h3 class="system-checking-title" data-i18n="system_checking_title">Checking System Compatibility...</h3>
-                            <div class="system-checking-list">
-                                <div class="system-checking-item">
-                                    <span id="rembg-engine-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="rembg-engine-status">AI Model: Checking...</span>
-                                </div>
-                                <div class="system-checking-item">
-                                    <span id="rembg-gpu-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="rembg-gpu-status">Hardware Engine: Checking...</span>
-                                </div>
-                                <div class="system-checking-item">
-                                    <span id="rembg-ffmpeg-dot" class="material-symbols-rounded font-20">hourglass_empty</span>
-                                    <span id="rembg-ffmpeg-status">FFmpeg WASM: Checking...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="rembg-logs-container" class="hidden process-logs-wrap mt-16">
-                            <div class="process-logs-header">
-                                <span class="process-logs-title" data-i18n="process_logs_title">Process Logs:</span>
-                                <button id="btn-rembg-copy-logs" type="button" class="btn-copy-logs">
-                                    <span class="material-symbols-rounded font-16">content_copy</span>
-                                    <span data-i18n="btn_copy" id="btn-rembg-copy-logs-label">Copy</span>
-                                </button>
-                            </div>
-                            <pre id="rembg-logs" class="process-logs-pre max-h-120"></pre>
-                        </div>
-
-                        <div id="rembg-progress-container" class="hidden mt-16">
-                            <div class="progress-bar-bg progress-track">
-                                <div id="rembg-progress-fill" class="progress-fill"></div>
-                            </div>
-                            <div class="progress-labels">
-                                <span id="rembg-progress-text">Processing...</span>
-                                <span id="rembg-progress-percent">0%</span>
-                            </div>
-                        </div>
-
-                        <div class="upscale-action-buttons mt-16">
-                            <button type="button" class="btn-primary w-full hidden" id="rembg-btn-process" data-i18n="tool_rembg_btn_process">
-                                <span class="material-symbols-rounded font-16 mr-8">auto_awesome</span>
-                                Remove Background
-                            </button>
-                            <button type="button" class="btn-primary w-full hidden btn-danger-container" id="rembg-btn-cancel" data-i18n="btn_cancel">Cancel</button>
-                            <button type="button" class="btn-primary w-full hidden mt-8" id="rembg-btn-reset" data-i18n="tool_rembg_btn_another">Process Another Media</button>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <footer class="app-footer">
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="footer-link open-legal-privacy" onclick="window.openLegalModal('privacy'); return false;" data-i18n="footer_privacy">Privacy Policy</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-terms" onclick="window.openLegalModal('terms'); return false;" data-i18n="footer_terms">Terms of Service</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-disclaimer" onclick="window.openLegalModal('disclaimer'); return false;" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
-                    </div>
-                    <div class="footer-copy">
-                        &copy; 2026 cutefishaep. <span>All Rights Reserved.</span>
-                        <div class="footer-build-info"><span data-i18n="footer_build_date">Build date:</span> <span class="footer-build-date-val"></span></div>
-                    </div>
-                </footer>
-            </section>
 
-            <section id="contact" class="section">
-                <div class="page-header-row">
-                    <h1 class="page-title" data-i18n="contact_title">Contact Us</h1>
-                </div>
-                <div class="grid" id="contact-grid">
-                    <!-- Loaded dynamically via scripts/app.js -->
-                </div>
-                <footer class="app-footer">
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="footer-link open-legal-privacy" onclick="window.openLegalModal('privacy'); return false;" data-i18n="footer_privacy">Privacy Policy</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-terms" onclick="window.openLegalModal('terms'); return false;" data-i18n="footer_terms">Terms of Service</a>
-                        <span class="footer-dot">•</span>
-                        <a href="javascript:void(0)" class="footer-link open-legal-disclaimer" onclick="window.openLegalModal('disclaimer'); return false;" data-i18n="footer_disclaimer">Disclaimer & DMCA</a>
-                    </div>
-                    <div class="footer-copy">
-                        &copy; 2026 cutefishaep. <span>All Rights Reserved.</span>
-                        <div class="footer-build-info"><span data-i18n="footer_build_date">Build date:</span> <span class="footer-build-date-val"></span></div>
-                    </div>
-                </footer>
-            </section>
-        </main>
-    </div>
+                <div class="app-view cube-face cube-face-6" id="view-preset">
+                    <section class="section preset-page-section">
+                        <div class="section-header">
+                            <div class="section-pill">
+                                <span class="material-symbols-rounded">description</span>
+                                <span data-i18n="nav_preset">Preset</span>
+                            </div>
+                            <h1 class="section-title" data-i18n="preset_title">Explore</h1>
+                        </div>
 
-    <div id="sw-download-picker" class="mini-popup-overlay">
-        <div class="mini-popup">
-            <div class="mini-popup-header-row">
-                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1">
-                    <span class="material-symbols-rounded">download</span>
-                    <span>Choose Version</span>
-                </h3>
-                <button class="mini-popup-close-btn" id="close-sw-download" aria-label="Close">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
+                        <div class="chip-group" id="preset-categories"></div>
+
+                        <div class="preset-grid" id="preset-grid">
+                            <div class="preset-skeleton"></div>
+                            <div class="preset-skeleton"></div>
+                            <div class="preset-skeleton"></div>
+                            <div class="preset-skeleton"></div>
+                            <div class="preset-skeleton"></div>
+                            <div class="preset-skeleton"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="app-view cube-face cube-face-5 cube-face-left" id="view-contact">
+                    <section class="section social-page-section">
+                        <div class="section-header">
+                            <div class="section-pill">
+                                <span class="material-symbols-rounded">mail</span>
+                                <span data-i18n="nav_contact">Contact</span>
+                            </div>
+                            <h1 class="section-title" data-i18n="contact_title">Contact Us</h1>
+                        </div>
+
+                        <div class="social-buttons-grid" id="contact-buttons-container">
+                            <div class="skeleton-social-btn"></div>
+                            <div class="skeleton-social-btn"></div>
+                        </div>
+                    </section>
+                </div>
             </div>
-            <p class="mini-popup-desc mt-10 mb-16">Select the software you want to download for:</p>
-            <div class="mini-popup-body" id="sw-download-options"></div>
+        </div>
+    </main>
         </div>
     </div>
 
-    <div id="sw-detail-picker" class="mini-popup-overlay">
-        <div class="mini-popup">
-            <div class="mini-popup-header-row gap-12">
-                <h3 class="mini-popup-title m-0 flex-grow-1" id="sw-detail-title-text-wrap">
-                    <img id="sw-detail-icon" src="" alt="" class="popup-icon-hidden">
-                    <span id="sw-detail-title-text">Preset Info</span>
-                </h3>
-                <button class="mini-popup-close-btn" id="back-sw-detail" aria-label="Back">
-                    <span class="material-symbols-rounded">arrow_back</span>
-                </button>
-            </div>
-            <div class="mini-popup-body mt-16">
-                <div id="sw-detail-plugin-section" class="d-none flex-col gap-8 mb-16 w-full">
-                    <div class="plugin-section-title">Required Plugins:</div>
-                    <div id="sw-detail-plugins" class="plugin-badges-container"></div>
-                </div>
-                <button class="sw-download-option-btn btn-primary-ghost" id="sw-detail-download-btn">
-                    <span class="material-symbols-rounded color-inherit ml-0 mr-8">download</span>
-                    <span>Download Preset</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="am-variant-picker" class="mini-popup-overlay">
-        <div class="mini-popup">
-            <div class="mini-popup-header-row gap-12">
-                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1 font-20">
-                    <img src="assets/icon/Am.png" alt="Alight Motion" class="popup-icon-sm">
-                    <span>Choose Variant</span>
-                </h3>
-                <button class="mini-popup-close-btn" id="back-am-variant" aria-label="Back">
-                    <span class="material-symbols-rounded">arrow_back</span>
-                </button>
-            </div>
-            <p class="mini-popup-desc mt-10 mb-16">Select the variant you want to download:</p>
-            <div class="mini-popup-body mt-16" id="am-variant-options"></div>
-        </div>
-    </div>
-
-    <!-- Resource Detail Popup (App Store style) -->
-    <div id="resource-detail-popup" class="modal-overlay">
-        <div class="res-popup-sheet">
-            <div class="res-popup-handle" aria-hidden="true"></div>
-            <!-- Header -->
-            <div class="res-popup-header">
-                <button class="res-popup-close" id="close-resource-popup" aria-label="Close">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="res-popup-app-row">
-                    <div class="res-popup-icon-wrap" id="res-popup-icon-wrap">
-                        <img id="res-popup-icon" src="" alt="" class="res-popup-icon">
-                        <div class="res-popup-icon-fallback hidden" id="res-popup-icon-fallback">
-                            <span class="material-symbols-rounded">folder_open</span>
+    <div class="legal-modal-backdrop" id="legal-modal-backdrop" aria-hidden="true">
+        <div class="legal-modal-card" id="legal-modal-card" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
+            <div class="legal-modal-header-container">
+                <div class="legal-modal-header">
+                    <div class="legal-modal-title-group">
+                        <div class="legal-modal-icon-badge" id="legal-modal-icon-badge">
+                            <span class="material-symbols-rounded" id="legal-modal-icon">gavel</span>
+                        </div>
+                        <div class="legal-modal-title-wrapper">
+                            <span class="legal-modal-subtitle" id="legal-modal-subtitle">Legal & Policies</span>
+                            <div class="legal-modal-title-slot" id="legal-modal-title-slot"></div>
                         </div>
                     </div>
-                    <div class="res-popup-app-info">
-                        <h2 class="res-popup-title" id="res-popup-title">Resource Name</h2>
-                        <p class="res-popup-dev" id="res-popup-dev">Developer</p>
-                        <div class="res-popup-cats" id="res-popup-cats"></div>
-                    </div>
-                </div>
-                <!-- Rating-style metadata row -->
-                <div class="res-popup-meta-row">
-                    <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-info">—</span>
-                        <span class="res-popup-meta-label">Size</span>
-                    </div>
-                    <div class="res-popup-meta-divider"></div>
-                    <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-os-count">—</span>
-                        <span class="res-popup-meta-label">Platforms</span>
-                    </div>
-                    <div class="res-popup-meta-divider"></div>
-                    <div class="res-popup-meta-item">
-                        <span class="res-popup-meta-val" id="res-popup-ver-count">—</span>
-                        <span class="res-popup-meta-label">Versions</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- OS Picker -->
-            <div class="res-popup-section" id="res-popup-os-section">
-                <h3 class="res-popup-section-title mb-4">Platform</h3>
-                <p class="font-11 text-on-surface-variant m-0 mb-12 font-400 opacity-75">Select your operating system:</p>
-                <div class="res-popup-os-chips" id="res-popup-os-chips"></div>
-            </div>
-
-            <!-- Version Picker -->
-            <div class="res-popup-section hidden" id="res-popup-ver-section">
-                <h3 class="res-popup-section-title mb-4">Version</h3>
-                <p class="font-11 text-on-surface-variant m-0 mb-12 font-400 opacity-75">Select your preferred version:</p>
-                <div class="res-popup-ver-chips" id="res-popup-ver-chips"></div>
-            </div>
-
-            <!-- Instruction Section -->
-            <div class="res-popup-section hidden" id="res-popup-instruction-section">
-                <h3 class="res-popup-section-title">
-                    <span class="material-symbols-rounded font-18 v-middle">info</span>
-                    Instructions
-                </h3>
-                <div class="res-popup-instruction" id="res-popup-instruction"></div>
-            </div>
-
-            <!-- Password Section -->
-            <div class="res-popup-section res-popup-password-section hidden" id="res-popup-password-section">
-                <div class="res-popup-password-row">
-                    <span class="material-symbols-rounded text-primary font-20">lock</span>
-                    <div class="res-popup-password-info">
-                        <span class="res-popup-password-label">Password</span>
-                        <span class="res-popup-password-val" id="res-popup-password">••••••••••••</span>
-                    </div>
-                    <button class="res-popup-copy-btn" id="res-popup-copy-btn" title="Copy password">
-                        <span class="material-symbols-rounded">content_copy</span>
+                    <button type="button" class="legal-modal-close-btn" id="legal-modal-close-btn" aria-label="Close dialog">
+                        <span class="material-symbols-rounded">close</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Download Button -->
-            <div class="res-popup-section hidden" id="res-popup-download-section">
-                <button class="res-popup-download-btn" id="res-popup-download-btn" disabled>
-                    <div class="download-text-group">
-                        <span class="download-main-text d-none">Download</span>
-                        <span id="res-popup-download-label">Select OS & Version</span>
+            <div class="legal-modal-body" id="legal-modal-body">
+
+                <article class="legal-article-card legal-doc-pane" id="modal-doc-privacy" data-i18n-html="legal_privacy_content"></article>
+
+                <article class="legal-article-card legal-doc-pane" id="modal-doc-tos" data-i18n-html="legal_terms_content"></article>
+
+                <article class="legal-article-card legal-doc-pane" id="modal-doc-disclaimer" data-i18n-html="legal_disclaimer_content"></article>
+            </div>
+        </div>
+    </div>
+
+    <div class="res-modal-backdrop" id="res-modal-backdrop" aria-hidden="true"></div>
+    <div class="res-modal-card" id="res-modal-card" role="dialog" aria-modal="true" aria-labelledby="res-modal-title">
+        <div class="res-modal-header-container">
+            <div class="res-modal-header">
+
+                <div class="res-modal-hero-slot" id="res-modal-hero-slot"></div>
+                <button type="button" class="res-modal-close-btn" id="res-modal-close-btn" aria-label="Close dialog">
+                    <span class="material-symbols-rounded res-close-icon-arrow">chevron_right</span>
+                    <span class="material-symbols-rounded res-close-icon-x">close</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="res-modal-body" id="res-modal-body">
+            <div class="res-modal-section" id="res-modal-os-section">
+                <span class="res-modal-section-title" data-i18n="res_modal_platform">CHOOSE PLATFORM</span>
+                <div class="res-modal-os-chips" id="res-modal-os-chips"></div>
+            </div>
+
+            <div class="res-modal-section hidden" id="res-modal-ver-section">
+                <span class="res-modal-section-title" data-i18n="res_modal_version">CHOOSE VERSION</span>
+                <div class="res-modal-ver-chips" id="res-modal-ver-chips"></div>
+            </div>
+
+            <div class="res-modal-section hidden" id="res-modal-instruction-section">
+                <span class="res-modal-section-title" data-i18n="res_modal_guide">INSTALLATION GUIDE</span>
+                <div class="res-modal-instruction-box" id="res-modal-instruction"></div>
+            </div>
+
+            <div class="res-modal-section res-modal-password-section" id="res-modal-password-section">
+                <div class="res-modal-password-card">
+                    <div class="res-modal-password-left">
+                        <span class="material-symbols-rounded">lock</span>
+                        <div class="res-modal-password-text">
+                            <span class="res-modal-password-label" data-i18n="res_modal_password">ARCHIVE PASSWORD</span>
+                            <span class="res-modal-password-val" id="res-modal-password">EDITINGSTUFF</span>
+                        </div>
+                    </div>
+                    <button type="button" class="res-modal-copy-btn" id="res-modal-copy-btn" title="Copy password">
+                        <span class="material-symbols-rounded">content_copy</span>
+                        <span data-i18n="res_modal_copy">Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="res-modal-footer" id="res-modal-download-section">
+                <button type="button" class="res-modal-download-btn" id="res-modal-download-btn" disabled>
+                    <span class="material-symbols-rounded">download</span>
+                    <div class="res-download-text-group">
+                        <span class="res-download-main-text" data-i18n="res_modal_get">Get Resource</span>
+                        <span class="res-download-sub-text" id="res-modal-download-label">Select OS &amp; Version</span>
                     </div>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="tiktok-analysis-modal" class="hidden">
-        <div class="tktk-modal-card">
-            <div class="tktk-modal-header">
-                <div class="tktk-modal-icon">
-                    <span class="material-symbols-rounded">analytics</span>
+    <div class="tool-modal-backdrop" id="tool-modal-backdrop" aria-hidden="true"></div>
+    <div class="tool-modal-card" id="tool-modal-card" role="dialog" aria-modal="true" aria-labelledby="tool-modal-hero-slot">
+        <div class="tool-modal-header-container">
+            <div class="tool-modal-header">
+                <div class="tool-modal-hero-slot" id="tool-modal-hero-slot"></div>
+                <button type="button" class="tool-modal-close-btn" id="tool-modal-close-btn" aria-label="Close dialog">
+                    <span class="material-symbols-rounded tool-close-icon-arrow">chevron_right</span>
+                    <span class="tool-close-progress-text" id="tool-close-progress-text"></span>
+                    <span class="material-symbols-rounded tool-close-icon-x">close</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="tool-modal-body" id="tool-modal-body">
+            <div class="tool-drop-zone" id="tool-drop-zone">
+                <span class="material-symbols-rounded tool-drop-icon" id="tool-drop-icon">upload_file</span>
+                <div class="tool-drop-content">
+                    <span class="tool-drop-title" id="tool-drop-title" data-i18n="patcher_drop_label">Drop video here or click to browse</span>
+                    <span class="tool-drop-subtitle" id="tool-drop-subtitle" data-i18n="tool_drop_formats">Supports MP4, MOV, WebM</span>
                 </div>
-                <div>
-                    <div class="tktk-modal-title" data-i18n="tktk_analysis_title">Video Compatibility Check</div>
-                    <div class="tktk-modal-subtitle" data-i18n="tktk_analysis_subtitle">Analyzing your video before direct patch</div>
+                <div class="tool-file-badge hidden" id="tool-file-badge">
+                    <span class="material-symbols-rounded">check_circle</span>
+                    <span class="tool-file-name" id="tool-file-name">video.mp4</span>
+                    <span class="tool-file-size" id="tool-file-size">0 MB</span>
+                </div>
+                <input type="file" id="tool-file-input" accept="video/mp4,video/quicktime,video/webm,video/*">
+            </div>
+
+            <div class="tool-dynamic-options" id="tool-dynamic-options"></div>
+
+            <div class="tool-progress-section hidden" id="tool-progress-section">
+                <div class="tool-progress-track">
+                    <div class="tool-progress-fill" id="tool-progress-fill"></div>
+                </div>
+                <div class="tool-progress-labels">
+                    <span class="tool-progress-status" id="tool-progress-status">Processing...</span>
+                    <span class="tool-progress-percent" id="tool-progress-percent">0%</span>
                 </div>
             </div>
 
-            <div class="tktk-check-list">
-                <div class="tktk-check-item" id="tktk-check-fps">
-                    <div class="tktk-check-icon loading" id="tktk-icon-fps">
-                        <span class="material-symbols-rounded">progress_activity</span>
-                    </div>
-                    <div class="tktk-check-body">
-                        <div class="tktk-check-label" data-i18n="tktk_label_fps">Frame Rate</div>
-                        <div class="tktk-check-value" id="tktk-val-fps" data-i18n="tktk_val_analyzing">Analyzing...</div>
-                        <div class="tktk-check-error" id="tktk-err-fps">Must be 60fps or higher | lower rates will cause speed-up playback</div>
-                    </div>
-                </div>
-                <div class="tktk-check-item" id="tktk-check-res">
-                    <div class="tktk-check-icon loading" id="tktk-icon-res">
-                        <span class="material-symbols-rounded">progress_activity</span>
-                    </div>
-                    <div class="tktk-check-body">
-                        <div class="tktk-check-label" data-i18n="tktk_label_res">Resolution</div>
-                        <div class="tktk-check-value" id="tktk-val-res" data-i18n="tktk_val_analyzing">Analyzing...</div>
-                        <div class="tktk-check-error" id="tktk-err-res">Exceeds 1080p limit (max 1080x1920). Must be compressed.</div>
-                    </div>
-                </div>
-                <div class="tktk-check-item" id="tktk-check-size">
-                    <div class="tktk-check-icon loading" id="tktk-icon-size">
-                        <span class="material-symbols-rounded">progress_activity</span>
-                    </div>
-                    <div class="tktk-check-body">
-                        <div class="tktk-check-label" data-i18n="tktk_label_size">File Size</div>
-                        <div class="tktk-check-value" id="tktk-val-size" data-i18n="tktk_val_analyzing">Analyzing...</div>
-                        <div class="tktk-check-error" id="tktk-err-size">Exceeds 50 MB safe limit for direct patching</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tktk-modal-footer">
-                <button class="tktk-btn tktk-btn-cancel" id="tktk-btn-cancel" data-i18n="btn_cancel">Cancel</button>
-                <button class="tktk-btn tktk-btn-proceed" id="tktk-btn-proceed" data-i18n="btn_continue">Continue</button>
+            <div class="tool-modal-footer" id="tool-modal-footer">
+                <button type="button" class="tool-process-btn" id="tool-process-btn" disabled>
+                    <span id="tool-process-label" data-i18n="patcher_btn_process">Process Video</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Version-patched notice popup -->
-    <div id="tiktok-version-patched-modal" class="hidden">
-        <div class="vp-modal-card">
-            <div class="vp-modal-header">
-                <div class="vp-modal-icon">
-                    <span class="material-symbols-rounded icon-22">error</span>
-                </div>
-                <div class="vp-modal-title" id="vp-modal-title">Method Patched</div>
-            </div>
-            <div class="vp-modal-body" id="vp-modal-body"></div>
-            <div class="vp-modal-footer">
-                <button class="vp-btn vp-btn-proceed" id="btn-vp-proceed">Proceed Anyway</button>
-                <button class="vp-btn vp-btn-use-v1" id="btn-vp-switch">Use WMV</button>
-            </div>
+    <div class="social-portal-backdrop" id="social-portal-backdrop" aria-hidden="true"></div>
+    <div class="social-portal-card" id="social-portal-card" aria-hidden="true">
+        <div class="social-portal-icon-wrapper" id="social-portal-icon-wrapper"></div>
+        <div class="social-portal-label-wrapper" id="social-portal-label-wrapper">
+            <span class="social-portal-label" id="social-portal-label"></span>
+        </div>
+        <span class="material-symbols-rounded social-portal-arrow" id="social-portal-arrow">arrow_outward</span>
+    </div>
+
+    <div class="preset-modal-backdrop" id="preset-modal-backdrop" aria-hidden="true"></div>
+    <div class="preset-modal-card" id="preset-modal-card" role="dialog" aria-modal="true" aria-labelledby="preset-modal-name">
+        <button type="button" class="preset-modal-close-btn" id="preset-modal-close-btn" aria-label="Close">
+            <span class="material-symbols-rounded">close</span>
+        </button>
+        <div class="preset-modal-media" id="preset-modal-media"></div>
+        <div class="preset-modal-overlay-ui">
+            <div class="preset-badges" id="preset-modal-badges"></div>
+            <h3 class="preset-name" id="preset-modal-name"></h3>
+            <div class="preset-meta" id="preset-modal-meta"></div>
+            <button type="button" class="preset-download-btn" id="preset-modal-download-btn">
+                <span class="material-symbols-rounded">download</span>
+                <span>Download</span>
+            </button>
         </div>
     </div>
 
-    <div id="tiktok-ios-warning-modal" class="hidden">
-        <div class="warning-modal-card">
-            <div class="warning-modal-header">
-                <div class="warning-modal-icon">
-                    <span class="material-symbols-rounded icon-24">warning</span>
+    <div id="sw-download-picker" class="preset-popup-overlay" aria-hidden="true">
+        <div class="preset-popup-card" role="dialog" aria-modal="true">
+            <div class="preset-popup-header">
+                <div class="preset-popup-title-group">
+                    <span class="material-symbols-rounded preset-popup-title-icon">download</span>
+                    <span class="preset-popup-title" data-i18n="preset_choose_version">Choose Version</span>
                 </div>
-                <div class="warning-modal-title" data-i18n="ios_warn_title">iOS Compatibility Warning</div>
-            </div>
-            <div class="warning-modal-content" data-i18n-html="ios_warn_desc">
-                <p>This tool is not supported on iOS, iPadOS, and VisionOS devices. Patched videos on iOS may fail to upload via TikTok Studio.</p>
-                <p>For the best experience, please use <strong>macOS, Windows, or Android</strong> devices.</p>
-            </div>
-            <div class="warning-modal-footer">
-                <button class="warning-btn warning-btn-cancel" id="btn-ios-warning-cancel" data-i18n="ios_warn_cancel">Cancel</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-ios-warning-proceed" data-i18n="ios_warn_proceed">Proceed Anyway</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="tiktok-v3-warning-modal" class="hidden">
-        <div class="warning-modal-card">
-            <div class="warning-modal-header">
-                <div class="warning-modal-icon">
-                    <span class="material-symbols-rounded icon-24">info</span>
-                </div>
-                <div class="warning-modal-title" data-i18n="v3_warn_title">V3 Method Warning</div>
-            </div>
-            <div class="warning-modal-content" data-i18n-html="v3_warn_desc">
-                <p>This process will take a very long time to achieve the smallest file size. Please be patient and do not close this page.</p>
-            </div>
-            <div class="warning-modal-footer">
-                <button class="warning-btn warning-btn-cancel" id="btn-v3-warning-cancel" data-i18n="v3_warn_cancel">Cancel</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-v3-warning-proceed" data-i18n="v3_warn_proceed">Proceed</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="ad-consent-modal" class="hidden">
-        <div class="warning-modal-card">
-            <div class="warning-modal-header">
-                <div class="warning-modal-icon" style="background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container);">
-                    <span class="material-symbols-rounded icon-24">volunteer_activism</span>
-                </div>
-                <div class="warning-modal-title" data-i18n="ad_consent_title">Suka pakai cutefish?</div>
-            </div>
-            <div class="warning-modal-content" data-i18n-html="ad_consent_desc">
-            </div>
-            <div class="warning-modal-footer" id="ad-consent-btns">
-                <button class="warning-btn warning-btn-cancel" id="btn-ad-decline" data-i18n="ad_consent_decline">Nanti aja</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-ad-accept" data-i18n="ad_consent_accept">Oke, Donasi</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="compress-oom-warning-modal" class="hidden">
-        <div class="warning-modal-card">
-            <div class="warning-modal-header">
-                <div class="warning-modal-icon" style="background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container);">
-                    <span class="material-symbols-rounded icon-24">memory</span>
-                </div>
-                <div class="warning-modal-title" data-i18n="compress_oom_title">Video Too Large</div>
-            </div>
-            <div class="warning-modal-content" data-i18n-html="compress_oom_desc">
-            </div>
-            <div class="warning-modal-footer">
-                <button class="warning-btn warning-btn-cancel" id="btn-compress-oom-cancel" data-i18n="compress_oom_cancel">Cancel</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-compress-oom-proceed" data-i18n="compress_oom_proceed">Proceed Anyway</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="tiktok-upload-guide-modal" class="hidden">
-        <div class="warning-modal-card upload-guide-card">
-            <div class="warning-modal-header">
-                <div class="warning-modal-icon upload-guide-icon">
-                    <span class="material-symbols-rounded icon-24">cloud_upload</span>
-                </div>
-                <div class="warning-modal-title" data-i18n="upload_guide_title">HD Upload Guide</div>
-            </div>
-            <div class="warning-modal-content upload-guide-content" id="upload-guide-body">
-            </div>
-            <div class="warning-modal-footer">
-                <button class="warning-btn warning-btn-cancel" id="btn-upload-guide-close" data-i18n="upload_guide_close">Close</button>
-                <button class="warning-btn warning-btn-proceed" id="btn-upload-guide-upload" data-i18n="upload_guide_upload">Upload</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="legal-modal" class="mini-popup-overlay">
-        <div class="mini-popup legal-popup">
-            <div class="bottom-sheet-drag-handle"></div>
-            <div class="mini-popup-header-row">
-                <h3 class="mini-popup-title m-0 flex align-center gap-10 flex-grow-1" id="legal-modal-title" data-i18n="legal_privacy_title">
-                    Privacy Policy
-                </h3>
-                <button class="mini-popup-close-btn" id="close-legal-modal" aria-label="Close">
+                <button type="button" class="preset-popup-close-btn" id="close-sw-download" aria-label="Close">
                     <span class="material-symbols-rounded">close</span>
                 </button>
             </div>
-            <div class="legal-modal-tabs">
-                <button type="button" class="legal-tab-btn active" data-legal-tab="privacy" data-i18n="footer_privacy">Privacy Policy</button>
-                <button type="button" class="legal-tab-btn" data-legal-tab="terms" data-i18n="footer_terms">Terms of Service</button>
-                <button type="button" class="legal-tab-btn" data-legal-tab="disclaimer" data-i18n="footer_disclaimer">Disclaimer & DMCA</button>
+            <p class="preset-popup-desc" data-i18n="preset_select_software">Select the software you want to download for:</p>
+            <div class="preset-popup-body" id="sw-download-options"></div>
+        </div>
+    </div>
+
+    <div id="sw-detail-picker" class="preset-popup-overlay" aria-hidden="true">
+        <div class="preset-popup-card" role="dialog" aria-modal="true">
+            <div class="preset-popup-header">
+                <div class="preset-popup-title-group">
+                    <img id="sw-detail-icon" src="" alt="" class="preset-popup-sw-icon hidden">
+                    <span class="preset-popup-title" id="sw-detail-title-text">Preset Info</span>
+                </div>
+                <button type="button" class="preset-popup-close-btn" id="back-sw-detail" aria-label="Back">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
             </div>
-            <div class="mini-popup-body legal-modal-body" id="legal-modal-body" data-i18n-html="legal_privacy_content">
-                <!-- Loaded dynamically -->
+            <div class="preset-popup-body">
+                <div id="sw-detail-plugin-section" class="preset-plugin-section hidden">
+                    <span class="preset-section-label" data-i18n="preset_required_plugins">Required Plugins:</span>
+                    <div id="sw-detail-plugins" class="preset-plugin-badges"></div>
+                </div>
+                <button type="button" class="preset-popup-action-btn" id="sw-detail-download-btn">
+                    <span class="material-symbols-rounded">download</span>
+                    <span data-i18n="preset_download_btn">Download Preset</span>
+                </button>
             </div>
         </div>
     </div>
 
+    <div id="am-variant-picker" class="preset-popup-overlay" aria-hidden="true">
+        <div class="preset-popup-card" role="dialog" aria-modal="true">
+            <div class="preset-popup-header">
+                <div class="preset-popup-title-group">
+                    <img src="assets/icon/Am.png" alt="Alight Motion" class="preset-popup-sw-icon">
+                    <span class="preset-popup-title" data-i18n="preset_choose_variant">Choose Variant</span>
+                </div>
+                <button type="button" class="preset-popup-close-btn" id="back-am-variant" aria-label="Back">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
+            </div>
+            <p class="preset-popup-desc" data-i18n="preset_select_variant">Select the variant you want to download:</p>
+            <div class="preset-popup-body" id="am-variant-options"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
     <script src="assets/jszip/jszip.min.js"></script>
-    <script src="scripts/app.js?v=1.6.9"></script>
-    <script src="scripts/ffmpeg-tool.js?v=1.0.0"></script>
-    <script src="scripts/tiktok-quality-tool.js?v=3.4.1"></script>
-    <script src="scripts/tiktok-quality-v1.js?v=3.4.1"></script>
-    <script src="scripts/tiktok-quality-v3.js?v=3.4.1"></script>
-    <script src="scripts/audio-extractor-tool.js?v=1.0.0"></script>
-    <script src="scripts/image-sequence-tool.js?v=1.0.0"></script>
-    <script src="scripts/fivemb-generator.js?v=1.0.0"></script>
-    <script src="scripts/ae-to-am-beatmark-tool.js?v=1.0.0"></script>
-    <script src="scripts/upscale-gpu-enhancer.js?v=1.0.0"></script>
-    <script src="scripts/upscale-tool.js?v=1.0.0"></script>
-    <script src="scripts/video-interpolation.js?v=1.0.3"></script>
-    <script src="scripts/rembg-tool.js?v=1.3.8"></script>
-    <script src="scripts/tiktok-stats-tool.js?v=1.1.2"></script>
-    <script src="scripts/tiktok-downloader.js?v=1.0.0"></script>
+    <script src="scripts/i18n.js"></script>
+    <script src="scripts/presets.js"></script>
+    <script src="scripts/Tools/tiktok-quality-v1.js"></script>
+    <script src="scripts/Tools/tiktok-quality-v3.js"></script>
+    <script src="scripts/Tools/tiktok-quality-tool.js"></script>
+    <script src="scripts/Tools/video-compressor-tool.js"></script>
+    <script src="scripts/Tools/audio-extractor-tool.js"></script>
+    <script src="scripts/Tools/image-sequence-tool.js"></script>
+    <script src="scripts/Tools/fivemb-generator-tool.js"></script>
+    <script src="scripts/Tools/ae-to-am-beatmark-tool.js"></script>
+    <script src="scripts/Tools/tiktok-stats-tool.js"></script>
+    <script src="scripts/Tools/tiktok-downloader-tool.js"></script>
+    <script src="scripts/Tools/upscale-gpu-enhancer.js"></script>
+    <script src="scripts/Tools/upscale-tool.js"></script>
+    <script src="scripts/Tools/video-interpolation-tool.js"></script>
+    <script src="scripts/Tools/rembg-tool.js"></script>
+    <script src="scripts/portfolio.js"></script>
 </body>
 </html>

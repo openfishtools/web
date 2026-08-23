@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 420" fill="currentColor">
+  <!-- Cempurit Tangkai Utama -->
+  <path d="M128 200 L128 415 C128 418 130 420 132 420 C134 420 136 418 136 415 L136 200 Z" opacity="0.85"/>
+  
+  <!-- Wayang Arjuna Silhouette -->
+  <!-- Gelung Supit Urang (Mahkota Headdress) -->
+  <path d="M125 35 C115 15 130 0 145 5 C158 10 162 25 155 40 C165 30 180 32 185 45 C190 60 178 75 160 78 C155 90 145 98 135 102 L142 85 C148 78 152 68 148 60 C144 52 135 52 130 60 L125 35 Z"/>
+  
+  <!-- Wajah Luruh (Refined Downcast Face & Sharp Nose) -->
+  <path d="M135 78 C130 80 120 85 110 88 C102 90 95 94 90 98 C95 99 104 100 108 102 C102 106 98 112 96 118 C102 116 108 115 112 116 C106 122 104 128 105 134 C112 130 118 126 124 124 C126 132 132 138 140 140 C146 142 152 138 155 130 C158 120 156 100 150 88 Z"/>
+  
+  <!-- Mata Liyepan & Sumping (Ear Ornament) -->
+  <circle cx="118" cy="104" r="2.5" fill="var(--md-sys-color-surface, #12140e)"/>
+  <path d="M142 98 C148 92 156 95 158 104 C152 108 145 106 142 98 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Leher & Kalung Bulan Sabit (Neck & Crescent Torc) -->
+  <path d="M136 138 C132 148 130 158 128 168 C136 172 144 172 152 168 C150 158 148 148 144 138 Z"/>
+  <path d="M126 166 C136 176 146 176 156 166 C152 178 130 178 126 166 Z" fill="var(--md-sys-color-surface, #12140e)"/>
+
+  <!-- Badan Langsing (Slender Torso & Praba Wings) -->
+  <path d="M128 172 C120 190 118 210 122 230 C130 234 140 234 148 230 C152 210 150 190 142 172 Z"/>
+  
+  <!-- Praba (Back Wing Aura) -->
+  <path d="M152 150 C175 140 195 155 200 180 C205 205 190 230 165 240 C175 220 175 195 160 180 C155 170 152 160 152 150 Z" opacity="0.8"/>
+
+  <!-- Tangan Depan Menekuk Halus (Graceful Articulated Arm & Cempurit) -->
+  <path d="M124 180 C110 190 95 205 82 225 C75 236 68 250 62 265 L68 268 C74 252 82 240 90 230 C102 212 118 198 128 190 Z"/>
+  <path d="M62 265 C55 280 50 300 48 320 L54 322 C56 304 60 286 68 268 Z"/>
+  <!-- Tangan Cempurit Gagang -->
+  <path d="M48 318 C42 322 38 330 40 338 C44 342 52 340 54 332 L128 395 L132 390 L58 326 Z"/>
+
+  <!-- Tangan Belakang (Rear Slender Arm) -->
+  <path d="M146 182 C160 195 174 212 182 232 C188 248 192 265 195 285 L189 286 C186 268 182 252 176 238 C168 220 156 204 144 192 Z"/>
+  <path d="M195 285 C198 302 202 320 208 338 L202 340 C196 322 192 304 189 286 Z"/>
+
+  <!-- Kain Jarik / Dodot & Celana Cinde (Lower Garments) -->
+  <path d="M120 232 C110 250 102 272 98 295 C110 302 125 305 140 302 C136 280 132 258 130 236 Z"/>
+  <path d="M140 232 C142 258 146 280 150 302 C162 298 174 290 182 278 C176 260 168 245 158 232 Z"/>
+  
+  <!-- Uncal Kencana & Sampur (Hanging Sashes) -->
+  <path d="M128 295 C124 325 118 355 105 385 L112 388 C126 356 132 324 136 295 Z"/>
+  <path d="M142 295 C146 325 154 355 168 385 L161 388 C148 356 140 324 135 295 Z"/>
+
+  <!-- Kaki Jenjang (Graceful Legs) -->
+  <path d="M115 305 C110 325 106 348 104 372 C108 375 116 376 122 374 C122 350 124 328 128 305 Z"/>
+  <path d="M145 305 C148 328 152 350 158 374 C164 376 172 374 175 370 C170 348 165 325 158 305 Z"/>
+</svg>

@@ -666,15 +666,16 @@ window.processVideoFPS = async function processVideoFPS(file) {
 window.processVideoV3 = async function processVideoV3(file, mode) {
     if (mode === undefined) mode = 'off';
     const s = window._tktk;
-    if (s.isProcessing) return;
     s.isProcessing = true;
 
     const isOff    = mode === 'off';
     const safeName = s.escapeHTML(file.name);
 
-    s.btnStart.classList.add('hidden');
-    s.progressContainer.classList.remove('hidden');
-    s.logsContainer.classList.remove('hidden');
+    if (s.btnStart) s.btnStart.disabled = true;
+    if (s.progressContainer) s.progressContainer.classList.remove('hidden');
+    if (s.logsContainer) s.logsContainer.classList.remove('hidden');
+    const dlBtn = document.getElementById('tool-download-btn');
+    if (dlBtn) dlBtn.classList.add('hidden');
     s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
     s.progressFill.style.width = '0%';
     s.progressPercent.textContent = '0%';
@@ -706,9 +707,20 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             s.progressFill.style.width = '100%';
             s.progressPercent.textContent = '100%';
             s.progressText.textContent = window.getTranslation('status_completed');
-            s.btnStart.classList.remove('hidden');
+            if (window.ToolProgressManager) {
+                window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
+            }
+            const processBtn = document.getElementById('tool-process-btn');
+            const processLabel = document.getElementById('tool-process-label');
+            const processIcon = document.getElementById('tool-process-icon');
+            if (processBtn) {
+                processBtn.disabled = false;
+                processBtn.dataset.state = 'completed';
+                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
+                if (processIcon) processIcon.textContent = 'restart_alt';
+            }
             s.isProcessing = false;
-            s.showUploadGuideModal(filename);
+            if (typeof window.showToast === 'function') window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Patch completed successfully!');
             return;
         } catch (jsErr) {
             s.log(`  [Error] Pure JS patch failed: ${jsErr.message}`);
@@ -729,7 +741,11 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
             s.progressFill.style.width = `${percent}%`;
             s.progressPercent.textContent = `${percent}%`;
-            s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_encoding')}</span>`;
+            const stMsg = `${window.getTranslation('status_encoding')}...`;
+            s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${stMsg}</span>`;
+            if (window.ToolProgressManager) {
+                window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent, status: stMsg, file });
+            }
         });
         ffmpeg.on('log', ({ message }) => {
             const lc = message.toLowerCase();
@@ -803,6 +819,9 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         s.progressText.textContent = 'Finalizing package...';
         s.progressFill.style.width = '95%';
         s.progressPercent.textContent = '95%';
+        if (window.ToolProgressManager) {
+            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 95, status: window.getTranslation('status_finalizing'), file });
+        }
 
         s.log(`  [3/3] Finalizing output package...`);
         const compressedData = await ffmpeg.readFile('output.mp4');
@@ -830,22 +849,48 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+
+        const dlBtn = document.getElementById('tool-download-btn');
+        if (dlBtn) {
+            dlBtn.classList.remove('hidden');
+            dlBtn.onclick = () => {
+                const da = document.createElement('a');
+                da.href = url;
+                da.download = filename;
+                document.body.appendChild(da);
+                da.click();
+                document.body.removeChild(da);
+            };
+        }
 
         s.log(`  Process Completed Successfully!`);
         s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
         s.progressFill.style.width = '100%';
         s.progressPercent.textContent = '100%';
         s.progressText.textContent = window.getTranslation('status_completed');
-        s.btnStart.classList.remove('hidden');
-        s.showUploadGuideModal(filename);
+        if (window.ToolProgressManager) {
+            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
+        }
+        const processBtn = document.getElementById('tool-process-btn');
+        const processLabel = document.getElementById('tool-process-label');
+        const processIcon = document.getElementById('tool-process-icon');
+        if (processBtn) {
+            processBtn.disabled = false;
+            processBtn.dataset.state = 'completed';
+            if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
+            if (processIcon) processIcon.textContent = 'restart_alt';
+        }
+        if (typeof window.showToast === 'function') {
+            window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Processing completed successfully!');
+        }
 
     } catch (error) {
         s.log(`  !! Process Error: ${s.escapeHTML(error.message)}`);
         console.error(error);
         s.showStatusError(`Error: ${s.escapeHTML(error.message)}`);
-        s.btnStart.classList.remove('hidden');
+        if (s.btnStart) s.btnStart.disabled = false;
     } finally {
         s.isProcessing = false;
+        if (s.btnStart) s.btnStart.disabled = false;
     }
 };
