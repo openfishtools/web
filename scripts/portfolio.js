@@ -152,6 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let patternCanvas = null;
     let patternCtx = null;
     let cachedThemeColor = '';
+    let gridPattern = null;
+    let batikHasContent = false;
 
     function buildAuthenticKawungPattern(themeColor) {
         if (!patternCanvas) {
@@ -294,10 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentScrollY = targetScrollY;
 
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-
-        const isDark = document.documentElement.classList.contains('dark-theme');
         if (mouseX < -500) {
+            if (batikHasContent && ctx) {
+                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                batikHasContent = false;
+            }
             if (isParallaxTransitioning) {
                 requestAnimationFrame(renderBatikFrame);
             } else {
@@ -306,39 +309,47 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        batikHasContent = true;
+
+        const isDark = document.documentElement.classList.contains('dark-theme');
         const colorString = getThemeColorString(isDark);
 
-        if (colorString !== cachedThemeColor) {
+        if (colorString !== cachedThemeColor || !gridPattern) {
             buildAuthenticKawungPattern(colorString);
+            gridPattern = ctx.createPattern(patternCanvas, 'repeat');
+            cachedThemeColor = colorString;
         }
 
         const radius = 280;
         const tileSize = 80;
+        const baseAlpha = isDark ? 0.42 : 0.30;
 
         const offX = ((currentParallaxX % tileSize) + tileSize) % tileSize;
         const offY = ((currentScrollY % tileSize) + tileSize) % tileSize;
-
-        const minX = Math.floor((mouseX - radius - offX) / tileSize) * tileSize + offX;
-        const maxX = Math.ceil((mouseX + radius - offX) / tileSize) * tileSize + offX;
-        const minY = Math.floor((mouseY - radius - offY) / tileSize) * tileSize + offY;
-        const maxY = Math.ceil((mouseY + radius - offY) / tileSize) * tileSize + offY;
 
         ctx.save();
         ctx.beginPath();
         ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
         ctx.clip();
 
-        const baseAlpha = isDark ? 0.42 : 0.30;
-        for (let x = minX; x <= maxX; x += tileSize) {
-            for (let y = minY; y <= maxY; y += tileSize) {
-                const dist = Math.hypot(x + 40 - mouseX, y + 40 - mouseY);
-                if (dist > radius + 40) continue;
+        ctx.globalAlpha = baseAlpha;
+        ctx.translate(offX, offY);
+        ctx.fillStyle = gridPattern;
+        ctx.fillRect(
+            mouseX - radius - tileSize - offX,
+            mouseY - radius - tileSize - offY,
+            (radius + tileSize) * 2,
+            (radius + tileSize) * 2
+        );
+        ctx.translate(-offX, -offY);
 
-                const alpha = Math.max(0, 1 - dist / radius);
-                ctx.globalAlpha = Math.pow(alpha, 1.2) * baseAlpha;
-                ctx.drawImage(patternCanvas, x, y);
-            }
-        }
+        ctx.globalCompositeOperation = 'destination-in';
+        const fade = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, radius);
+        fade.addColorStop(0, 'rgba(0, 0, 0, 1)');
+        fade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = fade;
+        ctx.fillRect(mouseX - radius, mouseY - radius, radius * 2, radius * 2);
         ctx.restore();
 
         if (isParallaxTransitioning) {
@@ -357,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeBatikCanvas() {
         if (!canvas) return;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
         canvas.width = window.innerWidth * dpr;
         canvas.height = window.innerHeight * dpr;
         if (ctx) {

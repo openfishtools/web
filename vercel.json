@@ -19,9 +19,15 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
+      "source": "/assets/(models|ffmpeg)/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/assets/(icon|svg|upscale|jszip|fonts)/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
       ]
     },
     {
