@@ -321,7 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             cachedThemeColor = colorString;
         }
 
-        const radius = 280;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) {
+            if (batikHasContent && ctx) {
+                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                batikHasContent = false;
+            }
+            if (isParallaxTransitioning) {
+                requestAnimationFrame(renderBatikFrame);
+            } else {
+                isRenderLoopActive = false;
+            }
+            return;
+        }
+
+        const isMobileParallax = window.innerWidth < 768;
+        const radius = isMobileParallax ? 180 : 280;
         const tileSize = 80;
         const baseAlpha = isDark ? 0.42 : 0.30;
 
@@ -1172,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (legalModalSubtitle) legalModalSubtitle.style.opacity = '0';
         if (legalModalCloseBtn) legalModalCloseBtn.style.opacity = '0';
         if (legalModalBody) legalModalBody.style.opacity = '0';
+
 
         void heroEl.offsetHeight;
         void legalModalBackdrop.offsetHeight;

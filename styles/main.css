@@ -1973,7 +1973,8 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    will-change: left, top, width, height;
+    contain: content;
+    will-change: transform;
 }
 
 .res-modal-card.expanded {
@@ -2411,7 +2412,8 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    will-change: left, top, width, height;
+    contain: content;
+    will-change: transform;
 }
 
 .tool-modal-card.expanded {
@@ -3023,6 +3025,7 @@ body.preset-modal-open .floating-nav-bar {
     visibility: hidden;
     pointer-events: none;
     box-sizing: border-box;
+    contain: content;
     will-change: left, top, width, height, border-radius;
 }
 
@@ -5763,7 +5766,8 @@ body.dark .tiktok-desc-warning-row {
     overflow: hidden;
     visibility: hidden;
     pointer-events: none;
-    will-change: left, top, width, height, transform, filter;
+    contain: content;
+    will-change: transform, filter;
     transition: transform 0.44s var(--ease-spring-soft), filter 0.35s ease;
 }
 
