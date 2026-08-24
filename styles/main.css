@@ -2022,7 +2022,6 @@ body.preset-modal-open .floating-nav-bar {
     visibility: hidden;
     pointer-events: none;
     contain: content;
-    will-change: transform;
 }
 
 .res-modal-card.expanded {
@@ -2461,7 +2460,13 @@ body.preset-modal-open .floating-nav-bar {
     visibility: hidden;
     pointer-events: none;
     contain: content;
-    will-change: transform;
+}
+
+/* Selama morph buka/tutup: matikan transisi child (border-color, dll)
+   agar tidak ada style-recalc ganda per frame di dalam kartu. */
+.res-modal-card.is-morphing *,
+.tool-modal-card.is-morphing * {
+    transition: none !important;
 }
 
 .tool-modal-card.expanded {

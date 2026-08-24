@@ -1849,6 +1849,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // Pre-decode hero images BEFORE the morph starts, so the browser does not
+    // stall mid-animation decoding freshly cloned <img> elements.
+    const predecodeHeroImages = (container) => {
+        const imgs = container ? container.querySelectorAll('img') : [];
+        if (!imgs.length) return Promise.resolve();
+        const jobs = Array.from(imgs).map(img => {
+            if (img.complete) return Promise.resolve();
+            if (typeof img.decode === 'function') return img.decode().catch(() => {});
+            return Promise.resolve();
+        });
+        return Promise.race([
+            Promise.all(jobs),
+            new Promise(r => setTimeout(r, 90))
+        ]);
+    };
+
     function getModalTargetGeometry(cardEl, maxHeightRatio = 0.86) {
         const isMobile = window.innerWidth <= 600;
         const targetW = isMobile ? window.innerWidth : Math.min(window.innerWidth * 0.92, 540);
@@ -2369,26 +2385,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         void cardEl.offsetHeight;
 
-        requestAnimationFrame(() => {
-            document.body.classList.add('tool-modal-open');
-            backdrop.classList.add('active');
-            backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
-            backdrop.style.opacity = '1';
-            cardEl.classList.add('expanded');
+        const isMobileMorph = window.innerWidth <= 600;
+        const morphS = isMobileMorph ? 0.34 : 0.42;
+        cardEl.classList.add('is-morphing');
 
-            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft)';
-            cardEl.style.left = `${geom.targetLeft}px`;
-            cardEl.style.top = `${geom.targetTop}px`;
-            cardEl.style.width = `${geom.targetW}px`;
-            cardEl.style.height = `${geom.targetH}px`;
-            cardEl.style.borderRadius = geom.borderRadius;
-            cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
+        predecodeHeroImages(heroSlot || cardEl).then(() => {
+            requestAnimationFrame(() => {
+                document.body.classList.add('tool-modal-open');
+                backdrop.classList.add('active');
+                backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
+                backdrop.style.opacity = '1';
+                cardEl.classList.add('expanded');
 
-            setTimeout(() => {
-                cardEl.style.willChange = '';
-                isToolModalAnimating = false;
-                updateOpenModalsLayout(false);
-            }, 440);
+                cardEl.style.transition = `left ${morphS}s var(--ease-spring-soft), top ${morphS}s var(--ease-spring-soft), width ${morphS}s var(--ease-spring-soft), height ${morphS}s var(--ease-spring-soft), border-radius ${morphS}s var(--ease-spring-soft)`;
+                cardEl.style.left = `${geom.targetLeft}px`;
+                cardEl.style.top = `${geom.targetTop}px`;
+                cardEl.style.width = `${geom.targetW}px`;
+                cardEl.style.height = `${geom.targetH}px`;
+                cardEl.style.borderRadius = geom.borderRadius;
+                cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
+
+                setTimeout(() => {
+                    cardEl.classList.remove('is-morphing');
+                    cardEl.style.willChange = '';
+                    isToolModalAnimating = false;
+                    updateOpenModalsLayout(false);
+                }, Math.round(morphS * 1000) + 20);
+            });
         });
     };
 
@@ -2417,11 +2440,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             void cardEl.offsetHeight;
 
+            const isMobileMorph = window.innerWidth <= 600;
+            const morphS = isMobileMorph ? 0.32 : 0.40;
+            cardEl.classList.add('is-morphing');
+
             requestAnimationFrame(() => {
                 document.body.classList.remove('tool-modal-open');
                 cardEl.classList.remove('expanded');
 
-                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft)';
+                cardEl.style.transition = `left ${morphS}s var(--ease-spring-soft), top ${morphS}s var(--ease-spring-soft), width ${morphS}s var(--ease-spring-soft), height ${morphS}s var(--ease-spring-soft), border-radius ${morphS}s var(--ease-spring-soft)`;
                 cardEl.style.left = `${sRect.left}px`;
                 cardEl.style.top = `${sRect.top}px`;
                 cardEl.style.width = `${sRect.width}px`;
@@ -2441,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     backdrop.classList.remove('active');
                     backdrop.style.cssText = '';
                     cardEl.style.cssText = '';
+                    cardEl.classList.remove('is-morphing');
 
                     if (currentToolItem && window.ToolProgressManager && currentToolItem._id) {
                         const stAfterClose = window.ToolProgressManager.get(currentToolItem._id);
@@ -2453,12 +2481,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     isToolModalAnimating = false;
-                }, 400);
+                }, Math.round(morphS * 1000) + 20);
             });
         } else {
             document.body.classList.remove('tool-modal-open');
             backdrop.classList.remove('active');
             cardEl.style.cssText = '';
+            cardEl.classList.remove('is-morphing');
             isToolModalAnimating = false;
         }
     };
@@ -2765,26 +2794,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         void cardEl.offsetHeight;
 
-        requestAnimationFrame(() => {
-            document.body.classList.add('res-modal-open');
-            backdrop.classList.add('active');
-            backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
-            backdrop.style.opacity = '1';
-            cardEl.classList.add('expanded');
+        const isMobileMorph = window.innerWidth <= 600;
+        const morphS = isMobileMorph ? 0.34 : 0.42;
+        cardEl.classList.add('is-morphing');
+
+        predecodeHeroImages(heroSlot || cardEl).then(() => {
+            requestAnimationFrame(() => {
+                document.body.classList.add('res-modal-open');
+                backdrop.classList.add('active');
+                backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
+                backdrop.style.opacity = '1';
+                cardEl.classList.add('expanded');
 
 
-            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft)';
-            cardEl.style.left = `${geom.targetLeft}px`;
-            cardEl.style.top = `${geom.targetTop}px`;
-            cardEl.style.width = `${geom.targetW}px`;
-            cardEl.style.height = `${geom.targetH}px`;
-            cardEl.style.borderRadius = geom.borderRadius;
-            cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
+                cardEl.style.transition = `left ${morphS}s var(--ease-spring-soft), top ${morphS}s var(--ease-spring-soft), width ${morphS}s var(--ease-spring-soft), height ${morphS}s var(--ease-spring-soft), border-radius ${morphS}s var(--ease-spring-soft)`;
+                cardEl.style.left = `${geom.targetLeft}px`;
+                cardEl.style.top = `${geom.targetTop}px`;
+                cardEl.style.width = `${geom.targetW}px`;
+                cardEl.style.height = `${geom.targetH}px`;
+                cardEl.style.borderRadius = geom.borderRadius;
+                cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
 
-            setTimeout(() => {
-                cardEl.style.willChange = '';
-                isResModalAnimating = false;
-            }, 440);
+                setTimeout(() => {
+                    cardEl.classList.remove('is-morphing');
+                    cardEl.style.willChange = '';
+                    isResModalAnimating = false;
+                }, Math.round(morphS * 1000) + 20);
+            });
         });
     };
 
@@ -2808,6 +2844,10 @@ document.addEventListener('DOMContentLoaded', () => {
             cardEl.style.maxHeight = 'none';
             cardEl.style.opacity = '1';
 
+            const isMobileMorph = window.innerWidth <= 600;
+            const morphS = isMobileMorph ? 0.32 : 0.40;
+            cardEl.classList.add('is-morphing');
+
 
             requestAnimationFrame(() => {
                 document.body.classList.remove('res-modal-open');
@@ -2817,7 +2857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetBg = 'var(--md-sys-color-surface-container)';
                 const targetBorder = isCutefish ? '1.5px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline-variant)';
 
-                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft)';
+                cardEl.style.transition = `left ${morphS}s var(--ease-spring-soft), top ${morphS}s var(--ease-spring-soft), width ${morphS}s var(--ease-spring-soft), height ${morphS}s var(--ease-spring-soft), border-radius ${morphS}s var(--ease-spring-soft)`;
                 cardEl.style.left = `${sRect.left}px`;
                 cardEl.style.top = `${sRect.top}px`;
                 cardEl.style.width = `${sRect.width}px`;
@@ -2838,14 +2878,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     backdrop.classList.remove('active');
                     backdrop.style.cssText = '';
                     cardEl.style.cssText = '';
+                    cardEl.classList.remove('is-morphing');
 
                     isResModalAnimating = false;
-                }, 400);
+                }, Math.round(morphS * 1000) + 20);
             });
         } else {
             document.body.classList.remove('res-modal-open');
             backdrop.classList.remove('active');
             cardEl.style.cssText = '';
+            cardEl.classList.remove('is-morphing');
             isResModalAnimating = false;
         }
     };

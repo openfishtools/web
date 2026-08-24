@@ -184,8 +184,10 @@
                             const m1 = view.getInt32(matrixOffset + 4, false) / 65536;
                             const m3 = view.getInt32(matrixOffset + 12, false) / 65536;
                             const m4 = view.getInt32(matrixOffset + 16, false) / 65536;
-                            // If rotation detected (~90° or ~270°): swap dimensions
-                            if ((Math.abs(m0) < 0.2 && Math.abs(m1) > 0.8) || (Math.abs(m0) > 0.8 && Math.abs(m1) < 0.2)) {
+                            // Only swap on a real ~90°/~270° rotation: both diagonal
+                            // components (a & d) are ~0 ONLY in quarter-turn matrices.
+                            // Identity (m0=1,m4=1) and 180° (m0=-1,m4=-1) must NOT swap.
+                            if (Math.abs(m0) < 0.5 && Math.abs(m4) < 0.5) {
                                 const temp = width;
                                 width = height;
                                 height = temp;
@@ -203,17 +205,16 @@
     function computeVideoProcessingOptions(w, h, fps, fileMB, mode) {
         let targetW = w || 1080;
         let targetH = h || 1920;
-        if (mode === '720p') {
-            if (targetW > targetH) {
-                targetW = 1280; targetH = 720;
-            } else {
-                targetW = 720; targetH = 1280;
-            }
-        } else if (mode === '1080p') {
-            if (targetW > targetH) {
-                targetW = 1920; targetH = 1080;
-            } else {
-                targetW = 1080; targetH = 1920;
+        const qualityShortSide = (mode === '720p') ? 720 : (mode === '1080p') ? 1080 : null;
+        if (qualityShortSide) {
+            // Flexible: scale the SHORT side to the quality target and keep the
+            // source aspect ratio. Works for landscape, portrait AND square
+            // (e.g. 1080x1080 -> 720x720) without forcing black bars.
+            const shortSide = Math.min(targetW, targetH);
+            if (shortSide > 0) {
+                const ratio = qualityShortSide / shortSide;
+                targetW = Math.round(targetW * ratio);
+                targetH = Math.round(targetH * ratio);
             }
         }
         targetW = Math.floor(targetW / 2) * 2;
