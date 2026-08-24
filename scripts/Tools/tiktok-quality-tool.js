@@ -174,14 +174,30 @@
                     const wOffset = version === 1 ? i + 92 : i + 80;
                     const hOffset = version === 1 ? i + 96 : i + 84;
                     if (wOffset + 4 <= buffer.byteLength) {
-                        const width = Math.round(view.getUint32(wOffset) / 65536);
-                        const height = Math.round(view.getUint32(hOffset) / 65536);
-                        if (width > 0 && height > 0 && width < 16000 && height < 16000) return { width, height };
+                        let width = Math.round(view.getUint32(wOffset) / 65536);
+                        let height = Math.round(view.getUint32(hOffset) / 65536);
+
+                        // Detect rotation matrix in tkhd (fix Alight Motion vertical export bug)
+                        const matrixOffset = version === 1 ? (i - 4) + 60 : (i - 4) + 48;
+                        if (matrixOffset + 36 <= buffer.byteLength && width > 0 && height > 0) {
+                            const m0 = view.getInt32(matrixOffset, false) / 65536;
+                            const m1 = view.getInt32(matrixOffset + 4, false) / 65536;
+                            const m3 = view.getInt32(matrixOffset + 12, false) / 65536;
+                            const m4 = view.getInt32(matrixOffset + 16, false) / 65536;
+                            // If rotation detected (~90° or ~270°): swap dimensions
+                            if ((Math.abs(m0) < 0.2 && Math.abs(m1) > 0.8) || (Math.abs(m0) > 0.8 && Math.abs(m1) < 0.2)) {
+                                const temp = width;
+                                width = height;
+                                height = temp;
+                            }
+                        }
+
+                        if (width > 0 && height > 0 && width < 16000 && height < 16000) return { width, height, rotated: (width !== Math.round(view.getUint32(wOffset) / 65536) || height !== Math.round(view.getUint32(hOffset) / 65536)) };
                     }
                 }
             }
         } catch (e) {}
-        return { width: 1080, height: 1920 };
+        return { width: 1080, height: 1920, rotated: false };
     }
 
     function computeVideoProcessingOptions(w, h, fps, fileMB, mode) {
