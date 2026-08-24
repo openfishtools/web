@@ -8,8 +8,6 @@
     const PURGE_COOLDOWN_MS = 60000;
 
     async function purgeEverythingAndReload() {
-        try { sessionStorage.setItem(KEY_PURGE_AT, String(Date.now())); } catch (e) {}
-
         try {
             if ('serviceWorker' in navigator) {
                 const regs = await navigator.serviceWorker.getRegistrations();
@@ -32,10 +30,17 @@
         } catch (e) {}
         try {
             const savedLang = localStorage.getItem('user_lang');
+            const savedThemeColor = localStorage.getItem('cf_theme_color');
+            const savedThemeMode = localStorage.getItem('cf_theme_mode');
             sessionStorage.clear();
             localStorage.clear();
             if (savedLang) localStorage.setItem('user_lang', savedLang);
+            if (savedThemeColor) localStorage.setItem('cf_theme_color', savedThemeColor);
+            if (savedThemeMode) localStorage.setItem('cf_theme_mode', savedThemeMode);
         } catch (e) {}
+
+        // Tulis flag SETELAH semua storage bersih supaya cooldown anti-loop persisten
+        try { sessionStorage.setItem(KEY_PURGE_AT, String(Date.now())); } catch (e) {}
 
         const url = new URL(window.location.href);
         url.searchParams.set('nocache', Date.now().toString());
