@@ -420,7 +420,10 @@
         logSection('Quality Method — Initializing');
         log(`  File : ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
         log(`  Method : ${currentVersion.toUpperCase()}`);
-        log(`  Compress : ${compressMode.toUpperCase()}`);
+        // Compress mode only applies to the Binary (V3) method.
+        if (currentVersion === 'v3') {
+            log(`  Compress : ${compressMode.toUpperCase()}`);
+        }
         logEnd();
 
         try {

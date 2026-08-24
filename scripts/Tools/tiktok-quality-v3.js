@@ -613,7 +613,9 @@ window.patchMp4FPSMethod = _v3_patchMp4FPSMethod;
 
 window.processVideoFPS = async function processVideoFPS(file) {
     const s = window._tktk;
-    if (s.isProcessing) return;
+    // NOTE: do not early-return on s.isProcessing here — the caller
+    // (processQualityMethod) already set it before dispatching to this
+    // method, so a guard would abort every run ("stuck at Reading file").
     s.isProcessing = true;
 
     const safeName = s.escapeHTML(file.name);
