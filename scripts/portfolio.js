@@ -148,15 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let patternCtx = null;
     let cachedThemeColor = '';
     let gridPattern = null;
+    const BATIK_SCALE = 1.5;
 
     function buildAuthenticKawungPattern(themeColor) {
         if (!patternCanvas) {
             patternCanvas = document.createElement('canvas');
-            patternCanvas.width = 80;
-            patternCanvas.height = 80;
+            patternCanvas.width = Math.round(80 * BATIK_SCALE);
+            patternCanvas.height = Math.round(80 * BATIK_SCALE);
             patternCtx = patternCanvas.getContext('2d');
         }
 
+        // Gambar tile dalam ruang ter-skala → raster native pada ukuran besar (tidak buram)
+        patternCtx.setTransform(BATIK_SCALE, 0, 0, BATIK_SCALE, 0, 0);
         patternCtx.clearRect(0, 0, 80, 80);
         patternCtx.strokeStyle = themeColor;
         patternCtx.fillStyle = themeColor;
@@ -267,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gridPattern = ctx.createPattern(patternCanvas, 'repeat');
             cachedThemeColor = colorString;
         }
-        ctx.globalAlpha = isDark ? 0.42 : 0.30;
+        ctx.globalAlpha = isDark ? 0.30 : 0.20;
         ctx.fillStyle = gridPattern;
         ctx.fillRect(0, 0, w, h);
         ctx.globalAlpha = 1;

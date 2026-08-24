@@ -754,30 +754,49 @@ body.preset-modal-open .floating-nav-bar {
     max-width: 840px;
 }
 
+/* ============================================================
+   SIGNPOST — sekarang section in-flow di atas Linimasa (bukan overlay).
+   Panggung tinggi tetap; tiang + plate Navigator via pseudo-element;
+   panah menempel kiri/kanan tiang dengan rotasi 3D.
+   ============================================================ */
 .signpost-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 150vh;
-    z-index: 5;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 26px 24px 0;
     pointer-events: none;
     overflow: visible;
-    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 94%);
-    mask-image: linear-gradient(to bottom, #000 60%, transparent 94%);
-    perspective: 520px;
-    perspective-origin: 72% 36%;
+    perspective: 900px;
+    perspective-origin: 50% 28%;
 }
 
 .signpost-overlay .signpost {
-    position: absolute;
-    top: 56vh;
-    right: 24vw;
-    width: clamp(180px, 16vw, 260px);
-    height: 140vh;
+    position: relative;
+    width: min(840px, 100%);
+    height: clamp(520px, 68vh, 720px);
     transform-origin: 50% 100%;
     transform: none;
     transform-style: preserve-3d;
+}
+
+/* Tiang — nuansa primary senada panah, memudar di ujung bawah */
+.signpost::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 0;
+    left: 50%;
+    width: clamp(12px, 1.2vw, 18px);
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background-image: linear-gradient(90deg,
+        color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface-container-high)),
+        color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-surface-container-high)) 48%,
+        color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container-high)));
+    box-shadow: 0 0 0 1px var(--md-sys-color-outline-variant);
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, rgba(0, 0, 0, 0.35) 84%, transparent 99%);
+    mask-image: linear-gradient(to bottom, #000 62%, rgba(0, 0, 0, 0.35) 84%, transparent 99%);
+    pointer-events: none;
 }
 
 .signpost-inner,
@@ -809,10 +828,10 @@ body.preset-modal-open .floating-nav-bar {
     position: absolute;
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: clamp(40px, 5.4vh, 54px);
-    min-width: clamp(160px, 13vw, 220px);
-    padding: 0 30px 0 18px;
+    gap: 12px;
+    height: clamp(56px, 7vh, 72px);
+    min-width: clamp(230px, 19vw, 320px);
+    padding: 0 42px 0 28px;
     border: none;
     cursor: pointer;
     font-family: inherit;
@@ -821,7 +840,7 @@ body.preset-modal-open .floating-nav-bar {
     background: transparent;
     transform-style: preserve-3d;
     --theta: 20deg;
-    --depth: 40px;
+    --depth: 18px;
     --box-thick: 12px;
     transition: transform 0.45s var(--ease-spring);
 }
@@ -834,28 +853,28 @@ body.preset-modal-open .floating-nav-bar {
 
 .arrow-left {
     right: 50%;
-    padding: 0 26px 0 44px;
+    padding: 0 30px 0 50px;
     transform-origin: right center;
     transform: rotateY(var(--theta)) translateZ(var(--depth));
 }
 
-/* Susunan 3D: kaskade rapat — makin ke bawah sedikit lebih dekat & menghadap kamera */
-.arrow-right.tone-a { top: 0%;    --theta: 24deg;  --depth: 20px; }
-.arrow-left.tone-b  { top: 4.5%;  --theta: -20deg; --depth: 32px; }
-.arrow-right.tone-c { top: 9%;    --theta: 16deg;  --depth: 44px; }
-.arrow-left.tone-d  { top: 13.5%; --theta: -12deg; --depth: 56px; }
+/* Susunan 3D di stage: theta & depth seragam → semua panah menempel rapi di tiang */
+.arrow-right.tone-a { top: 80px;  --theta: 20deg;  --depth: 18px; }
+.arrow-left.tone-b  { top: 190px; --theta: -20deg; --depth: 18px; }
+.arrow-right.tone-c { top: 300px; --theta: 20deg;  --depth: 18px; }
+.arrow-left.tone-d  { top: 410px; --theta: -20deg; --depth: 18px; }
 
-/* Hover: box sedikit menghadap kamera + maju tipis → ketebalan kelihatan */
+/* Hover: hanya rotasi menghadap kamera — posisi tetap, tidak maju */
 .arrow-right:hover {
-    transform: rotateY(10deg) rotateX(-5deg) translateZ(calc(var(--depth) + 16px)) translateX(3px);
+    transform: rotateY(9deg) rotateX(-6deg) translateZ(var(--depth));
 }
 
 .arrow-left:hover {
-    transform: rotateY(-10deg) rotateX(-5deg) translateZ(calc(var(--depth) + 16px)) translateX(-3px);
+    transform: rotateY(-9deg) rotateX(-6deg) translateZ(var(--depth));
 }
 
 .sign-arrow:active {
-    transform: scale(0.95);
+    transform: rotateY(var(--theta)) translateZ(var(--depth)) scale(0.95);
 }
 
 .sign-arrow.tone-a { color: var(--md-sys-color-on-primary-container); --arrow-bg: var(--md-sys-color-primary-container); }
@@ -899,7 +918,7 @@ body.preset-modal-open .floating-nav-bar {
 }
 
 .sign-arrow-icon {
-    font-size: clamp(17px, 2.1vh, 23px);
+    font-size: clamp(24px, 3vh, 32px);
     flex-shrink: 0;
     transform: translateZ(10px);
     transform-style: preserve-3d;
@@ -916,7 +935,7 @@ body.preset-modal-open .floating-nav-bar {
 }
 
 .sign-arrow-label {
-    font-size: clamp(0.82rem, 1.6vh, 1.05rem);
+    font-size: clamp(1.15rem, 2.2vh, 1.45rem);
     font-weight: 700;
     letter-spacing: -0.01em;
     white-space: nowrap;
@@ -924,85 +943,86 @@ body.preset-modal-open .floating-nav-bar {
     text-shadow: 0 1px 0 rgba(0,0,0,0.18), 0 6px 10px rgba(0,0,0,0.22);
 }
 
-/* Rentang desktop-menengah: signpost digeser lebih kanan & dipangkas biar gak nutupin teks hero */
+/* Rentang desktop-menengah: panah sedikit lebih ramping */
 @media (max-width: 1718px) and (min-width: 1025px) {
-    .signpost-overlay .signpost {
-        right: 12vw;
-        width: clamp(140px, 12vw, 200px);
-    }
-
     .sign-arrow {
-        min-width: clamp(120px, 10.5vw, 170px);
-        padding: 0 26px 0 16px;
+        min-width: clamp(180px, 15vw, 250px);
+        padding: 0 36px 0 24px;
     }
 
     .arrow-left {
-        padding: 0 22px 0 38px;
+        padding: 0 28px 0 46px;
     }
 }
 
 @media (max-width: 1024px) {
+    .signpost-overlay {
+        padding: 20px 18px 0;
+    }
+
     .signpost-overlay .signpost {
-        width: clamp(150px, 28vw, 230px);
-        right: 6vw;
-        top: 58vh;
-        height: 126vh;
+        height: clamp(480px, 58vh, 640px);
     }
 
     .sign-arrow {
-        height: clamp(36px, 4.6vh, 48px);
-        min-width: min(20vw, 150px);
-        gap: 7px;
-        padding: 0 22px 0 14px;
+        height: clamp(52px, 6vh, 64px);
+        min-width: min(26vw, 230px);
+        gap: 10px;
+        padding: 0 32px 0 20px;
     }
 
     .arrow-left {
-        padding: 0 14px 0 22px;
+        padding: 0 20px 0 32px;
     }
 
-    .arrow-right.tone-a { top: 0%;   --theta: 20deg;  --depth: 16px; }
-    .arrow-left.tone-b  { top: 6%;   --theta: -17deg; --depth: 24px; }
-    .arrow-right.tone-c { top: 12%;  --theta: 13deg;  --depth: 32px; }
-    .arrow-left.tone-d  { top: 18%;  --theta: -10deg; --depth: 40px; }
-    
-    .sign-arrow-icon { font-size: 16px; }
-    .sign-arrow-label { font-size: 0.82rem; }
+    .arrow-right.tone-a { top: 72px;  --theta: 18deg;  --depth: 15px; }
+    .arrow-left.tone-b  { top: 166px; --theta: -18deg; --depth: 15px; }
+    .arrow-right.tone-c { top: 260px; --theta: 18deg;  --depth: 15px; }
+    .arrow-left.tone-d  { top: 354px; --theta: -18deg; --depth: 15px; }
+
+    .sign-arrow-icon { font-size: 22px; }
+    .sign-arrow-label { font-size: 1.05rem; }
 }
 
 @media (max-width: 640px) {
     .signpost-overlay {
-        height: 112vh;
-        perspective: 640px;
-        perspective-origin: 60% 42%;
-        -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
-        mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
+        padding: 16px 14px 0;
+        perspective: 760px;
     }
 
     .signpost-overlay .signpost {
-        width: clamp(130px, 36vw, 180px);
-        right: 12vw;
-        top: 73vh;
-        height: 80vh;
+        width: 100%;
+        height: clamp(420px, 54vh, 560px);
+    }
+
+    .signpost::before {
+        top: 42px;
+        width: 14px;
+    }
+
+    .signpost::after {
+        font-size: 0.58rem;
+        padding: 5px 11px;
     }
 
     .sign-arrow {
-        height: 34px;
-        min-width: min(28vw, 140px);
-        gap: 6px;
-        padding: 0 18px 0 12px;
+        height: 50px;
+        min-width: min(36vw, 220px);
+        gap: 8px;
+        padding: 0 26px 0 16px;
     }
 
     .arrow-left {
-        padding: 0 12px 0 18px;
+        padding: 0 16px 0 26px;
     }
 
-    .arrow-right.tone-a { top: 0%;   --theta: 14deg;  --depth: 12px; }
-    .arrow-left.tone-b  { top: 6%;   --theta: -13deg; --depth: 17px; }
-    .arrow-right.tone-c { top: 12%;  --theta: 11deg;  --depth: 22px; }
-    .arrow-left.tone-d  { top: 18%;  --theta: -9deg;  --depth: 27px; }
+    .arrow-right.tone-a { top: 68px;  --theta: 14deg;  --depth: 12px; }
+    .arrow-left.tone-b  { top: 152px; --theta: -14deg; --depth: 12px; }
+    .arrow-right.tone-c { top: 236px; --theta: 14deg;  --depth: 12px; }
+    .arrow-left.tone-d  { top: 320px; --theta: -14deg; --depth: 12px; }
 
-    .sign-arrow-icon { font-size: 14px; }
-    .sign-arrow-label { font-size: 0.72rem; }
+    .sign-arrow-icon { font-size: 20px; }
+    .sign-arrow-label { font-size: 0.98rem; }
 }
 
 
@@ -6473,54 +6493,13 @@ body.preset-popup-active .preset-modal-card.expanded {
         border-radius: 0;
     }
 
-    /* Signpost: tampil flat di mobile — tanpa perspective/layer 3D */
-    .signpost-overlay {
-        perspective: none;
-    }
-
-    .signpost-overlay .signpost,
-    .signpost-inner,
+    /* Signpost: 3D tetap aktif di mobile (perspective + box utuh dari desktop) */
     .sign-arrow {
-        transform-style: flat;
-    }
-
-    .arrow-right,
-    .arrow-left {
-        transform: none !important;
-        transition: transform 0.3s ease;
-    }
-
-    .arrow-right:hover,
-    .arrow-left:hover {
-        transform: translateX(3px) !important;
-    }
-
-    .arrow-left:hover {
-        transform: translateX(-3px) !important;
+        transition: transform 0.35s var(--ease-spring);
     }
 
     .sign-arrow:active {
-        transform: scale(0.96) !important;
-    }
-
-    .sign-arrow::after,
-    .arrow-side {
-        display: none !important;
-    }
-
-    .sign-arrow::before {
-        transform: none;
-    }
-
-    .sign-arrow-icon,
-    .sign-arrow-label {
-        position: relative;
-        z-index: 1;
-        transform: none;
-    }
-
-    .sign-arrow-icon {
-        filter: none;
+        transform: rotateY(var(--theta)) translateZ(var(--depth)) scale(0.96) !important;
     }
 }
 
