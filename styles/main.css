@@ -6406,3 +6406,88 @@ body.preset-popup-active .preset-modal-card.expanded {
         box-shadow: 0 0 0 0 transparent;
     }
 }
+
+/* ============================================================
+   MOBILE LOW-END: matikan hardware acceleration / efek GPU-berat
+   Render lebih banyak lewat CPU: tanpa layer paksa (will-change),
+   tanpa blur backdrop, tanpa compositing 3D di signpost & modal.
+   ============================================================ */
+@media (max-width: 768px) {
+    .floating-nav-bar,
+    .tiktok-card-duration {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .floating-nav-bar,
+    .floating-nav-indicator,
+    .app-layout,
+    .preset-modal-card,
+    .res-modal-card,
+    .tool-modal-card,
+    .legal-modal-backdrop,
+    .social-portal-card,
+    .social-portal-icon-wrapper,
+    .social-portal-label-wrapper,
+    .legal-portal-hero-btn {
+        will-change: auto !important;
+    }
+
+    /* Modal terbuka: tanpa scale/transform di app-layout (hindari raster GPU layer raksasa) */
+    body.legal-modal-open .app-layout,
+    body.res-modal-open .app-layout,
+    body.tool-modal-open .app-layout,
+    body.social-modal-open .app-layout,
+    body.preset-modal-open .app-layout {
+        transform: none;
+        border-radius: 0;
+    }
+
+    /* Signpost: tampil flat di mobile — tanpa perspective/layer 3D */
+    .signpost-overlay {
+        perspective: none;
+    }
+
+    .signpost-overlay .signpost,
+    .signpost-inner,
+    .sign-arrow {
+        transform-style: flat;
+    }
+
+    .arrow-right,
+    .arrow-left {
+        transform: none !important;
+        transition: transform 0.3s ease;
+    }
+
+    .arrow-right:hover,
+    .arrow-left:hover {
+        transform: translateX(3px) !important;
+    }
+
+    .arrow-left:hover {
+        transform: translateX(-3px) !important;
+    }
+
+    .sign-arrow:active {
+        transform: scale(0.96) !important;
+    }
+
+    .sign-arrow::after,
+    .arrow-side {
+        display: none !important;
+    }
+
+    .sign-arrow::before {
+        transform: none;
+    }
+
+    .sign-arrow-icon,
+    .sign-arrow-label {
+        transform: none;
+    }
+
+    .sign-arrow-icon {
+        filter: none;
+    }
+}
