@@ -393,7 +393,6 @@ tbody tr:hover {
     max-width: 560px;
     border-radius: var(--radius-xl);
     padding: 32px;
-    box-shadow: var(--elevation-5);
     transform: translateY(40px) scale(0.95);
     transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
     max-height: 85vh;
@@ -794,7 +793,6 @@ tbody tr:hover {
     padding: 24px;
     width: 90%;
     max-width: 380px;
-    box-shadow: var(--elevation-5);
     transform: translateY(24px) scale(0.96);
     transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }

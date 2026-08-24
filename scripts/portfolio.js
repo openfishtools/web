@@ -2372,7 +2372,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cardEl.style.borderRadius = 'var(--radius-l)';
         cardEl.style.background = 'var(--md-sys-color-surface-container)';
         cardEl.style.border = '1px solid var(--md-sys-color-outline-variant)';
-        cardEl.style.boxShadow = '0 0 0 transparent';
         cardEl.style.opacity = '1';
         cardEl.style.visibility = 'visible';
         cardEl.style.pointerEvents = 'auto';
@@ -2403,7 +2402,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardEl.style.width = `${geom.targetW}px`;
                 cardEl.style.height = `${geom.targetH}px`;
                 cardEl.style.borderRadius = geom.borderRadius;
-                cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
 
                 setTimeout(() => {
                     cardEl.classList.remove('is-morphing');
@@ -2454,7 +2452,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardEl.style.width = `${sRect.width}px`;
                 cardEl.style.height = `${sRect.height}px`;
                 cardEl.style.borderRadius = 'var(--radius-l)';
-                cardEl.style.boxShadow = '0 0 0 transparent';
 
                 backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
                 backdrop.style.opacity = '0';
@@ -2780,7 +2777,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cardEl.style.borderRadius = 'var(--radius-l)';
         cardEl.style.background = initialBg;
         cardEl.style.border = initialBorder;
-        cardEl.style.boxShadow = '0 0 0 transparent';
         cardEl.style.opacity = '1';
         cardEl.style.visibility = 'visible';
 
@@ -2813,7 +2809,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardEl.style.width = `${geom.targetW}px`;
                 cardEl.style.height = `${geom.targetH}px`;
                 cardEl.style.borderRadius = geom.borderRadius;
-                cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
 
                 setTimeout(() => {
                     cardEl.classList.remove('is-morphing');
@@ -2865,7 +2860,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardEl.style.borderRadius = 'var(--radius-l)';
                 cardEl.style.background = targetBg;
                 cardEl.style.border = targetBorder;
-                cardEl.style.boxShadow = '0 0 0 transparent';
 
                 backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
                 backdrop.style.opacity = '0';
@@ -3084,6 +3078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const prevViewKey = currentViewKey;
         currentViewKey = activeViewKey;
+        document.body.dataset.view = activeViewKey;
 
         if (window.location.pathname !== '/') {
             const keepHash = ['privacy', 'tos', 'terms', 'disclaimer', 'dmca'].includes(rawHash);

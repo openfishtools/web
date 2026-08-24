@@ -491,6 +491,16 @@ body.preset-modal-open .floating-nav-bar {
     overflow: visible !important;
 }
 
+/* Signpost punya konteks 3D sendiri (preserve-3d + perspective + arrow-side
+   rotateX). Children ber-transform 3D bisa lolos dari clipping
+   overflow:hidden pada face non-aktif, sehingga signpost "berhantu" di tab
+   lain — apalagi saat animasi rotasi kubus saat SEMUA face dipaksa visible.
+   Sembunyikan total berdasarkan view aktif (di-set di body[data-view] oleh
+   navigateToRoute sejak awal navigasi), bukan menunggu animasi selesai. */
+body:not([data-view="home"]) .signpost-overlay {
+    display: none !important;
+}
+
 .cube-face-front,
 .cube-face-1 {
     transform: rotateY(0deg) translateZ(var(--cube-depth));
@@ -2015,7 +2025,6 @@ body.preset-modal-open .floating-nav-bar {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 0 0 transparent;
     box-sizing: border-box;
     z-index: 41;
     opacity: 0;
@@ -2028,7 +2037,6 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
 }
 
 .res-modal-header-container {
@@ -2453,7 +2461,6 @@ body.preset-modal-open .floating-nav-bar {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 0 0 transparent;
     box-sizing: border-box;
     z-index: 41;
     opacity: 0;
@@ -2473,7 +2480,6 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
 }
 
 .tool-modal-header-container {
