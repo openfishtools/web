@@ -198,37 +198,79 @@
 
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
-            const ffmpeg = new FFmpeg();
+            let ffmpeg = new FFmpeg();
             let oomDetected = false;
+
+            // Some failures from ffmpeg.load()/toBlobURL are not Error objects,
+            // so always extract a readable string (never log "undefined").
+            const errMsg = (e) => {
+                if (!e) return 'unknown error';
+                if (e instanceof Error && e.message) return e.message;
+                if (typeof e === 'string') return e;
+                try { return JSON.stringify(e); } catch (_) { return String(e); }
+            };
 
             const localBaseURL = window.location.origin + '/assets/ffmpeg';
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
+            const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
             const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice;
 
             logSection('FFmpeg Core Initialization');
             let loaded = false;
-            try {
-                log('  Loading FFmpeg Core WASM...');
-                await ffmpeg.load({
-                    coreURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                    workerURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript')
-                });
-                loaded = true;
-                log('  FFmpeg Core WASM loaded from local assets.');
-            } catch (err) {
-                log(`  Local load fallback to CDN: ${err.message}`);
+
+            if (isMultiThread) {
                 try {
+                    log('  Loading FFmpeg Core WASM (Multi-Thread)...');
                     await ffmpeg.load({
-                        coreURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript'),
-                        wasmURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm'),
-                        workerURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript')
+                        coreURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+                        wasmURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                        workerURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript')
                     });
                     loaded = true;
-                    log('  FFmpeg Core WASM loaded from CDN.');
-                } catch (cdnErr) {
-                    throw new Error(`Failed to load FFmpeg WASM: ${cdnErr.message}`);
+                    log('  FFmpeg Core WASM (MT) loaded from local assets.');
+                } catch (err) {
+                    log(`  Local MT load failed, fallback to CDN: ${errMsg(err)}`);
+                    // A failed FFmpeg instance cannot be reused in 0.12.x —
+                    // recreate it before retrying, otherwise load() hangs.
+                    ffmpeg = new FFmpeg();
+                    try {
+                        await ffmpeg.load({
+                            coreURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript'),
+                            wasmURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm'),
+                            workerURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript')
+                        });
+                        loaded = true;
+                        log('  FFmpeg Core WASM (MT) loaded from CDN.');
+                    } catch (cdnErr) {
+                        log(`  CDN MT load failed: ${errMsg(cdnErr)}`);
+                    }
+                }
+            }
+
+            if (!loaded) {
+                // No SharedArrayBuffer (no cross-origin isolation / iOS):
+                // must use the Single-Thread core WITHOUT workerURL.
+                log('  Loading FFmpeg Core WASM (Single-Thread)...');
+                ffmpeg = new FFmpeg();
+                try {
+                    await ffmpeg.load({
+                        coreURL: await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript'),
+                        wasmURL: await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm')
+                    });
+                    log('  FFmpeg Core WASM (ST) loaded from local assets.');
+                } catch (err) {
+                    log(`  Local ST load failed, fallback to CDN: ${errMsg(err)}`);
+                    ffmpeg = new FFmpeg();
+                    try {
+                        await ffmpeg.load({
+                            coreURL: await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript'),
+                            wasmURL: await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm')
+                        });
+                        log('  FFmpeg Core WASM (ST) loaded from CDN.');
+                    } catch (cdnErr) {
+                        throw new Error(`Failed to load FFmpeg WASM: ${errMsg(cdnErr)}`);
+                    }
                 }
             }
             logEnd();
