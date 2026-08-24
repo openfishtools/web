@@ -141,19 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('batik-canvas');
     let ctx = canvas ? canvas.getContext('2d') : null;
 
-    let mouseX = -9999;
-    let mouseY = -9999;
-    let currentParallaxX = 0;
-    let targetParallaxX = 0;
-    let currentScrollY = 0;
-    let targetScrollY = 0;
-    let isRenderLoopActive = false;
-
     let patternCanvas = null;
     let patternCtx = null;
     let cachedThemeColor = '';
     let gridPattern = null;
-    let batikHasContent = false;
 
     function buildAuthenticKawungPattern(themeColor) {
         if (!patternCanvas) {
@@ -249,27 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cachedThemeColor = themeColor;
     }
 
-    let parallaxAnimStartTime = 0;
-    let parallaxAnimDuration = 800;
-    let parallaxAnimStartX = 0;
-    let parallaxAnimTargetX = 0;
-    let isParallaxTransitioning = false;
-
-    function easeCubeBezier(t) {
-        const u = 1 - t;
-        return 3 * u * u * t * 0.9 + 3 * u * t * t * 1.0 + t * t * t;
-    }
-
-    function startParallaxTransition(newTargetX, duration = 800) {
-        parallaxAnimStartX = currentParallaxX;
-        parallaxAnimTargetX = newTargetX;
-        targetParallaxX = newTargetX;
-        parallaxAnimStartTime = performance.now();
-        parallaxAnimDuration = duration;
-        isParallaxTransitioning = true;
-        triggerRender();
-    }
-
     let cachedThemeColorString = '';
 
     function getThemeColorString(isDark) {
@@ -281,104 +251,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return cachedThemeColorString;
     }
 
-    function renderBatikFrame() {
+    // Batik statis: motif berulang mengisi layar, tiles ke-crop otomatis di tepi canvas
+    function renderBatik() {
         if (!ctx || !canvas) return;
-
-        if (isParallaxTransitioning) {
-            const elapsed = performance.now() - parallaxAnimStartTime;
-            const progress = Math.min(1, elapsed / parallaxAnimDuration);
-            const eased = easeCubeBezier(progress);
-            currentParallaxX = parallaxAnimStartX + (parallaxAnimTargetX - parallaxAnimStartX) * eased;
-            if (progress >= 1) {
-                isParallaxTransitioning = false;
-                currentParallaxX = parallaxAnimTargetX;
-            }
-        }
-        currentScrollY = targetScrollY;
-
-        if (mouseX < -500) {
-            if (batikHasContent && ctx) {
-                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-                batikHasContent = false;
-            }
-            if (isParallaxTransitioning) {
-                requestAnimationFrame(renderBatikFrame);
-            } else {
-                isRenderLoopActive = false;
-            }
-            return;
-        }
-
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-        batikHasContent = true;
-
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        ctx.clearRect(0, 0, w, h);
         const isDark = document.documentElement.classList.contains('dark-theme');
         const colorString = getThemeColorString(isDark);
-
         if (colorString !== cachedThemeColor || !gridPattern) {
             buildAuthenticKawungPattern(colorString);
             gridPattern = ctx.createPattern(patternCanvas, 'repeat');
             cachedThemeColor = colorString;
         }
-
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReducedMotion) {
-            if (batikHasContent && ctx) {
-                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-                batikHasContent = false;
-            }
-            if (isParallaxTransitioning) {
-                requestAnimationFrame(renderBatikFrame);
-            } else {
-                isRenderLoopActive = false;
-            }
-            return;
-        }
-
-        const isMobileParallax = window.innerWidth < 768;
-        const radius = isMobileParallax ? 180 : 280;
-        const tileSize = 80;
-        const baseAlpha = isDark ? 0.42 : 0.30;
-
-        const offX = ((currentParallaxX % tileSize) + tileSize) % tileSize;
-        const offY = ((currentScrollY % tileSize) + tileSize) % tileSize;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(mouseX, mouseY, radius, 0, Math.PI * 2);
-        ctx.clip();
-
-        ctx.globalAlpha = baseAlpha;
-        ctx.translate(offX, offY);
+        ctx.globalAlpha = isDark ? 0.42 : 0.30;
         ctx.fillStyle = gridPattern;
-        ctx.fillRect(
-            mouseX - radius - tileSize - offX,
-            mouseY - radius - tileSize - offY,
-            (radius + tileSize) * 2,
-            (radius + tileSize) * 2
-        );
-        ctx.translate(-offX, -offY);
-
-        ctx.globalCompositeOperation = 'destination-in';
-        const fade = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, radius);
-        fade.addColorStop(0, 'rgba(0, 0, 0, 1)');
-        fade.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = fade;
-        ctx.fillRect(mouseX - radius, mouseY - radius, radius * 2, radius * 2);
-        ctx.restore();
-
-        if (isParallaxTransitioning) {
-            requestAnimationFrame(renderBatikFrame);
-        } else {
-            isRenderLoopActive = false;
-        }
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalAlpha = 1;
     }
 
     function triggerRender() {
-        if (!isRenderLoopActive) {
-            isRenderLoopActive = true;
-            requestAnimationFrame(renderBatikFrame);
-        }
+        renderBatik();
+    }
+
+    function startParallaxTransition() {
+        renderBatik();
     }
 
     function resizeBatikCanvas() {
@@ -390,31 +287,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         cachedThemeColor = '';
-        triggerRender();
+        renderBatik();
     }
 
     if (canvas) {
         resizeBatikCanvas();
         window.addEventListener('resize', resizeBatikCanvas);
-
-        window.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            triggerRender();
-        }, { passive: true });
-
-        document.addEventListener('mouseleave', () => {
-            mouseX = -9999;
-            mouseY = -9999;
-            triggerRender();
-        });
     }
 
     const contentScroller = document.getElementById('content-scroller');
     if (contentScroller) {
         contentScroller.addEventListener('scroll', () => {
-            targetScrollY = -contentScroller.scrollTop * 0.12;
-            triggerRender();
             if (isModalAnimating && !document.body.classList.contains('legal-modal-open')) {
                 cleanupLegalModal();
             }
