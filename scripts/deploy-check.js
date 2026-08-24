@@ -1,10 +1,15 @@
 (function () {
     'use strict';
 
-    const STORAGE_KEY = 'cf_deploy_version';
-    const STORAGE_TS_KEY = 'cf_deploy_timestamp';
+    const KEY_VER = 'cf_deploy_version';
+    const KEY_TS = 'cf_deploy_timestamp';
+    const KEY_CHECKED = 'cf_deploy_checked_session';
+    const KEY_PURGE_AT = 'cf_deploy_purge_at';
+    const PURGE_COOLDOWN_MS = 60000;
 
     async function purgeEverythingAndReload() {
+        try { sessionStorage.setItem(KEY_PURGE_AT, String(Date.now())); } catch (e) {}
+
         try {
             if ('serviceWorker' in navigator) {
                 const regs = await navigator.serviceWorker.getRegistrations();
@@ -34,45 +39,46 @@
 
         const url = new URL(window.location.href);
         url.searchParams.set('nocache', Date.now().toString());
-        url.searchParams.delete('v');
         window.location.replace(url.toString());
-        setTimeout(() => window.location.reload(true), 500);
     }
 
     async function checkDeployedVersion() {
         try {
-            const res = await fetch('/api/version', {
-                cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache' }
-            });
+            if (sessionStorage.getItem(KEY_CHECKED)) return;
+            let lastPurgeAt = 0;
+            try { lastPurgeAt = Number(sessionStorage.getItem(KEY_PURGE_AT) || 0); } catch (e) {}
+            if (lastPurgeAt && Date.now() - lastPurgeAt < PURGE_COOLDOWN_MS) return;
+
+            const res = await fetch('/api/version', { cache: 'no-store' });
             if (!res.ok) return;
             const data = await res.json();
             const deployedVer = data && data.version ? String(data.version) : null;
-            const deployedTs = data && data.timestamp ? Number(data.timestamp) : 0;
             if (!deployedVer) return;
 
-            const storedVer = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
-            const storedTs = Number(sessionStorage.getItem(STORAGE_TS_KEY) || localStorage.getItem(STORAGE_TS_KEY) || 0);
+            sessionStorage.setItem(KEY_CHECKED, '1');
 
-            if (!storedVer || storedVer !== deployedVer || deployedTs > storedTs) {
-                sessionStorage.setItem(STORAGE_KEY, deployedVer);
-                sessionStorage.setItem(STORAGE_TS_KEY, String(deployedTs));
-                localStorage.setItem(STORAGE_KEY, deployedVer);
-                localStorage.setItem(STORAGE_TS_KEY, String(deployedTs));
+            const storedVer = localStorage.getItem(KEY_VER);
+            const deployedTs = Number(data.timestamp || 0);
 
-                if (storedVer && (storedVer !== deployedVer || deployedTs > storedTs)) {
-                    await purgeEverythingAndReload();
-                    return;
-                }
+            if (!storedVer) {
+                localStorage.setItem(KEY_VER, deployedVer);
+                localStorage.setItem(KEY_TS, String(deployedTs));
+                return;
+            }
+
+            if (storedVer !== deployedVer) {
+                localStorage.setItem(KEY_VER, deployedVer);
+                localStorage.setItem(KEY_TS, String(deployedTs));
+                await purgeEverythingAndReload();
             }
         } catch (e) {
-            console.warn('[Deploy Check] Error checking deployed version:', e);
+            console.warn('[Deploy Check] Skipped:', e.message);
         }
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(checkDeployedVersion, 300));
+        document.addEventListener('DOMContentLoaded', () => setTimeout(checkDeployedVersion, 800));
     } else {
-        setTimeout(checkDeployedVersion, 300);
+        setTimeout(checkDeployedVersion, 800);
     }
 })();

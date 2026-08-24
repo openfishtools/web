@@ -165,6 +165,10 @@
             if(!modelBuffer){ try{ onLog('[RIFE] Fetching local model...'); const r=await fetch(localModelUrl); if(r.ok) modelBuffer=await r.arrayBuffer(); }catch(e){} }
             if(!modelBuffer){ for(const u of remoteUrls){ try{ onLog('[RIFE] Fetching remote model...'); const r=await fetch(u); if(r.ok){ modelBuffer=await r.arrayBuffer(); if(cache){ try{ const full=new URL(localModelUrl,window.location.origin).href; const cr=new Response(modelBuffer.slice(0),{headers:{'Content-Type':'application/octet-stream'}}); await cache.put(full,cr.clone()); await cache.put(localModelUrl,cr);}catch(e){} } break; } }catch(e){} } }
             if(!modelBuffer) throw new Error('Failed to load RIFE model');
+            if (typeof ort === 'undefined' || !ort.InferenceSession) {
+                if (typeof window.ensureOnnxRuntime !== 'function') throw new Error('ONNX Runtime failed to load.');
+                await window.ensureOnnxRuntime();
+            }
             if (typeof ort !== 'undefined' && ort.env) try{ ort.env.logLevel = 'error'; }catch(e){}
             try{ this.session=await ort.InferenceSession.create(modelBuffer.slice(0),{executionProviders:[{name:'webgpu',powerPreference:'high-performance'},'wasm'],graphOptimizationLevel:'all'}); }catch(e){ onLog('[RIFE] WebGPU failed, fallback WASM'); this.session=await ort.InferenceSession.create(modelBuffer.slice(0),{executionProviders:['wasm'],graphOptimizationLevel:'all'}); }
             this.isReady=true; onLog('[RIFE] RIFE v4.7 ready');

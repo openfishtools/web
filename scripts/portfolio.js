@@ -115,6 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (greetingCurrent && nameCurrent) {
         initLayers();
         function cycleAnalogTitle() {
+            if (document.hidden) return;
+            const homeView = document.getElementById('view-home');
+            if (!homeView || !homeView.classList.contains('active-face')) return;
             currentGreetingIdx = (currentGreetingIdx + 1) % greetingPhrases.length;
             currentNameIdx = (currentNameIdx + 1) % nameAliases.length;
 
@@ -292,7 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (canvas) {
         resizeBatikCanvas();
-        window.addEventListener('resize', resizeBatikCanvas);
+        let batikResizeTimer = null;
+        window.addEventListener('resize', () => {
+            if (batikResizeTimer) clearTimeout(batikResizeTimer);
+            batikResizeTimer = setTimeout(resizeBatikCanvas, 150);
+        });
     }
 
     const contentScroller = document.getElementById('content-scroller');
@@ -2864,18 +2871,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function makeSearchDebounce(fn, delayMs) {
+        let timer = null;
+        return (e) => {
+            const val = e.target.value;
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => fn(val), delayMs);
+        };
+    }
+
     const resSearchInput = document.getElementById('resource-search');
     if (resSearchInput) {
-        resSearchInput.addEventListener('input', (e) => {
-            renderResources(e.target.value, activeResourceCategory);
-        });
+        resSearchInput.addEventListener('input', makeSearchDebounce((val) => {
+            renderResources(val, activeResourceCategory);
+        }, 160));
     }
 
     const toolsSearchInput = document.getElementById('tools-search');
     if (toolsSearchInput) {
-        toolsSearchInput.addEventListener('input', (e) => {
-            renderTools(e.target.value, activeToolCategory);
-        });
+        toolsSearchInput.addEventListener('input', makeSearchDebounce((val) => {
+            renderTools(val, activeToolCategory);
+        }, 160));
     }
 
     document.addEventListener('keydown', (e) => {
@@ -3166,25 +3182,41 @@ document.addEventListener('DOMContentLoaded', () => {
         ro.observe(timelineWrapper);
     }
 
+    let layoutResizeTimer = null;
     window.addEventListener('resize', () => {
-        updateCubeDimensions();
-        updateTimelineConnector();
-        updateNavIndicator();
-        scrollActiveNavIntoView();
-        updateOpenModalsLayout();
-        requestAnimationFrame(updateTimelineConnector);
-        requestAnimationFrame(updateNavIndicator);
-        requestAnimationFrame(updateOpenModalsLayout);
-        setTimeout(() => {
+        if (layoutResizeTimer) clearTimeout(layoutResizeTimer);
+        layoutResizeTimer = setTimeout(() => {
+            updateCubeDimensions();
             updateTimelineConnector();
             updateNavIndicator();
+            scrollActiveNavIntoView();
             updateOpenModalsLayout();
-        }, 120);
+            requestAnimationFrame(updateNavIndicator);
+        }, 150);
     });
     window.addEventListener('hashchange', navigateToRoute);
     if (typeof window.translateUI === 'function') {
         window.translateUI();
     }
+
+    function initVercelReleaseBadge() {
+        const badgeEl = document.getElementById('vercel-release-badge');
+        const verEl = document.getElementById('vercel-release-version');
+        if (!badgeEl || !verEl) return;
+        fetch('/api/version', { cache: 'no-store' })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data || !data.version || String(data.version).startsWith('dev-')) {
+                    badgeEl.classList.add('hidden');
+                    return;
+                }
+                verEl.textContent = data.version;
+                if (data.buildDateId) badgeEl.title = `Build ${data.buildDateId}`;
+            })
+            .catch(() => badgeEl.classList.add('hidden'));
+    }
+    initVercelReleaseBadge();
+
     updateCubeDimensions();
     navigateToRoute();
     setTimeout(() => {

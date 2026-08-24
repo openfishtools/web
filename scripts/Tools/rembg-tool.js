@@ -560,7 +560,8 @@
         const cacheKey = `${modelId}__${selectedDevice}`;
         if (sessionCache[cacheKey] && sessionCache[cacheKey].modelId === modelId && sessionCache[cacheKey].device === selectedDevice) return sessionCache[cacheKey].session;
         if (typeof ort === 'undefined' || !ort.InferenceSession) {
-            throw new Error('ONNX Runtime failed to load.');
+            if (typeof window.ensureOnnxRuntime !== 'function') throw new Error('ONNX Runtime failed to load.');
+            await window.ensureOnnxRuntime();
         }
         const meta = MODEL_META[modelId];
         log(`[AI] Loading model ${meta.file} [${selectedDevice.toUpperCase()}]...`);
@@ -614,7 +615,10 @@
     }
 
     async function segmentSource(srcLike) {
-        if (!window.ort || !ort.InferenceSession) throw new Error('ONNX Runtime failed to load.');
+        if (!window.ort || !ort.InferenceSession) {
+            if (typeof window.ensureOnnxRuntime === 'function') await window.ensureOnnxRuntime();
+            if (!window.ort || !ort.InferenceSession) throw new Error('ONNX Runtime failed to load.');
+        }
         const session = await getSession(selectedModel);
         const cfg = MODEL_META[selectedModel];
 

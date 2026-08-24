@@ -2987,6 +2987,50 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 0.85;
 }
 
+.vercel-release-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface-variant);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    user-select: none;
+}
+
+.vercel-release-badge .vrb-logo {
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.vercel-release-badge .vrb-label {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vercel-release-badge .vrb-sep {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.vercel-release-badge .vrb-version {
+    color: var(--md-sys-color-primary);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .footer-legal-btn {
     background: none;
     border: none;
@@ -6422,6 +6466,7 @@ body.preset-popup-active .preset-modal-card.expanded {
     .floating-nav-bar,
     .floating-nav-indicator,
     .app-layout,
+    .cube-3d-box,
     .preset-modal-card,
     .res-modal-card,
     .tool-modal-card,
@@ -6491,5 +6536,26 @@ body.preset-popup-active .preset-modal-card.expanded {
 
     .sign-arrow-icon {
         filter: none;
+    }
+}
+
+/* ============================================================
+   REDUCED MOTION: hentikan animasi dekoratif (shimmer/pulse/spin)
+   untuk user yang mengaktifkan "reduce motion" di OS — hemat CPU.
+   Animasi morphing utama (modal/cube) TIDAK disentuh.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+
+    .tiktok-card-skeleton .skeleton-thumb,
+    .tiktok-card-skeleton .skeleton-line,
+    .skeleton-tool-card-icon,
+    .skeleton-tool-card-line,
+    .skeleton-resource-card-icon,
+    .skeleton-resource-card-line,
+    .skeleton-social-btn,
+    .preset-skeleton,
+    .tool-card-arrow.is-processing,
+    .stats-skeleton {
+        animation: none !important;
     }
 }
