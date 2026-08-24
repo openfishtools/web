@@ -1057,12 +1057,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const signpost = document.getElementById('nav-signpost');
         if (!signpost) return;
         const inner = signpost.querySelector('.signpost-inner');
+        const overlay = document.getElementById('signpost-overlay');
+        if (!inner || !overlay) return;
 
         let wobbleTimer = null;
 
         signpost.querySelectorAll('.sign-arrow').forEach(arrow => {
             arrow.addEventListener('click', () => {
-                if (!inner) return;
                 inner.classList.remove('is-wobbling');
                 void inner.offsetWidth;
                 inner.classList.add('is-wobbling');
@@ -1077,6 +1078,64 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.location.hash = targetHash;
                 }, 120);
             });
+        });
+
+        // Box 3D: front (::before z=0) + back (::after z=-T) + dinding sisi per edge poligon
+        // Rumus per edge: len = hypot(dx,dy), ang = atan2(dy,dx),
+        // dinding = strip T x len di titik awal edge, rotateZ(ang) rotateX(-90deg) → melipat ke -z
+        // Overlap 2px di tiap ujung edge biar sambungan sudut gak bolong
+        function buildArrowBox(arrow) {
+            arrow.querySelectorAll('.arrow-side').forEach(el => el.remove());
+            const W = arrow.offsetWidth;
+            const H = arrow.offsetHeight;
+            if (W < 10 || H < 10) return;
+            const tip = 24;
+            const T = parseFloat(getComputedStyle(arrow).getPropertyValue('--box-thick')) || 8;
+            const isRight = arrow.classList.contains('arrow-right');
+            const pts = isRight
+                ? [[0, 0], [W - tip, 0], [W, H / 2], [W - tip, H], [0, H]]
+                : [[tip, 0], [W, 0], [W, H], [tip, H], [0, H / 2]];
+            const bg = getComputedStyle(arrow).getPropertyValue('--arrow-bg').trim() || 'rgb(120,120,120)';
+            for (let i = 0; i < pts.length; i++) {
+                const [x1, y1] = pts[i];
+                const [x2, y2] = pts[(i + 1) % pts.length];
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len = Math.hypot(dx, dy);
+                if (len < 1) continue;
+                const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+                const ox = (dx / len) * 2;
+                const oy = (dy / len) * 2;
+                const el = document.createElement('div');
+                el.className = 'arrow-side';
+                el.style.left = (x1 - ox) + 'px';
+                el.style.top = (y1 - oy) + 'px';
+                el.style.width = (len + 4) + 'px';
+                el.style.height = T + 'px';
+                el.style.background = 'color-mix(in srgb, ' + bg + ' 84%, black)';
+                el.style.transformOrigin = '0 0';
+                el.style.transform = 'rotateZ(' + ang + 'deg) rotateX(-90deg)';
+                arrow.appendChild(el);
+            }
+        }
+
+        function buildAllArrowBoxes() {
+            signpost.querySelectorAll('.sign-arrow').forEach(buildArrowBox);
+        }
+        // Rebuild saat ukuran berubah — termasuk setelah icon font ter-render
+        requestAnimationFrame(buildAllArrowBoxes);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => requestAnimationFrame(buildAllArrowBoxes));
+        }
+        window.addEventListener('load', () => requestAnimationFrame(buildAllArrowBoxes));
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => buildAllArrowBoxes());
+            signpost.querySelectorAll('.sign-arrow').forEach(a => ro.observe(a));
+        }
+        let boxResizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(boxResizeTimer);
+            boxResizeTimer = setTimeout(buildAllArrowBoxes, 120);
         });
     };
 

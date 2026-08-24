@@ -762,9 +762,11 @@ body.preset-modal-open .floating-nav-bar {
     height: 150vh;
     z-index: 5;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
     -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 94%);
     mask-image: linear-gradient(to bottom, #000 60%, transparent 94%);
+    perspective: 520px;
+    perspective-origin: 72% 36%;
 }
 
 .signpost-overlay .signpost {
@@ -775,10 +777,10 @@ body.preset-modal-open .floating-nav-bar {
     height: 140vh;
     transform-origin: 50% 100%;
     transform: none;
+    transform-style: preserve-3d;
 }
 
 .signpost-inner,
-.signpost-pole,
 .sign-arrow {
     transform-origin: 50% 100%;
 }
@@ -800,32 +802,7 @@ body.preset-modal-open .floating-nav-bar {
     position: absolute;
     inset: 0;
     transform-origin: 50% 96%;
-}
-
-.signpost-cap {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    width: clamp(20px, 1.8vw, 30px);
-    height: clamp(20px, 1.8vw, 30px);
-    margin-left: calc(clamp(20px, 1.8vw, 30px) / -2);
-    border-radius: var(--radius-full);
-    background: radial-gradient(circle at 32% 30%, var(--md-sys-color-primary), hsla(var(--primary-h), 45%, 32%, 1) 75%);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
-    z-index: 3;
-}
-
-.signpost-pole {
-    position: absolute;
-    top: 4px;
-    bottom: 0;
-    left: 50%;
-    width: clamp(11px, 0.9vw, 15px);
-    margin-left: calc(clamp(11px, 0.9vw, 15px) / -2);
-    border-radius: 8px;
-    background: linear-gradient(90deg, var(--md-sys-color-outline-variant) 0%, var(--md-sys-color-surface-container-highest) 38%, var(--md-sys-color-outline) 100%);
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
-    z-index: 1;
+    transform-style: preserve-3d;
 }
 
 .sign-arrow {
@@ -841,52 +818,92 @@ body.preset-modal-open .floating-nav-bar {
     font-family: inherit;
     z-index: 2;
     pointer-events: auto;
-    filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.32));
-    transition: transform 0.45s var(--ease-spring), filter 0.25s cubic-bezier(0.2, 0, 0, 1);
-    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%);
+    background: transparent;
+    transform-style: preserve-3d;
+    --theta: 20deg;
+    --depth: 40px;
+    --box-thick: 12px;
+    transition: transform 0.45s var(--ease-spring);
 }
 
 .arrow-right {
     left: 50%;
-    margin-left: -10px;
     transform-origin: left center;
-    transform: rotateY(14deg);
+    transform: rotateY(var(--theta)) translateZ(var(--depth));
 }
 
 .arrow-left {
     right: 50%;
-    margin-right: -10px;
     padding: 0 26px 0 44px;
     transform-origin: right center;
-    transform: rotateY(-14deg);
-    clip-path: polygon(24px 0, 100% 0, 100% 100%, 24px 100%, 0 50%);
+    transform: rotateY(var(--theta)) translateZ(var(--depth));
 }
 
-.arrow-right.tone-a { top: 2.4%; }
-.arrow-left.tone-b { top: 8%; }
-.arrow-right.tone-c { top: 13.6%; }
-.arrow-left.tone-d { top: 19.2%; }
+/* Susunan 3D: kaskade rapat — makin ke bawah sedikit lebih dekat & menghadap kamera */
+.arrow-right.tone-a { top: 0%;    --theta: 24deg;  --depth: 20px; }
+.arrow-left.tone-b  { top: 4.5%;  --theta: -20deg; --depth: 32px; }
+.arrow-right.tone-c { top: 9%;    --theta: 16deg;  --depth: 44px; }
+.arrow-left.tone-d  { top: 13.5%; --theta: -12deg; --depth: 56px; }
 
-.sign-arrow:hover {
-    filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.4));
+/* Hover: box sedikit menghadap kamera + maju tipis → ketebalan kelihatan */
+.arrow-right:hover {
+    transform: rotateY(10deg) rotateX(-5deg) translateZ(calc(var(--depth) + 16px)) translateX(3px);
 }
 
-.arrow-right:hover { transform: rotateY(7deg) translateX(6px) scale(1.04); }
-.arrow-left:hover { transform: rotateY(-7deg) translateX(-6px) scale(1.04); }
+.arrow-left:hover {
+    transform: rotateY(-10deg) rotateX(-5deg) translateZ(calc(var(--depth) + 16px)) translateX(-3px);
+}
 
 .sign-arrow:active {
     transform: scale(0.95);
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
 }
 
-.sign-arrow.tone-a { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
-.sign-arrow.tone-b { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
-.sign-arrow.tone-c { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
-.sign-arrow.tone-d { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.sign-arrow.tone-a { color: var(--md-sys-color-on-primary-container); --arrow-bg: var(--md-sys-color-primary-container); }
+.sign-arrow.tone-b { color: var(--md-sys-color-on-secondary-container); --arrow-bg: var(--md-sys-color-secondary-container); }
+.sign-arrow.tone-c { color: var(--md-sys-color-on-tertiary-container); --arrow-bg: var(--md-sys-color-tertiary-container); }
+.sign-arrow.tone-d { color: var(--md-sys-color-on-primary); --arrow-bg: var(--md-sys-color-primary); }
+
+/* Front face — bentuk pemandu arah / bendera ujung segitiga */
+.sign-arrow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--arrow-bg, var(--md-sys-color-surface-container-high));
+    transform: translateZ(0);
+    pointer-events: none;
+}
+
+/* Back face — tutup box di belakang */
+.sign-arrow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--arrow-bg, #888) 62%, black);
+    transform: translateZ(calc(var(--box-thick) * -1));
+    pointer-events: none;
+}
+
+.arrow-right::before,
+.arrow-right::after {
+    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%);
+}
+
+.arrow-left::before,
+.arrow-left::after {
+    clip-path: polygon(24px 0, 100% 0, 100% 100%, 24px 100%, 0 50%);
+}
+
+.arrow-side {
+    position: absolute;
+    pointer-events: none;
+}
 
 .sign-arrow-icon {
     font-size: clamp(17px, 2.1vh, 23px);
     flex-shrink: 0;
+    transform: translateZ(10px);
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
 }
 
 .sign-arrow-year {
@@ -903,22 +920,26 @@ body.preset-modal-open .floating-nav-bar {
     font-weight: 700;
     letter-spacing: -0.01em;
     white-space: nowrap;
+    transform: translateZ(6px);
+    text-shadow: 0 1px 0 rgba(0,0,0,0.18), 0 6px 10px rgba(0,0,0,0.22);
 }
 
-.sign-arrow::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 7px;
-    height: 18px;
-    margin-top: -9px;
-    border-radius: 4px;
-    background: currentColor;
-    opacity: 0.35;
-}
+/* Rentang desktop-menengah: signpost digeser lebih kanan & dipangkas biar gak nutupin teks hero */
+@media (max-width: 1718px) and (min-width: 1025px) {
+    .signpost-overlay .signpost {
+        right: 12vw;
+        width: clamp(140px, 12vw, 200px);
+    }
 
-.arrow-right::after { left: 12px; }
-.arrow-left::after { right: 12px; }
+    .sign-arrow {
+        min-width: clamp(120px, 10.5vw, 170px);
+        padding: 0 26px 0 16px;
+    }
+
+    .arrow-left {
+        padding: 0 22px 0 38px;
+    }
+}
 
 @media (max-width: 1024px) {
     .signpost-overlay .signpost {
@@ -939,6 +960,11 @@ body.preset-modal-open .floating-nav-bar {
         padding: 0 14px 0 22px;
     }
 
+    .arrow-right.tone-a { top: 0%;   --theta: 20deg;  --depth: 16px; }
+    .arrow-left.tone-b  { top: 6%;   --theta: -17deg; --depth: 24px; }
+    .arrow-right.tone-c { top: 12%;  --theta: 13deg;  --depth: 32px; }
+    .arrow-left.tone-d  { top: 18%;  --theta: -10deg; --depth: 40px; }
+
     .sign-arrow-icon { font-size: 16px; }
     .sign-arrow-label { font-size: 0.82rem; }
 }
@@ -946,6 +972,8 @@ body.preset-modal-open .floating-nav-bar {
 @media (max-width: 640px) {
     .signpost-overlay {
         height: 112vh;
+        perspective: 640px;
+        perspective-origin: 60% 42%;
         -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
         mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
     }
@@ -968,10 +996,10 @@ body.preset-modal-open .floating-nav-bar {
         padding: 0 12px 0 18px;
     }
 
-    .arrow-right.tone-a { top: 3%; }
-    .arrow-left.tone-b { top: 10.5%; }
-    .arrow-right.tone-c { top: 18%; }
-    .arrow-left.tone-d { top: 25.5%; }
+    .arrow-right.tone-a { top: 0%;   --theta: 14deg;  --depth: 12px; }
+    .arrow-left.tone-b  { top: 6%;   --theta: -13deg; --depth: 17px; }
+    .arrow-right.tone-c { top: 12%;  --theta: 11deg;  --depth: 22px; }
+    .arrow-left.tone-d  { top: 18%;  --theta: -9deg;  --depth: 27px; }
 
     .sign-arrow-icon { font-size: 14px; }
     .sign-arrow-label { font-size: 0.72rem; }
