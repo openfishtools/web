@@ -964,7 +964,7 @@ body.preset-modal-open .floating-nav-bar {
     .arrow-left.tone-b  { top: 6%;   --theta: -17deg; --depth: 24px; }
     .arrow-right.tone-c { top: 12%;  --theta: 13deg;  --depth: 32px; }
     .arrow-left.tone-d  { top: 18%;  --theta: -10deg; --depth: 40px; }
-
+    
     .sign-arrow-icon { font-size: 16px; }
     .sign-arrow-label { font-size: 0.82rem; }
 }
@@ -6484,6 +6484,8 @@ body.preset-popup-active .preset-modal-card.expanded {
 
     .sign-arrow-icon,
     .sign-arrow-label {
+        position: relative;
+        z-index: 1;
         transform: none;
     }
 
