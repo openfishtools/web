@@ -1323,14 +1323,6 @@
         closeBtn.style.opacity = '0';
         closeBtn.style.transform = 'scale(0.6)';
 
-        cardEl.style.transition = 'none';
-        cardEl.style.opacity = '0';
-        cardEl.style.left = `${sourceRect.left}px`;
-        cardEl.style.top = `${sourceRect.top}px`;
-        cardEl.style.width = `${sourceRect.width}px`;
-        cardEl.style.height = `${sourceRect.height}px`;
-        cardEl.style.borderRadius = '14px';
-
         const ratio = await Promise.race([
             measureMediaRatio(mediaEl),
             new Promise(r => setTimeout(() => r(null), 120))
@@ -1339,13 +1331,22 @@
             presetModalMediaRatio = ratio;
             const geom = getPresetModalGeometry(ratio);
 
+            // Transform-only FLIP: park card at final geometry, then invert
+            // with translate+scale (GPU composited, no layout/paint per frame).
+            const sx = geom.targetW > 0 ? sourceRect.width / geom.targetW : 1;
+            const sy = geom.targetH > 0 ? sourceRect.height / geom.targetH : 1;
+            const dx = sourceRect.left - geom.targetLeft;
+            const dy = sourceRect.top - geom.targetTop;
+
             cardEl.style.transition = 'none';
-            cardEl.style.opacity = '1';
-            cardEl.style.left = `${sourceRect.left}px`;
-            cardEl.style.top = `${sourceRect.top}px`;
-            cardEl.style.width = `${sourceRect.width}px`;
-            cardEl.style.height = `${sourceRect.height}px`;
-            cardEl.style.borderRadius = '14px';
+            cardEl.style.willChange = 'transform';
+            cardEl.style.transformOrigin = '0 0';
+            cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+            cardEl.style.left = `${geom.targetLeft}px`;
+            cardEl.style.top = `${geom.targetTop}px`;
+            cardEl.style.width = `${geom.targetW}px`;
+            cardEl.style.height = `${geom.targetH}px`;
+            cardEl.style.borderRadius = geom.borderRadius;
             cardEl.classList.add('expanded');
 
             void cardEl.offsetHeight;
@@ -1354,11 +1355,8 @@
             backdrop.style.opacity = '1';
 
             const morphDur = 0.36;
-            cardEl.style.transition = `left ${morphDur}s ${EASE}, top ${morphDur}s ${EASE}, width ${morphDur}s ${EASE}, height ${morphDur}s ${EASE}, border-radius 0.28s ease`;
-            cardEl.style.left = `${geom.targetLeft}px`;
-            cardEl.style.top = `${geom.targetTop}px`;
-            cardEl.style.width = `${geom.targetW}px`;
-            cardEl.style.height = `${geom.targetH}px`;
+            cardEl.style.transition = `transform ${morphDur}s ${EASE}, border-radius 0.28s ease`;
+            cardEl.style.transform = 'translate(0px, 0px) scale(1, 1)';
             cardEl.style.borderRadius = geom.borderRadius;
 
             const contentDelay = 0.26;
@@ -1374,6 +1372,9 @@
 
             setTimeout(() => {
                 clearPresetChildFx(cardEl);
+                cardEl.style.willChange = '';
+                cardEl.style.transformOrigin = '';
+                cardEl.style.transform = '';
                 cardEl.style.transition = 'transform 0.44s var(--ease-spring-soft), filter 0.35s ease';
                 isPresetModalAnimating = false;
                 applyPendingModalRatio();
@@ -1423,11 +1424,18 @@
         fadePresetChromeOut(cardEl);
 
         if (rect) {
-            cardEl.style.transition = `left 0.28s ${EASE}, top 0.28s ${EASE}, width 0.28s ${EASE}, height 0.28s ${EASE}, border-radius 0.22s ease`;
-            cardEl.style.left = `${rect.left}px`;
-            cardEl.style.top = `${rect.top}px`;
-            cardEl.style.width = `${rect.width}px`;
-            cardEl.style.height = `${rect.height}px`;
+            // Transform-only FLIP reverse: current box -> source rect via
+            // translate+scale (GPU composited, no layout/paint per frame).
+            const cur = cardEl.getBoundingClientRect();
+            const sx = cur.width > 0 ? rect.width / cur.width : 1;
+            const sy = cur.height > 0 ? rect.height / cur.height : 1;
+            const dx = rect.left - cur.left;
+            const dy = rect.top - cur.top;
+
+            cardEl.style.willChange = 'transform';
+            cardEl.style.transformOrigin = '0 0';
+            cardEl.style.transition = `transform 0.28s ${EASE}, border-radius 0.22s ease`;
+            cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
             cardEl.style.borderRadius = '14px';
         }
 

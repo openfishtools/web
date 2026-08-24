@@ -2347,6 +2347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const geom = getModalTargetGeometry(cardEl, 0.86);
 
         cardEl.classList.remove('expanded');
+        cardEl.style.willChange = 'left, top, width, height';
         cardEl.style.left = `${sRect.left}px`;
         cardEl.style.top = `${sRect.top}px`;
         cardEl.style.width = `${sRect.width}px`;
@@ -2375,17 +2376,16 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop.style.opacity = '1';
             cardEl.classList.add('expanded');
 
-            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft), background 0.42s var(--ease-spring-soft), border 0.42s var(--ease-spring-soft), box-shadow 0.42s var(--ease-spring-soft)';
+            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft)';
             cardEl.style.left = `${geom.targetLeft}px`;
             cardEl.style.top = `${geom.targetTop}px`;
             cardEl.style.width = `${geom.targetW}px`;
             cardEl.style.height = `${geom.targetH}px`;
             cardEl.style.borderRadius = geom.borderRadius;
-            cardEl.style.background = 'var(--md-sys-color-surface-container)';
-            cardEl.style.border = '1px solid var(--md-sys-color-outline-variant)';
             cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
 
             setTimeout(() => {
+                cardEl.style.willChange = '';
                 isToolModalAnimating = false;
                 updateOpenModalsLayout(false);
             }, 440);
@@ -2407,6 +2407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sRect) {
             const curRect = cardEl.getBoundingClientRect();
             cardEl.style.transition = 'none';
+            cardEl.style.willChange = 'left, top, width, height';
             cardEl.style.left = `${curRect.left}px`;
             cardEl.style.top = `${curRect.top}px`;
             cardEl.style.width = `${curRect.width}px`;
@@ -2420,14 +2421,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.classList.remove('tool-modal-open');
                 cardEl.classList.remove('expanded');
 
-                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft), background 0.40s var(--ease-spring-soft), border 0.40s var(--ease-spring-soft), box-shadow 0.40s var(--ease-spring-soft)';
+                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft)';
                 cardEl.style.left = `${sRect.left}px`;
                 cardEl.style.top = `${sRect.top}px`;
                 cardEl.style.width = `${sRect.width}px`;
                 cardEl.style.height = `${sRect.height}px`;
                 cardEl.style.borderRadius = 'var(--radius-l)';
-                cardEl.style.background = 'var(--md-sys-color-surface-container)';
-                cardEl.style.border = '1px solid var(--md-sys-color-outline-variant)';
                 cardEl.style.boxShadow = '0 0 0 transparent';
 
                 backdrop.style.transition = 'opacity 0.38s var(--ease-spring-soft)';
@@ -2743,6 +2742,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         cardEl.classList.remove('expanded');
+        cardEl.style.willChange = 'left, top, width, height';
         cardEl.style.left = `${sRect.left}px`;
         cardEl.style.top = `${sRect.top}px`;
         cardEl.style.width = `${sRect.width}px`;
@@ -2773,17 +2773,16 @@ document.addEventListener('DOMContentLoaded', () => {
             cardEl.classList.add('expanded');
 
 
-            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft), background 0.42s var(--ease-spring-soft), border 0.42s var(--ease-spring-soft), box-shadow 0.42s var(--ease-spring-soft)';
+            cardEl.style.transition = 'left 0.42s var(--ease-spring-soft), top 0.42s var(--ease-spring-soft), width 0.42s var(--ease-spring-soft), height 0.42s var(--ease-spring-soft), border-radius 0.42s var(--ease-spring-soft)';
             cardEl.style.left = `${geom.targetLeft}px`;
             cardEl.style.top = `${geom.targetTop}px`;
             cardEl.style.width = `${geom.targetW}px`;
             cardEl.style.height = `${geom.targetH}px`;
             cardEl.style.borderRadius = geom.borderRadius;
-            cardEl.style.background = 'var(--md-sys-color-surface-container)';
-            cardEl.style.border = '1px solid var(--md-sys-color-outline-variant)';
             cardEl.style.boxShadow = '0 24px 60px rgba(0, 0, 0, 0.55)';
 
             setTimeout(() => {
+                cardEl.style.willChange = '';
                 isResModalAnimating = false;
             }, 440);
         });
@@ -2801,6 +2800,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sRect) {
             const curRect = cardEl.getBoundingClientRect();
             cardEl.style.transition = 'none';
+            cardEl.style.willChange = 'left, top, width, height';
             cardEl.style.left = `${curRect.left}px`;
             cardEl.style.top = `${curRect.top}px`;
             cardEl.style.width = `${curRect.width}px`;
@@ -2817,7 +2817,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetBg = 'var(--md-sys-color-surface-container)';
                 const targetBorder = isCutefish ? '1.5px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline-variant)';
 
-                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft), background 0.40s var(--ease-spring-soft), border 0.40s var(--ease-spring-soft), box-shadow 0.40s var(--ease-spring-soft)';
+                cardEl.style.transition = 'left 0.40s var(--ease-spring-soft), top 0.40s var(--ease-spring-soft), width 0.40s var(--ease-spring-soft), height 0.40s var(--ease-spring-soft), border-radius 0.40s var(--ease-spring-soft)';
                 cardEl.style.left = `${sRect.left}px`;
                 cardEl.style.top = `${sRect.top}px`;
                 cardEl.style.width = `${sRect.width}px`;

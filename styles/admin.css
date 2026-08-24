@@ -378,12 +378,13 @@ tbody tr:hover {
     z-index: 2000;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 0.3s;
 }
 
 .modal-overlay.show {
     opacity: 1;
     visibility: visible;
+    transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .admin-modal {
@@ -394,7 +395,7 @@ tbody tr:hover {
     padding: 32px;
     box-shadow: var(--elevation-5);
     transform: translateY(40px) scale(0.95);
-    transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
     max-height: 85vh;
     overflow-y: auto;
     position: relative;
@@ -777,12 +778,13 @@ tbody tr:hover {
     z-index: 9000;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+    transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 0.25s;
 }
 
 .mini-popup-overlay.show {
     opacity: 1;
     visibility: visible;
+    transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .mini-popup {
@@ -794,7 +796,7 @@ tbody tr:hover {
     max-width: 380px;
     box-shadow: var(--elevation-5);
     transform: translateY(24px) scale(0.96);
-    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .mini-popup-overlay.show .mini-popup {
@@ -1099,9 +1101,17 @@ tr.table-row-hidden {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-
     .admin-table-container table {
         width: max-content;
         min-width: 640px;
+    }
+}
+
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    .modal-overlay,
+    .mini-popup-overlay {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background-color: rgba(0, 0, 0, 0.82);
     }
 }

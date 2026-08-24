@@ -595,7 +595,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.openModal = (id, editData = null) => {
         const modal = document.getElementById(id);
+        modal.style.willChange = 'opacity';
         modal.classList.add('show');
+        setTimeout(() => { modal.style.willChange = ''; }, 450);
         if (editData) {
             modal.dataset.editIndex = editData.index;
             if (id === 'social-modal') {
@@ -760,7 +762,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.closeModal = async (id) => {
-        document.getElementById(id).classList.remove('show');
+        const modal = document.getElementById(id);
+        modal.style.willChange = 'opacity';
+        modal.classList.remove('show');
+        setTimeout(() => { modal.style.willChange = ''; }, 300);
     };
 
     const reorderItem = async (type, list, index, direction, reloadFn) => {

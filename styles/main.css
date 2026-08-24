@@ -5844,7 +5844,6 @@ body.dark .tiktok-desc-warning-row {
     visibility: hidden;
     pointer-events: none;
     contain: content;
-    will-change: transform, filter;
     transition: transform 0.44s var(--ease-spring-soft), filter 0.35s ease;
 }
 
