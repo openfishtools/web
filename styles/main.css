@@ -3010,21 +3010,6 @@ body.preset-modal-open .floating-nav-bar {
     opacity: 0.9;
 }
 
-.vercel-release-badge .vrb-label {
-    font-family: 'Unbounded', sans-serif;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.vercel-release-badge .vrb-sep {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: currentColor;
-    opacity: 0.5;
-    flex-shrink: 0;
-}
-
 .vercel-release-badge .vrb-version {
     color: var(--md-sys-color-primary);
     font-weight: 700;
