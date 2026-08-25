@@ -128,47 +128,68 @@
 
             const { FFmpeg } = window.FFmpegWASM;
             const { fetchFile, toBlobURL } = window.FFmpegUtil;
-            let ffmpeg = new FFmpeg();
+            const errMsg = (e) => {
+                if (!e) return 'unknown error';
+                if (e instanceof Error && e.message) return e.message;
+                if (typeof e === 'string') return e;
+                try { return JSON.stringify(e); } catch (_) { return String(e); }
+            };
 
+            let localBaseURL = window.location.origin + '/assets/ffmpeg';
+            try {
+                localBaseURL = new URL('assets/ffmpeg', window.location.href).href.replace(/\/$/, '');
+            } catch (_) {}
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
             const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-            const localBaseURL = window.location.origin + '/assets/ffmpeg';
-            const isIosDevice = /iPhone|iPad|iPod|VisionPro/i.test(navigator.userAgent) || 
-                               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-                               (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
-            const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice;
-            let loaded = false;
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || 
+                               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-            if (isMultiThread) {
-                try {
-                    const coreURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript');
-                    const wasmURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm');
-                    const workerURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript');
-                    await ffmpeg.load({ coreURL, wasmURL, workerURL });
-                    loaded = true;
-                } catch (err) {
-                    try {
-                        const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript');
-                        const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                        const workerURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript');
-                        await ffmpeg.load({ coreURL, wasmURL, workerURL });
-                        loaded = true;
-                    } catch (localErr) {
-                        ffmpeg = new FFmpeg();
+            const isMultiThread = !isMobileDevice && typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated === true;
+
+            const withTimeout = (promise, ms, label) => new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error(`${label || 'Operation'} timed out after ${Math.round(ms / 1000)}s`)), ms);
+                Promise.resolve(promise).then(
+                    (v) => { clearTimeout(timer); resolve(v); },
+                    (e) => {
+                        clearTimeout(timer);
+                        reject(e instanceof Error ? e : new Error(errMsg(e)));
                     }
+                );
+            });
+
+            const attempts = [];
+            if (isMultiThread) {
+                attempts.push({ label: 'local assets (MT)', base: localBaseURL, core: 'ffmpeg-core', mt: true, timeout: 15000 });
+                attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
+            }
+            attempts.push({ label: 'local assets (ST)', base: localBaseURL, core: 'ffmpeg-core-st', mt: false, timeout: 20000 });
+            attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
+
+            let ffmpeg = null;
+            for (const attempt of attempts) {
+                let inst = null;
+                try {
+                    const config = {
+                        coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), attempt.timeout, `${attempt.label} core download`),
+                        wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), attempt.timeout, `${attempt.label} wasm download`)
+                    };
+                    if (attempt.mt) {
+                        config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), attempt.timeout, `${attempt.label} worker download`);
+                    }
+                    inst = new FFmpeg();
+                    await withTimeout(inst.load(config), attempt.timeout, `${attempt.label} engine init`);
+                    ffmpeg = inst;
+                    break;
+                } catch (err) {
+                    if (inst) {
+                        try { inst.terminate(); } catch (_) {}
+                    }
+                    console.warn(`[Audio Extractor] ${attempt.label} failed:`, errMsg(err));
                 }
             }
 
-            if (!loaded) {
-                try {
-                    const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
-                    const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
-                    await ffmpeg.load({ coreURL, wasmURL });
-                } catch (err) {
-                    const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
-                    const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
-                    await ffmpeg.load({ coreURL, wasmURL });
-                }
+            if (!ffmpeg) {
+                throw new Error("Failed to initialize FFmpeg engine.");
             }
 
             ffmpeg.on('progress', ({ progress }) => {

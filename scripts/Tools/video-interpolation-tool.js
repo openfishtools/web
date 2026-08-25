@@ -201,17 +201,70 @@
 
     async function getFFmpeg(){
         if(ffmpegInstance) return ffmpegInstance;
-        const ready=await loadFFmpegLibraries();
-        if(!ready||!window.FFmpegWASM||!window.FFmpegUtil) throw new Error('FFmpeg failed');
-        const {FFmpeg}=window.FFmpegWASM; const {toBlobURL}=window.FFmpegUtil;
-        let ffmpeg=new FFmpeg();
-        ffmpeg.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
-        const cdnST='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        const local=window.location.origin+'/assets/ffmpeg';
-        let loaded=false;
-        try{ const coreURL=await toBlobURL(`${cdnST}/ffmpeg-core.js`,'text/javascript'); const wasmURL=await toBlobURL(`${cdnST}/ffmpeg-core.wasm`,'application/wasm'); await ffmpeg.load({coreURL,wasmURL}); loaded=true; }catch(e){ try{ const coreURL=await toBlobURL(`${local}/ffmpeg-core-st.js`,'text/javascript'); const wasmURL=await toBlobURL(`${local}/ffmpeg-core-st.wasm`,'application/wasm'); await ffmpeg.load({coreURL,wasmURL}); loaded=true; }catch(err){} }
-        if(!loaded) throw new Error('FFmpeg core failed');
-        ffmpegInstance=ffmpeg; return ffmpegInstance;
+        const ready = await loadFFmpegLibraries();
+        if(!ready || !window.FFmpegWASM || !window.FFmpegUtil) throw new Error('FFmpeg library failed to load');
+        const {FFmpeg} = window.FFmpegWASM; 
+        const {toBlobURL} = window.FFmpegUtil;
+        const errMsg = (e) => {
+            if (!e) return 'unknown error';
+            if (e instanceof Error && e.message) return e.message;
+            if (typeof e === 'string') return e;
+            try { return JSON.stringify(e); } catch (_) { return String(e); }
+        };
+
+        let localBaseURL = window.location.origin + '/assets/ffmpeg';
+        try {
+            localBaseURL = new URL('assets/ffmpeg', window.location.href).href.replace(/\/$/, '');
+        } catch (_) {}
+        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || 
+                           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        const isMultiThread = !isMobileDevice && typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated === true;
+
+        const withTimeout = (promise, ms, label) => new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`${label || 'Operation'} timed out after ${Math.round(ms / 1000)}s`)), ms);
+            Promise.resolve(promise).then(
+                (v) => { clearTimeout(timer); resolve(v); },
+                (e) => {
+                    clearTimeout(timer);
+                    reject(e instanceof Error ? e : new Error(errMsg(e)));
+                }
+            );
+        });
+
+        const attempts = [];
+        if (isMultiThread) {
+            attempts.push({ label: 'local assets (MT)', base: localBaseURL, core: 'ffmpeg-core', mt: true, timeout: 15000 });
+            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
+        }
+        attempts.push({ label: 'local assets (ST)', base: localBaseURL, core: 'ffmpeg-core-st', mt: false, timeout: 20000 });
+        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
+
+        for (const attempt of attempts) {
+            let inst = null;
+            try {
+                const config = {
+                    coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), attempt.timeout, `${attempt.label} core download`),
+                    wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), attempt.timeout, `${attempt.label} wasm download`)
+                };
+                if (attempt.mt) {
+                    config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), attempt.timeout, `${attempt.label} worker download`);
+                }
+                inst = new FFmpeg();
+                inst.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
+                await withTimeout(inst.load(config), attempt.timeout, `${attempt.label} engine init`);
+                ffmpegInstance = inst;
+                return ffmpegInstance;
+            } catch (err) {
+                if (inst) {
+                    try { inst.terminate(); } catch (_) {}
+                }
+                console.warn(`[Video Interp] ${attempt.label} failed:`, errMsg(err));
+            }
+        }
+        throw new Error('FFmpeg core failed to load');
     }
 
     async function seekVideoForward(vid,time){
@@ -352,52 +405,8 @@
         log(`[Interp] Source: ${file.name} (${(file.size/(1024*1024)).toFixed(2)} MB) | ${originalFps} FPS → ${originalFps*multiplier} FPS (${multiplier}x)`);
 
         try {
-            const ready = await loadFFmpegLibraries();
-            if (!ready || !window.FFmpegWASM || !window.FFmpegUtil) {
-                throw new Error("FFmpeg WASM engine could not be loaded.");
-            }
-
-            const { FFmpeg } = window.FFmpegWASM;
-            const { fetchFile, toBlobURL } = window.FFmpegUtil;
-            let ffmpeg = new FFmpeg();
-            try {
-                const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-                const localBaseURL = window.location.origin + '/assets/ffmpeg';
-                const isIosDevice = /iPhone|iPad|iPod|VisionPro/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
-                const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice;
-                let loaded = false;
-                if (isMultiThread) {
-                    try {
-                        const coreURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript');
-                        const wasmURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm');
-                        const workerURL = await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript');
-                        await ffmpeg.load({ coreURL, wasmURL, workerURL });
-                        loaded = true;
-                    } catch (e) {
-                        try {
-                            const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript');
-                            const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm');
-                            const workerURL = await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript');
-                            await ffmpeg.load({ coreURL, wasmURL, workerURL });
-                            loaded = true;
-                        } catch (err2) { ffmpeg = new FFmpeg(); }
-                    }
-                }
-                if (!loaded) {
-                    try {
-                        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-                        const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
-                        const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
-                        await ffmpeg.load({ coreURL, wasmURL });
-                    } catch (e) {
-                        const coreURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.js`, 'text/javascript');
-                        const wasmURL = await toBlobURL(`${localBaseURL}/ffmpeg-core-st.wasm`, 'application/wasm');
-                        await ffmpeg.load({ coreURL, wasmURL });
-                    }
-                }
-            } catch (loadErr) {
-                await ffmpeg.load();
-            }
+            const ffmpeg = await getFFmpeg();
+            const { fetchFile } = window.FFmpegUtil;
 
             const targetFps = originalFps * multiplier;
             log(`[RIFE] Starting RIFE AI interpolation ${originalFps}→${targetFps} FPS (${multiplier}x) ...`);

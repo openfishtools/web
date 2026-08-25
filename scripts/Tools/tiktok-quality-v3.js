@@ -734,9 +734,8 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         const isReady = await s.loadFFmpegLibraries();
         if (!isReady) throw new Error('Processing engine failed to load.');
 
-        const { FFmpeg }  = window.FFmpegWASM;
         const { toBlobURL } = window.FFmpegUtil;
-        let ffmpeg = new FFmpeg();
+        let ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
         let oomDetected = false;
 
         ffmpeg.on('progress', ({ progress }) => {
@@ -753,8 +752,6 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             const lc = message.toLowerCase();
             if (lc.includes('oom') || lc.includes('out of memory')) oomDetected = true;
         });
-
-        ffmpeg = await s.loadFFmpegHelper(ffmpeg, toBlobURL);
 
         s.log(`  [1/3] Loading video data...`);
         const preParseBuffer = s.currentFileBuffer ? s.currentFileBuffer.slice(0) : null;

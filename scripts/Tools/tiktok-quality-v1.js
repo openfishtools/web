@@ -19,9 +19,8 @@ window.processVideoV1 = async function processVideoV1(file) {
         if (!isReady) {
             throw new Error('FFmpeg library failed to load. Please check your network connection and reload the page.');
         }
-        const { FFmpeg } = window.FFmpegWASM;
         const { toBlobURL } = window.FFmpegUtil;
-        let ffmpeg = new FFmpeg();
+        let ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
         let oomDetected = false;
         let oomLine = '';
         ffmpeg.on('progress', ({ progress }) => {
@@ -47,7 +46,6 @@ window.processVideoV1 = async function processVideoV1(file) {
             }
             s.appendToLogsEl(message);
         });
-        ffmpeg = await s.loadFFmpegHelper(ffmpeg, toBlobURL);
         s.logSection('FFmpeg V1 — Writing Input');
         s.log(`  Buffer size : ${s.currentFileBuffer.byteLength} bytes`);
         await ffmpeg.writeFile('input.mp4', new Uint8Array(s.currentFileBuffer));
