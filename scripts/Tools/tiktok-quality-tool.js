@@ -51,6 +51,34 @@
         return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     }
 
+    function errMsg(e) {
+        if (!e) return 'unknown error';
+        if (e instanceof Error && e.message) return e.message;
+        if (typeof e === 'string') return e;
+        try { return JSON.stringify(e); } catch (_) { return String(e); }
+    }
+
+    // SharedArrayBuffer exists on Android Chrome even WITHOUT cross-origin
+    // isolation, but it cannot be shared with workers there -> the MT core
+    // hangs forever. Only trust the real crossOriginIsolated flag.
+    function supportsMultiThread() {
+        if (typeof SharedArrayBuffer === 'undefined' || typeof Atomics === 'undefined') return false;
+        if (isIosDevice()) return false;
+        return window.crossOriginIsolated === true;
+    }
+
+    // ffmpeg.load()/toBlobURL can hang silently on mobile — never leave the
+    // user stuck: every step gets a hard timeout so we can fall back.
+    function withTimeout(promise, ms, label) {
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`)), ms);
+            promise.then(
+                (v) => { clearTimeout(timer); resolve(v); },
+                (e) => { clearTimeout(timer); reject(e instanceof Error ? e : new Error(errMsg(e))); }
+            );
+        });
+    }
+
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
@@ -106,36 +134,44 @@
     async function loadFFmpegHelper(ffmpeg, toBlobURL) {
         const localBaseURL = window.location.origin + '/assets/ffmpeg';
         const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-        const isMultiThread = typeof SharedArrayBuffer !== 'undefined' && !isIosDevice();
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        const isMultiThread = supportsMultiThread();
+        const { FFmpeg } = window.FFmpegWASM;
+        const TIMEOUT_MS = 180000;
 
         logSection('FFmpeg Initialization');
         log(`  Multi-threading: ${isMultiThread ? 'Enabled' : 'Disabled'}`);
 
-        let loaded = false;
-        try {
-            log('  Loading FFmpeg Core WASM...');
-            await ffmpeg.load({
-                coreURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.js`, 'text/javascript'),
-                wasmURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                workerURL: await toBlobURL(`${localBaseURL}/ffmpeg-core.worker.js`, 'text/javascript')
-            });
-            loaded = true;
-            log('  FFmpeg Core WASM loaded from local assets.');
-        } catch (err) {
-            log(`  Local load fallback to CDN: ${err.message}`);
+        // Local ST core files use a "-st" suffix; CDN ST does not.
+        const attempts = [];
+        if (isMultiThread) {
+            attempts.push({ label: 'local assets (MT)', base: localBaseURL, core: 'ffmpeg-core', mt: true });
+            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
+        }
+        attempts.push({ label: 'local assets (ST)', base: localBaseURL, core: 'ffmpeg-core-st', mt: false });
+        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
+
+        for (const attempt of attempts) {
             try {
-                await ffmpeg.load({
-                    coreURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.wasm`, 'application/wasm'),
-                    workerURL: await toBlobURL(`${cdnBaseMT}/ffmpeg-core.worker.js`, 'text/javascript')
-                });
-                loaded = true;
-                log('  FFmpeg Core WASM loaded from CDN.');
-            } catch (cdnErr) {
-                throw new Error(`Failed to load FFmpeg WASM: ${cdnErr.message}`);
+                log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
+                const config = {
+                    coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), TIMEOUT_MS, `${attempt.label} core download`),
+                    wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), TIMEOUT_MS, `${attempt.label} wasm download`)
+                };
+                if (attempt.mt) {
+                    config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), TIMEOUT_MS, `${attempt.label} worker download`);
+                }
+                // A failed FFmpeg instance cannot be reused in 0.12.x —
+                // always load into a fresh instance, otherwise it hangs.
+                const instance = new FFmpeg();
+                await withTimeout(instance.load(config), TIMEOUT_MS, `${attempt.label} engine init`);
+                log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
+                return instance;
+            } catch (err) {
+                log(`  ${attempt.label} failed: ${errMsg(err)}`);
             }
         }
-        return loaded;
+        throw new Error('Failed to load FFmpeg WASM from all sources.');
     }
 
     function parseFpsFromMp4(buffer) {

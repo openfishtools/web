@@ -736,7 +736,7 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
 
         const { FFmpeg }  = window.FFmpegWASM;
         const { toBlobURL } = window.FFmpegUtil;
-        const ffmpeg = new FFmpeg();
+        let ffmpeg = new FFmpeg();
         let oomDetected = false;
 
         ffmpeg.on('progress', ({ progress }) => {
@@ -754,7 +754,7 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             if (lc.includes('oom') || lc.includes('out of memory')) oomDetected = true;
         });
 
-        await s.loadFFmpegHelper(ffmpeg, toBlobURL);
+        ffmpeg = await s.loadFFmpegHelper(ffmpeg, toBlobURL);
 
         s.log(`  [1/3] Loading video data...`);
         const preParseBuffer = s.currentFileBuffer ? s.currentFileBuffer.slice(0) : null;

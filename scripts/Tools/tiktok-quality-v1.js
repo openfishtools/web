@@ -21,7 +21,7 @@ window.processVideoV1 = async function processVideoV1(file) {
         }
         const { FFmpeg } = window.FFmpegWASM;
         const { toBlobURL } = window.FFmpegUtil;
-        const ffmpeg = new FFmpeg();
+        let ffmpeg = new FFmpeg();
         let oomDetected = false;
         let oomLine = '';
         ffmpeg.on('progress', ({ progress }) => {
@@ -47,7 +47,7 @@ window.processVideoV1 = async function processVideoV1(file) {
             }
             s.appendToLogsEl(message);
         });
-        await s.loadFFmpegHelper(ffmpeg, toBlobURL);
+        ffmpeg = await s.loadFFmpegHelper(ffmpeg, toBlobURL);
         s.logSection('FFmpeg V1 — Writing Input');
         s.log(`  Buffer size : ${s.currentFileBuffer.byteLength} bytes`);
         await ffmpeg.writeFile('input.mp4', new Uint8Array(s.currentFileBuffer));
