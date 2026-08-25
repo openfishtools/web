@@ -3125,12 +3125,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (contentScroller) {
                 contentScroller.scrollTo({ top: 0, behavior: 'smooth' });
             }
+            // Hanya face asal + tujuan yang ikut dirender selama rotasi
+            Object.values(views).forEach(el => {
+                if (el) el.classList.remove('face-entering');
+            });
+            targetViewEl.classList.add('face-entering');
             if (cubeBox) cubeBox.classList.add('cube-rotating');
             document.documentElement.style.setProperty('--cube-rot-y', `${targetAngle}deg`);
 
             cubeRotationTimer = setTimeout(() => {
                 Object.values(views).forEach(el => {
-                    if (el) el.classList.remove('active-face');
+                    if (el) {
+                        el.classList.remove('active-face');
+                        el.classList.remove('face-entering');
+                    }
                 });
                 targetViewEl.classList.add('active-face');
                 if (cubeBox) cubeBox.classList.remove('cube-rotating');
@@ -3148,7 +3156,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (targetViewEl) {
             document.documentElement.style.setProperty('--cube-rot-y', `${targetAngle}deg`);
             Object.values(views).forEach(el => {
-                if (el) el.classList.remove('active-face');
+                if (el) {
+                    el.classList.remove('active-face');
+                    el.classList.remove('face-entering');
+                }
             });
             targetViewEl.classList.add('active-face');
             if (cubeBox) cubeBox.classList.remove('cube-rotating');

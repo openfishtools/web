@@ -238,7 +238,6 @@ body {
     overflow: hidden;
     background-color: var(--md-sys-color-surface);
     transform-origin: center center;
-    will-change: transform, border-radius;
     transition: transform 0.40s var(--ease-spring-soft),
                 border-radius 0.40s var(--ease-spring-soft);
 }
@@ -248,6 +247,7 @@ body.res-modal-open .app-layout,
 body.tool-modal-open .app-layout,
 body.social-modal-open .app-layout,
 body.preset-modal-open .app-layout {
+    will-change: transform;
     transform: scale(0.95);
     border-radius: var(--radius-xl);
     pointer-events: none;
@@ -450,6 +450,10 @@ body.preset-modal-open .floating-nav-bar {
     -webkit-transform-style: preserve-3d;
     transition: transform 0.7s var(--ease-spring-soft);
     transform: translateZ(calc(var(--cube-depth) * -1)) rotateY(var(--cube-rot-y));
+}
+
+/* will-change hanya selama animasi rotasi (hemat layer GPU permanen) */
+.cube-3d-box.cube-rotating {
     will-change: transform;
 }
 
@@ -459,8 +463,9 @@ body.preset-modal-open .floating-nav-bar {
     left: 0;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform-style: preserve-3d;
-    -webkit-transform-style: preserve-3d;
+    /* Sengaja TANPA preserve-3d: konten 3D internal (signpost dll) di-flat
+       ke bidang face. Ini memutus kebocoran paint 3D antar face dan
+       visual tetap sama karena .signpost-overlay punya perspective sendiri. */
     position: absolute;
     opacity: 0;
     visibility: hidden;
@@ -480,7 +485,10 @@ body.preset-modal-open .floating-nav-bar {
     overflow: visible !important;
 }
 
-.cube-rotating .app-view.cube-face {
+/* Selama rotasi, hanya face asal (active-face) + face tujuan (face-entering)
+   yang dirender — bukan 6 face sekaligus. Hemat rasterisasi besar di mobile. */
+.cube-rotating .app-view.cube-face.active-face,
+.cube-rotating .app-view.cube-face.face-entering {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
