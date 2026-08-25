@@ -385,7 +385,6 @@
         id: 'tool-video-compressor',
         _id: 'tool-video-compressor',
         title: 'Video Compressor',
-        version: '2.1.1',
         desc: 'Compress video to custom quality and file sizes',
         icon: 'compress',
         category: 'Tools',

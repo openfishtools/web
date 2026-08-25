@@ -320,7 +320,6 @@
         desc: 'Beatmark Converter',
         descKey: 'tool_ae_am_desc',
         dropKey: 'tool_ae_am_drop',
-        version: '1.0.0',
         icon: 'music_note',
         category: 'Tools',
         features: [

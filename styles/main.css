@@ -117,12 +117,10 @@
 .light-theme .floating-nav-bar {
     background-color: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-outline-variant);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .light-theme .floating-nav-indicator {
     background-color: var(--md-sys-color-primary);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
 }
 
 .light-theme .floating-nav-item.active {
@@ -272,7 +270,6 @@ body.preset-modal-open .floating-nav-bar {
     background-color: var(--md-sys-color-surface-container-high);
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-full);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
     z-index: 44;
     justify-content: flex-start;
     align-items: center;
@@ -291,7 +288,6 @@ body.preset-modal-open .floating-nav-bar {
     transition: transform 0.42s var(--ease-spring-soft),
                 opacity 0.38s var(--ease-spring-soft),
                 background-color var(--transition-standard),
-                box-shadow var(--transition-standard);
     will-change: transform, opacity;
 }
 
@@ -300,7 +296,6 @@ body.preset-modal-open .floating-nav-bar {
 }
 
 .floating-nav-bar:hover {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.32);
     transform: translateX(-50%) translateY(-2px);
 }
 
@@ -314,7 +309,6 @@ body.preset-modal-open .floating-nav-bar {
     border-radius: var(--radius-full);
     z-index: 1;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .floating-nav-item {
@@ -718,7 +712,6 @@ body:not([data-view="home"]) .signpost-overlay {
     border-radius: var(--radius-full);
     background-color: var(--md-sys-color-surface-container);
     border: 1px solid var(--md-sys-color-outline-variant);
-    box-shadow: var(--elevation-1);
 }
 
 .mini-palette-btn {
@@ -756,7 +749,6 @@ body:not([data-view="home"]) .signpost-overlay {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--elevation-1);
     transition: background-color var(--transition-standard), transform var(--transition-bounce);
 }
 
@@ -811,7 +803,6 @@ body:not([data-view="home"]) .signpost-overlay {
         color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface-container-high)),
         color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-surface-container-high)) 48%,
         color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container-high)));
-    box-shadow: 0 0 0 1px var(--md-sys-color-outline-variant);
     -webkit-mask-image: linear-gradient(to bottom, #000 62%, rgba(0, 0, 0, 0.35) 84%, transparent 99%);
     mask-image: linear-gradient(to bottom, #000 62%, rgba(0, 0, 0, 0.35) 84%, transparent 99%);
     pointer-events: none;
@@ -940,7 +931,6 @@ body:not([data-view="home"]) .signpost-overlay {
     flex-shrink: 0;
     transform: translateZ(10px);
     transform-style: preserve-3d;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
 }
 
 .sign-arrow-year {
@@ -1236,7 +1226,6 @@ body:not([data-view="home"]) .signpost-overlay {
     align-items: center;
     justify-content: center;
     z-index: 3;
-    box-shadow: var(--elevation-1);
     transition: transform var(--transition-bounce), background-color var(--transition-standard);
 }
 
@@ -1255,7 +1244,6 @@ body:not([data-view="home"]) .signpost-overlay {
 .glow-marker {
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
-    box-shadow: 0 0 16px hsla(var(--primary-h), 50%, 50%, 0.4);
 }
 
 .zigzag-card {
@@ -1265,13 +1253,12 @@ body:not([data-view="home"]) .signpost-overlay {
     padding: 24px 28px;
     position: relative;
     z-index: 2;
-    transition: transform var(--transition-standard), box-shadow var(--transition-standard), background-color var(--transition-standard);
+    transition: transform var(--transition-standard), background-color var(--transition-standard);
 }
 
 .zigzag-card:hover {
     transform: translateY(-4px);
     background-color: var(--md-sys-color-surface-container-high);
-    box-shadow: var(--elevation-2);
 }
 
 .feature-zigzag-card {
@@ -1335,19 +1322,17 @@ body:not([data-view="home"]) .signpost-overlay {
     border: none;
     cursor: pointer;
     font-family: inherit;
-    transition: transform var(--transition-standard), box-shadow var(--transition-standard), background-color var(--transition-standard);
+    transition: transform var(--transition-standard), background-color var(--transition-standard);
 }
 
 .md-btn-primary {
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
-    box-shadow: var(--elevation-1);
 }
 
 .md-btn-primary:hover {
     background-color: hsl(var(--primary-h), 55%, 32%);
     transform: translateY(-2px);
-    box-shadow: var(--elevation-2);
 }
 
 .dark-theme .md-btn-primary:hover {
@@ -1358,14 +1343,12 @@ body:not([data-view="home"]) .signpost-overlay {
     background-color: var(--md-sys-color-surface-container-high);
     color: var(--md-sys-color-on-surface);
     border: 1px solid var(--md-sys-color-outline-variant);
-    box-shadow: var(--elevation-1);
 }
 
 .md-btn-tonal:hover {
     background-color: var(--md-sys-color-surface-container-highest);
     border-color: var(--md-sys-color-primary);
     transform: translateY(-2px);
-    box-shadow: var(--elevation-2);
 }
 
 .social-section,
@@ -1408,13 +1391,11 @@ body:not([data-view="home"]) .signpost-overlay {
     border-radius: var(--radius-full);
     text-decoration: none;
     cursor: pointer;
-    box-shadow: var(--elevation-1);
-    transition: transform var(--transition-standard), box-shadow var(--transition-standard), background-color var(--transition-standard), border-color var(--transition-standard);
+    transition: transform var(--transition-standard), background-color var(--transition-standard), border-color var(--transition-standard);
 }
 
 .social-btn:hover {
     transform: translateY(-2px);
-    box-shadow: var(--elevation-2);
     background-color: var(--md-sys-color-surface-container-highest);
     border-color: var(--md-sys-color-primary);
 }
@@ -1499,13 +1480,12 @@ body:not([data-view="home"]) .signpost-overlay {
     border-radius: var(--radius-full);
     margin-top: 20px;
     margin-bottom: 16px;
-    transition: border-color var(--transition-standard), box-shadow var(--transition-standard), background var(--transition-standard);
+    transition: border-color var(--transition-standard), background var(--transition-standard);
 }
 
 .resource-search-bar:focus-within {
     border-color: var(--md-sys-color-primary);
     background: var(--md-sys-color-surface-container-high);
-    box-shadow: 0 0 0 2px rgba(168, 230, 207, 0.2);
 }
 
 .resource-search-bar .material-symbols-rounded {
@@ -1587,19 +1567,16 @@ body:not([data-view="home"]) .signpost-overlay {
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-l);
     transition: transform 0.26s var(--ease-spring-soft), 
-                box-shadow 0.26s var(--ease-spring-soft), 
                 border-color 0.2s ease, 
                 background-color 0.2s ease;
     cursor: pointer !important;
     position: relative;
     user-select: none;
-    box-shadow: var(--elevation-0);
 }
 
 .resource-card:hover {
     background-color: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .resource-card:active {
@@ -1748,13 +1725,12 @@ body:not([data-view="home"]) .signpost-overlay {
     border-radius: var(--radius-full);
     margin-top: 20px;
     margin-bottom: 16px;
-    transition: border-color var(--transition-standard), box-shadow var(--transition-standard), background var(--transition-standard);
+    transition: border-color var(--transition-standard), background var(--transition-standard);
 }
 
 .tools-search-bar:focus-within {
     border-color: var(--md-sys-color-primary);
     background: var(--md-sys-color-surface-container-high);
-    box-shadow: 0 0 0 2px rgba(168, 230, 207, 0.2);
 }
 
 .tools-search-bar .material-symbols-rounded {
@@ -1794,19 +1770,16 @@ body:not([data-view="home"]) .signpost-overlay {
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-l);
     transition: transform 0.26s var(--ease-spring-soft), 
-                box-shadow 0.26s var(--ease-spring-soft), 
                 border-color 0.2s ease, 
                 background-color 0.2s ease;
     cursor: pointer;
     position: relative;
     user-select: none;
-    box-shadow: var(--elevation-0);
 }
 
 .tool-card:hover {
     background-color: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .tool-card:active {
@@ -1881,7 +1854,6 @@ body:not([data-view="home"]) .signpost-overlay {
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
     z-index: 5;
     pointer-events: none;
 }
@@ -1961,10 +1933,8 @@ body:not([data-view="home"]) .signpost-overlay {
 
 @keyframes toolPulse {
     0%, 100% {
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
     }
     50% {
-        box-shadow: 0 0 0 5px rgba(76, 175, 80, 0);
     }
 }
 
@@ -1986,15 +1956,13 @@ body:not([data-view="home"]) .signpost-overlay {
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-l);
     box-sizing: border-box;
-    will-change: transform, background-color, border-color, box-shadow;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+    will-change: transform, background-color, border-color;
     transform-origin: top left;
 }
 
 .res-portal-hero-card.in-modal {
     background-color: transparent !important;
     border-color: transparent !important;
-    box-shadow: none !important;
     padding: 0 !important;
 }
 
@@ -2249,8 +2217,7 @@ body:not([data-view="home"]) .signpost-overlay {
     cursor: pointer;
     transition: transform 0.25s var(--ease-spring-soft),
                 background-color 0.25s var(--ease-spring-soft),
-                border-color 0.25s var(--ease-spring-soft),
-                box-shadow 0.25s var(--ease-spring-soft);
+                border-color 0.25s var(--ease-spring-soft);
 }
 
 .os-chip-btn .os-icon-svg {
@@ -2264,7 +2231,6 @@ body:not([data-view="home"]) .signpost-overlay {
     border-color: var(--md-sys-color-primary) !important;
     background: var(--md-sys-color-surface-container-highest) !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
 .os-chip-btn:hover .os-icon-svg {
@@ -2402,13 +2368,11 @@ body:not([data-view="home"]) .signpost-overlay {
     gap: 10px;
     font-family: inherit;
     transition: transform 0.2s var(--ease-spring-soft), 
-                filter 0.2s ease, 
-                box-shadow 0.2s ease;
+                filter 0.2s ease;
 }
 
 .res-modal-download-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     filter: brightness(1.08);
 }
 
@@ -2752,7 +2716,6 @@ body:not([data-view="home"]) .signpost-overlay {
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
     font-weight: 700;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .tool-opt-info-box {
@@ -2818,13 +2781,11 @@ body:not([data-view="home"]) .signpost-overlay {
     justify-content: center;
     gap: 8px;
     cursor: pointer;
-    transition: transform var(--transition-standard), box-shadow var(--transition-standard), background var(--transition-standard);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: transform var(--transition-standard), background var(--transition-standard);
 }
 
 .tool-process-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .tool-process-btn:active:not(:disabled) {
@@ -2836,7 +2797,6 @@ body:not([data-view="home"]) .signpost-overlay {
     color: var(--md-sys-color-on-surface-variant);
     opacity: 0.6;
     cursor: not-allowed;
-    box-shadow: none;
 }
 
 .tool-download-btn {
@@ -2854,12 +2814,11 @@ body:not([data-view="home"]) .signpost-overlay {
     justify-content: center;
     gap: 8px;
     cursor: pointer;
-    transition: transform var(--transition-standard), box-shadow var(--transition-standard), background var(--transition-standard);
+    transition: transform var(--transition-standard), background var(--transition-standard);
 }
 
 .tool-download-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .tool-download-btn:active {
@@ -3104,7 +3063,6 @@ body:not([data-view="home"]) .signpost-overlay {
     box-sizing: border-box;
     transform-origin: top left;
     will-change: transform, background-color, color;
-    box-shadow: none;
     transition: background-color 0.36s var(--ease-spring-soft),
                 color 0.36s var(--ease-spring-soft);
 }
@@ -3112,7 +3070,6 @@ body:not([data-view="home"]) .signpost-overlay {
 .legal-modal-backdrop {
     position: fixed;
     background-color: var(--md-sys-color-surface-container);
-    box-shadow: none;
     z-index: 41;
     display: flex;
     flex-direction: column;
@@ -3258,7 +3215,6 @@ body:not([data-view="home"]) .signpost-overlay {
     background: transparent;
     border: none;
     padding: 0;
-    box-shadow: none;
 }
 
 .legal-article-card h2,
@@ -3323,7 +3279,6 @@ body:not([data-view="home"]) .signpost-overlay {
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.35;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.1);
     max-width: calc(100vw - 24px);
     opacity: 0;
     transform: translateY(-14px) scale(0.96);
@@ -3373,7 +3328,6 @@ body:not([data-view="home"]) .signpost-overlay {
 .light-theme .toast {
     background-color: var(--md-sys-color-surface-container-high);
     border-color: var(--md-sys-color-outline-variant);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.07);
 }@media (max-width: 768px){
     .hero-fullscreen-section {
         padding-top: 28px;
@@ -3611,8 +3565,7 @@ body:not([data-view="home"]) .signpost-overlay {
     overflow: hidden;
     text-decoration: none;
     color: inherit;
-    transition: transform var(--transition-standard), border-color var(--transition-standard), box-shadow var(--transition-standard);
-    box-shadow: var(--elevation-0);
+    transition: transform var(--transition-standard), border-color var(--transition-standard);
     animation: tiktokCardPopIn 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
@@ -3630,7 +3583,6 @@ body:not([data-view="home"]) .signpost-overlay {
 .tiktok-card:hover {
     transform: translateY(-4px);
     border-color: var(--md-sys-color-primary);
-    box-shadow: var(--elevation-2);
 }
 
 .tiktok-card-thumb {
@@ -3829,7 +3781,6 @@ body:not([data-view="home"]) .signpost-overlay {
     visibility: hidden;
     pointer-events: none;
     z-index: 40;
-    box-shadow: none;
     transition: opacity 0.38s var(--ease-spring-soft);
 }
 
@@ -3850,7 +3801,6 @@ body:not([data-view="home"]) .signpost-overlay {
     visibility: hidden;
     pointer-events: none;
     will-change: left, top, width, height, border-radius;
-    box-shadow: none !important;
     cursor: pointer;
 }
 
@@ -3964,7 +3914,6 @@ body:not([data-view="home"]) .signpost-overlay {
     background: var(--md-sys-color-primary);
     transition: transform 0.28s var(--ease-spring-soft);
     pointer-events: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     transform: translateX(0%);
 }
 
@@ -4201,7 +4150,7 @@ body.dark .tiktok-desc-warning-row {
     background: var(--md-sys-color-surface-container-high);
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-m);
-    transition: border-color var(--transition-standard), box-shadow var(--transition-standard), background var(--transition-standard);
+    transition: border-color var(--transition-standard), background var(--transition-standard);
     box-sizing: border-box;
     width: 100%;
 }
@@ -4209,7 +4158,6 @@ body.dark .tiktok-desc-warning-row {
 .tool-input-wrapper:focus-within {
     border-color: var(--md-sys-color-primary);
     background: var(--md-sys-color-surface-container-highest);
-    box-shadow: 0 0 0 2px rgba(168, 230, 207, 0.2);
 }
 
 .tool-input-icon {
@@ -4943,7 +4891,7 @@ body.dark .tiktok-desc-warning-row {
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    transition: background-color var(--transition-standard), color var(--transition-standard), border-color var(--transition-standard), transform var(--transition-standard), box-shadow var(--transition-standard);
+    transition: background-color var(--transition-standard), color var(--transition-standard), border-color var(--transition-standard), transform var(--transition-standard);
 }
 
 .upscale-preset-btn:hover {
@@ -4987,7 +4935,6 @@ body.dark .tiktok-desc-warning-row {
     background: var(--md-sys-color-primary);
     transition: transform 0.28s var(--ease-spring-soft);
     pointer-events: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     transform: translateX(0%);
 }
 
@@ -5408,7 +5355,6 @@ body.dark .tiktok-desc-warning-row {
     color: var(--md-sys-color-primary);
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5727,13 +5673,12 @@ body.dark .tiktok-desc-warning-row {
     background-color: var(--md-sys-color-surface-container);
     border: 1px solid var(--md-sys-color-outline-variant);
     cursor: pointer;
-    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .preset-card:hover {
     transform: translateY(-4px);
     border-color: var(--md-sys-color-primary);
-    box-shadow: var(--elevation-2);
 }
 
 .preset-thumb {
@@ -6135,7 +6080,6 @@ body.preset-popup-active .preset-modal-card.expanded {
     z-index: 43;
     background: var(--md-sys-color-surface-container-high);
     border: 1px solid var(--md-sys-color-outline-variant);
-    box-shadow: none;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -6464,13 +6408,10 @@ body.preset-popup-active .preset-modal-card.expanded {
 
 @keyframes resource-deeplink-pulse {
     0% {
-        box-shadow: 0 0 0 0 var(--md-sys-color-primary);
     }
     70% {
-        box-shadow: 0 0 0 12px transparent;
     }
     100% {
-        box-shadow: 0 0 0 0 transparent;
     }
 }
 

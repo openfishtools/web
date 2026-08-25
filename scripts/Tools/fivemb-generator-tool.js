@@ -470,7 +470,6 @@
         desc: 'Alight Motion',
         descKey: 'tool_fivemb_desc',
         dropKey: 'tool_fivemb_drop',
-        version: '1.0.0',
         icon: 'folder_zip',
         category: 'Tools',
         features: [

@@ -1334,7 +1334,6 @@
         desc: 'AI Matting',
         descKey: 'tool_rembg_desc',
         dropKey: 'tool_rembg_drop',
-        version: '1.5.0',
         icon: 'person_remove',
         category: 'Tools',
         hideDropOnUpload: true,

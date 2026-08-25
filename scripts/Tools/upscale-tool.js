@@ -1868,7 +1868,6 @@
         desc: 'Media Upscaler',
         descKey: 'tool_upscale_desc',
         dropKey: 'tool_upscale_drop',
-        version: '1.3.0',
         icon: 'auto_awesome',
         category: 'Tools',
         features: [

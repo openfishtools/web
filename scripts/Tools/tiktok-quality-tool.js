@@ -559,7 +559,6 @@
         id: 'tool-tiktok-patcher',
         _id: 'tool-tiktok-patcher',
         title: 'Quality Method',
-        version: '3.4.2',
         desc: 'TikTok HQ Upload',
         icon: 'high_quality',
         category: 'TikTok',

@@ -512,7 +512,6 @@
         desc: 'FPS Upscaler',
         descKey: 'tool_interp_desc',
         dropKey: 'tool_interp_drop',
-        version: '1.0.3',
         icon: 'motion_photos_on',
         category: 'Tools',
         features: [

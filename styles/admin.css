@@ -205,7 +205,6 @@ body {
     padding: 40px;
     border-radius: var(--radius-xl);
     border: 1px solid var(--md-sys-color-outline-variant);
-    box-shadow: var(--elevation-3);
 }
 
 .login-icon {
@@ -259,13 +258,11 @@ select {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--elevation-3);
     transition: var(--transition-standard);
     border: none;
 }
 
 .fab:hover {
-    box-shadow: var(--elevation-4);
     filter: brightness(1.1);
 }
 
@@ -460,7 +457,6 @@ tbody tr:hover {
 .input-field select:focus,
 .modal-textarea:focus {
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
     background-color: var(--md-sys-color-surface-container-high);
     outline: none;
 }
@@ -542,7 +538,6 @@ tbody tr:hover {
 
 .status-dot.online {
     background-color: #4caf50;
-    box-shadow: 0 0 8px #4caf50;
 }
 
 .status-dot.offline {
@@ -1003,7 +998,6 @@ tr.table-row-hidden {
     background-color: var(--md-sys-color-surface-container-high);
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--radius-full);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     display: flex;

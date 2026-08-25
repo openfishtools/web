@@ -204,7 +204,6 @@
         _id: 'tool-tiktok-downloader',
         title: 'TikTok Downloader',
         desc: 'Powered By TikWm - Download HD Video',
-        version: 'v1.0.2',
         icon: 'download',
         category: ['TikTok', 'Downloader', 'Tools'],
         inputType: 'url',

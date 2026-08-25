@@ -269,7 +269,6 @@
         desc: 'Video to Audio',
         descKey: 'tool_audio_extractor_desc',
         dropKey: 'tool_audio_extractor_drop',
-        version: '1.0.0',
         icon: 'audiotrack',
         category: 'Tools',
         features: [

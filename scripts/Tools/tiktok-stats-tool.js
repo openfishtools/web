@@ -326,7 +326,6 @@
         _id: 'tool-tiktok-stats',
         title: 'TikTok Statistics',
         desc: 'Metadata & Stream Analyser',
-        version: 'v1.1.4',
         icon: 'query_stats',
         category: ['TikTok', 'Analytics', 'Tools'],
         inputType: 'url',

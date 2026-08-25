@@ -429,7 +429,6 @@
         desc: 'AM Zip Exporter',
         descKey: 'tool_seq_desc',
         dropKey: 'tool_seq_drop',
-        version: '1.1.0',
         icon: 'video_file',
         category: 'Tools',
         features: [
