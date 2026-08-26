@@ -226,6 +226,8 @@
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
+            "patcher_fixaudio_label": "Perbaiki audio tak teridentifikasi",
+            "patcher_fixaudio_title": "Menambahkan track audio kedua yang bersih agar TikTok tidak salah membaca suara.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -698,6 +700,8 @@
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
+            "patcher_fixaudio_label": "Fix unidentified audio",
+            "patcher_fixaudio_title": "Adds a second clean audio track so TikTok does not misidentify the sound.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">

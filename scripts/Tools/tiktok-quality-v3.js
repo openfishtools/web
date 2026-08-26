@@ -274,9 +274,59 @@ function _v3_rebuildBox(box, replacements) {
     }
     return _v3_makeBox(box.type, _v3_concatBytes(parts));
 }
+function _v3_getTrackId(trak) {
+    const tkhd = _v3_findChild(trak, 'tkhd');
+    if (!tkhd) return 0;
+    const d      = _v3_boxBytes(tkhd);
+    const isV1   = d[8] === 1;
+    const idOff  = 8 + (isV1 ? 20 : 12);
+    return _v3_readU32BE(d, idOff);
+}
+function _v3_withTrackId(trak, newId) {
+    const tkhd = _v3_findChild(trak, 'tkhd');
+    if (!tkhd) return null;
+    const d     = new Uint8Array(_v3_boxBytes(tkhd));
+    const isV1  = d[8] === 1;
+    const idOff = 8 + (isV1 ? 20 : 12);
+    _v3_writeU32BE(d, idOff, newId);
+    return d;
+}
 
-function _v3_patchMp4(inputData, _logFn) {
+// "Fix unidentified audio": keep the original audio track CLEAN (no synthetic
+// entries) and attach a duplicated audio track that carries the fake-sample
+// padding instead. Players that choke on the padded stream simply use the
+// untouched first track.
+function _v3_buildFixedAudioClone(audioTrak, ctx) {
+    const cloneReplacements = new Map();
+
+    const aEdts = _v3_findChild(audioTrak, 'edts');
+    if (aEdts) cloneReplacements.set(aEdts, null);
+
+    const aUdta = _v3_findChild(audioTrak, 'udta');
+    if (aUdta) cloneReplacements.set(aUdta, null);
+
+    const newTkhdData = _v3_withTrackId(audioTrak, ctx.newTrackId);
+    if (newTkhdData) cloneReplacements.set(_v3_findChild(audioTrak, 'tkhd'), newTkhdData);
+
+    const fakeChunkOffset = ctx.newMdatContentStart + ctx.origMdatPayload.byteLength;
+    const newAOffsets = [...ctx.aRelOffsets.map(off => off + ctx.newMdatContentStart), fakeChunkOffset];
+    cloneReplacements.set(ctx.aStcoBox, _v3_buildStco(newAOffsets));
+
+    const newASizes = [...ctx.aOrigSizes, ...new Array(ctx.fakeCount).fill(FAKE_SAMPLE_SIZE)];
+    cloneReplacements.set(ctx.aStszBox, _v3_buildStsz(newASizes));
+
+    const newAStsc = [...ctx.aOrigStsc, [ctx.aRelOffsets.length + 1, ctx.fakeCount, 1]];
+    cloneReplacements.set(ctx.aStscBox, _v3_buildStsc(newAStsc));
+
+    const newAStts = [...ctx.aOrigStts, [ctx.fakeCount, 1]];
+    cloneReplacements.set(ctx.aSttsBox, _v3_buildStts(newAStts));
+
+    return _v3_rebuildBox(audioTrak, cloneReplacements);
+}
+
+function _v3_patchMp4(inputData, _logFn, opts) {
     const _log  = _logFn || (() => {});
+    const _fixAudio = !!(opts && opts.fixAudio);
     const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
     const data   = new Uint8Array(srcArr.byteLength);
     data.set(srcArr);
@@ -347,6 +397,17 @@ function _v3_patchMp4(inputData, _logFn) {
         fakePayload.set(FAKE_SAMPLE_BYTES, i * FAKE_SAMPLE_SIZE);
     }
 
+    // Fix-audio mode: reserve a stub child so the cloned (padded) audio track
+    // is appended right after the existing tracks on every moov rebuild.
+    let fixTrakStub = null;
+    let fixNewTrackId = 0;
+    if (audioTrak && _fixAudio) {
+        fixNewTrackId = traks.reduce((max, tr) => Math.max(max, _v3_getTrackId(tr)), 0) + 1;
+        fixTrakStub = { type: 'trak' };
+        moov.children.push(fixTrakStub);
+        _log(`Fix unidentified audio: ON — original audio kept clean, padded clone added as track #${fixNewTrackId}.`);
+    }
+
     let moovHeaderLen = moov.size;
     let finalOutput   = null;
     let patchResultStats = null;
@@ -355,13 +416,24 @@ function _v3_patchMp4(inputData, _logFn) {
         const newMdatContentStart = ftypBytes.byteLength + moovHeaderLen + 8;
         const replacements = new Map();
 
+        if (fixTrakStub) {
+            replacements.set(fixTrakStub, _v3_buildFixedAudioClone(audioTrak, {
+                newTrackId: fixNewTrackId,
+                newMdatContentStart,
+                origMdatPayload,
+                aRelOffsets, aOrigSizes, aOrigStsc, aOrigStts,
+                aStcoBox, aStszBox, aStscBox, aSttsBox,
+                fakeCount
+            }));
+        }
+
         const vEdts = _v3_findChild(videoTrak, 'edts');
         if (vEdts) replacements.set(vEdts, null);
 
         const newVOffsets = vRelOffsets.map(off => off + newMdatContentStart);
         replacements.set(vStcoBox, _v3_buildStco(newVOffsets));
 
-        if (audioTrak) {
+        if (audioTrak && !_fixAudio) {
             const aEdts = _v3_findChild(audioTrak, 'edts');
             if (aEdts) replacements.set(aEdts, null);
 
@@ -380,6 +452,26 @@ function _v3_patchMp4(inputData, _logFn) {
 
             const newAStts = [...aOrigStts, [fakeCount, 1]];
             replacements.set(aSttsBox, _v3_buildStts(newAStts));
+        } else if (audioTrak) {
+            // Fix-audio mode: original track stays clean, only re-point its
+            // chunk offsets to the relocated mdat.
+            const aEdts = _v3_findChild(audioTrak, 'edts');
+            if (aEdts) replacements.set(aEdts, null);
+
+            const aUdta = _v3_findChild(audioTrak, 'udta');
+            if (aUdta) replacements.set(aUdta, null);
+
+            replacements.set(aStcoBox, _v3_buildStco(aRelOffsets.map(off => off + newMdatContentStart)));
+        }
+
+        if (fixTrakStub) {
+            const mvhd = _v3_findChild(moov, 'mvhd');
+            if (mvhd) {
+                // mvhd ends with next_track_ID — keep it valid for the clone.
+                const mvhdData = new Uint8Array(_v3_boxBytes(mvhd));
+                _v3_writeU32BE(mvhdData, mvhdData.length - 4, fixNewTrackId + 1);
+                replacements.set(mvhd, mvhdData);
+            }
         }
 
         _v3_addCommentMetadata(moov, replacements);
@@ -400,7 +492,8 @@ function _v3_patchMp4(inputData, _logFn) {
                 duration:     (vStsz.length) * (vStts[0] ? vStts[0][1] : 1000),
                 chunkCount:   vRelOffsets.length,
                 inputFps,
-                patchedFps:   inputFps
+                patchedFps:   inputFps,
+                audioFix:     !!fixTrakStub
             };
         }
     }
@@ -409,8 +502,8 @@ function _v3_patchMp4(inputData, _logFn) {
     return patchResultStats;
 }
 
-function _v3_patchMp4HDMethod(inputBuffer) {
-    const result = _v3_patchMp4(inputBuffer);
+function _v3_patchMp4HDMethod(inputBuffer, opts) {
+    const result = _v3_patchMp4(inputBuffer, null, opts);
     return result.output;
 }
 window.patchMp4HDMethod = _v3_patchMp4HDMethod;
@@ -665,8 +758,9 @@ window.processVideoFPS = async function processVideoFPS(file) {
     }
 };
 
-window.processVideoV3 = async function processVideoV3(file, mode) {
+window.processVideoV3 = async function processVideoV3(file, mode, fixAudio) {
     if (mode === undefined) mode = 'off';
+    fixAudio = !!fixAudio;
     const s = window._tktk;
     s.isProcessing = true;
 
@@ -687,12 +781,13 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
     s.logSection('BINARY PROCESSING');
     s.log(`  File   : ${safeName}`);
     s.log(`  Mode   : ${modeLabel}`);
+    s.log(`  Fix Aud: ${fixAudio ? 'ON (dual audio track)' : 'OFF'}`);
     s.logEnd();
 
     if (isOff) {
         s.log(`  [1/2] Executing Pure JS Patch...`);
         try {
-            const patchedBytes = _v3_patchMp4HDMethod(s.currentFileBuffer);
+            const patchedBytes = _v3_patchMp4HDMethod(s.currentFileBuffer, { fixAudio });
             s.log(`  [2/2] Finalizing output package...`);
             const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
             const url      = URL.createObjectURL(blob);
@@ -775,9 +870,17 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
         s.log(`  FFmpeg filters: ${procOpts.vfString}`);
 
+        // High-motion sources (esp. 60fps) looked muddy because "ultrafast"
+        // skips nearly all x264 refinement. A slower preset produces sharper
+        // motion at the SAME CRF (often smaller), while higher maxrate only
+        // lifts the ceiling during movement spikes — average size stays put.
+        const isMobileDev = (typeof s.isMobileDevice === 'function') ? s.isMobileDevice() : true;
+        const x264Preset  = (isMobileDev || fileMB > 50) ? 'superfast' : 'veryfast';
+
         const crfValue = (mode === '720p') ? '20' : '19';
-        const maxRate  = (mode === '720p') ? '10M' : '18M';
-        const bufSize  = (mode === '720p') ? '16M' : '28M';
+        const maxRate  = (mode === '720p') ? '14M' : '24M';
+        const bufSize  = (mode === '720p') ? '21M' : '38M';
+        const gopSize  = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
 
         const command = [
             '-y', '-i', 'input.mp4',
@@ -790,16 +893,18 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             '-vf', procOpts.vfString,
             '-vsync', 'cfr',
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', x264Preset,
             '-crf', crfValue,
             '-maxrate', maxRate,
             '-bufsize', bufSize,
+            '-g', gopSize,
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
             '-b:a', '192k',
             '-movflags', '+faststart',
             'output.mp4'
         ];
+        s.log(`  Encoder: libx264 ${x264Preset} crf=${crfValue} maxrate=${maxRate} gop=${gopSize}`);
 
         try {
             await ffmpeg.exec(command);
@@ -832,7 +937,7 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         const rawOutput = new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
         let finalResultBytes;
         try {
-            finalResultBytes = _v3_patchMp4HDMethod(rawOutput);
+            finalResultBytes = _v3_patchMp4HDMethod(rawOutput, { fixAudio });
         } catch (pErr) {
             s.log(`  [Notice] MP4 patch failed, using compressed output as-is: ${pErr.message}`);
             finalResultBytes = rawOutput;

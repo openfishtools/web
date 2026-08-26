@@ -14,6 +14,7 @@
     let isProcessing = false;
     let currentVersion = 'v3';
     let compressMode = 'off';
+    let fixAudio = false;
 
     const MAX_FILE_MB = 1500;
 
@@ -389,6 +390,14 @@
                     <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
                     <div class="tiktok-switch-option ${compressMode === '1080p' ? 'active' : ''}" data-mode="1080p">1080P</div>
                 </div>
+
+                <label class="tiktok-fixaudio-row" for="tiktok-fixaudio-toggle" title="${t('patcher_fixaudio_title')}">
+                    <span class="fivemb-checkbox-wrapper">
+                        <input type="checkbox" id="tiktok-fixaudio-toggle" ${fixAudio ? 'checked' : ''}>
+                        <span class="fivemb-checkbox-custom"></span>
+                    </span>
+                    <span class="tiktok-switcher-label">${t('patcher_fixaudio_label')}</span>
+                </label>
             </div>
 
             <div class="tiktok-preset-desc" id="tiktok-info-desc"></div>
@@ -435,6 +444,13 @@
                     cSwitch.setAttribute('data-selected', compressMode);
                     updateDesc();
                 });
+            });
+        }
+
+        const faToggle = document.getElementById('tiktok-fixaudio-toggle');
+        if (faToggle) {
+            faToggle.addEventListener('change', () => {
+                fixAudio = faToggle.checked;
             });
         }
 
@@ -498,6 +514,7 @@
         // Compress mode only applies to the Binary (V3) method.
         if (currentVersion === 'v3') {
             log(`  Compress : ${compressMode.toUpperCase()}`);
+            log(`  Fix Audio: ${fixAudio ? 'ON' : 'OFF'}`);
         }
         logEnd();
 
@@ -526,7 +543,7 @@
                 }
             } else {
                 if (typeof window.processVideoV3 === 'function') {
-                    await window.processVideoV3(file, compressMode);
+                    await window.processVideoV3(file, compressMode, fixAudio);
                 } else {
                     throw new Error('V3 Binary module is not loaded.');
                 }
@@ -601,6 +618,8 @@
         get currentFileBuffer() { return currentFileBuffer; },
         set currentFileBuffer(v) { currentFileBuffer = v; },
         get compressMode() { return compressMode; },
+        get fixAudio() { return fixAudio; },
+        set fixAudio(v) { fixAudio = !!v; },
         get selectedFile() { return selectedFile; },
         set selectedFile(v) { selectedFile = v; },
         get statusText() { return document.getElementById('tool-progress-status') || { innerHTML: '' }; },
