@@ -1437,7 +1437,7 @@
 
             if (isTransparent) {
                 outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg.mov`;
-                log(`[RemBG] Encoding transparent video to QuickTime MOV (RGBA / PNG)...`);
+                log(`[RemBG] Encoding transparent video to QuickTime MOV (qtrle/argb)...`);
                 setProgress(88, 'Encoding MOV with alpha channel...');
 
                 await ffmpeg.exec([
@@ -1447,8 +1447,8 @@
                     '-i', inName,
                     '-map', '0:v',
                     '-map', '1:a?',
-                    '-c:v', 'png',
-                    '-pix_fmt', 'rgba',
+                    '-c:v', 'qtrle',
+                    '-pix_fmt', 'argb',
                     '-c:a', 'copy',
                     '-shortest',
                     'matting.mov'
