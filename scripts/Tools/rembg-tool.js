@@ -539,11 +539,17 @@
                 labelRight.setAttribute('data-i18n', 'tool_rembg_label_result');
             }
 
+            log('[RemBG] Enhanced video src set, waiting for metadata...');
+            ev.addEventListener('loadedmetadata', () => {
+                log(`[RemBG] Enhanced video loaded: ${ev.videoWidth}x${ev.videoHeight} @ ${ev.duration}s`);
+            }, { once: true });
+
             if (origVid) {
                 bindSyncVideos(origVid, ev);
                 const startSynced = () => {
                     try { ev.currentTime = origVid.currentTime || 0; } catch (e) {}
                     ev.play().catch(() => {});
+                    log('[RemBG] Enhanced video playback started');
                 };
                 if (ev.readyState >= 1) startSynced();
                 else ev.addEventListener('loadedmetadata', startSynced, { once: true });
@@ -1405,10 +1411,17 @@
             const enhancedVideo = document.getElementById('rembg-enhanced-video');
             const overlayEl = document.getElementById('rembg-unprocessed-overlay');
             const labelRight = document.getElementById('rembg-slider-label-right');
+            const origVid = document.getElementById('rembg-preview-video');
+
+            previewActive = true;
+            updateSliderVisuals();
 
             for (let i = 0; i < totalFrames; i++) {
                 const tSec = Math.min(duration, i / fps);
                 await ensureVideoSeek(procVid, tSec);
+                if (origVid) {
+                    try { origVid.currentTime = tSec; } catch (_) {}
+                }
                 fctx.clearRect(0, 0, W, H);
                 fctx.drawImage(procVid, 0, 0, W, H);
 
@@ -1454,7 +1467,7 @@
 
             if (isTransparent) {
                 outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg.mov`;
-                log(`[RemBG] Encoding transparent video to QuickTime MOV (qtrle/argb)...`);
+                log(`[RemBG] Encoding transparent video to QuickTime MOV (PNG/RGBA)...`);
                 setProgress(88, 'Encoding MOV with alpha channel...');
 
                 await ffmpeg.exec([
@@ -1464,8 +1477,8 @@
                     '-i', inName,
                     '-map', '0:v',
                     '-map', '1:a?',
-                    '-c:v', 'qtrle',
-                    '-pix_fmt', 'argb',
+                    '-c:v', 'png',
+                    '-pix_fmt', 'rgba',
                     '-c:a', 'copy',
                     '-shortest',
                     'matting.mov'
@@ -1510,6 +1523,11 @@
             log(`[RemBG] Saved: ${outFileName} (${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB)`);
 
             try {
+                const origVid = document.getElementById('rembg-preview-video');
+                if (origVid && origVid.readyState >= 1) {
+                    origVid.pause();
+                    origVid.currentTime = 0;
+                }
                 await showEnhancedVideoInPreview(finalBlob);
                 log('[RemBG] Synced original/result preview active.');
             } catch (pvErr) {
