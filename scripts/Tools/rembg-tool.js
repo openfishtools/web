@@ -1401,6 +1401,11 @@
         let processedFrames = 0;
 
         try {
+            const previewCanvas = document.getElementById('rembg-preview-canvas');
+            const enhancedVideo = document.getElementById('rembg-enhanced-video');
+            const overlayEl = document.getElementById('rembg-unprocessed-overlay');
+            const labelRight = document.getElementById('rembg-slider-label-right');
+
             for (let i = 0; i < totalFrames; i++) {
                 const tSec = Math.min(duration, i / fps);
                 await ensureVideoSeek(procVid, tSec);
@@ -1409,6 +1414,18 @@
 
                 const mask = await segmentSource(frameCanvas);
                 const outCanvas = compositeWithMask(frameCanvas, mask, W, H);
+
+                if (previewCanvas && (i % 2 === 0 || i === totalFrames - 1)) {
+                    previewCanvas.width = W;
+                    previewCanvas.height = H;
+                    previewCanvas.getContext('2d').drawImage(outCanvas, 0, 0);
+                    previewCanvas.classList.remove('hidden');
+                    if (enhancedVideo) enhancedVideo.classList.add('hidden');
+                    if (overlayEl) overlayEl.classList.remove('show');
+                    if (labelRight) {
+                        labelRight.textContent = `${t('tool_rembg_label_result') || 'No BG'} (${i + 1}/${totalFrames})`;
+                    }
+                }
 
                 let blob;
                 if (isTransparent) {
@@ -1517,10 +1534,22 @@
         }
     }
 
+    function setControlsDisabled(disabled) {
+        const controlsCard = document.getElementById('rembg-controls-card');
+        if (controlsCard) {
+            controlsCard.querySelectorAll('button, input').forEach(el => {
+                el.disabled = disabled;
+            });
+        }
+        const previewToggle = document.getElementById('rembg-preview-toggle');
+        if (previewToggle) previewToggle.disabled = disabled;
+    }
+
     async function removeBackground(file) {
         if (isProcessing || !file) return;
         isProcessing = true;
 
+        setControlsDisabled(true);
         setButtonState('processing', t('status_processing') || 'Initializing AI Matting...');
         setProgress(10, t('status_initializing') || 'Initializing...');
 
@@ -1555,6 +1584,7 @@
             }
         } finally {
             isProcessing = false;
+            setControlsDisabled(false);
         }
     }
 
