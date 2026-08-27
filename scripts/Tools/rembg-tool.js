@@ -798,6 +798,44 @@
         });
     }
 
+    async function detectFps(file) {
+        return new Promise((resolve) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.muted = true;
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            let resolved = false;
+            const done = (fps) => { if (!resolved) { resolved = true; URL.revokeObjectURL(url); resolve(fps); } };
+            if ('requestVideoFrameCallback' in video) {
+                const frames = [];
+                let timeout = setTimeout(() => { video.pause(); done(30); }, 1500);
+                const cb = (now, meta) => {
+                    frames.push(meta.mediaTime);
+                    if (frames.length < 10) video.requestVideoFrameCallback(cb);
+                    else {
+                        clearTimeout(timeout);
+                        video.pause();
+                        const diffs = [];
+                        for (let k = 1; k < frames.length; k++) { const d = frames[k] - frames[k - 1]; if (d > 0.001) diffs.push(d); }
+                        if (!diffs.length) { done(30); return; }
+                        const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                        const raw = 1 / avg;
+                        const common = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+                        const nearest = common.reduce((p, c) => Math.abs(c - raw) < Math.abs(p - raw) ? c : p);
+                        done(nearest);
+                    }
+                };
+                video.currentTime = 0;
+                video.requestVideoFrameCallback(cb);
+                video.play().catch(() => { clearTimeout(timeout); done(30); });
+            } else {
+                video.onloadedmetadata = () => done(30);
+                video.onerror = () => done(30);
+            }
+        });
+    }
+
     function ensureVideoSeek(vid, target) {
         return new Promise((resolve) => {
             if (Math.abs((vid.currentTime || 0) - target) <= 0.03) { resolve(); return; }
@@ -1211,11 +1249,13 @@
 
     async function removeBackgroundVideo(file) {
         showLogs();
-        log(`[RemBG] Video source: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB) | Chroma-key matting`);
+        log(`[RemBG] Video source: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
+        log(`[RemBG] AI Model: ${selectedModel} | Device: ${selectedDevice.toUpperCase()} | Background: ${selectedBg}`);
 
         setButtonState('processing', t('status_processing') || 'Processing video...');
-        setProgress(20, t('status_loading_engine') || 'Loading FFmpeg core (~31 MB, first time only)...');
+        setProgress(10, t('status_loading_engine') || 'Loading FFmpeg core (~31 MB, first time only)...');
         log('[RemBG] Loading FFmpeg libraries...');
+
         const loadScript = (src) => new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = src;
@@ -1310,83 +1350,171 @@
         let oomDetected = false;
         ffmpeg.on('progress', ({ progress }) => {
             const p = Math.max(0, Math.min(100, Math.round(progress * 100)));
-            const mappedPercent = 30 + Math.round(progress * 65);
-            setProgress(mappedPercent, `${t('status_encoding') || 'Rendering video output...'} (${p}%)`);
+            const mappedPercent = 88 + Math.round(progress * 7);
+            setProgress(Math.min(95, mappedPercent), `${t('status_encoding') || 'Rendering video output...'} (${p}%)`);
         });
 
-        let lastLoggedSec = 0;
         ffmpeg.on('log', ({ message }) => {
             const lc = message.toLowerCase();
             if (lc.includes('oom') || lc.includes('out of memory')) {
                 oomDetected = true;
             }
-            if (message.includes('frame=') || message.includes('fps=')) {
-                const now = Date.now();
-                if (now - lastLoggedSec > 1500) {
-                    lastLoggedSec = now;
-                    log(`[RemBG FFmpeg] ${message.trim()}`);
-                }
-            } else if (message.includes('Error') || message.includes('error:') || message.includes('warning:')) {
-                log(`[RemBG FFmpeg] ${message.trim()}`);
-            }
         });
+
+        setProgress(15, t('status_loading_engine') || 'Initializing AI matting engine...');
+        await getSession(selectedModel);
+
+        const fps = await detectFps(file);
+        const procVid = document.createElement('video');
+        procVid.muted = true;
+        procVid.playsInline = true;
+        procVid.preload = 'auto';
+        const vidUrl = URL.createObjectURL(file);
+        procVid.src = vidUrl;
+        await new Promise((resolve, reject) => {
+            procVid.onloadedmetadata = () => resolve();
+            procVid.onerror = () => reject(new Error('Failed to load video file.'));
+        });
+
+        const W = (procVid.videoWidth || 640) & ~1;
+        const H = (procVid.videoHeight || 360) & ~1;
+        const duration = procVid.duration || 1;
+        const totalFrames = Math.max(1, Math.round(duration * fps));
 
         const ext = file.name.split('.').pop() || 'mp4';
         const inName = `input.${ext}`;
-        log(`[RemBG] Loading video into memory...`);
+        log(`[RemBG] Writing input audio/video stream...`);
         await ffmpeg.writeFile(inName, await fetchFile(file));
 
-        let col = '0x00FF00';
-        if (selectedBg === 'color' && customColor) {
-            col = '0x' + customColor.replace('#', '');
-        }
+        recurrentStates = null;
+        const isTransparent = (selectedBg === 'transparent');
+        const frameExt = isTransparent ? 'png' : 'jpg';
 
-        setProgress(30, t('status_encoding') || 'Rendering video output...');
-        log(`[RemBG] Key color: ${col}`);
+        log(`[RemBG AI] Video: ${W}x${H} @ ${fps.toFixed(2)} FPS (~${totalFrames} frames)`);
+        log(`[RemBG AI] Processing frames with ${selectedModel} matting...`);
 
-        const fileMB = file.size / (1024 * 1024);
-        const hardwareThreads = navigator.hardwareConcurrency || 4;
-        const threads = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width = W;
+        frameCanvas.height = H;
+        const fctx = frameCanvas.getContext('2d', { willReadFrequently: true });
 
-        log(`[RemBG] Processing with ${threads} thread(s) and ultrafast preset...`);
-
-        await ffmpeg.exec([
-            '-i', inName,
-            '-threads', threads,
-            '-vf', `chromakey=${col}:0.12:0.08,colorkey=0x00FF00:0.1:0.05`,
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'copy',
-            'matting.mp4'
-        ]);
-
-        if (oomDetected) {
-            throw new Error('Out of memory detected during video processing. Try a smaller video or lower resolution.');
-        }
-
-        setProgress(95, t('status_finalizing') || 'Finalizing video...');
-        const data = await ffmpeg.readFile('matting.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        let processedFrames = 0;
 
         try {
-            await ffmpeg.deleteFile(inName);
-            await ffmpeg.deleteFile('matting.mp4');
-        } catch (_) {}
+            for (let i = 0; i < totalFrames; i++) {
+                const tSec = Math.min(duration, i / fps);
+                await ensureVideoSeek(procVid, tSec);
+                fctx.clearRect(0, 0, W, H);
+                fctx.drawImage(procVid, 0, 0, W, H);
 
-        triggerDownload(blob, file.name.replace(/\.[^/.]+$/, '') + `_matting.mp4`);
-        log(`[RemBG] Saved: ${file.name.replace(/\.[^/.]+$/, '')}_matting.mp4 (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`);
+                const mask = await segmentSource(frameCanvas);
+                const outCanvas = compositeWithMask(frameCanvas, mask, W, H);
 
-        try {
-            await showEnhancedVideoInPreview(blob);
-            log('[RemBG] Synced original/result preview active.');
-        } catch (pvErr) {
-            console.warn('[Remove Background] Preview playback skipped:', pvErr);
+                let blob;
+                if (isTransparent) {
+                    blob = await new Promise(r => outCanvas.toBlob(r, 'image/png'));
+                } else {
+                    blob = await new Promise(r => outCanvas.toBlob(r, 'image/jpeg', 0.95));
+                }
+                const ab = await blob.arrayBuffer();
+                await ffmpeg.writeFile(`frame_${String(i).padStart(5, '0')}.${frameExt}`, new Uint8Array(ab));
+
+                processedFrames++;
+                const pct = 15 + Math.round((i / totalFrames) * 72);
+                setProgress(Math.min(87, pct), `${t('status_processing') || 'Matting frames'} (${i + 1}/${totalFrames})...`);
+                if ((i + 1) % 8 === 0 || i + 1 === totalFrames) {
+                    log(`[RemBG AI] Matting progress: ${i + 1}/${totalFrames} frames`);
+                }
+            }
+
+            URL.revokeObjectURL(vidUrl);
+
+            const hardwareThreads = navigator.hardwareConcurrency || 4;
+            const threads = Math.min(4, hardwareThreads).toString();
+
+            let outFileName = '';
+            let finalBlob = null;
+
+            if (isTransparent) {
+                outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg.mov`;
+                log(`[RemBG] Encoding transparent video to QuickTime MOV (RGBA / PNG)...`);
+                setProgress(88, 'Encoding MOV with alpha channel...');
+
+                await ffmpeg.exec([
+                    '-r', String(fps),
+                    '-threads', threads,
+                    '-i', `frame_%05d.png`,
+                    '-i', inName,
+                    '-map', '0:v',
+                    '-map', '1:a?',
+                    '-c:v', 'png',
+                    '-pix_fmt', 'rgba',
+                    '-c:a', 'copy',
+                    '-shortest',
+                    'matting.mov'
+                ]);
+
+                if (oomDetected) {
+                    throw new Error('Out of memory detected during video encoding.');
+                }
+
+                const data = await ffmpeg.readFile('matting.mov');
+                finalBlob = new Blob([data.buffer], { type: 'video/quicktime' });
+            } else {
+                outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_${selectedBg}.mp4`;
+                log(`[RemBG] Encoding MP4 video (${selectedBg} background)...`);
+                setProgress(88, 'Encoding MP4 video...');
+
+                await ffmpeg.exec([
+                    '-r', String(fps),
+                    '-threads', threads,
+                    '-i', `frame_%05d.jpg`,
+                    '-i', inName,
+                    '-map', '0:v',
+                    '-map', '1:a?',
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'copy',
+                    '-shortest',
+                    'matting.mp4'
+                ]);
+
+                if (oomDetected) {
+                    throw new Error('Out of memory detected during video encoding.');
+                }
+
+                const data = await ffmpeg.readFile('matting.mp4');
+                finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+            }
+
+            setProgress(95, t('status_finalizing') || 'Finalizing video...');
+            triggerDownload(finalBlob, outFileName);
+            log(`[RemBG] Saved: ${outFileName} (${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB)`);
+
+            try {
+                await showEnhancedVideoInPreview(finalBlob);
+                log('[RemBG] Synced original/result preview active.');
+            } catch (pvErr) {
+                console.warn('[Remove Background] Preview playback skipped:', pvErr);
+            }
+
+            setCompletedLayout(true);
+            setProgress(100, t('status_completed') || 'Done!');
+            setButtonState('completed', t('status_process_another') || 'Process Another');
+
+        } finally {
+            if (ffmpeg) {
+                for (let f = 0; f < processedFrames; f++) {
+                    try {
+                        await ffmpeg.deleteFile(`frame_${String(f).padStart(5, '0')}.${frameExt}`);
+                    } catch (_) {}
+                }
+                try { await ffmpeg.deleteFile(inName); } catch (_) {}
+                try { await ffmpeg.deleteFile('matting.mov'); } catch (_) {}
+                try { await ffmpeg.deleteFile('matting.mp4'); } catch (_) {}
+            }
         }
-
-        setCompletedLayout(true);
-        setProgress(100, t('status_completed') || 'Done!');
-        setButtonState('completed', t('status_process_another') || 'Process Another');
     }
 
     async function removeBackground(file) {
