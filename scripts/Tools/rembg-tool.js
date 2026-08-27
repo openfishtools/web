@@ -63,9 +63,9 @@
     ];
 
     const FORMAT_OPTIONS = [
-        { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: '.mov', ext: '.mov', mime: 'video/quicktime' },
-        { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: '.webm', ext: '.webm', mime: 'video/webm' },
-        { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: '.mp4', ext: '.mp4', mime: 'video/mp4' }
+        { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: 'MOV (PNG/RGBA)', ext: '.mov', mime: 'video/quicktime' },
+        { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: 'WebM (VP9/Alpha)', ext: '.webm', mime: 'video/webm' },
+        { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: 'MP4 (HEVC/Alpha)', ext: '.mp4', mime: 'video/mp4' }
     ];
 
     const DEVICE_OPTIONS = [
@@ -1531,24 +1531,7 @@
 
                     const data = await ffmpeg.readFile('matting.mov');
                     finalBlob = new Blob([data.buffer], { type: selectedFormatMeta.mime });
-
-                    log(`[RemBG] Encoding WebM VP9 (yuva420p) for preview playback...`);
-                    await ffmpeg.exec([
-                        '-r', String(fps),
-                        '-threads', threads,
-                        '-i', `frame_%05d.png`,
-                        '-i', inName,
-                        '-map', '0:v',
-                        '-map', '1:a?',
-                        '-c:v', 'libvpx-vp9',
-                        '-pix_fmt', 'yuva420p',
-                        '-c:a', 'libopus',
-                        '-shortest',
-                        'matting_preview.webm'
-                    ]);
-
-                    const previewData = await ffmpeg.readFile('matting_preview.webm');
-                    finalPreviewBlob = new Blob([previewData.buffer], { type: 'video/webm' });
+                    finalPreviewBlob = null;
                 } else if (selectedFormat === 'webm') {
                     log(`[RemBG] Encoding transparent video to WebM (VP9/Alpha)...`);
                     setProgress(88, 'Encoding WebM with alpha channel...');
