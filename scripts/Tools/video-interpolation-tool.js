@@ -399,13 +399,18 @@
     async function processInterpolation(file) {
         if (isProcessing || !file) return;
         isProcessing = true;
+        cancelRife = false;
 
         setButtonState('processing', t('status_processing') || 'Initializing AI Engine...');
         setProgress(10, t('interp_checking_gpu') || 'Checking system...');
         log(`[Interp] Source: ${file.name} (${(file.size/(1024*1024)).toFixed(2)} MB) | ${originalFps} FPS → ${originalFps*multiplier} FPS (${multiplier}x)`);
 
+        let outIdx = 0;
+        let inName = null;
+        let ffmpeg = null;
+
         try {
-            const ffmpeg = await getFFmpeg();
+            ffmpeg = await getFFmpeg();
             const { fetchFile } = window.FFmpegUtil;
 
             const targetFps = originalFps * multiplier;
@@ -427,13 +432,13 @@
             await rife.init((m)=>log(m));
             setProgress(45, 'RIFE engine ready, interpolating...');
             const ext = file.name.split('.').pop() || 'mp4';
-            const inName = `input.${ext}`;
+            inName = `input.${ext}`;
             await ffmpeg.writeFile(inName, await fetchFile(file));
             log(`[RIFE] Input written, starting frame interpolation...`);
             const c0 = document.createElement('canvas'); c0.width=width; c0.height=height; const ctx0=c0.getContext('2d',{willReadFrequently:true});
             const c1 = document.createElement('canvas'); c1.width=width; c1.height=height; const ctx1=c1.getContext('2d',{willReadFrequently:true});
             const outCanvas = document.createElement('canvas'); outCanvas.width=width; outCanvas.height=height;
-            let outIdx = 0;
+            outIdx = 0;
             const writeFrame = async (canvas) => {
                 const blob = await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.90));
                 const ab = await blob.arrayBuffer();
@@ -460,13 +465,18 @@
             URL.revokeObjectURL(videoUrl);
             log(`[RIFE] Encoding ${outIdx} frames @ ${targetFps} FPS...`);
             setProgress(88, 'Encoding output video...');
-            const encodeArgs = ['-r', String(targetFps), '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-shortest', 'output.mp4'];
+
+            ffmpeg.on('progress', ({ progress }) => {
+                const encPct = 88 + Math.round(progress * 7);
+                setProgress(Math.min(95, encPct), `Encoding video (${Math.round(progress * 100)}%)...`);
+            });
+
+            const hardwareThreads = navigator.hardwareConcurrency || 4;
+            const threads = Math.min(4, hardwareThreads).toString();
+            const encodeArgs = ['-r', String(targetFps), '-threads', threads, '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-shortest', 'output.mp4'];
             await ffmpeg.exec(encodeArgs);
             setProgress(95, t('status_finalizing') || 'Finalizing video...');
             const data = await ffmpeg.readFile('output.mp4');
-            for(let f=0; f<outIdx; f++){ try{ await ffmpeg.deleteFile(`frame_${String(f).padStart(5,'0')}.jpg`);}catch(e){} }
-            try{ await ffmpeg.deleteFile(inName);}catch(e){}
-            try{ await ffmpeg.deleteFile('output.mp4');}catch(e){}
 
             if (!data || data.byteLength < 1024) {
                 throw new Error("Video interpolation rendering failed.");
@@ -509,6 +519,11 @@
                 window.ToolProgressManager.clear('tool-video-interpolation');
             }
         } finally {
+            if (ffmpeg) {
+                for(let f=0; f<outIdx; f++){ try{ await ffmpeg.deleteFile(`frame_${String(f).padStart(5,'0')}.jpg`);}catch(e){} }
+                if (inName) { try{ await ffmpeg.deleteFile(inName);}catch(e){} }
+                try{ await ffmpeg.deleteFile('output.mp4');}catch(e){}
+            }
             isProcessing = false;
         }
     }
@@ -549,6 +564,7 @@
             processInterpolation(file || selectedFile);
         },
         onReset: function() {
+            cancelRife = true;
             selectedFile = null;
             isProcessing = false;
             multiplier = 2;

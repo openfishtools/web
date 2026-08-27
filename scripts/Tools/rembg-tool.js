@@ -1307,8 +1307,33 @@
             throw new Error('Failed to load FFmpeg WASM engine.');
         }
 
+        let oomDetected = false;
+        ffmpeg.on('progress', ({ progress }) => {
+            const p = Math.max(0, Math.min(100, Math.round(progress * 100)));
+            const mappedPercent = 30 + Math.round(progress * 65);
+            setProgress(mappedPercent, `${t('status_encoding') || 'Rendering video output...'} (${p}%)`);
+        });
+
+        let lastLoggedSec = 0;
+        ffmpeg.on('log', ({ message }) => {
+            const lc = message.toLowerCase();
+            if (lc.includes('oom') || lc.includes('out of memory')) {
+                oomDetected = true;
+            }
+            if (message.includes('frame=') || message.includes('fps=')) {
+                const now = Date.now();
+                if (now - lastLoggedSec > 1500) {
+                    lastLoggedSec = now;
+                    log(`[RemBG FFmpeg] ${message.trim()}`);
+                }
+            } else if (message.includes('Error') || message.includes('error:') || message.includes('warning:')) {
+                log(`[RemBG FFmpeg] ${message.trim()}`);
+            }
+        });
+
         const ext = file.name.split('.').pop() || 'mp4';
         const inName = `input.${ext}`;
+        log(`[RemBG] Loading video into memory...`);
         await ffmpeg.writeFile(inName, await fetchFile(file));
 
         let col = '0x00FF00';
@@ -1316,20 +1341,38 @@
             col = '0x' + customColor.replace('#', '');
         }
 
-        setProgress(60, t('status_encoding') || 'Rendering video output...');
+        setProgress(30, t('status_encoding') || 'Rendering video output...');
         log(`[RemBG] Key color: ${col}`);
+
+        const fileMB = file.size / (1024 * 1024);
+        const hardwareThreads = navigator.hardwareConcurrency || 4;
+        const threads = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
+
+        log(`[RemBG] Processing with ${threads} thread(s) and ultrafast preset...`);
+
         await ffmpeg.exec([
             '-i', inName,
+            '-threads', threads,
             '-vf', `chromakey=${col}:0.12:0.08,colorkey=0x00FF00:0.1:0.05`,
             '-c:v', 'libx264',
+            '-preset', 'ultrafast',
             '-pix_fmt', 'yuv420p',
             '-c:a', 'copy',
             'matting.mp4'
         ]);
 
+        if (oomDetected) {
+            throw new Error('Out of memory detected during video processing. Try a smaller video or lower resolution.');
+        }
+
         setProgress(95, t('status_finalizing') || 'Finalizing video...');
         const data = await ffmpeg.readFile('matting.mp4');
         const blob = new Blob([data.buffer], { type: 'video/mp4' });
+
+        try {
+            await ffmpeg.deleteFile(inName);
+            await ffmpeg.deleteFile('matting.mp4');
+        } catch (_) {}
 
         triggerDownload(blob, file.name.replace(/\.[^/.]+$/, '') + `_matting.mp4`);
         log(`[RemBG] Saved: ${file.name.replace(/\.[^/.]+$/, '')}_matting.mp4 (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`);
