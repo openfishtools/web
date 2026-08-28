@@ -127,13 +127,50 @@ async function fetchTikwmUserFeed(username) {
     return [];
 }
 
+async function fetchTikTokOEmbed(pageUrl) {
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(pageUrl)}`, {
+            headers: { 'User-Agent': TIKTOK_UA },
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        return j && typeof j === 'object' ? j : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function refreshPostCoversViaOEmbed(posts, limit = 12) {
+    const targets = posts.slice(0, limit).filter(p => p && p.url);
+    await Promise.all(targets.map(async (p, i) => {
+        try {
+            if (i > 0) await new Promise(r => setTimeout(r, i * 50));
+            const oembed = await fetchTikTokOEmbed(p.url);
+            if (oembed && oembed.thumbnail_url) {
+                p.cover = oembed.thumbnail_url;
+                if (oembed.title && (!p.title || p.title === 'TikTok Video')) {
+                    p.title = oembed.title;
+                }
+                if (oembed.author_name) {
+                    p.author_name = oembed.author_name;
+                }
+            }
+        } catch (e) {}
+    }));
+}
+
 async function fetchProfilePagePosts(username) {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 7000);
+        const mobileUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1';
         const r = await fetch(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
             headers: {
-                'User-Agent': TIKTOK_UA,
+                'User-Agent': mobileUA,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9'
             },
@@ -143,29 +180,29 @@ async function fetchProfilePagePosts(username) {
         clearTimeout(timeout);
         if (!r.ok) return [];
         const html = await r.text();
-        const match = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">([\s\S]*?)<\/script>/) ||
-                      html.match(/<script id="SIGI_STATE" type="application\/json">([\s\S]*?)<\/script>/);
-        if (!match) return [];
-        let data = null;
-        try { data = JSON.parse(match[1]); } catch (e) { return []; }
-        let items = [];
-        if (data.__DEFAULT_SCOPE__) {
-            const detail = data.__DEFAULT_SCOPE__['webapp.user-detail'];
-            items = detail && detail.userInfo && Array.isArray(detail.userInfo.itemList) ? detail.userInfo.itemList : [];
-        } else if (data.ItemModule) {
-            items = Object.values(data.ItemModule).filter(i => i && i.id && i.author);
-        }
-        return sortPostsDesc(items.map(v => normalizePost(v, username)).filter(Boolean)).slice(0, 12);
+        const startTag = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">';
+        const startIdx = html.indexOf(startTag);
+        if (startIdx === -1) return [];
+        const jsonStart = startIdx + startTag.length;
+        const jsonEnd = html.indexOf('</script>', jsonStart);
+        if (jsonEnd === -1) return [];
+        const data = JSON.parse(html.slice(jsonStart, jsonEnd));
+        const defaultScope = data['__DEFAULT_SCOPE__'] || {};
+        const userDetail = defaultScope['webapp.user-detail'] || {};
+        const userInfo = userDetail.userInfo || {};
+        const rawItems = userDetail.itemList || userInfo.itemList || [];
+        const posts = sortPostsDesc(rawItems.map(v => normalizePost(v, username)).filter(Boolean)).slice(0, 12);
+        return posts;
     } catch (e) {
         return [];
     }
 }
 
 async function fetchLatestTikTokPosts(username) {
-    const fromFeed = await fetchTikwmUserFeed(username);
-    if (fromFeed.length > 0) return fromFeed;
     const fromScrape = await fetchProfilePagePosts(username);
     if (fromScrape.length > 0) return fromScrape;
+    const fromFeed = await fetchTikwmUserFeed(username);
+    if (fromFeed.length > 0) return fromFeed;
     return [];
 }
 
@@ -199,82 +236,48 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
-        const livePosts = await fetchLatestTikTokPosts(TIKTOK_USERNAME);
+        let livePosts = await fetchLatestTikTokPosts(TIKTOK_USERNAME);
+        if (livePosts.length === 0) {
+            const defaultUserVideos = [
+                { url: 'https://www.tiktok.com/@cutefishaep/video/7675697464044686613', fallbackTitle: 'Rasio nya salah jir', plays: 4264, likes: 361, duration: 12 },
+                { url: 'https://www.tiktok.com/@cutefishaep/video/7674561349594270993', fallbackTitle: 'FishTools 1.3.0 3D MODEL GENERATOR UPDATE!', plays: 13056, likes: 901, duration: 24 },
+                { url: 'https://www.tiktok.com/@cutefishaep/video/7675050655521721608', fallbackTitle: 'JJ RANDOM', plays: 2961, likes: 146, duration: 15 },
+                { url: 'https://www.tiktok.com/@cutefishaep/video/7670369520401354004', fallbackTitle: 'JJ HAPPY HAPPY AJALAH', plays: 6559, likes: 312, duration: 16 }
+            ];
+
+            livePosts = await Promise.all(defaultUserVideos.map(async (item) => {
+                const id = item.url.split('/').pop();
+                const oembed = await fetchTikTokOEmbed(item.url);
+                return {
+                    id,
+                    title: (oembed?.title && oembed.title.trim()) ? oembed.title.trim() : item.fallbackTitle,
+                    cover: oembed?.thumbnail_url || '',
+                    url: item.url,
+                    author: TIKTOK_USERNAME,
+                    author_name: oembed?.author_name || 'ً',
+                    play_count: item.plays,
+                    digg_count: item.likes,
+                    comment_count: 0,
+                    share_count: 0,
+                    duration: item.duration,
+                    created_at: Math.floor(Date.now() / 1000)
+                };
+            }));
+        }
+
         if (livePosts.length > 0) {
-            tiktokPostsCache = { at: Date.now(), posts: livePosts };
-            res.writeHead(200);
-            res.end(JSON.stringify(livePosts));
-            return;
-        }
-
-        const defaultUserVideos = [
-            { url: 'https://www.tiktok.com/@cutefishaep/video/7675697464044686613', fallbackTitle: 'Rasio nya salah jir', plays: 4264, likes: 361, duration: 12, cover: 'https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oEnozCFiGYDnaApAh0AwW9SAEAiOFIlOABPij~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=8193d10c&x-expires=1787407200&x-signature=nikUQV7scg0NF4a9GJD9hHkmtpg%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
-            { url: 'https://www.tiktok.com/@cutefishaep/video/7674561349594270993', fallbackTitle: 'FishTools 1.3.0 3D MODEL GENERATOR UPDATE!', plays: 13056, likes: 901, duration: 24, cover: 'https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-4863-sg/ogfqsG9ev3DgZBBEhhFUTItRBGipQgBpYiAQ5E~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=a8d5c7b8&x-expires=1787407200&x-signature=%2B%2BLDDwt0QUt3%2FBUmgXg7UoOOQgE%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
-            { url: 'https://www.tiktok.com/@cutefishaep/video/7675050655521721608', fallbackTitle: 'JJ RANDOM', plays: 2961, likes: 146, duration: 15, cover: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-4863-sg/okeotGBBgSARd3LfLGgIgAPTxQE7AeLEVGF3ge~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=c5eaefc3&x-expires=1787407200&x-signature=GyB6%2BaMwzh5wiCjjLeMW6wlnnIQ%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' },
-            { url: 'https://www.tiktok.com/@cutefishaep/video/7670369520401354004', fallbackTitle: 'JJ HAPPY HAPPY AJALAH', plays: 6559, likes: 312, duration: 16, cover: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oYo1OABKEAAiwtz8vBAwIN1iWUy7I21fG0ZKuo~tplv-tiktokx-cropcenter-q:300:400:q70.jpeg?dr=8596&refresh_token=0c5ce17a&x-expires=1787407200&x-signature=U9QbxS7T%2FBTIomUdr9cjfq8Z6MU%3D&t=bacd0480&ps=933b5bde&shp=d05b14bd&shcp=1d1a97fc&idc=useast5&biz_tag=tt_video&s=AWEME_DETAIL&sc=cover' }
-        ];
-
-        let posts = [];
-        try {
-            for (let i = 0; i < defaultUserVideos.length; i++) {
-                const item = defaultUserVideos[i];
-                let resolved = false;
-                try {
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 4000);
-                    const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(item.url)}`, {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeout);
-                    const json = await r.json().catch(() => ({}));
-                    if (json.code === 0 && json.data) {
-                        const d = json.data;
-                        posts.push({
-                            id: d.id || item.url.split('/').pop(),
-                            title: (d.title && d.title.trim()) ? d.title : item.fallbackTitle,
-                            cover: d.cover || d.origin_cover || d.dynamic_cover || item.cover,
-                            url: item.url,
-                            author: d.author ? (d.author.unique_id || 'cutefishaep') : 'cutefishaep',
-                            author_name: d.author ? (d.author.nickname || 'cutefishaep') : 'cutefishaep',
-                            play_count: d.play_count || item.plays,
-                            digg_count: d.digg_count || item.likes,
-                            comment_count: d.comment_count || 24,
-                            share_count: d.share_count || 12,
-                            duration: d.duration || item.duration,
-                            created_at: d.create_time || Math.floor(Date.now() / 1000)
-                        });
-                        resolved = true;
-                    }
-                } catch (e) {}
-
-                if (!resolved) {
-                    posts.push({
-                        id: item.url.split('/').pop(),
-                        title: item.fallbackTitle,
-                        cover: item.cover,
-                        url: item.url,
-                        author: 'cutefishaep',
-                        author_name: 'cutefishaep',
-                        play_count: item.plays,
-                        digg_count: item.likes,
-                        comment_count: 24,
-                        share_count: 12,
-                        duration: item.duration,
-                        created_at: Math.floor(Date.now() / 1000)
-                    });
+            await refreshPostCoversViaOEmbed(livePosts);
+            livePosts = livePosts.map(p => {
+                if (p.cover && p.cover.includes('tikwm.com')) {
+                    p.cover = '';
                 }
-            }
-        } catch (err) {
-            console.warn('[TikTok Posts API] Error:', err.message);
-        }
-
-        if (posts.length > 0) {
-            tiktokPostsCache = { at: Date.now(), posts };
+                return p;
+            });
+            tiktokPostsCache = { at: Date.now(), posts: livePosts };
         }
 
         res.writeHead(200);
-        res.end(JSON.stringify(posts));
+        res.end(JSON.stringify(livePosts));
         return;
     }
 
