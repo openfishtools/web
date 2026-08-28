@@ -14,6 +14,7 @@
     let selectedModel = 'selfie_segmenter';
     let selectedDevice = 'gpu';
     let selectedBg = 'transparent';
+    let selectedFormat = 'mov';
     let customColor = '#0842a0';
     let isImageMode = true;
     let isGeneratingPreview = false;
@@ -59,6 +60,12 @@
         { id: 'green', labelKey: 'tool_rembg_bg_green', fallback: 'Green Screen' },
         { id: 'color', labelKey: 'tool_rembg_bg_color', fallback: 'Solid Color' },
         { id: 'blur', labelKey: 'tool_rembg_bg_blur', fallback: 'Blur' }
+    ];
+
+    const FORMAT_OPTIONS = [
+        { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: 'MOV (PNG/RGBA)', ext: '.mov', mime: 'video/quicktime' },
+        { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: 'WebM (VP9/Alpha)', ext: '.webm', mime: 'video/webm' },
+        { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: 'MP4 (HEVC/Alpha)', ext: '.mp4', mime: 'video/mp4' }
     ];
 
     const DEVICE_OPTIONS = [
@@ -1045,6 +1052,17 @@
                             <input type="text" id="rembg-color-text" value="${customColor}" class="rembg-color-text font-mono">
                         </div>
                     </div>
+
+                    <div id="rembg-format-row" class="rembg-format-row ${selectedBg === 'transparent' ? '' : 'hidden'} mt-4">
+                        <p class="upscale-controls-title" data-i18n="tool_rembg_format_title">${t('tool_rembg_format_title') || 'Format'}</p>
+                        <div class="upscale-preset-list" id="rembg-format-list">
+                            ${FORMAT_OPTIONS.map(opt => `
+                                <button type="button" class="upscale-preset-btn ${opt.id === selectedFormat ? 'active' : ''}" data-format="${opt.id}" data-i18n="${opt.labelKey}">
+                                    ${t(opt.labelKey) || opt.fallback}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
                 </div>
                 <div class="process-logs-wrap" id="rembg-logs-container">
@@ -1181,6 +1199,11 @@
                         if (selectedBg === 'color') colorPickerRow.classList.remove('hidden');
                         else colorPickerRow.classList.add('hidden');
                     }
+                    const formatRow = document.getElementById('rembg-format-row');
+                    if (formatRow) {
+                        if (selectedBg === 'transparent') formatRow.classList.remove('hidden');
+                        else formatRow.classList.add('hidden');
+                    }
                     recomposeIfPossible();
                     if (typeof window.updateOpenModalsLayout === 'function') window.updateOpenModalsLayout(true);
                 });
@@ -1199,6 +1222,18 @@
                     colorInput.value = customColor;
                     if (selectedBg === 'color') recomposeIfPossible();
                 }
+            });
+        }
+
+        const formatList = document.getElementById('rembg-format-list');
+        if (formatList) {
+            formatList.querySelectorAll('.upscale-preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    formatList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedFormat = btn.getAttribute('data-format') || 'mov';
+                    log(`[RemBG] Format set to ${selectedFormat.toUpperCase()}.`);
+                });
             });
         }
 
@@ -1464,32 +1499,107 @@
 
             let outFileName = '';
             let finalBlob = null;
+            let finalPreviewBlob = null;
+
+            const selectedFormatMeta = FORMAT_OPTIONS.find(f => f.id === selectedFormat) || FORMAT_OPTIONS[0];
 
             if (isTransparent) {
-                outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg.mov`;
-                log(`[RemBG] Encoding transparent video to QuickTime MOV (PNG/RGBA)...`);
-                setProgress(88, 'Encoding MOV with alpha channel...');
+                outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg${selectedFormatMeta.ext}`;
+                const isMov = selectedFormat === 'mov';
 
-                await ffmpeg.exec([
-                    '-r', String(fps),
-                    '-threads', threads,
-                    '-i', `frame_%05d.png`,
-                    '-i', inName,
-                    '-map', '0:v',
-                    '-map', '1:a?',
-                    '-c:v', 'png',
-                    '-pix_fmt', 'rgba',
-                    '-c:a', 'copy',
-                    '-shortest',
-                    'matting.mov'
-                ]);
+                if (isMov) {
+                    log(`[RemBG] Encoding transparent video to QuickTime MOV (PNG/RGBA)...`);
+                    setProgress(88, 'Encoding MOV with alpha channel...');
 
-                if (oomDetected) {
-                    throw new Error('Out of memory detected during video encoding.');
+                    await ffmpeg.exec([
+                        '-r', String(fps),
+                        '-threads', threads,
+                        '-i', `frame_%05d.png`,
+                        '-i', inName,
+                        '-map', '0:v',
+                        '-map', '1:a?',
+                        '-c:v', 'png',
+                        '-pix_fmt', 'rgba',
+                        '-c:a', 'copy',
+                        '-shortest',
+                        'matting.mov'
+                    ]);
+
+                    if (oomDetected) {
+                        throw new Error('Out of memory detected during video encoding.');
+                    }
+
+                    const data = await ffmpeg.readFile('matting.mov');
+                    finalBlob = new Blob([data.buffer], { type: selectedFormatMeta.mime });
+
+                    log(`[RemBG] Encoding WebM VP9 (yuva420p) for preview playback...`);
+                    await ffmpeg.exec([
+                        '-r', String(fps),
+                        '-threads', threads,
+                        '-i', `frame_%05d.png`,
+                        '-i', inName,
+                        '-map', '0:v',
+                        '-map', '1:a?',
+                        '-c:v', 'libvpx-vp9',
+                        '-pix_fmt', 'yuva420p',
+                        '-c:a', 'libopus',
+                        '-shortest',
+                        'matting_preview.webm'
+                    ]);
+
+                    const previewData = await ffmpeg.readFile('matting_preview.webm');
+                    finalPreviewBlob = new Blob([previewData.buffer], { type: 'video/webm' });
+                } else if (selectedFormat === 'webm') {
+                    log(`[RemBG] Encoding transparent video to WebM (VP9/Alpha)...`);
+                    setProgress(88, 'Encoding WebM with alpha channel...');
+
+                    await ffmpeg.exec([
+                        '-r', String(fps),
+                        '-threads', threads,
+                        '-i', `frame_%05d.png`,
+                        '-i', inName,
+                        '-map', '0:v',
+                        '-map', '1:a?',
+                        '-c:v', 'libvpx-vp9',
+                        '-pix_fmt', 'yuva420p',
+                        '-c:a', 'libopus',
+                        '-shortest',
+                        'matting.webm'
+                    ]);
+
+                    if (oomDetected) {
+                        throw new Error('Out of memory detected during video encoding.');
+                    }
+
+                    const data = await ffmpeg.readFile('matting.webm');
+                    finalBlob = new Blob([data.buffer], { type: 'video/webm' });
+                    finalPreviewBlob = finalBlob;
+                } else if (selectedFormat === 'mp4') {
+                    log(`[RemBG] Encoding transparent video to MP4 (HEVC/Alpha)...`);
+                    setProgress(88, 'Encoding MP4 HEVC with alpha channel...');
+
+                    await ffmpeg.exec([
+                        '-r', String(fps),
+                        '-threads', threads,
+                        '-i', `frame_%05d.png`,
+                        '-i', inName,
+                        '-map', '0:v',
+                        '-map', '1:a?',
+                        '-c:v', 'libx265',
+                        '-pix_fmt', 'yuva420p',
+                        '-c:a', 'copy',
+                        '-shortest',
+                        'matting.mp4'
+                    ]);
+
+                    if (oomDetected) {
+                        throw new Error('Out of memory detected during video encoding.');
+                    }
+
+                    const data = await ffmpeg.readFile('matting.mp4');
+                    finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                    finalPreviewBlob = finalBlob;
                 }
-
-                const data = await ffmpeg.readFile('matting.mov');
-                finalBlob = new Blob([data.buffer], { type: 'video/quicktime' });
             } else {
                 outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_${selectedBg}.mp4`;
                 log(`[RemBG] Encoding MP4 video (${selectedBg} background)...`);
@@ -1522,16 +1632,47 @@
             triggerDownload(finalBlob, outFileName);
             log(`[RemBG] Saved: ${outFileName} (${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB)`);
 
-            try {
-                const origVid = document.getElementById('rembg-preview-video');
-                if (origVid && origVid.readyState >= 1) {
-                    origVid.pause();
-                    origVid.currentTime = 0;
+            const actionRow = document.getElementById('rembg-action-row');
+            const durationRow = document.getElementById('rembg-duration-row');
+            if (actionRow) actionRow.classList.add('hidden');
+            if (durationRow) durationRow.classList.add('hidden');
+
+            const isMovFormat = isTransparent && selectedFormat === 'mov';
+            const previewBlob = finalPreviewBlob || finalBlob;
+
+            if (isMovFormat) {
+                const enhancedVideo = document.getElementById('rembg-enhanced-video');
+                const canvas = document.getElementById('rembg-preview-canvas');
+                const overlayEl = document.getElementById('rembg-unprocessed-overlay');
+                const labelRight = document.getElementById('rembg-slider-label-right');
+                if (enhancedVideo) enhancedVideo.classList.add('hidden');
+                if (canvas) canvas.classList.add('hidden');
+                if (overlayEl) {
+                    overlayEl.classList.remove('show');
+                    const title = overlayEl.querySelector('.unprocessed-title');
+                    const subtitle = overlayEl.querySelector('.unprocessed-subtitle');
+                    if (title) title.textContent = t('tool_rembg_mov_preview_title') || 'MOV Preview Unavailable';
+                    if (subtitle) subtitle.textContent = t('tool_rembg_mov_preview_desc') || 'MOV (PNG/RGBA) cannot be played in browser. Download to view.';
                 }
-                await showEnhancedVideoInPreview(finalBlob);
-                log('[RemBG] Synced original/result preview active.');
-            } catch (pvErr) {
-                console.warn('[Remove Background] Preview playback skipped:', pvErr);
+                if (labelRight) {
+                    labelRight.textContent = t('tool_rembg_label_result') || 'No BG';
+                    labelRight.setAttribute('data-i18n', 'tool_rembg_label_result');
+                }
+                previewActive = true;
+                updateSliderVisuals();
+                log('[RemBG] MOV format selected - preview unavailable, download to view.');
+            } else {
+                try {
+                    const origVid = document.getElementById('rembg-preview-video');
+                    if (origVid && origVid.readyState >= 1) {
+                        origVid.pause();
+                        origVid.currentTime = 0;
+                    }
+                    await showEnhancedVideoInPreview(previewBlob);
+                    log('[RemBG] Synced original/result preview active.');
+                } catch (pvErr) {
+                    console.warn('[Remove Background] Preview playback skipped:', pvErr);
+                }
             }
 
             setCompletedLayout(true);
@@ -1634,6 +1775,7 @@
             const { optContainer } = ctx;
             if (optContainer) optContainer.innerHTML = '';
             selectedFile = null;
+            selectedFormat = 'mov';
             lastResultCanvas = null;
             lastResultBlob = null;
             previewActive = false;
@@ -1656,6 +1798,7 @@
             selectedFile = null;
             isProcessing = false;
             selectedBg = 'transparent';
+            selectedFormat = 'mov';
             lastResultCanvas = null;
             lastResultBlob = null;
             previewActive = false;
