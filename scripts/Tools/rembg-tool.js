@@ -63,9 +63,9 @@
     ];
 
     const FORMAT_OPTIONS = [
-        { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: 'MOV (PNG/RGBA)', ext: '.mov', mime: 'video/quicktime' },
-        { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: 'WebM (VP9/Alpha)', ext: '.webm', mime: 'video/webm' },
-        { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: 'MP4 (HEVC/Alpha)', ext: '.mp4', mime: 'video/mp4' }
+        { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: '.mov', ext: '.mov', mime: 'video/quicktime' },
+        { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: '.webm', ext: '.webm', mime: 'video/webm' },
+        { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: '.mp4', ext: '.mp4', mime: 'video/mp4' }
     ];
 
     const DEVICE_OPTIONS = [
