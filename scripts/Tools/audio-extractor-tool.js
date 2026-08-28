@@ -241,10 +241,9 @@
             const blob = new Blob([data.buffer], { type: 'audio/mp3' });
             const url = URL.createObjectURL(blob);
 
-            const outBase = file.name.replace(/\.[^/.]+$/, '');
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${outBase}_audio.mp3`;
+            a.download = 'audio.mp3';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
