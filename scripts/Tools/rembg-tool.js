@@ -814,34 +814,49 @@
     async function detectFps(file) {
         return new Promise((resolve) => {
             const video = document.createElement('video');
-            video.preload = 'metadata';
+            video.preload = 'auto';
             video.muted = true;
+            video.playsInline = true;
             const url = URL.createObjectURL(file);
             video.src = url;
             let resolved = false;
             const done = (fps) => { if (!resolved) { resolved = true; URL.revokeObjectURL(url); resolve(fps); } };
             if ('requestVideoFrameCallback' in video) {
                 const frames = [];
-                let timeout = setTimeout(() => { video.pause(); done(30); }, 1500);
+                let timeout = setTimeout(() => { video.pause(); done(30); }, 3000);
                 const cb = (now, meta) => {
                     frames.push(meta.mediaTime);
-                    if (frames.length < 10) video.requestVideoFrameCallback(cb);
-                    else {
+                    if (frames.length < 20) {
+                        video.requestVideoFrameCallback(cb);
+                    } else {
                         clearTimeout(timeout);
                         video.pause();
+                        const stableFrames = frames.slice(3);
                         const diffs = [];
-                        for (let k = 1; k < frames.length; k++) { const d = frames[k] - frames[k - 1]; if (d > 0.001) diffs.push(d); }
+                        for (let k = 1; k < stableFrames.length; k++) {
+                            const d = stableFrames[k] - stableFrames[k - 1];
+                            if (d > 0.005 && d < 0.2) diffs.push(d);
+                        }
                         if (!diffs.length) { done(30); return; }
-                        const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-                        const raw = 1 / avg;
-                        const common = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+                        diffs.sort((a, b) => a - b);
+                        const mid = Math.floor(diffs.length / 2);
+                        const median = diffs.length % 2 !== 0 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
+                        const raw = 1 / median;
+                        const common = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 120];
                         const nearest = common.reduce((p, c) => Math.abs(c - raw) < Math.abs(p - raw) ? c : p);
-                        done(nearest);
+                        if (Math.abs(nearest - raw) < 1.8) {
+                            done(nearest);
+                        } else {
+                            done(Math.round(raw * 100) / 100);
+                        }
                     }
                 };
-                video.currentTime = 0;
-                video.requestVideoFrameCallback(cb);
-                video.play().catch(() => { clearTimeout(timeout); done(30); });
+                video.oncanplay = () => {
+                    video.currentTime = 0;
+                    video.requestVideoFrameCallback(cb);
+                    video.play().catch(() => { clearTimeout(timeout); done(30); });
+                };
+                video.onerror = () => { clearTimeout(timeout); done(30); };
             } else {
                 video.onloadedmetadata = () => done(30);
                 video.onerror = () => done(30);
@@ -1389,6 +1404,7 @@
         }
 
         let oomDetected = false;
+        let probedFps = null;
         ffmpeg.on('progress', ({ progress }) => {
             const p = Math.max(0, Math.min(100, Math.round(progress * 100)));
             const mappedPercent = 88 + Math.round(progress * 7);
@@ -1400,12 +1416,30 @@
             if (lc.includes('oom') || lc.includes('out of memory')) {
                 oomDetected = true;
             }
+            const match = message.match(/Stream #\d+:\d+.*?: Video:.*?,\s*([\d.]+)\s*(?:fps|tbr)/i);
+            if (match && match[1]) {
+                const val = parseFloat(match[1]);
+                if (val >= 1 && val <= 240 && isFinite(val)) {
+                    probedFps = val;
+                }
+            }
         });
+
+        const ext = file.name.split('.').pop() || 'mp4';
+        const inName = `input.${ext}`;
+        log(`[RemBG] Writing input audio/video stream...`);
+        await ffmpeg.writeFile(inName, await fetchFile(file));
+
+        try {
+            await ffmpeg.exec(['-i', inName]);
+        } catch (_) {}
 
         setProgress(15, t('status_loading_engine') || 'Initializing AI matting engine...');
         await getSession(selectedModel);
 
-        const fps = await detectFps(file);
+        const detectedFps = await detectFps(file);
+        const fps = probedFps || detectedFps || 30;
+
         const procVid = document.createElement('video');
         procVid.muted = true;
         procVid.playsInline = true;
@@ -1421,11 +1455,6 @@
         const H = (procVid.videoHeight || 360) & ~1;
         const duration = procVid.duration || 1;
         const totalFrames = Math.max(1, Math.round(duration * fps));
-
-        const ext = file.name.split('.').pop() || 'mp4';
-        const inName = `input.${ext}`;
-        log(`[RemBG] Writing input audio/video stream...`);
-        await ffmpeg.writeFile(inName, await fetchFile(file));
 
         recurrentStates = null;
         const isTransparent = (selectedBg === 'transparent');
@@ -1508,11 +1537,11 @@
                 const isMov = selectedFormat === 'mov';
 
                 if (isMov) {
-                    log(`[RemBG] Encoding transparent video to QuickTime MOV (PNG/RGBA)...`);
+                    log(`[RemBG] Encoding transparent video to QuickTime MOV (PNG/RGBA @ ${fps} FPS)...`);
                     setProgress(88, 'Encoding MOV with alpha channel...');
 
                     await ffmpeg.exec([
-                        '-r', String(fps),
+                        '-framerate', String(fps),
                         '-threads', threads,
                         '-i', `frame_%05d.png`,
                         '-i', inName,
@@ -1520,6 +1549,7 @@
                         '-map', '1:a?',
                         '-c:v', 'png',
                         '-pix_fmt', 'rgba',
+                        '-r', String(fps),
                         '-c:a', 'copy',
                         '-shortest',
                         'matting.mov'
@@ -1533,11 +1563,11 @@
                     finalBlob = new Blob([data.buffer], { type: selectedFormatMeta.mime });
                     finalPreviewBlob = null;
                 } else if (selectedFormat === 'webm') {
-                    log(`[RemBG] Encoding transparent video to WebM (VP9/Alpha)...`);
+                    log(`[RemBG] Encoding transparent video to WebM (VP9/Alpha @ ${fps} FPS)...`);
                     setProgress(88, 'Encoding WebM with alpha channel...');
 
                     await ffmpeg.exec([
-                        '-r', String(fps),
+                        '-framerate', String(fps),
                         '-threads', threads,
                         '-i', `frame_%05d.png`,
                         '-i', inName,
@@ -1545,6 +1575,7 @@
                         '-map', '1:a?',
                         '-c:v', 'libvpx-vp9',
                         '-pix_fmt', 'yuva420p',
+                        '-r', String(fps),
                         '-c:a', 'libopus',
                         '-shortest',
                         'matting.webm'
@@ -1558,11 +1589,11 @@
                     finalBlob = new Blob([data.buffer], { type: 'video/webm' });
                     finalPreviewBlob = finalBlob;
                 } else if (selectedFormat === 'mp4') {
-                    log(`[RemBG] Encoding transparent video to MP4 (HEVC/Alpha)...`);
+                    log(`[RemBG] Encoding transparent video to MP4 (HEVC/Alpha @ ${fps} FPS)...`);
                     setProgress(88, 'Encoding MP4 HEVC with alpha channel...');
 
                     await ffmpeg.exec([
-                        '-r', String(fps),
+                        '-framerate', String(fps),
                         '-threads', threads,
                         '-i', `frame_%05d.png`,
                         '-i', inName,
@@ -1570,6 +1601,7 @@
                         '-map', '1:a?',
                         '-c:v', 'libx265',
                         '-pix_fmt', 'yuva420p',
+                        '-r', String(fps),
                         '-c:a', 'copy',
                         '-shortest',
                         'matting.mp4'
@@ -1585,11 +1617,11 @@
                 }
             } else {
                 outFileName = `${file.name.replace(/\.[^/.]+$/, '')}_${selectedBg}.mp4`;
-                log(`[RemBG] Encoding MP4 video (${selectedBg} background)...`);
+                log(`[RemBG] Encoding MP4 video (${selectedBg} background @ ${fps} FPS)...`);
                 setProgress(88, 'Encoding MP4 video...');
 
                 await ffmpeg.exec([
-                    '-r', String(fps),
+                    '-framerate', String(fps),
                     '-threads', threads,
                     '-i', `frame_%05d.jpg`,
                     '-i', inName,
@@ -1598,6 +1630,7 @@
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
                     '-pix_fmt', 'yuv420p',
+                    '-r', String(fps),
                     '-c:a', 'copy',
                     '-shortest',
                     'matting.mp4'

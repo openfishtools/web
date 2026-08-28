@@ -473,7 +473,7 @@
 
             const hardwareThreads = navigator.hardwareConcurrency || 4;
             const threads = Math.min(4, hardwareThreads).toString();
-            const encodeArgs = ['-r', String(targetFps), '-threads', threads, '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-shortest', 'output.mp4'];
+            const encodeArgs = ['-framerate', String(targetFps), '-threads', threads, '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(targetFps), '-preset', 'ultrafast', '-shortest', 'output.mp4'];
             await ffmpeg.exec(encodeArgs);
             setProgress(95, t('status_finalizing') || 'Finalizing video...');
             const data = await ffmpeg.readFile('output.mp4');
