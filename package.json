@@ -5,7 +5,8 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "dev": "nodemon api/index.js"
+    "dev": "nodemon api/index.js",
+    "build": "echo 'Static build done'"
   },
   "dependencies": {
     "@vercel/otel": "^1.14.2",
