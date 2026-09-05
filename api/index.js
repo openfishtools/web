@@ -1095,51 +1095,6 @@ async function fetchTikTokOEmbedThumb(pageUrl) {
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fetchTikTokVideoDetails(videoId, username = TIKTOK_USERNAME) {
-    try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        const r = await fetch(`https://www.tiktok.com/embed/v2/${videoId}`, {
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9'
-            },
-            signal: controller.signal
-        });
-        clearTimeout(timer);
-        if (!r.ok) return null;
-        const html = await r.text();
-        const match = html.match(/<script id="__FRONTITY_CONNECT_STATE__"[^>]*>([\s\S]*?)<\/script>/);
-        if (match) {
-            const state = JSON.parse(match[1]);
-            const dataObj = state.source?.data || {};
-            for (const key of Object.keys(dataObj)) {
-                const item = dataObj[key]?.videoData?.itemInfos;
-                const author = dataObj[key]?.videoData?.authorInfos;
-                if (item) {
-                    const cover = item.coversOrigin?.[0] || item.covers?.[0] || '';
-                    return {
-                        id: String(item.id || videoId),
-                        title: item.text ? item.text.trim() : 'TikTok Video',
-                        cover: cover,
-                        url: `https://www.tiktok.com/@${author?.uniqueId || username}/video/${videoId}`,
-                        author: author?.uniqueId || username,
-                        author_name: author?.nickName || username,
-                        play_count: Number(item.playCount) || 0,
-                        digg_count: Number(item.diggCount) || 0,
-                        comment_count: Number(item.commentCount) || 0,
-                        share_count: Number(item.shareCount) || 0,
-                        duration: Number(item.video?.duration) || 15,
-                        created_at: Number(item.createTime) || Math.floor(Date.now() / 1000)
-                    };
-                }
-            }
-        }
-    } catch(e) {}
-    return null;
-}
-
 async function refreshPostCoversViaOEmbed(posts, limit = 12) {
     const targets = posts.slice(0, limit).filter(p => p && p.url);
     await Promise.all(targets.map(async (p, i) => {
