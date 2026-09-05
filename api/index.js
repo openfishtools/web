@@ -26,6 +26,14 @@ const app = express();
 const fs = require('fs');
 app.use(express.json());
 
+app.use((req, res, next) => {
+    const rawPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;
+    if (rawPath && req.url.startsWith('/api/index.js')) {
+        req.url = rawPath.split('?')[0];
+    }
+    next();
+});
+
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
