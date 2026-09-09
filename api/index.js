@@ -1662,7 +1662,7 @@ app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
 module.exports = app;
 
 if (require.main === module) {
-    const port = process.env.NEXTGEN_PORT || 3000;
+    const port = process.env.NEXTGEN_PORT || process.env.PORT || 5000;
     app.listen(port, '0.0.0.0', () => {
         console.log(`\x1b[32m[Next Gen API]\x1b[0m Running at \x1b[36mhttp://localhost:${port}\x1b[0m`);
     });

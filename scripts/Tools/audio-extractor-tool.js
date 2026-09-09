@@ -303,7 +303,8 @@
             { label: 'PRIVACY', value: '100% Local (Zero Server Upload)' }
         ],
         initModal: function(ctx) {
-            const { processLabel } = ctx;
+            const { optContainer, processLabel } = ctx;
+            if (optContainer) optContainer.innerHTML = '';
             if (processLabel) processLabel.textContent = t('tool_audio_btn') || 'Extract Audio';
             selectedFile = null;
         },

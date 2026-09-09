@@ -15,9 +15,17 @@
     let selectedDevice = 'gpu';
     let selectedBg = 'transparent';
     let selectedFormat = 'mov';
+    let selectedImageFormat = 'png';
     let customColor = '#0842a0';
     let isImageMode = true;
     let isGeneratingPreview = false;
+
+    function isImageFile(file) {
+        if (!file) return false;
+        if (file.type && file.type.startsWith('image/')) return true;
+        if (file.type && file.type.startsWith('video/')) return false;
+        return /\.(png|jpe?g|webp|bmp|gif|tiff?|avif|heic|jfif|svg)$/i.test(file.name || '');
+    }
 
     let sliderPos = 50;
     let isDraggingSlider = false;
@@ -66,6 +74,11 @@
         { id: 'mov', labelKey: 'tool_rembg_format_mov', fallback: 'MOV (PNG/RGBA)', ext: '.mov', mime: 'video/quicktime' },
         { id: 'webm', labelKey: 'tool_rembg_format_webm', fallback: 'WebM (VP9/Alpha)', ext: '.webm', mime: 'video/webm' },
         { id: 'mp4', labelKey: 'tool_rembg_format_mp4', fallback: 'MP4 (HEVC/Alpha)', ext: '.mp4', mime: 'video/mp4' }
+    ];
+
+    const IMAGE_FORMAT_OPTIONS = [
+        { id: 'png', fallback: 'PNG (Lossless Alpha)', ext: '.png', mime: 'image/png' },
+        { id: 'webp', fallback: 'WebP (Alpha)', ext: '.webp', mime: 'image/webp' }
     ];
 
     const DEVICE_OPTIONS = [
@@ -966,7 +979,13 @@
         const optContainer = document.getElementById('tool-dynamic-options');
         if (!optContainer) return;
 
-        isImageMode = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+        isImageMode = isImageFile(file);
+        if (isImageMode) {
+            selectedImageFormat = 'png';
+        } else {
+            selectedFormat = 'mov';
+        }
+
         if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
         currentObjectUrl = URL.createObjectURL(file);
         const mediaUrl = currentObjectUrl;
@@ -986,7 +1005,7 @@
                             <span id="rembg-gpu-dot" class="material-symbols-rounded" style="font-size:20px;">hourglass_empty</span>
                             <span id="rembg-gpu-status">Hardware Engine: Checking...</span>
                         </div>
-                        <div class="system-checking-item">
+                        <div class="system-checking-item ${isImageMode ? 'hidden' : ''}">
                             <span id="rembg-ffmpeg-dot" class="material-symbols-rounded" style="font-size:20px;">hourglass_empty</span>
                             <span id="rembg-ffmpeg-status">FFmpeg WASM: Checking...</span>
                         </div>
@@ -1071,9 +1090,9 @@
                     <div id="rembg-format-row" class="rembg-format-row ${selectedBg === 'transparent' ? '' : 'hidden'} mt-4">
                         <p class="upscale-controls-title" data-i18n="tool_rembg_format_title">${t('tool_rembg_format_title') || 'Format'}</p>
                         <div class="upscale-preset-list" id="rembg-format-list">
-                            ${FORMAT_OPTIONS.map(opt => `
-                                <button type="button" class="upscale-preset-btn ${opt.id === selectedFormat ? 'active' : ''}" data-format="${opt.id}" data-i18n="${opt.labelKey}">
-                                    ${t(opt.labelKey) || opt.fallback}
+                            ${(isImageMode ? IMAGE_FORMAT_OPTIONS : FORMAT_OPTIONS).map(opt => `
+                                <button type="button" class="upscale-preset-btn ${opt.id === (isImageMode ? selectedImageFormat : selectedFormat) ? 'active' : ''}" data-format="${opt.id}" ${opt.labelKey ? `data-i18n="${opt.labelKey}"` : ''}>
+                                    ${(opt.labelKey && t(opt.labelKey)) || opt.fallback}
                                 </button>
                             `).join('')}
                         </div>
@@ -1246,8 +1265,14 @@
                 btn.addEventListener('click', () => {
                     formatList.querySelectorAll('.upscale-preset-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    selectedFormat = btn.getAttribute('data-format') || 'mov';
-                    log(`[RemBG] Format set to ${selectedFormat.toUpperCase()}.`);
+                    const fmt = btn.getAttribute('data-format');
+                    if (isImageMode) {
+                        selectedImageFormat = fmt || 'png';
+                        log(`[RemBG] Image format set to ${selectedImageFormat.toUpperCase()}.`);
+                    } else {
+                        selectedFormat = fmt || 'mov';
+                        log(`[RemBG] Video format set to ${selectedFormat.toUpperCase()}.`);
+                    }
                 });
             });
         }
@@ -1289,15 +1314,19 @@
         setProgress(80, t('status_processing') || 'Compositing background...');
         const outCanvas = compositeWithMask(img, mask, img.naturalWidth, img.naturalHeight);
 
-        setProgress(92, t('status_finalizing') || 'Generating PNG...');
-        const blob = await new Promise(r => outCanvas.toBlob(r, 'image/png'));
+        const fmt = selectedImageFormat || 'png';
+        const mime = fmt === 'webp' ? 'image/webp' : 'image/png';
+        const ext = fmt === 'webp' ? 'webp' : 'png';
+        setProgress(92, t('status_finalizing') || `Generating ${ext.toUpperCase()}...`);
+        const blob = await new Promise(r => outCanvas.toBlob(r, mime, 0.95));
         if (!blob) throw new Error('Failed to encode output image.');
 
         showStaticResult(outCanvas);
         setCompletedLayout(true);
 
-        triggerDownload(blob, file.name.replace(/\.[^/.]+$/, '') + `_nobg.png`);
-        log(`[RemBG] Saved: ${file.name.replace(/\.[^/.]+$/, '')}_nobg.png (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`);
+        const outName = `${file.name.replace(/\.[^/.]+$/, '')}_nobg.${ext}`;
+        triggerDownload(blob, outName);
+        log(`[RemBG] Saved: ${outName} (${(blob.size / (1024 * 1024)).toFixed(2)} MB)`);
 
         setProgress(100, t('status_completed') || 'Done!');
         setButtonState('completed', t('status_process_another') || 'Process Another');
@@ -1729,7 +1758,7 @@
         setProgress(10, t('status_initializing') || 'Initializing...');
 
         try {
-            const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+            const isImg = isImageFile(file);
             if (isImg) {
                 await removeBackgroundImage(file);
             } else {
@@ -1792,6 +1821,7 @@
             if (optContainer) optContainer.innerHTML = '';
             selectedFile = null;
             selectedFormat = 'mov';
+            selectedImageFormat = 'png';
             lastResultCanvas = null;
             lastResultBlob = null;
             previewActive = false;
@@ -1815,6 +1845,7 @@
             isProcessing = false;
             selectedBg = 'transparent';
             selectedFormat = 'mov';
+            selectedImageFormat = 'png';
             lastResultCanvas = null;
             lastResultBlob = null;
             previewActive = false;

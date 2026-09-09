@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 require('dotenv').config();
 
-const PORT = process.env.NEXTGEN_PORT || 3000;
+const PORT = process.env.NEXTGEN_PORT || process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 let isDbConnected = false;

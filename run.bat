@@ -2,6 +2,15 @@
 title CHROS Next Gen - Server + API
 cd /d "%~dp0"
 
+if "%PORT%"=="" (
+    if "%NEXTGEN_PORT%"=="" (
+        set PORT=5000
+    ) else (
+        set PORT=%NEXTGEN_PORT%
+    )
+)
+set NEXTGEN_PORT=%PORT%
+
 echo ==========================================
 echo  CHROS Next Gen - Server + API
 echo ==========================================
@@ -13,9 +22,9 @@ if not exist "%~dp0node_modules" (
     echo.
 )
 
-echo [Server] Starting Next Gen API at http://localhost:3000...
+echo [Server] Starting Next Gen API at http://localhost:%PORT%...
 echo [Browser] Opening in default browser...
-start http://localhost:3000
+start http://localhost:%PORT%
 
 node api/index.js
 

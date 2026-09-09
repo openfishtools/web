@@ -2159,6 +2159,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (progressSec) progressSec.classList.add('hidden');
         }
 
+        if (optContainer) {
+            optContainer.innerHTML = '';
+        }
+
         if (typeof tool.initModal === 'function') {
             tool.initModal({
                 optContainer,
@@ -2169,8 +2173,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 downloadBtn,
                 progressSec
             });
-        } else if (optContainer) {
-            optContainer.innerHTML = '';
         }
 
         const activeState = (window.ToolProgressManager && tool && tool._id) ? window.ToolProgressManager.get(tool._id) : null;
@@ -2231,42 +2233,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window._tktk.currentFileBuffer = null;
                 window._tktk.isProcessing = false;
             }
-            if (fileBadge) fileBadge.classList.add('hidden');
-            if (dropIcon) dropIcon.classList.remove('hidden');
-            if (dropContent) dropContent.classList.remove('hidden');
-            if (dropZone && tool.hideDropOnUpload) dropZone.classList.remove('hidden');
-            if (fileInput) fileInput.value = '';
-            if (progressSec) progressSec.classList.add('hidden');
-            if (progressFill) progressFill.style.width = '0%';
-            if (progressPercent) progressPercent.textContent = '0%';
-            if (downloadBtn) downloadBtn.classList.add('hidden');
-
-            const allLogWraps = document.querySelectorAll('.process-logs-wrap, #tiktok-logs-container, #compressor-logs-container');
-            allLogWraps.forEach(el => el.classList.add('hidden'));
-
-            const allLogPres = document.querySelectorAll('#tiktok-logs, #compressor-logs, .process-logs-pre');
-            allLogPres.forEach(el => el.textContent = '');
-
-            const dynamicResults = document.querySelectorAll('#tiktok-stats-results, #tiktok-dl-preview');
-            dynamicResults.forEach(el => el.classList.add('hidden'));
-
             if (typeof tool.onReset === 'function') {
                 tool.onReset();
             }
 
-            if (processBtn) {
-                if (tool.inputType === 'url') {
-                    processBtn.disabled = false;
-                    processBtn.dataset.state = 'ready';
-                } else {
-                    processBtn.disabled = true;
-                    processBtn.dataset.state = 'idle';
-                }
-                const defaultLabel = (window.getTranslation && window.getTranslation(getProcessKey(tool))) || getProcessFallback(tool);
-                if (processLabel) processLabel.textContent = defaultLabel;
-                const processIcon = document.getElementById('tool-process-icon');
-                if (processIcon) processIcon.textContent = 'play_arrow';
-            }
+            populateToolDetails(tool);
 
             if (typeof window.updateOpenModalsLayout === 'function') {
                 window.updateOpenModalsLayout(true);
@@ -2364,14 +2335,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         cachedToolSourceRect = sRect;
 
-        populateToolDetails(tool);
-
         const heroSlot = document.getElementById('tool-modal-hero-slot');
         if (heroSlot) {
             heroSlot.innerHTML = sourceCard.innerHTML;
             const sArrow = heroSlot.querySelector('.tool-card-arrow');
             if (sArrow) sArrow.remove();
         }
+
+        populateToolDetails(tool);
 
         const closeBtn = document.getElementById('tool-modal-close-btn');
         const closeProgress = document.getElementById('tool-close-progress-text');
@@ -2494,13 +2465,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     cardEl.style.cssText = '';
                     cardEl.classList.remove('is-morphing');
 
-                    if (currentToolItem && window.ToolProgressManager && currentToolItem._id) {
-                        const stAfterClose = window.ToolProgressManager.get(currentToolItem._id);
-                        if (stAfterClose && stAfterClose.completed && !stAfterClose.isProcessing) {
-                            window.ToolProgressManager.clear(currentToolItem._id);
+                    if (currentToolItem) {
+                        const stAfterClose = (window.ToolProgressManager && currentToolItem._id)
+                            ? window.ToolProgressManager.get(currentToolItem._id)
+                            : null;
+                        if (!stAfterClose || !stAfterClose.isProcessing) {
+                            if (stAfterClose && stAfterClose.completed && window.ToolProgressManager) {
+                                window.ToolProgressManager.clear(currentToolItem._id);
+                            }
                             if (typeof currentToolItem.onReset === 'function') {
                                 currentToolItem.onReset();
                             }
+                            const optC = document.getElementById('tool-dynamic-options');
+                            if (optC) optC.innerHTML = '';
                         }
                     }
 
@@ -2512,6 +2489,21 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop.classList.remove('active');
             cardEl.style.cssText = '';
             cardEl.classList.remove('is-morphing');
+            if (currentToolItem) {
+                const stAfterClose = (window.ToolProgressManager && currentToolItem._id)
+                    ? window.ToolProgressManager.get(currentToolItem._id)
+                    : null;
+                if (!stAfterClose || !stAfterClose.isProcessing) {
+                    if (stAfterClose && stAfterClose.completed && window.ToolProgressManager) {
+                        window.ToolProgressManager.clear(currentToolItem._id);
+                    }
+                    if (typeof currentToolItem.onReset === 'function') {
+                        currentToolItem.onReset();
+                    }
+                    const optC = document.getElementById('tool-dynamic-options');
+                    if (optC) optC.innerHTML = '';
+                }
+            }
             isToolModalAnimating = false;
         }
     };
