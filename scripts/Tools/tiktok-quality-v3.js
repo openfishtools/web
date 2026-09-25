@@ -1,510 +1,548 @@
-const FAKE_SAMPLE_BYTES = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
-const FAKE_SAMPLE_SIZE = 8;
-const CONTAINER_BOXES = new Set([
-    'moov', 'trak', 'mdia', 'minf', 'stbl',
-    'edts', 'dinf', 'udta', 'meta', 'ilst',
-]);
+/* =========================================================================
+ * ADJN MP4 Core v5.0 — 64-Bit Unknown Duration Sentinel Engine
+ * Developed by F R Y 60fps (@itsmefachry) & Adekjamannow (@adek.jamannow)
+ * Integrated for Editorstuff / Cutefish TikTok Quality Tool
+ * ========================================================================= */
 
-function _v3_getBoxType(data, offset) {
-    return String.fromCharCode(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
+const ADJN_VERSION = '5.0';
+const ENCODER_TAG = 'ADJN Quality Method by F R Y 60fps (@itsmefachry) & Adekjamannow (@adek.jamannow) (cutefish.my.id)';
+const FOURCC_TOO = new Uint8Array([0xa9, 0x74, 0x6f, 0x6f]); // '©too'
+const FOURCC_CMT = new Uint8Array([0xa9, 0x63, 0x6d, 0x74]); // '©cmt'
+const SENTINEL_FF = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]); // 64-bit Unknown Duration Sentinel
+const CONTAINER_BOXES = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts']);
+const MAX_TABLE_ENTRIES = 50000000;
+const EMPTY_U8 = new Uint8Array(0);
+
+function _v3_createError(msg) {
+    const err = new Error(msg);
+    err.name = 'ADJNPatchError';
+    return err;
 }
-function _v3_assertUint32(value, label) {
-    if (!Number.isFinite(value) || value < 0 || value > 0xffffffff)
-        throw new Error(`${label} out of uint32 range: ${value}`);
+function _v3_throwError(msg) {
+    throw _v3_createError(msg);
 }
-function _v3_readBox(view, data, offset, end, parentPath) {
-    if (offset + 8 > end) return null;
-    const smallSize = view.getUint32(offset, false);
-    const type = _v3_getBoxType(data, offset + 4);
-    let size = smallSize;
-    let headerSize = 8;
-    if (smallSize === 1) {
-        if (offset + 16 > end) return null;
-        const high = view.getUint32(offset + 8, false);
-        const low  = view.getUint32(offset + 12, false);
-        size = high * 4294967296 + low;
-        headerSize = 16;
-    } else if (smallSize === 0) {
-        size = end - offset;
+
+function _v3_readU32(b, o) {
+    return ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+}
+function _v3_readU64(b, o) {
+    return Number((BigInt(_v3_readU32(b, o)) << 32n) | BigInt(_v3_readU32(b, o + 4)));
+}
+function _v3_u32ToBytes(v) {
+    const b = new Uint8Array(4);
+    b[0] = (v >>> 24) & 0xff;
+    b[1] = (v >>> 16) & 0xff;
+    b[2] = (v >>> 8) & 0xff;
+    b[3] = v & 0xff;
+    return b;
+}
+function _v3_u64ToBytes(v) {
+    const b = new Uint8Array(8);
+    const big = BigInt(v);
+    b.set(_v3_u32ToBytes(Number(big >> 32n)), 0);
+    b.set(_v3_u32ToBytes(Number(big & 0xffffffffn)), 4);
+    return b;
+}
+function _v3_asciiToBytes(str) {
+    const b = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) b[i] = str.charCodeAt(i) & 0xff;
+    return b;
+}
+function _v3_concatBytes(chunks) {
+    let total = 0;
+    for (const c of chunks) total += (c ? c.length : 0);
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+        if (!c) continue;
+        out.set(c, offset);
+        offset += c.length;
     }
-    if (size < headerSize || offset + size > end) return null;
-    return {
-        type, offset, size, headerSize,
-        contentStart: offset + headerSize,
-        end: offset + size,
-        path: parentPath ? `${parentPath}/${type}` : type,
-        data, view,
-        children: [],
-        prefixStart: offset + headerSize,
-        prefixEnd:   offset + headerSize,
-    };
+    return out;
 }
-function _v3_childStartForBox(box) {
-    return box.type === 'meta' ? box.contentStart + 4 : box.contentStart;
+function _v3_cloneBytes(src) {
+    const dst = new Uint8Array(src.length);
+    dst.set(src);
+    return dst;
 }
-function _v3_boxPayload(box) {
-    return box.data.subarray(box.contentStart, box.end);
+function _v3_toU8Array(val) {
+    if (val instanceof Uint8Array) return new Uint8Array(val.buffer, val.byteOffset, val.byteLength);
+    if (val instanceof ArrayBuffer) return new Uint8Array(val);
+    if (ArrayBuffer.isView(val)) return new Uint8Array(val.buffer, val.byteOffset, val.byteLength);
+    throw _v3_createError('Buffer video tidak valid.');
 }
-function _v3_readU32BE(arr, offset) {
-    return ((arr[offset] << 24) | (arr[offset + 1] << 16) | (arr[offset + 2] << 8) | arr[offset + 3]) >>> 0;
-}
-function _v3_parseBoxes(data, view, start, end, parentPath) {
-    const boxes = [];
-    let offset = start;
-    while (offset + 8 <= end) {
-        const box = _v3_readBox(view, data, offset, end, parentPath || '');
-        if (!box) break;
-        if (CONTAINER_BOXES.has(box.type)) {
-            const childStart = _v3_childStartForBox(box);
-            if (childStart <= box.end) {
-                box.prefixStart = box.contentStart;
-                box.prefixEnd   = childStart;
-                box.children    = _v3_parseBoxes(data, view, childStart, box.end, box.path);
-            }
+
+function _v3_exactBytesEqual(a, b) {
+    if (a.byteLength !== b.byteLength) return false;
+    const step = 65536;
+    for (let o = 0; o < a.byteLength; o += step) {
+        const len = Math.min(step, a.byteLength - o);
+        for (let i = 0; i < len; i++) {
+            if (a[o + i] !== b[o + i]) return false;
         }
-        boxes.push(box);
-        offset = box.end;
     }
-    return boxes;
+    return true;
 }
-function _v3_findChild(box, type) {
-    return box ? box.children.find(c => c.type === type) || null : null;
+
+function _v3_indexOfSubarray(haystack, needleStr) {
+    const needle = _v3_asciiToBytes(needleStr);
+    outer: for (let i = 0; i + needle.length <= haystack.length; i++) {
+        for (let j = 0; j < needle.length; j++) {
+            if (haystack[i + j] !== needle[j]) continue outer;
+        }
+        return i;
+    }
+    return -1;
 }
-function _v3_findDescendant(box, typePath) {
-    let cur = box;
-    for (const t of typePath) {
-        cur = _v3_findChild(cur, t);
+
+function Mp4Box(type, payload, children) {
+    this.type = type;
+    this.payload = payload || EMPTY_U8;
+    this.children = children || null;
+}
+Mp4Box.prototype.find = function (type) {
+    if (!this.children) return null;
+    for (const c of this.children) if (c.type === type) return c;
+    return null;
+};
+Mp4Box.prototype.findAll = function (type) {
+    if (!this.children) return [];
+    return this.children.filter(c => c.type === type);
+};
+Mp4Box.prototype.remove = function (type) {
+    if (this.children) this.children = this.children.filter(c => c.type !== type);
+};
+Mp4Box.prototype.path = function (...types) {
+    let cur = this;
+    for (let i = 0; i < types.length; i++) {
+        cur = cur ? cur.find(types[i]) : null;
         if (!cur) return null;
     }
     return cur;
-}
-function _v3_findTopLevel(boxes, type) {
-    return boxes.find(b => b.type === type) || null;
-}
-function _v3_handlerTypeForTrak(trak) {
-    const hdlr = _v3_findDescendant(trak, ['mdia', 'hdlr']);
-    if (!hdlr || hdlr.offset + 20 > hdlr.end) return null;
-    return _v3_getBoxType(hdlr.data, hdlr.offset + 16);
-}
-function _v3_getTimescale(trak) {
-    const mdhd = _v3_findDescendant(trak, ['mdia', 'mdhd']);
-    if (!mdhd) return 90000;
-    const ver = mdhd.data[mdhd.offset + 8];
-    return ver === 0
-        ? mdhd.view.getUint32(mdhd.offset + 20, false)
-        : mdhd.view.getUint32(mdhd.offset + 28, false);
-}
-function _v3_parseStsz(stsz) {
-    const sampleSize = stsz.view.getUint32(stsz.offset + 12, false);
-    const count      = stsz.view.getUint32(stsz.offset + 16, false);
-    if (sampleSize) return new Array(count).fill(sampleSize);
-    const tableStart = stsz.offset + 20;
-    if (tableStart + count * 4 > stsz.end)
-        throw new Error('stsz too small for declared sample count.');
-    const sizes = [];
-    for (let i = 0; i < count; i++)
-        sizes.push(stsz.view.getUint32(tableStart + i * 4, false));
-    return sizes;
-}
-function _v3_parseStco(stcoBox) {
-    const isCo64 = stcoBox.type === 'co64';
-    const count = stcoBox.view.getUint32(stcoBox.offset + 12, false);
-    const tableStart = stcoBox.offset + 16;
-    const itemSize = isCo64 ? 8 : 4;
-    if (tableStart + count * itemSize > stcoBox.end)
-        throw new Error(`${stcoBox.type} too small for declared chunk count.`);
-    const offsets = [];
-    for (let i = 0; i < count; i++) {
-        if (isCo64) {
-            const high = stcoBox.view.getUint32(tableStart + i * 8, false);
-            const low  = stcoBox.view.getUint32(tableStart + i * 8 + 4, false);
-            offsets.push(high * 4294967296 + low);
+};
+Mp4Box.prototype.clone = function () {
+    if (this.children) return new Mp4Box(this.type, null, this.children.map(c => c.clone()));
+    return new Mp4Box(this.type, _v3_cloneBytes(this.payload));
+};
+Mp4Box.prototype.serialize = function () {
+    const body = this.children ? _v3_concatBytes(this.children.map(c => c.serialize())) : this.payload;
+    if (body.length + 8 > 0xffffffff) {
+        return _v3_concatBytes([_v3_u32ToBytes(1), _v3_asciiToBytes(this.type), _v3_u64ToBytes(body.length + 16), body]);
+    }
+    return _v3_concatBytes([_v3_u32ToBytes(body.length + 8), _v3_asciiToBytes(this.type), body]);
+};
+
+function _v3_parseBoxes(bytes, start, end) {
+    const list = [];
+    let p = start;
+    while (p + 8 <= end) {
+        let size = _v3_readU32(bytes, p);
+        let header = 8;
+        if (size === 1) {
+            if (p + 16 > end) break;
+            size = _v3_readU64(bytes, p + 8);
+            header = 16;
+        } else if (size === 0) {
+            size = end - p;
+        }
+        if (size < header || p + size > end) break;
+        const type = String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]);
+        if (CONTAINER_BOXES.has(type)) {
+            list.push(new Mp4Box(type, null, _v3_parseBoxes(bytes, p + header, p + size)));
         } else {
-            offsets.push(stcoBox.view.getUint32(tableStart + i * 4, false));
+            list.push(new Mp4Box(type, bytes.subarray(p + header, p + size)));
         }
+        p += size;
     }
-    return offsets;
+    return list;
 }
-function _v3_parseStsc(stsc) {
-    const count      = stsc.view.getUint32(stsc.offset + 12, false);
-    const tableStart = stsc.offset + 16;
-    if (tableStart + count * 12 > stsc.end)
-        throw new Error('stsc too small for declared entry count.');
-    const rows = [];
-    for (let i = 0; i < count; i++) {
-        const off = tableStart + i * 12;
-        rows.push([
-            stsc.view.getUint32(off,     false),
-            stsc.view.getUint32(off + 4, false),
-            stsc.view.getUint32(off + 8, false),
-        ]);
-    }
-    return rows;
-}
-function _v3_parseStts(stts) {
-    const count = stts.view.getUint32(stts.offset + 12, false);
-    const tableStart = stts.offset + 16;
-    const entries = [];
-    for (let i = 0; i < count; i++) {
-        const off = tableStart + i * 8;
-        entries.push([
-            stts.view.getUint32(off, false),
-            stts.view.getUint32(off + 4, false)
-        ]);
-    }
-    return entries;
-}
+
 function _v3_makeBox(type, payload) {
-    const size = 8 + payload.byteLength;
-    _v3_assertUint32(size, `${type}.size`);
-    const box = new Uint8Array(size);
-    const dv  = new DataView(box.buffer);
-    dv.setUint32(0, size, false);
-    for (let i = 0; i < 4; i++) box[4 + i] = type.charCodeAt(i);
-    box.set(new Uint8Array(payload.buffer || payload, payload.byteOffset || 0, payload.byteLength), 8);
-    return box;
+    return _v3_concatBytes([_v3_u32ToBytes(payload.length + 8), _v3_asciiToBytes(type), payload]);
 }
-function _v3_concatBytes(parts) {
-    let totalLen = 0;
-    for (const p of parts) totalLen += (p ? p.byteLength : 0);
-    const result = new Uint8Array(totalLen);
-    let off = 0;
-    for (const p of parts) {
-        if (!p) continue;
-        result.set(new Uint8Array(p.buffer || p, p.byteOffset || 0, p.byteLength), off);
-        off += p.byteLength;
+function _v3_makeBoxRaw(typeBytes, payload) {
+    return _v3_concatBytes([_v3_u32ToBytes(payload.length + 8), typeBytes, payload]);
+}
+
+function _v3_scanBoxes(bytes, start, end, label) {
+    const out = [];
+    let p = start;
+    while (p < end) {
+        if (p + 8 > end) _v3_throwError('Invalid MP4 — malformed ' + label + ' metadata layout.');
+        let size = _v3_readU32(bytes, p);
+        let header = 8;
+        if (size === 1) {
+            if (p + 16 > end) _v3_throwError('Invalid MP4 — truncated 64-bit ' + label + ' metadata header.');
+            size = _v3_readU64(bytes, p + 8);
+            header = 16;
+        } else if (size === 0) {
+            size = end - p;
+        }
+        if (!Number.isSafeInteger(size) || size < header || p + size > end) {
+            _v3_throwError('Invalid MP4 — malformed ' + label + ' metadata box size.');
+        }
+        out.push({
+            type: String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]),
+            start: p,
+            end: p + size,
+            header
+        });
+        p += size;
     }
-    return result;
+    return out;
 }
-function _v3_boxBytes(box) {
-    return new Uint8Array(box.data.buffer, box.data.byteOffset + box.offset, box.size);
+
+function _v3_makeDataAtom(text, fourCC) {
+    const dataPayload = _v3_concatBytes([_v3_u32ToBytes(1), _v3_u32ToBytes(0), _v3_asciiToBytes(text)]);
+    return _v3_makeBoxRaw(fourCC || FOURCC_TOO, _v3_makeBox('data', dataPayload));
 }
-function _v3_writeU32BE(arr, offset, value) {
-    const dv = new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
-    dv.setUint32(offset, value, false);
+function _v3_makeMetaBox(tagText) {
+    const hdlrPayload = _v3_concatBytes([_v3_u32ToBytes(0), _v3_u32ToBytes(0), _v3_asciiToBytes('mdir'), new Uint8Array(12), new Uint8Array(1)]);
+    return _v3_makeBox('meta', _v3_concatBytes([_v3_u32ToBytes(0), _v3_makeBox('hdlr', hdlrPayload), _v3_makeBox('ilst', _v3_makeDataAtom(tagText))]));
 }
-function _v3_buildStco(newOffsets) {
-    const payload = new Uint8Array(8 + newOffsets.length * 4);
-    _v3_writeU32BE(payload, 4, newOffsets.length);
-    let off = 8;
-    for (const o of newOffsets) {
-        _v3_assertUint32(o, 'stco.chunk_offset');
-        _v3_writeU32BE(payload, off, o);
-        off += 4;
+function _v3_patchIlst(bytes, tagText) {
+    const chunks = [];
+    for (const box of _v3_scanBoxes(bytes, 0, bytes.length, 'ilst')) {
+        if (box.type !== '©too' && box.type !== '©cmt') chunks.push(_v3_cloneBytes(bytes.subarray(box.start, box.end)));
     }
-    return _v3_makeBox('stco', payload);
-}
-function _v3_buildStsc(rows) {
-    const payload = new Uint8Array(8 + rows.length * 12);
-    _v3_writeU32BE(payload, 4, rows.length);
-    let off = 8;
-    for (const [fc, spc, sdi] of rows) {
-        _v3_writeU32BE(payload, off, fc);
-        _v3_writeU32BE(payload, off + 4, spc);
-        _v3_writeU32BE(payload, off + 8, sdi);
-        off += 12;
+    if (tagText) {
+        chunks.push(_v3_makeDataAtom(tagText, FOURCC_TOO));
+        chunks.push(_v3_makeDataAtom(tagText, FOURCC_CMT));
     }
-    return _v3_makeBox('stsc', payload);
+    return _v3_concatBytes(chunks);
 }
-function _v3_buildStsz(sizes) {
-    const payload = new Uint8Array(12 + sizes.length * 4);
-    _v3_writeU32BE(payload, 8, sizes.length);
-    let off = 12;
-    for (const sz of sizes) { _v3_writeU32BE(payload, off, sz); off += 4; }
-    return _v3_makeBox('stsz', payload);
-}
-function _v3_buildStts(entries) {
-    const payload = new Uint8Array(8 + entries.length * 8);
-    _v3_writeU32BE(payload, 4, entries.length);
-    let off = 8;
-    for (const [count, delta] of entries) {
-        _v3_writeU32BE(payload, off, count);
-        _v3_writeU32BE(payload, off + 4, delta);
-        off += 8;
+function _v3_patchMetaBox(bytes, tagText) {
+    if (bytes.length < 4) _v3_throwError('Invalid MP4 — malformed meta FullBox.');
+    const chunks = [_v3_cloneBytes(bytes.subarray(0, 4))];
+    let inserted = false;
+    for (const box of _v3_scanBoxes(bytes, 4, bytes.length, 'meta')) {
+        if (box.type === 'ilst') {
+            const body = bytes.subarray(box.start + box.header, box.end);
+            chunks.push(_v3_makeBox('ilst', _v3_patchIlst(body, !inserted ? tagText : null)));
+            inserted = inserted || !!tagText;
+        } else {
+            chunks.push(_v3_cloneBytes(bytes.subarray(box.start, box.end)));
+        }
     }
-    return _v3_makeBox('stts', payload);
+    if (!inserted && tagText) chunks.push(_v3_makeBox('ilst', _v3_makeDataAtom(tagText)));
+    return _v3_makeBox('meta', _v3_concatBytes(chunks));
 }
-function _v3_buildCommentItem(comment) {
-    const text = new TextEncoder().encode(comment);
-    const dataPayload = new Uint8Array(8 + text.byteLength);
-    dataPayload.set(text, 8);
-    return _v3_makeBox('\u00A9cmt', _v3_makeBox('data', dataPayload));
-}
-function _v3_buildCommentMetadata() {
-    const item = _v3_buildCommentItem('Patch by cutefish.my.id');
-    const ilst = _v3_makeBox('ilst', item);
-    return _v3_makeBox('meta', _v3_concatBytes([new Uint8Array(4), ilst]));
-}
-function _v3_addCommentMetadata(moov, replacements) {
-    const udta = _v3_findChild(moov, 'udta');
-    if (!udta) {
-        const moovBytes   = _v3_rebuildBox(moov, replacements);
-        const rebuiltMoov = _v3_makeBox('moov', _v3_concatBytes([
-            moovBytes.subarray(8),
-            _v3_makeBox('udta', _v3_buildCommentMetadata())
-        ]));
-        replacements.set(moov, rebuiltMoov);
-        return;
+function _v3_patchUdtaBox(bytes, tagText) {
+    const chunks = [];
+    let inserted = false;
+    for (const box of _v3_scanBoxes(bytes, 0, bytes.length, 'udta')) {
+        if (box.type === 'meta') {
+            const body = bytes.subarray(box.start + box.header, box.end);
+            chunks.push(_v3_patchMetaBox(body, !inserted ? tagText : null));
+            inserted = inserted || !!tagText;
+        } else {
+            chunks.push(_v3_cloneBytes(bytes.subarray(box.start, box.end)));
+        }
     }
-    const meta = _v3_findChild(udta, 'meta');
-    if (!meta) {
-        const udtaPrefix   = new Uint8Array(udta.data.buffer, udta.data.byteOffset + udta.offset + 8, udta.prefixEnd - udta.contentStart);
-        const udtaChildren = udta.children.map(_v3_boxBytes);
-        replacements.set(udta, _v3_makeBox('udta', _v3_concatBytes([udtaPrefix, ...udtaChildren, _v3_buildCommentMetadata()])));
-        return;
-    }
-    const ilst = _v3_findChild(meta, 'ilst');
-    if (ilst) {
-        const items = ilst.children.filter(item => item.type !== '\u00A9cmt').map(_v3_boxBytes);
-        replacements.set(ilst, _v3_makeBox('ilst', _v3_concatBytes([...items, _v3_buildCommentItem('Patch by cutefish.my.id')])));
-        return;
-    }
-    const metaPrefix   = new Uint8Array(meta.data.buffer, meta.data.byteOffset + meta.offset + 8, meta.prefixEnd - meta.contentStart);
-    const metaChildren = meta.children.map(_v3_boxBytes);
-    replacements.set(meta, _v3_makeBox('meta', _v3_concatBytes([metaPrefix, ...metaChildren, _v3_makeBox('ilst', _v3_buildCommentItem('Patch by cutefish.my.id'))])));
+    if (!inserted && tagText) chunks.push(_v3_makeMetaBox(tagText));
+    return _v3_concatBytes(chunks);
 }
-function _v3_rebuildBox(box, replacements) {
-    if (replacements.has(box)) return replacements.get(box);
-    if (!box.children.length) return _v3_boxBytes(box);
-    const prefix = new Uint8Array(box.data.buffer, box.data.byteOffset + box.prefixStart, box.prefixEnd - box.prefixStart);
-    const parts  = [prefix];
-    for (const child of box.children) {
-        const r = _v3_rebuildBox(child, replacements);
-        if (r) parts.push(r);
-    }
-    return _v3_makeBox(box.type, _v3_concatBytes(parts));
-}
-function _v3_getTrackId(trak) {
-    const tkhd = _v3_findChild(trak, 'tkhd');
-    if (!tkhd) return 0;
-    const d      = _v3_boxBytes(tkhd);
-    const isV1   = d[8] === 1;
-    const idOff  = 8 + (isV1 ? 20 : 12);
-    return _v3_readU32BE(d, idOff);
-}
-function _v3_withTrackId(trak, newId) {
-    const tkhd = _v3_findChild(trak, 'tkhd');
-    if (!tkhd) return null;
-    const d     = new Uint8Array(_v3_boxBytes(tkhd));
-    const isV1  = d[8] === 1;
-    const idOff = 8 + (isV1 ? 20 : 12);
-    _v3_writeU32BE(d, idOff, newId);
-    return d;
-}
-
-// "Fix unidentified audio": keep the original audio track CLEAN (no synthetic
-// entries) and attach a duplicated audio track that carries the fake-sample
-// padding instead. Players that choke on the padded stream simply use the
-// untouched first track.
-function _v3_buildFixedAudioClone(audioTrak, ctx) {
-    const cloneReplacements = new Map();
-
-    const aEdts = _v3_findChild(audioTrak, 'edts');
-    if (aEdts) cloneReplacements.set(aEdts, null);
-
-    const aUdta = _v3_findChild(audioTrak, 'udta');
-    if (aUdta) cloneReplacements.set(aUdta, null);
-
-    const newTkhdData = _v3_withTrackId(audioTrak, ctx.newTrackId);
-    if (newTkhdData) cloneReplacements.set(_v3_findChild(audioTrak, 'tkhd'), newTkhdData);
-
-    const fakeChunkOffset = ctx.newMdatContentStart + ctx.origMdatPayload.byteLength;
-    const newAOffsets = [...ctx.aRelOffsets.map(off => off + ctx.newMdatContentStart), fakeChunkOffset];
-    cloneReplacements.set(ctx.aStcoBox, _v3_buildStco(newAOffsets));
-
-    const newASizes = [...ctx.aOrigSizes, ...new Array(ctx.fakeCount).fill(FAKE_SAMPLE_SIZE)];
-    cloneReplacements.set(ctx.aStszBox, _v3_buildStsz(newASizes));
-
-    const newAStsc = [...ctx.aOrigStsc, [ctx.aRelOffsets.length + 1, ctx.fakeCount, 1]];
-    cloneReplacements.set(ctx.aStscBox, _v3_buildStsc(newAStsc));
-
-    const newAStts = [...ctx.aOrigStts, [ctx.fakeCount, 1]];
-    cloneReplacements.set(ctx.aSttsBox, _v3_buildStts(newAStts));
-
-    return _v3_rebuildBox(audioTrak, cloneReplacements);
-}
-
-function _v3_patchMp4(inputData, _logFn, opts) {
-    const _log  = _logFn || (() => {});
-    const _fixAudio = !!(opts && opts.fixAudio);
-    const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
-    const data   = new Uint8Array(srcArr.byteLength);
-    data.set(srcArr);
-    const view = new DataView(data.buffer);
-    _log(`Input buffer size: ${data.byteLength} bytes (${(data.byteLength / (1024 * 1024)).toFixed(3)} MB)`);
-
-    const topLevel  = _v3_parseBoxes(data, view, 0, data.length, '');
-    const ftyp      = _v3_findTopLevel(topLevel, 'ftyp');
-    const moov      = _v3_findTopLevel(topLevel, 'moov');
-    const mdat      = _v3_findTopLevel(topLevel, 'mdat');
-    if (!ftyp || !moov || !mdat) throw new Error('Missing required MP4 boxes.');
-
-    const ftypPayload = new Uint8Array([
-        0x69, 0x73, 0x6f, 0x6d,
-        0x00, 0x00, 0x02, 0x00,
-        0x69, 0x73, 0x6f, 0x6d,
-        0x69, 0x73, 0x6f, 0x32,
-        0x61, 0x76, 0x63, 0x31,
-        0x6d, 0x70, 0x34, 0x31
-    ]);
-    const ftypBytes = _v3_makeBox('ftyp', ftypPayload);
-
-    const origMdatPayload = data.subarray(mdat.contentStart, mdat.end);
-    const origMdatContentStart = mdat.contentStart;
-
-    const traks     = moov.children.filter(c => c.type === 'trak');
-    const videoTrak = traks.find(c => _v3_handlerTypeForTrak(c) === 'vide');
-    const audioTrak = traks.find(c => _v3_handlerTypeForTrak(c) === 'soun');
-    if (!videoTrak) throw new Error('Video track not found.');
-
-    const vStbl    = _v3_findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
-    const vStcoBox = _v3_findChild(vStbl, 'stco') || _v3_findChild(vStbl, 'co64');
-    const vSttsBox = _v3_findChild(vStbl, 'stts');
-    const vStszBox = _v3_findChild(vStbl, 'stsz');
-
-    const vOrigOffsets = _v3_parseStco(vStcoBox);
-    const vRelOffsets  = vOrigOffsets.map(off => off - origMdatContentStart);
-    const vStsz        = _v3_parseStsz(vStszBox);
-    const vStts        = _v3_parseStts(vSttsBox);
-
-    let fakeCount = 0;
-    let aRelOffsets = [];
-    let aOrigSizes = [];
-    let aOrigStsc = [];
-    let aOrigStts = [];
-    let aStbl = null, aStszBox = null, aStcoBox = null, aStscBox = null, aSttsBox = null;
-
-    if (audioTrak) {
-        aStbl    = _v3_findDescendant(audioTrak, ['mdia', 'minf', 'stbl']);
-        aStszBox = _v3_findChild(aStbl, 'stsz');
-        aStcoBox = _v3_findChild(aStbl, 'stco') || _v3_findChild(aStbl, 'co64');
-        aStscBox = _v3_findChild(aStbl, 'stsc');
-        aSttsBox = _v3_findChild(aStbl, 'stts');
-
-        aOrigSizes = _v3_parseStsz(aStszBox);
-        fakeCount  = aOrigSizes.length * 9;
-
-        const aOrigOffsets = _v3_parseStco(aStcoBox);
-        aRelOffsets = aOrigOffsets.map(off => off - origMdatContentStart);
-        aOrigStsc   = _v3_parseStsc(aStscBox);
-        aOrigStts   = _v3_parseStts(aSttsBox);
+function _v3_injectUdta(moov, tagText) {
+    const existing = moov.findAll('udta');
+    if (existing.length) {
+        let inserted = false;
+        for (const u of existing) {
+            const toAdd = !inserted ? tagText : null;
+            inserted = inserted || !!toAdd;
+            if (u.children) _v3_throwError('Invalid MP4 — unexpected parsed udta metadata tree.');
+            u.payload = _v3_patchUdtaBox(u.payload, toAdd);
+        }
     } else {
-        fakeCount = vStsz.length * 9;
+        moov.children.push(new Mp4Box('udta', _v3_makeMetaBox(tagText)));
     }
+}
 
-    const fakePayload = new Uint8Array(fakeCount * FAKE_SAMPLE_SIZE);
-    for (let i = 0; i < fakeCount; i++) {
-        fakePayload.set(FAKE_SAMPLE_BYTES, i * FAKE_SAMPLE_SIZE);
-    }
-
-    // Fix-audio mode: reserve a stub child so the cloned (padded) audio track
-    // is appended right after the existing tracks on every moov rebuild.
-    let fixTrakStub = null;
-    let fixNewTrackId = 0;
-    if (audioTrak && _fixAudio) {
-        fixNewTrackId = traks.reduce((max, tr) => Math.max(max, _v3_getTrackId(tr)), 0) + 1;
-        fixTrakStub = { type: 'trak' };
-        moov.children.push(fixTrakStub);
-        _log(`Fix unidentified audio: ON — original audio kept clean, padded clone added as track #${fixNewTrackId}.`);
-    }
-
-    let moovHeaderLen = moov.size;
-    let finalOutput   = null;
-    let patchResultStats = null;
-
-    for (let pass = 0; pass < 3; pass++) {
-        const newMdatContentStart = ftypBytes.byteLength + moovHeaderLen + 8;
-        const replacements = new Map();
-
-        if (fixTrakStub) {
-            replacements.set(fixTrakStub, _v3_buildFixedAudioClone(audioTrak, {
-                newTrackId: fixNewTrackId,
-                newMdatContentStart,
-                origMdatPayload,
-                aRelOffsets, aOrigSizes, aOrigStsc, aOrigStts,
-                aStcoBox, aStszBox, aStscBox, aSttsBox,
-                fakeCount
-            }));
+function _v3_parseTopLevel(bytes) {
+    const list = [];
+    let p = 0;
+    while (p + 8 <= bytes.length) {
+        let size = _v3_readU32(bytes, p);
+        let header = 8;
+        if (size === 1) {
+            if (p + 16 > bytes.length) break;
+            size = _v3_readU64(bytes, p + 8);
+            header = 16;
+        } else if (size === 0) {
+            size = end - p;
         }
+        if (size < header || p + size > bytes.length) break;
+        list.push({
+            type: String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]),
+            start: p,
+            end: p + size,
+            header
+        });
+        p += size;
+    }
+    return list;
+}
 
-        const vEdts = _v3_findChild(videoTrak, 'edts');
-        if (vEdts) replacements.set(vEdts, null);
-
-        const newVOffsets = vRelOffsets.map(off => off + newMdatContentStart);
-        replacements.set(vStcoBox, _v3_buildStco(newVOffsets));
-
-        if (audioTrak && !_fixAudio) {
-            const aEdts = _v3_findChild(audioTrak, 'edts');
-            if (aEdts) replacements.set(aEdts, null);
-
-            const aUdta = _v3_findChild(audioTrak, 'udta');
-            if (aUdta) replacements.set(aUdta, null);
-
-            const fakeChunkOffset = newMdatContentStart + origMdatPayload.byteLength;
-            const newAOffsets = [...aRelOffsets.map(off => off + newMdatContentStart), fakeChunkOffset];
-            replacements.set(aStcoBox, _v3_buildStco(newAOffsets));
-
-            const newASizes = [...aOrigSizes, ...new Array(fakeCount).fill(FAKE_SAMPLE_SIZE)];
-            replacements.set(aStszBox, _v3_buildStsz(newASizes));
-
-            const newAStsc = [...aOrigStsc, [aRelOffsets.length + 1, fakeCount, 1]];
-            replacements.set(aStscBox, _v3_buildStsc(newAStsc));
-
-            const newAStts = [...aOrigStts, [fakeCount, 1]];
-            replacements.set(aSttsBox, _v3_buildStts(newAStts));
-        } else if (audioTrak) {
-            // Fix-audio mode: original track stays clean, only re-point its
-            // chunk offsets to the relocated mdat.
-            const aEdts = _v3_findChild(audioTrak, 'edts');
-            if (aEdts) replacements.set(aEdts, null);
-
-            const aUdta = _v3_findChild(audioTrak, 'udta');
-            if (aUdta) replacements.set(aUdta, null);
-
-            replacements.set(aStcoBox, _v3_buildStco(aRelOffsets.map(off => off + newMdatContentStart)));
+function _v3_validateBoxNesting(bytes, start, end, label, depth = 0) {
+    if (depth > 24) _v3_throwError('Invalid MP4 — box nesting is too deep to patch safely.');
+    let p = start;
+    while (p < end) {
+        if (p + 8 > end) _v3_throwError('Invalid MP4 — malformed ' + label + ' box layout.');
+        let size = _v3_readU32(bytes, p);
+        let header = 8;
+        if (size === 1) {
+            if (p + 16 > end) _v3_throwError('Invalid MP4 — truncated 64-bit ' + label + ' box header.');
+            size = _v3_readU64(bytes, p + 8);
+            header = 16;
+        } else if (size === 0) {
+            size = end - p;
         }
+        if (!Number.isSafeInteger(size) || size < header || p + size > end) {
+            _v3_throwError('Invalid MP4 — malformed ' + label + ' box size.');
+        }
+        const type = String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]);
+        if (CONTAINER_BOXES.has(type)) {
+            _v3_validateBoxNesting(bytes, p + header, p + size, type, depth + 1);
+        }
+        p += size;
+    }
+}
 
-        if (fixTrakStub) {
-            const mvhd = _v3_findChild(moov, 'mvhd');
-            if (mvhd) {
-                // mvhd ends with next_track_ID — keep it valid for the clone.
-                const mvhdData = new Uint8Array(_v3_boxBytes(mvhd));
-                _v3_writeU32BE(mvhdData, mvhdData.length - 4, fixNewTrackId + 1);
-                replacements.set(mvhd, mvhdData);
+function _v3_isSentinelDuration(payload) {
+    if (!payload || payload.length < 32 || payload[0] !== 1) return false;
+    for (let i = 0; i < 8; i++) {
+        if (payload[24 + i] !== 0xff) return false;
+    }
+    return true;
+}
+
+function _v3_patchMvhdToV1Sentinel(payload) {
+    if (!payload || payload.length < 4) _v3_throwError('Malformed mvhd box (too short for version byte).');
+    const ver = payload[0];
+    if (ver === 1) {
+        if (payload.length < 112) _v3_throwError('Malformed version-1 mvhd box (too short — needs 112 bytes).');
+        const out = _v3_cloneBytes(payload);
+        out.set(SENTINEL_FF, 24);
+        return out;
+    }
+    if (ver !== 0) _v3_throwError('Unsupported mvhd version: ' + ver + '.');
+    if (payload.length < 100) _v3_throwError('Malformed version-0 mvhd box (too short).');
+    return _v3_concatBytes([
+        new Uint8Array([1, payload[1], payload[2], payload[3]]),
+        _v3_u32ToBytes(0),
+        _v3_cloneBytes(payload.subarray(4, 8)),
+        _v3_u32ToBytes(0),
+        _v3_cloneBytes(payload.subarray(8, 12)),
+        _v3_cloneBytes(payload.subarray(12, 16)),
+        _v3_cloneBytes(SENTINEL_FF),
+        _v3_cloneBytes(payload.subarray(20))
+    ]);
+}
+
+function _v3_validateTableEntries(bytes, headerSize, entrySize, label) {
+    if (!bytes || bytes.length < 8) _v3_throwError('The ' + label + ' table is truncated.');
+    const count = _v3_readU32(bytes, 4);
+    if (count > MAX_TABLE_ENTRIES) _v3_throwError('The ' + label + ' table is unreasonably large (' + count + ' entries).');
+    if (headerSize + count * entrySize > bytes.length) _v3_throwError('The ' + label + ' table is truncated.');
+    return count;
+}
+
+function _v3_parseStcoOrCo64(box) {
+    const bytes = box.payload;
+    const is64 = box.type === 'co64';
+    const count = _v3_validateTableEntries(bytes, 8, is64 ? 8 : 4, box.type);
+    const list = new Array(count);
+    for (let i = 0; i < count; i++) {
+        list[i] = is64 ? _v3_readU64(bytes, 8 + i * 8) : _v3_readU32(bytes, 8 + i * 4);
+    }
+    return list;
+}
+
+function _v3_writeStcoOrCo64(box, offsets) {
+    let maxOff = 0;
+    for (const off of offsets) if (off > maxOff) maxOff = off;
+    if (maxOff > 0xffffffff) {
+        box.type = 'co64';
+        const b = new Uint8Array(8 + offsets.length * 8);
+        b.set(_v3_u32ToBytes(offsets.length), 4);
+        for (let i = 0; i < offsets.length; i++) b.set(_v3_u64ToBytes(offsets[i]), 8 + i * 8);
+        box.payload = b;
+    } else {
+        box.type = 'stco';
+        const b = new Uint8Array(8 + offsets.length * 4);
+        b.set(_v3_u32ToBytes(offsets.length), 4);
+        for (let i = 0; i < offsets.length; i++) b.set(_v3_u32ToBytes(offsets[i]), 8 + i * 4);
+        box.payload = b;
+    }
+}
+
+function _v3_getStbl(trak) {
+    return trak.path('mdia', 'minf', 'stbl');
+}
+function _v3_getOffsetBox(trak) {
+    const stbl = _v3_getStbl(trak);
+    if (!stbl) return null;
+    return stbl.find('stco') || stbl.find('co64');
+}
+function _v3_getTrackHandler(trak) {
+    const hdlr = trak.path('mdia', 'hdlr');
+    if (!hdlr || hdlr.payload.length < 12) return '';
+    const p = hdlr.payload;
+    return String.fromCharCode(p[8], p[9], p[10], p[11]);
+}
+function _v3_getCodecFourCC(trak) {
+    const stbl = _v3_getStbl(trak);
+    const stsd = stbl ? stbl.find('stsd') : null;
+    if (!stsd || stsd.payload.length < 16) return '';
+    const p = stsd.payload;
+    const count = _v3_readU32(p, 4);
+    const entrySize = _v3_readU32(p, 8);
+    if (count < 1 || entrySize < 8 || 8 + entrySize > p.length) return '';
+    return String.fromCharCode(p[12], p[13], p[14], p[15]);
+}
+
+function _v3_parseMp4Structure(bytes) {
+    if (!bytes.length) _v3_throwError('File video kosong.');
+    const topBoxes = _v3_parseTopLevel(bytes);
+    _v3_validateBoxNesting(bytes, 0, bytes.length, 'top-level', 0);
+    if (topBoxes.some(b => b.type === 'moof')) _v3_throwError('Fragmented MP4 files tidak didukung untuk direct sentinel patch.');
+
+    const ftypList = topBoxes.filter(b => b.type === 'ftyp');
+    const moovList = topBoxes.filter(b => b.type === 'moov');
+    const mdatList = topBoxes.filter(b => b.type === 'mdat');
+    if (ftypList.length !== 1 || moovList.length !== 1 || mdatList.length !== 1) {
+        _v3_throwError('Invalid MP4 — membutuhkan tepat satu box ftyp, moov, dan mdat.');
+    }
+
+    const ftypBox = ftypList[0];
+    const moovBox = moovList[0];
+    const mdatBox = mdatList[0];
+    const moov = new Mp4Box('moov', null, _v3_parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end));
+    const traks = moov.findAll('trak');
+    if (!traks.length) _v3_throwError('Invalid MP4 — tidak ditemukan track di file video.');
+
+    const mvhd = moov.find('mvhd');
+    if (!mvhd || mvhd.payload.length < 4) _v3_throwError('Invalid MP4 — mvhd hilang.');
+    if (mvhd.payload[0] !== 0 && mvhd.payload[0] !== 1) {
+        _v3_throwError('Unsupported mvhd version: ' + mvhd.payload[0]);
+    }
+
+    return {
+        top: topBoxes,
+        ftypBox,
+        moovBox,
+        mdatBox,
+        moov,
+        mvhd,
+        traks
+    };
+}
+
+function _v3_executePatch(bytes, parsed, _log) {
+    const { top, moovBox, mdatBox, moov } = parsed;
+    const mvhd = moov.find('mvhd');
+    if (!mvhd || mvhd.payload.length < 4) _v3_throwError('Invalid MP4 — mvhd hilang.');
+
+    mvhd.payload = _v3_patchMvhdToV1Sentinel(mvhd.payload);
+    _v3_injectUdta(moov, ENCODER_TAG);
+
+    const moovBeforeMdat = moovBox.start < mdatBox.start;
+    const oldMoovSize = moovBox.end - moovBox.start;
+
+    if (moovBeforeMdat) {
+        const traksWithOffsets = moov.findAll('trak').filter(t => _v3_getOffsetBox(t));
+        const origOffsets = traksWithOffsets.map(t => _v3_parseStcoOrCo64(_v3_getOffsetBox(t)));
+        for (let iter = 0; iter < 6; iter++) {
+            const delta = moov.serialize().length - oldMoovSize;
+            let changedType = false;
+            traksWithOffsets.forEach((t, i) => {
+                const box = _v3_getOffsetBox(t);
+                const prevType = box.type;
+                _v3_writeStcoOrCo64(box, origOffsets[i].map(o => o + delta));
+                if (box.type !== prevType) changedType = true;
+            });
+            if (!changedType && moov.serialize().length === oldMoovSize + delta) {
+                if (_log) _log(`  Offsets recalibrated (iter ${iter + 1}, delta = +${delta} bytes).`);
+                break;
             }
         }
+    }
 
-        _v3_addCommentMetadata(moov, replacements);
-        const moovFinal = _v3_rebuildBox(moov, replacements);
-        moovHeaderLen   = moovFinal.byteLength;
+    const newMoovBytes = moov.serialize();
+    const finalChunks = [];
+    for (const b of top) {
+        finalChunks.push(b.start === moovBox.start ? newMoovBytes : bytes.subarray(b.start, b.end));
+    }
+    return _v3_concatBytes(finalChunks);
+}
 
-        if (pass === 2) {
-            const newMdatBox = _v3_makeBox('mdat', origMdatPayload);
-            finalOutput      = _v3_concatBytes([ftypBytes, moovFinal, newMdatBox, fakePayload]);
-            const vTimescale = _v3_getTimescale(videoTrak);
-            const inputFps   = Math.round(vTimescale / (vStts[0] ? vStts[0][1] : 1000));
-            patchResultStats = {
-                output: finalOutput,
-                realSamples:  vStsz.length,
-                fakeSamples:  fakeCount,
-                timescale:    vTimescale,
-                sampleDelta:  vStts[0] ? vStts[0][1] : 1000,
-                duration:     (vStsz.length) * (vStts[0] ? vStts[0][1] : 1000),
-                chunkCount:   vRelOffsets.length,
-                inputFps,
-                patchedFps:   inputFps,
-                audioFix:     !!fixTrakStub
-            };
+function _v3_validateFinalOutput(bytes, originalBytes) {
+    const top = _v3_parseTopLevel(bytes);
+    if (!top.length || top[top.length - 1].end !== bytes.length) _v3_throwError('Hasil patch bukan box run lengkap.');
+    const moovList = top.filter(b => b.type === 'moov');
+    const mdatList = top.filter(b => b.type === 'mdat');
+    if (moovList.length !== 1 || mdatList.length !== 1) _v3_throwError('Hasil patch harus memiliki tepat satu moov dan satu mdat.');
+
+    const moovBox = moovList[0];
+    const mdatBox = mdatList[0];
+    const mdatStart = mdatBox.start + mdatBox.header;
+    const mdatEnd = mdatBox.end;
+    const moov = new Mp4Box('moov', null, _v3_parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end));
+
+    const mvhd = moov.find('mvhd');
+    if (!mvhd || !_v3_isSentinelDuration(mvhd.payload)) _v3_throwError('Hasil patch mvhd.duration bukan sentinel Unknown Duration.');
+
+    for (const trak of moov.findAll('trak')) {
+        const offsBox = _v3_getOffsetBox(trak);
+        if (!offsBox) continue;
+        for (const off of _v3_parseStcoOrCo64(offsBox)) {
+            if (off < mdatStart || off >= mdatEnd) {
+                _v3_throwError('Offset chunk ter-patch (' + off + ') berada di luar mdat.');
+            }
         }
     }
 
-    _log(`V3 MP4 patch completed successfully. Total output: ${finalOutput.byteLength} bytes.`);
-    return patchResultStats;
+    if (originalBytes) {
+        const origTop = _v3_parseTopLevel(originalBytes);
+        const origMdatBox = origTop.find(b => b.type === 'mdat');
+        if (origMdatBox) {
+            const origMdat = originalBytes.subarray(origMdatBox.start + origMdatBox.header, origMdatBox.end);
+            const outMdat = bytes.subarray(mdatStart, mdatEnd);
+            if (!_v3_exactBytesEqual(origMdat, outMdat)) {
+                _v3_throwError('Media payload (mdat) tidak identik setelah patch.');
+            }
+        }
+    }
 }
 
-function _v3_patchMp4HDMethod(inputBuffer, opts) {
-    const result = _v3_patchMp4(inputBuffer, null, opts);
-    return result.output;
+function _v3_patchMp4ADJN(inputData, _logFn) {
+    const _log = _logFn || (() => {});
+    const src = _v3_toU8Array(inputData);
+    _log(`  Input size : ${(src.byteLength / (1024 * 1024)).toFixed(2)} MB (${src.byteLength} bytes)`);
+
+    const parsed = _v3_parseMp4Structure(src);
+    _log(`  Boxes validated: ftyp, moov, mdat found.`);
+    const vTrak = parsed.traks.find(t => _v3_getTrackHandler(t) === 'vide');
+    const aTrak = parsed.traks.find(t => _v3_getTrackHandler(t) === 'soun');
+    if (vTrak) _log(`  Video Track: ${_v3_getCodecFourCC(vTrak) || 'AVC/HEVC'}`);
+    if (aTrak) _log(`  Audio Track: ${_v3_getCodecFourCC(aTrak) || 'AAC'}`);
+
+    _log(`  Applying metadata patch...`);
+    const patched = _v3_executePatch(src, parsed, _log);
+
+    _log(`  Verifying output integrity...`);
+    _v3_validateFinalOutput(patched, src);
+
+    _log(`  Patch complete! Size: ${(patched.byteLength / (1024 * 1024)).toFixed(2)} MB`);
+    return {
+        output: patched,
+        durationUnknown: true,
+        mdatByteIdentical: true
+    };
+}
+
+function _v3_patchMp4HDMethod(inputBuffer) {
+    const res = _v3_patchMp4ADJN(inputBuffer, null);
+    return res.output;
 }
 window.patchMp4HDMethod = _v3_patchMp4HDMethod;
 
@@ -758,9 +796,8 @@ window.processVideoFPS = async function processVideoFPS(file) {
     }
 };
 
-window.processVideoV3 = async function processVideoV3(file, mode, fixAudio) {
+window.processVideoV3 = async function processVideoV3(file, mode) {
     if (mode === undefined) mode = 'off';
-    fixAudio = !!fixAudio;
     const s = window._tktk;
     s.isProcessing = true;
 
@@ -777,17 +814,17 @@ window.processVideoV3 = async function processVideoV3(file, mode, fixAudio) {
     s.progressPercent.textContent = '0%';
     s.progressText.textContent = 'Processing Binary...';
 
-    const modeLabel = isOff ? 'Direct Pass-Through (OFF)' : (mode === '720p' ? 'HD 720p Compress + Patch' : 'Full HD 1080p Compress + Patch');
+    const modeLabel = isOff ? 'Pass-Through (No Compression)' : (mode === '720p' ? '720p Compression + Patch' : '1080p Compression + Patch');
     s.logSection('BINARY PROCESSING');
-    s.log(`  File   : ${safeName}`);
-    s.log(`  Mode   : ${modeLabel}`);
-    s.log(`  Fix Aud: ${fixAudio ? 'ON (dual audio track)' : 'OFF'}`);
+    s.log(`  File : ${safeName}`);
+    s.log(`  Mode : ${modeLabel}`);
     s.logEnd();
 
     if (isOff) {
-        s.log(`  [1/2] Executing Pure JS Patch...`);
+        s.log(`  [1/2] Applying binary metadata patch...`);
         try {
-            const patchedBytes = _v3_patchMp4HDMethod(s.currentFileBuffer, { fixAudio });
+            const patchRes = _v3_patchMp4ADJN(s.currentFileBuffer, s.log);
+            const patchedBytes = patchRes.output;
             s.log(`  [2/2] Finalizing output package...`);
             const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
             const url      = URL.createObjectURL(blob);
@@ -937,9 +974,10 @@ window.processVideoV3 = async function processVideoV3(file, mode, fixAudio) {
         const rawOutput = new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
         let finalResultBytes;
         try {
-            finalResultBytes = _v3_patchMp4HDMethod(rawOutput, { fixAudio });
+            const patchRes = _v3_patchMp4ADJN(rawOutput, s.log);
+            finalResultBytes = patchRes.output;
         } catch (pErr) {
-            s.log(`  [Notice] MP4 patch failed, using compressed output as-is: ${pErr.message}`);
+            s.log(`  [Notice] Metadata patch failed, using compressed output as-is: ${pErr.message}`);
             finalResultBytes = rawOutput;
         }
         s.logEnd();

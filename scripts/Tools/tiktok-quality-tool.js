@@ -14,7 +14,9 @@
     let isProcessing = false;
     let currentVersion = 'v3';
     let compressMode = 'off';
-    let fixAudio = false;
+    let currentInspectedFile = null;
+    let currentVideoSpecs = null;
+    let isExtensionDetected = false;
 
     const MAX_FILE_MB = 1500;
 
@@ -355,6 +357,263 @@
         }, 400);
     }
 
+    function checkExtensionPresence() {
+        if (typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
+            isExtensionDetected = true;
+            return Promise.resolve(true);
+        }
+        return new Promise((resolve) => {
+            let timer = null;
+            function onMsg(ev) {
+                if (ev.data && (ev.data.type === 'TIKTOK_CLOUD_DISABLER_PONG' || ev.data.type === 'ADJN_PONG')) {
+                    window.removeEventListener('message', onMsg);
+                    if (timer) clearTimeout(timer);
+                    isExtensionDetected = true;
+                    resolve(true);
+                }
+            }
+            window.addEventListener('message', onMsg);
+            try {
+                window.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PING' }, '*');
+            } catch (_) {}
+            timer = setTimeout(() => {
+                window.removeEventListener('message', onMsg);
+                if (!isExtensionDetected && typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
+                    isExtensionDetected = true;
+                }
+                resolve(isExtensionDetected);
+            }, 250);
+        });
+    }
+
+    async function inspectMp4Meta(file) {
+        if (!file) return null;
+        let width = 0;
+        let height = 0;
+        let fps = 0;
+
+        function scanBuffer(buffer) {
+            let foundFps = 0;
+            let foundRes = null;
+            try {
+                const data = new Uint8Array(buffer);
+                const view = new DataView(buffer);
+                let timescale = 0;
+                let sampleDelta = 0;
+                for (let i = 0; i < data.length - 8; i++) {
+                    if (data[i] === 0x6D && data[i+1] === 0x64 && data[i+2] === 0x68 && data[i+3] === 0x64) {
+                        if (i + 28 <= buffer.byteLength) {
+                            const version = view.getUint8(i + 4);
+                            timescale = version === 1 ? view.getUint32(i + 24) : view.getUint32(i + 16);
+                        }
+                    }
+                    if (data[i] === 0x73 && data[i+1] === 0x74 && data[i+2] === 0x74 && data[i+3] === 0x73) {
+                        if (i + 20 <= buffer.byteLength) {
+                            const entryCount = view.getUint32(i + 8);
+                            if (entryCount > 0) {
+                                sampleDelta = view.getUint32(i + 16);
+                            }
+                        }
+                    }
+                    if (timescale && sampleDelta && !foundFps) {
+                        const f = Math.round(timescale / sampleDelta);
+                        if (f > 0 && f < 300) foundFps = f;
+                    }
+                    if (data[i] === 0x74 && data[i+1] === 0x6B && data[i+2] === 0x68 && data[i+3] === 0x64) {
+                        const version = view.getUint8(i + 4);
+                        const wOffset = version === 1 ? i + 92 : i + 80;
+                        const hOffset = version === 1 ? i + 96 : i + 84;
+                        if (wOffset + 4 <= buffer.byteLength && hOffset + 4 <= buffer.byteLength) {
+                            let w = Math.round(view.getUint32(wOffset) / 65536);
+                            let h = Math.round(view.getUint32(hOffset) / 65536);
+                            if (w > 0 && h > 0 && w < 16000 && h < 16000) {
+                                foundRes = { width: w, height: h };
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+            return { fps: foundFps, res: foundRes };
+        }
+
+        try {
+            const headBlob = file.slice(0, Math.min(file.size, 2 * 1024 * 1024));
+            const headBuf = await headBlob.arrayBuffer();
+            const headRes = scanBuffer(headBuf);
+            if (headRes.fps) fps = headRes.fps;
+            if (headRes.res) {
+                width = headRes.res.width;
+                height = headRes.res.height;
+            }
+
+            if ((!fps || !width) && file.size > 2 * 1024 * 1024) {
+                const tailStart = Math.max(0, file.size - 4 * 1024 * 1024);
+                const tailBlob = file.slice(tailStart, file.size);
+                const tailBuf = await tailBlob.arrayBuffer();
+                const tailRes = scanBuffer(tailBuf);
+                if (!fps && tailRes.fps) fps = tailRes.fps;
+                if (!width && tailRes.res) {
+                    width = tailRes.res.width;
+                    height = tailRes.res.height;
+                }
+            }
+        } catch (e) {}
+
+        if (!width || !height) {
+            try {
+                await new Promise((resolve) => {
+                    const v = document.createElement('video');
+                    v.preload = 'metadata';
+                    const url = URL.createObjectURL(file);
+                    v.onloadedmetadata = () => {
+                        width = v.videoWidth || width;
+                        height = v.videoHeight || height;
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    };
+                    v.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    };
+                    v.src = url;
+                });
+            } catch (e) {}
+        }
+
+        return {
+            width: width || 1080,
+            height: height || 1920,
+            fps: fps || 60
+        };
+    }
+
+    function updateExtensionWarning() {
+        const slot = document.getElementById('tiktok-ext-alert-slot');
+        const processBtn = document.getElementById('tool-process-btn');
+        const processLabel = document.getElementById('tool-process-label');
+
+        if (!slot) return;
+
+        if (!isExtensionDetected) {
+            if (typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
+                isExtensionDetected = true;
+            }
+        }
+
+        if (!currentVideoSpecs) {
+            slot.innerHTML = '';
+            if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
+                processBtn.disabled = false;
+                processBtn.dataset.state = 'ready';
+                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
+            }
+            return;
+        }
+
+        const isHighProfile = (currentVideoSpecs.fps > 60 || currentVideoSpecs.width > 1080 || currentVideoSpecs.height > 1920);
+        if (!isHighProfile || currentVersion !== 'v3') {
+            slot.innerHTML = '';
+            if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
+                processBtn.disabled = false;
+                processBtn.dataset.state = 'ready';
+                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
+            }
+            return;
+        }
+
+        if (isExtensionDetected) {
+            slot.innerHTML = `
+                <div class="tiktok-ext-success">
+                    <span class="material-symbols-rounded">verified_user</span>
+                    <span>${t('patcher_ext_active_notice')}</span>
+                </div>
+            `;
+            if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
+                processBtn.disabled = false;
+                processBtn.dataset.state = 'ready';
+                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
+            }
+            return;
+        }
+
+        const titleText = t('patcher_ext_warn_title') || 'Bypass Cloud Canvas Diperlukan';
+        const browser = detectBrowser();
+        const extensionInstallUrl = (browser === 'Firefox')
+            ? 'https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/'
+            : 'https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag';
+
+        slot.innerHTML = `
+            <div class="tiktok-ext-warning">
+                <div class="tiktok-ext-warning-header">
+                    <span class="material-symbols-rounded">extension</span>
+                    <span>${titleText}</span>
+                </div>
+                <p class="tiktok-ext-warning-body">${t('patcher_ext_warn_body')}</p>
+                <div class="tiktok-ext-actions">
+                    <a href="assets/userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
+                        <span class="material-symbols-rounded">code</span>
+                        <span>${t('patcher_ext_btn_userscript')}</span>
+                    </a>
+                    <a href="${extensionInstallUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-install-manager">
+                        <span class="material-symbols-rounded">download</span>
+                        <span>${t('patcher_ext_btn_install')}</span>
+                    </a>
+                    <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
+                        <span class="material-symbols-rounded">refresh</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const recheckBtn = slot.querySelector('#btn-tiktok-recheck-ext');
+        if (recheckBtn) {
+            recheckBtn.addEventListener('click', async () => {
+                recheckBtn.disabled = true;
+                recheckBtn.classList.add('loading');
+                await checkExtensionPresence();
+                if (isExtensionDetected) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(t('patcher_ext_detected_toast'));
+                    }
+                } else {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(t('patcher_ext_not_found_toast'));
+                    }
+                }
+                updateExtensionWarning();
+            });
+        }
+
+        if (processBtn && !isProcessing) {
+            processBtn.disabled = true;
+            processBtn.dataset.state = 'blocked';
+            if (processLabel) {
+                processLabel.textContent = t('patcher_ext_btn_blocked');
+            }
+        }
+    }
+
+    async function inspectAndAlert(file) {
+        if (!file) return;
+        currentInspectedFile = file;
+        currentVideoSpecs = await inspectMp4Meta(file);
+        await checkExtensionPresence();
+        updateExtensionWarning();
+    }
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('message', (ev) => {
+            if (ev.data && (ev.data.type === 'TIKTOK_CLOUD_DISABLER_PONG' || ev.data.type === 'ADJN_PONG')) {
+                isExtensionDetected = true;
+                updateExtensionWarning();
+            }
+        });
+        window.addEventListener('languageChanged', () => {
+            updateDesc();
+            updateExtensionWarning();
+        });
+    }
+
     function updateDesc() {
         const descEl = document.getElementById('tiktok-info-desc');
         if (!descEl) return;
@@ -390,17 +649,11 @@
                     <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
                     <div class="tiktok-switch-option ${compressMode === '1080p' ? 'active' : ''}" data-mode="1080p">1080P</div>
                 </div>
-
-                <label class="tiktok-fixaudio-row" for="tiktok-fixaudio-toggle" title="${t('patcher_fixaudio_title')}">
-                    <span class="fivemb-checkbox-wrapper">
-                        <input type="checkbox" id="tiktok-fixaudio-toggle" ${fixAudio ? 'checked' : ''}>
-                        <span class="fivemb-checkbox-custom"></span>
-                    </span>
-                    <span class="tiktok-switcher-label">${t('patcher_fixaudio_label')}</span>
-                </label>
             </div>
 
             <div class="tiktok-preset-desc" id="tiktok-info-desc"></div>
+
+            <div id="tiktok-ext-alert-slot"></div>
 
             <div class="process-logs-wrap hidden" id="tiktok-logs-container">
                 <div class="process-logs-header">
@@ -415,6 +668,7 @@
         `;
 
         updateDesc();
+        checkExtensionPresence().then(updateExtensionWarning);
 
         const vSwitch = document.getElementById('tiktok-version-switch');
         const cRow = document.getElementById('tiktok-compress-row');
@@ -431,6 +685,7 @@
                         cRow.style.display = (currentVersion === 'v3') ? 'block' : 'none';
                     }
                     updateDesc();
+                    updateExtensionWarning();
                 });
             });
         }
@@ -443,14 +698,8 @@
                     compressMode = opt.getAttribute('data-mode') || 'off';
                     cSwitch.setAttribute('data-selected', compressMode);
                     updateDesc();
+                    updateExtensionWarning();
                 });
-            });
-        }
-
-        const faToggle = document.getElementById('tiktok-fixaudio-toggle');
-        if (faToggle) {
-            faToggle.addEventListener('change', () => {
-                fixAudio = faToggle.checked;
             });
         }
 
@@ -468,23 +717,43 @@
         }
 
         const heroSlot = document.getElementById('tool-modal-hero-slot');
-        if (heroSlot && !heroSlot.querySelector('#btn-tiktok-clear-cache')) {
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.id = 'btn-tiktok-clear-cache';
-            clearBtn.title = t('patcher_clear_cache');
-            clearBtn.className = 'btn-icon-ghost';
-            clearBtn.innerHTML = '<span class="material-symbols-rounded">cleaning_services</span>';
-            clearBtn.onclick = (e) => {
-                e.stopPropagation();
-                clearAllToolCache(clearBtn);
-            };
-            heroSlot.appendChild(clearBtn);
+        if (heroSlot) {
+            const oldExtBtn = heroSlot.querySelector('#btn-tiktok-download-ext-hero');
+            if (oldExtBtn) oldExtBtn.remove();
+
+            if (!heroSlot.querySelector('#btn-tiktok-clear-cache')) {
+                const clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.id = 'btn-tiktok-clear-cache';
+                clearBtn.title = t('patcher_clear_cache');
+                clearBtn.className = 'btn-icon-ghost';
+                clearBtn.innerHTML = '<span class="material-symbols-rounded">cleaning_services</span>';
+                clearBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    clearAllToolCache(clearBtn);
+                };
+                heroSlot.appendChild(clearBtn);
+            }
         }
     }
 
     async function processQualityMethod(file) {
         if (!file || isProcessing) return;
+
+        if (!currentVideoSpecs) {
+            currentVideoSpecs = await inspectMp4Meta(file);
+        }
+        await checkExtensionPresence();
+        const isHighProfile = currentVideoSpecs && (currentVideoSpecs.fps > 60 || currentVideoSpecs.width > 1080 || currentVideoSpecs.height > 1920);
+
+        if (currentVersion === 'v3' && isHighProfile && !isExtensionDetected) {
+            updateExtensionWarning();
+            if (typeof window.showToast === 'function') {
+                window.showToast(t('patcher_ext_blocked_toast'));
+            }
+            return;
+        }
+
         isProcessing = true;
 
         const processBtn = document.getElementById('tool-process-btn');
@@ -514,11 +783,14 @@
         // Compress mode only applies to the Binary (V3) method.
         if (currentVersion === 'v3') {
             log(`  Compress : ${compressMode.toUpperCase()}`);
-            log(`  Fix Audio: ${fixAudio ? 'ON' : 'OFF'}`);
         }
         logEnd();
 
         try {
+            if (!currentVideoSpecs) {
+                currentVideoSpecs = await inspectMp4Meta(file);
+                updateExtensionWarning();
+            }
             if (!currentFileBuffer) {
                 if (progressStatus) progressStatus.textContent = t('status_reading_file');
                 if (window.ToolProgressManager) {
@@ -543,7 +815,7 @@
                 }
             } else {
                 if (typeof window.processVideoV3 === 'function') {
-                    await window.processVideoV3(file, compressMode, fixAudio);
+                    await window.processVideoV3(file, compressMode);
                 } else {
                     throw new Error('V3 Binary module is not loaded.');
                 }
@@ -618,8 +890,6 @@
         get currentFileBuffer() { return currentFileBuffer; },
         set currentFileBuffer(v) { currentFileBuffer = v; },
         get compressMode() { return compressMode; },
-        get fixAudio() { return fixAudio; },
-        set fixAudio(v) { fixAudio = !!v; },
         get selectedFile() { return selectedFile; },
         set selectedFile(v) { selectedFile = v; },
         get statusText() { return document.getElementById('tool-progress-status') || { innerHTML: '' }; },
@@ -643,6 +913,10 @@
         parseResolutionFromMp4,
         computeVideoProcessingOptions,
         isMobileDevice,
+        inspectMp4Meta,
+        inspectAndAlert,
+        checkExtensionPresence,
+        updateExtensionWarning,
         showStatusError: function(msg) {
             const statusEl = document.getElementById('tool-progress-status');
             if (statusEl) statusEl.textContent = msg;
@@ -660,7 +934,7 @@
         icon: 'high_quality',
         category: 'TikTok',
         features: [
-            'Binary Patch (NAL & EDTS)',
+            'Binary Patch',
             'WMV Container Re-encode',
             '60 FPS Timescale Patch',
             '720p & 1080p Compression'
@@ -671,11 +945,16 @@
             { label: 'PROCESSING', value: 'Client-side (Browser)' }
         ],
         initModal: initQualityMethodUI,
+        onFileSelect: inspectAndAlert,
         onProcess: processQualityMethod,
         onReset: function() {
             isProcessing = false;
             currentFileBuffer = null;
             selectedFile = null;
+            currentInspectedFile = null;
+            currentVideoSpecs = null;
+            const slot = document.getElementById('tiktok-ext-alert-slot');
+            if (slot) slot.innerHTML = '';
             const logsContainer = document.getElementById('tiktok-logs-container');
             if (logsContainer) logsContainer.classList.add('hidden');
             const logs = document.getElementById('tiktok-logs');

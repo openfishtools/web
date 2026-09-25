@@ -234,6 +234,16 @@
             "patcher_mode_1080p": "1080P",
             "patcher_fixaudio_label": "Perbaiki audio tak teridentifikasi",
             "patcher_fixaudio_title": "Menambahkan track audio kedua yang bersih agar TikTok tidak salah membaca suara.",
+            "patcher_ext_warn_title": "Bypass Cloud Canvas Diperlukan",
+            "patcher_ext_warn_body": "Untuk memproses video 120 FPS / >1080p dengan metode Binary, pasang Userscript agar fitur kompresi canvas TikTok dinonaktifkan saat Anda upload di <strong>tiktok.com/tiktokstudio/upload</strong>.",
+            "patcher_ext_btn_userscript": "Userscript",
+            "patcher_ext_btn_install": "Install",
+            "patcher_ext_recheck_btn": "Periksa Ulang",
+            "patcher_ext_btn_blocked": "Userscript Belum Terpasang",
+            "patcher_ext_blocked_toast": "Pasang userscript TikTok Cloud Edit Disabler terlebih dahulu.",
+            "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler aktif!",
+            "patcher_ext_not_found_toast": "Userscript belum terdeteksi aktif.",
+            "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> aktif. Pembatasan Cloud Canvas dinonaktifkan, video 120 FPS / resolusi tinggi siap diproses.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -251,12 +261,17 @@
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Mode:</strong> Direct Pass-Through</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Menata ulang struktur metadata dan susunan streaming MP4 secara langsung tanpa kompresi, menjaga resolusi serta kualitas visual asli tetap utuh 100%.</span>
+                        <span>Menata ulang metadata MP4 tanpa encode ulang, menjaga kualitas video dan audio tetap asli.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.</span>
                     </div>
                 </div>
             `,
@@ -265,12 +280,17 @@
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 720p</li>
-                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Mengompresi dan menyesuaikan batas resolusi ke 720p dengan alokasi bitrate teroptimasi, lalu menerapkan rekonstruksi metadata kontainer MP4.</span>
+                        <span>Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menerapkan patch metadata MP4.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.</span>
                     </div>
                 </div>
             `,
@@ -279,12 +299,17 @@
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 1080p</li>
-                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Mengompresi video pada resolusi Full HD 1080p dengan batas bitrate tinggi untuk menjaga ketajaman gerak, dilanjutkan dengan rekonstruksi metadata kontainer MP4.</span>
+                        <span>Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menerapkan patch metadata MP4.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.</span>
                     </div>
                 </div>
             `,
@@ -714,6 +739,16 @@
             "patcher_mode_1080p": "1080P",
             "patcher_fixaudio_label": "Fix unidentified audio",
             "patcher_fixaudio_title": "Adds a second clean audio track so TikTok does not misidentify the sound.",
+            "patcher_ext_warn_title": "Cloud Canvas Bypass Required",
+            "patcher_ext_warn_body": "To process 120 FPS / >1080p videos with the Binary method, install the Userscript to bypass TikTok's cloud recompression on <strong>tiktok.com/tiktokstudio/upload</strong>.",
+            "patcher_ext_btn_userscript": "Userscript",
+            "patcher_ext_btn_install": "Install",
+            "patcher_ext_recheck_btn": "Recheck",
+            "patcher_ext_btn_blocked": "Userscript Not Installed",
+            "patcher_ext_blocked_toast": "Please install the TikTok Cloud Edit Disabler userscript first.",
+            "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler is active!",
+            "patcher_ext_not_found_toast": "Userscript is not detected yet.",
+            "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> is active. Cloud Canvas restriction disabled, ready to process 120 FPS / high-resolution video.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -731,12 +766,17 @@
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Mode:</strong> Direct Pass-Through</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Restructures MP4 container metadata and stream layout directly without compression, preserving 100% of original visual quality and resolution.</span>
+                        <span>Rearranges MP4 metadata without re-encoding, keeping original video and audio quality intact.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.</span>
                     </div>
                 </div>
             `,
@@ -745,12 +785,17 @@
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 720p</li>
-                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Compresses and scales resolution up to 720p with optimized bitrate allocation, followed by MP4 container metadata reconstruction.</span>
+                        <span>Compresses video to 720p for a smaller file size, then applies MP4 metadata patch.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.</span>
                     </div>
                 </div>
             `,
@@ -759,12 +804,17 @@
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 1080p</li>
-                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + Binary Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>Compresses video at Full HD 1080p resolution with high bitrate allocation to preserve motion clarity, followed by MP4 container metadata reconstruction.</span>
+                        <span>Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 metadata patch.</span>
+                    </div>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">favorite</span>
+                        <span>Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.</span>
                     </div>
                 </div>
             `,

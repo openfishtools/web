@@ -832,31 +832,43 @@ app.get('/api/tiktok-fps', async (req, res) => {
         return res.json({ fps: null, width: 0, height: 0, comment: '' });
     }
 
+    const defaultHeaders = {
+        'Range': 'bytes=0-524287',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://www.tiktok.com/',
+        'Accept': '*/*'
+    };
+
     try {
         let response = await fetch(url, {
-            headers: { 'Range': 'bytes=0-2097151', 'User-Agent': 'Mozilla/5.0' },
-            signal: AbortSignal.timeout(5000)
+            headers: defaultHeaders,
+            signal: AbortSignal.timeout(8000)
         });
 
-        if (!response.ok && response.status !== 206) {
-            return res.json({ fps: null, width: 0, height: 0, comment: '' });
-        }
-
-        let buffer = Buffer.from(await response.arrayBuffer());
-        let meta = parseVideoMetadataFromBuffer(buffer);
-
-        if (!meta) {
-            response = await fetch(url, {
-                headers: { 'Range': 'bytes=-2097152', 'User-Agent': 'Mozilla/5.0' },
-                signal: AbortSignal.timeout(5000)
-            });
-            if (response.ok || response.status === 206) {
-                buffer = Buffer.from(await response.arrayBuffer());
-                meta = parseVideoMetadataFromBuffer(buffer);
+        if (response.ok || response.status === 206) {
+            let buffer = Buffer.from(await response.arrayBuffer());
+            let meta = parseVideoMetadataFromBuffer(buffer);
+            if (meta && (meta.fps || meta.width)) {
+                return res.json(meta);
             }
         }
 
-        res.json(meta || { fps: null, width: 0, height: 0, comment: '' });
+        // If moov box is at the end of the file, fetch last 512KB
+        try {
+            response = await fetch(url, {
+                headers: { ...defaultHeaders, 'Range': 'bytes=-524288' },
+                signal: AbortSignal.timeout(6000)
+            });
+            if (response.ok || response.status === 206) {
+                let buffer = Buffer.from(await response.arrayBuffer());
+                let meta = parseVideoMetadataFromBuffer(buffer);
+                if (meta && (meta.fps || meta.width)) {
+                    return res.json(meta);
+                }
+            }
+        } catch (_) {}
+
+        res.json({ fps: null, width: 0, height: 0, comment: '' });
     } catch (e) {
         res.json({ fps: null, width: 0, height: 0, comment: '' });
     }

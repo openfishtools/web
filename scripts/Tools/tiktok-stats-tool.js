@@ -151,6 +151,18 @@
         }
     }
 
+    function showStatus(msg, color) {
+        setButtonState('error', msg);
+        if (typeof window.showToast === 'function') {
+            window.showToast(msg);
+        }
+        const statusEl = document.getElementById('tool-progress-status');
+        if (statusEl) {
+            statusEl.textContent = msg;
+            if (color) statusEl.style.color = color;
+        }
+    }
+
     function displayMethod(comment) {
         const statsMethod = document.getElementById('stats-method');
         if (!statsMethod) return;
@@ -272,7 +284,16 @@
 
             setButtonState('processing', t('stats_status_analysing_video') || 'Analysing bitstream...');
 
-            const videoMeta = await analyseVideoMetadataFromUrl(streamUrl);
+            let videoMeta = await analyseVideoMetadataFromUrl(streamUrl);
+            if ((!videoMeta || !videoMeta.fps) && metadata && metadata.id) {
+                const proxyStreamUrl = `https://www.tikwm.com/video/media/play/${metadata.id}.mp4`;
+                if (proxyStreamUrl !== streamUrl) {
+                    const fallbackMeta = await analyseVideoMetadataFromUrl(proxyStreamUrl);
+                    if (fallbackMeta && (fallbackMeta.fps || fallbackMeta.width)) {
+                        videoMeta = fallbackMeta;
+                    }
+                }
+            }
 
             const statsFps = document.getElementById('stats-fps');
             const statsResolution = document.getElementById('stats-resolution');
