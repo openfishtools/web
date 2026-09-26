@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.2.2
+// @version      1.3.0
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -42,11 +42,11 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.2.2',
+    'System: TikTok Studio Cloud Disabler v1.3.0',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
-    `FFmpeg Core: Sentinel MP4 Box Patcher Active (mvhd/mdhd 60000 timescale)`,
+    `FFmpeg Core: In-Browser Canvas Re-Encoder + Sentinel MP4 Box Patcher Active`,
     'Fetch / XHR Hook: Cloud Canvas payload interceptor active',
     'Blob / FileReader Hook: Auto ArrayBuffer patcher ready',
     'TikTok Studio Hook: Active'
@@ -159,6 +159,108 @@
       } catch (_) {}
       return originalSend.apply(this, arguments);
     };
+  }
+
+  // ================= IN-BROWSER VIDEO COMPRESSOR RE-ENCODER =================
+  async function compressVideoInBrowser(file, targetRes, onProgress) {
+    if (!targetRes || targetRes === 'OFF') return file;
+
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = async () => {
+        try {
+          let origWidth = video.videoWidth || 1080;
+          let origHeight = video.videoHeight || 1920;
+
+          let targetH = targetRes === '720p' ? 720 : 1080;
+          let scale = 1.0;
+
+          if (origHeight > origWidth) {
+            if (origHeight > targetH) scale = targetH / origHeight;
+          } else {
+            if (origWidth > targetH) scale = targetH / origWidth;
+          }
+
+          const targetW = Math.round((origWidth * scale) / 2) * 2;
+          const outH = Math.round((origHeight * scale) / 2) * 2;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+
+          const stream = canvas.captureStream(60);
+
+          let mimeType = 'video/mp4;codecs=avc1';
+          if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4';
+          }
+          if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm;codecs=vp9';
+          }
+          if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
+
+          const options = { mimeType, videoBitsPerSecond: targetH === 720 ? 5000000 : 10000000 };
+          let mediaRecorder;
+          try {
+            mediaRecorder = new MediaRecorder(stream, options);
+          } catch (_) {
+            mediaRecorder = new MediaRecorder(stream);
+          }
+
+          const chunks = [];
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            URL.revokeObjectURL(video.src);
+            const compressedBlob = new Blob(chunks, { type: file.type || 'video/mp4' });
+            const compressedFile = new File([compressedBlob], file.name, { type: file.type || 'video/mp4' });
+            resolve(compressedFile);
+          };
+
+          mediaRecorder.start(100);
+
+          const duration = video.duration || 10;
+          video.currentTime = 0;
+          await video.play();
+
+          const drawFrame = () => {
+            if (video.paused || video.ended) {
+              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+              return;
+            }
+            ctx.drawImage(video, 0, 0, targetW, outH);
+            if (onProgress && duration > 0) {
+              const pct = Math.min(Math.round((video.currentTime / duration) * 100), 99);
+              onProgress(pct);
+            }
+            requestAnimationFrame(drawFrame);
+          };
+
+          drawFrame();
+          video.onended = () => {
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          };
+        } catch (err) {
+          URL.revokeObjectURL(video.src);
+          resolve(file);
+        }
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        resolve(file);
+      };
+    });
   }
 
   // ================= BINARY PATCHER SENTINEL ENGINE =================
@@ -428,14 +530,14 @@
         </div>
       </div>
 
-      <button type="button" class="cf-action-btn" id="cf-btn-start-process">Proses Video</button>
-      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">Batal / Reset</button></div>
+      <button type="button" class="cf-action-btn" id="cf-btn-start-process">patch & upload</button>
+      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">Batal</button></div>
 
       <div class="cf-progress-container" id="cf-progress-container">
         <div class="cf-progress-bar-bg">
           <div class="cf-progress-bar-fill" id="cf-progress-fill"></div>
         </div>
-        <div class="cf-progress-text" id="cf-progress-text">Membaca struktur MP4 header... 0%</div>
+        <div class="cf-progress-text" id="cf-progress-text">Memproses video... 0%</div>
       </div>
     `;
 
@@ -490,45 +592,40 @@
       progressContainer.style.display = 'block';
 
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Memulai patch file: ${pendingRawFile.name}`);
-      addUiLog(`[${timeStr}] File size: ${fileSizeMB} MB, type: ${pendingRawFile.type || 'video/mp4'}`);
-      addUiLog(`[${timeStr}] Method: ${selectedMethod}, Compress: ${selectedCompress.toUpperCase()}`);
-
-      const sizeMB = pendingRawFile.size / (1024 * 1024);
-      const totalSteps = 20;
-      const stepInterval = Math.max(90, Math.min(220, Math.round((sizeMB * 12) / totalSteps) + 90));
-
-      let currentStep = 0;
-      const progressInterval = setInterval(() => {
-        currentStep++;
-        const pct = Math.min(Math.round((currentStep / totalSteps) * 100), 95);
-        progressFill.style.width = pct + '%';
-
-        if (pct < 30) {
-          progressText.textContent = `Membaca struktur MP4 header... ${pct}%`;
-        } else if (pct < 70) {
-          progressText.textContent = `Mengubah timescale mvhd & mdhd (60 FPS)... ${pct}%`;
-        } else {
-          progressText.textContent = `Menerapkan parameter kompresi ${selectedCompress.toUpperCase()}... ${pct}%`;
-        }
-      }, stepInterval);
+      addUiLog(`[${timeStr}] Memulai proses patch & upload: ${pendingRawFile.name}`);
+      addUiLog(`[${timeStr}] Ukuran awal: ${fileSizeMB} MB, Tipe: ${pendingRawFile.type || 'video/mp4'}`);
+      addUiLog(`[${timeStr}] Metode: ${selectedMethod}, Kompresi Target: ${selectedCompress.toUpperCase()}`);
 
       try {
-        let finalFile = pendingRawFile;
-        if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
-          addUiLog(`[${timeStr}] Executing Sentinel MP4 Box Patcher...`);
-          const buf = await pendingRawFile.arrayBuffer();
-          const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
-          const patchedBlob = new Blob([patchedU8], { type: pendingRawFile.type || 'video/mp4' });
-          finalFile = new File([patchedBlob], pendingRawFile.name, { type: pendingRawFile.type || 'video/mp4' });
-          addUiLog(`[${timeStr}] Timescale patch result: ${count} box updated (60000 timescale units / 60 FPS precision)`);
+        let videoToPatch = pendingRawFile;
+
+        // Physical In-Browser Re-encoding / Compression if 720p or 1080p selected
+        if (selectedCompress !== 'OFF') {
+          addUiLog(`[${timeStr}] Memulai re-encoding kompresi video (${selectedCompress.toUpperCase()})...`);
+          videoToPatch = await compressVideoInBrowser(pendingRawFile, selectedCompress, (pct) => {
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}%`;
+          });
+          const compressedMB = (videoToPatch.size / (1024 * 1024)).toFixed(2);
+          addUiLog(`[${timeStr}] Hasil re-encoding kompresi: ${compressedMB} MB`);
         }
 
-        clearInterval(progressInterval);
+        progressFill.style.width = '95%';
+        progressText.textContent = 'Menerapkan patch binary timescale (60 FPS)...';
+
+        let finalFile = videoToPatch;
+        if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
+          const buf = await videoToPatch.arrayBuffer();
+          const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
+          const patchedBlob = new Blob([patchedU8], { type: videoToPatch.type || 'video/mp4' });
+          finalFile = new File([patchedBlob], pendingRawFile.name, { type: videoToPatch.type || 'video/mp4' });
+          addUiLog(`[${timeStr}] Patch timescale diterapkan (${count} box diperbarui)`);
+        }
+
         progressFill.style.width = '100%';
         progressText.textContent = 'Proses patch selesai. Mengunggah ke TikTok Studio...';
 
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 400));
 
         const input = document.querySelector('input[type="file"]');
         if (input) {
@@ -536,14 +633,13 @@
           dt.items.add(finalFile);
           input.files = dt.files;
           input.dispatchEvent(new Event('change', { bubbles: true }));
-          addUiLog(`[${timeStr}] DataTransfer payload dispatched to TikTok Studio input element`);
+          addUiLog(`[${timeStr}] File terkompresi & ter-patch dikirim ke TikTok Studio`);
         }
 
         overlay.remove();
       } catch (err) {
-        clearInterval(progressInterval);
         progressText.textContent = `Error: ${err.message}`;
-        addUiLog(`[Error] Patch gagal: ${err.message}`);
+        addUiLog(`[Error] Proses gagal: ${err.message}`);
       } finally {
         pendingRawFile = null;
         setTimeout(() => { isPatchingFile = false; }, 1000);
