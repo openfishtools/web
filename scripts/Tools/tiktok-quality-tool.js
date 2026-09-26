@@ -539,7 +539,7 @@
                 </div>
                 <p class="tiktok-ext-warning-body">${t('patcher_ext_warn_body')}</p>
                 <div class="tiktok-ext-actions">
-                    <a href="assets/userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
+                    <a href="userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
                         <span class="material-symbols-rounded">code</span>
                         <span>${t('patcher_ext_btn_userscript')}</span>
                     </a>
