@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.4.2
+// @version      1.4.3
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -11,7 +11,13 @@
 // @match        *://*.cutefish.my.id/*
 // @run-at       document-start
 // @grant        unsafeWindow
-// ==/UserScript==
+// @grant        GM_xmlhttpRequest
+// @grant        GM.xmlHttpRequest
+// @connect      cdn.jsdelivr.net
+// @connect      cutefish.my.id
+// @require      https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js
+// @require      https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
+// ==UserScript==
 
 (() => {
   'use strict';
@@ -21,17 +27,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.2';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.3';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.2';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.3';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.2', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.3', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +50,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.4.2',
+    'System: TikTok Studio Cloud Disabler v1.4.3',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -166,57 +172,120 @@
   // ================= IN-BROWSER FFMPEG WASM COMPRESSOR ENGINE =================
   let ffmpegInstance = null;
 
-  async function loadFFmpegInUserscript() {
-    if (win.FFmpegWASM && win.FFmpegUtil) return true;
+  function fetchBlobWithGM(url, mimeType) {
+    return new Promise((resolve, reject) => {
+      const gmx = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
+                  (typeof GM !== 'undefined' && GM.xmlHttpRequest) ? GM.xmlHttpRequest : null;
+      if (gmx) {
+        gmx({
+          method: 'GET',
+          url: url,
+          responseType: 'blob',
+          onload: (res) => {
+            if (res.status >= 200 && res.status < 300 && res.response) {
+              const blob = res.response instanceof Blob ? res.response : new Blob([res.response], { type: mimeType });
+              resolve(URL.createObjectURL(blob));
+            } else {
+              reject(new Error(`HTTP ${res.status} loading ${url}`));
+            }
+          },
+          onerror: () => reject(new Error(`Network error loading ${url}`)),
+          ontimeout: () => reject(new Error(`Timeout loading ${url}`))
+        });
+      } else {
+        const toBlob = win.FFmpegUtil?.toBlobURL || (async (u, t) => {
+          const resp = await fetch(u);
+          const b = await resp.blob();
+          return URL.createObjectURL(new Blob([b], { type: t }));
+        });
+        toBlob(url, mimeType).then(resolve).catch(reject);
+      }
+    });
+  }
 
-    const loadScript = (src) => new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.onload = () => resolve(true);
-      s.onerror = () => reject(new Error(`Failed to load ${src}`));
-      (document.head || document.documentElement).appendChild(s);
+  async function loadFFmpegInUserscript() {
+    let fWasm = win.FFmpegWASM || (typeof FFmpegWASM !== 'undefined' ? FFmpegWASM : null);
+    let fUtil = win.FFmpegUtil || (typeof FFmpegUtil !== 'undefined' ? FFmpegUtil : null);
+
+    if (fWasm && !win.FFmpegWASM) win.FFmpegWASM = fWasm;
+    if (fUtil && !win.FFmpegUtil) win.FFmpegUtil = fUtil;
+
+    if (fWasm && fUtil) return { FFmpegWASM: fWasm, FFmpegUtil: fUtil };
+
+    const loadScriptViaGM = (url) => new Promise((resolve, reject) => {
+      const gmx = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
+                  (typeof GM !== 'undefined' && GM.xmlHttpRequest) ? GM.xmlHttpRequest : null;
+      if (gmx) {
+        gmx({
+          method: 'GET',
+          url: url,
+          onload: (res) => {
+            if (res.status >= 200 && res.status < 300 && res.responseText) {
+              try {
+                const s = document.createElement('script');
+                s.textContent = res.responseText;
+                (document.head || document.documentElement).appendChild(s);
+                s.remove();
+                resolve(true);
+              } catch (e) {
+                reject(e);
+              }
+            } else {
+              reject(new Error(`HTTP ${res.status}`));
+            }
+          },
+          onerror: () => reject(new Error(`GM_xmlhttpRequest error loading ${url}`)),
+          ontimeout: () => reject(new Error(`GM_xmlhttpRequest timeout loading ${url}`))
+        });
+      } else {
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = () => resolve(true);
+        s.onerror = () => reject(new Error(`Failed to load ${url}`));
+        (document.head || document.documentElement).appendChild(s);
+      }
     });
 
     try {
-      if (!win.FFmpegUtil) {
-        try {
-          await loadScript('assets/ffmpeg/index.js');
-        } catch (_) {
-          await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
-        }
+      if (!win.FFmpegUtil && !(typeof FFmpegUtil !== 'undefined')) {
+        await loadScriptViaGM('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
       }
-      if (!win.FFmpegWASM) {
-        try {
-          await loadScript('assets/ffmpeg/ffmpeg.js');
-        } catch (_) {
-          await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-        }
+      if (!win.FFmpegWASM && !(typeof FFmpegWASM !== 'undefined')) {
+        await loadScriptViaGM('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
       }
     } catch (err) {
-      console.error('Error loading FFmpeg WASM in userscript:', err);
+      console.error('Error loading FFmpeg WASM scripts:', err);
     }
-    return !!(win.FFmpegWASM && win.FFmpegUtil);
+
+    fWasm = win.FFmpegWASM || (typeof FFmpegWASM !== 'undefined' ? FFmpegWASM : null);
+    fUtil = win.FFmpegUtil || (typeof FFmpegUtil !== 'undefined' ? FFmpegUtil : null);
+    if (fWasm && !win.FFmpegWASM) win.FFmpegWASM = fWasm;
+    if (fUtil && !win.FFmpegUtil) win.FFmpegUtil = fUtil;
+
+    if (fWasm && fUtil) return { FFmpegWASM: fWasm, FFmpegUtil: fUtil };
+    return null;
   }
 
   async function compressVideoInBrowser(file, targetRes, onProgress) {
     if (!targetRes || targetRes === 'OFF') return file;
 
     const timeStr = () => new Date().toLocaleTimeString([], { hour12: false });
-    addUiLog(`[${timeStr()}] Compressor: Loading FFmpeg WASM engine from CDN...`);
+    addUiLog(`[${timeStr()}] Compressor: Loading FFmpeg WASM engine...`);
 
     try {
-      const isLoaded = await loadFFmpegInUserscript();
-      if (!isLoaded) throw new Error('Engine FFmpeg WASM tidak dapat dimuat.');
+      const libs = await loadFFmpegInUserscript();
+      if (!libs || !libs.FFmpegWASM) throw new Error('Engine FFmpeg WASM tidak dapat dimuat.');
 
-      const { FFmpeg } = win.FFmpegWASM;
-      const { toBlobURL } = win.FFmpegUtil;
+      const { FFmpeg } = libs.FFmpegWASM;
 
       if (!ffmpegInstance) {
         ffmpegInstance = new FFmpeg();
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         addUiLog(`[${timeStr()}] Downloading FFmpeg Core WASM binaries...`);
-        const coreURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
-        const wasmURL = await toBlobURL(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
+
+        const coreURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
+
         await ffmpegInstance.load({ coreURL, wasmURL });
         addUiLog(`[${timeStr()}] FFmpeg WASM engine active & ready.`);
       }

@@ -357,7 +357,7 @@
         }, 400);
     }
 
-    const TARGET_USERSCRIPT_VERSION = '1.4.2';
+    const TARGET_USERSCRIPT_VERSION = '1.4.3';
     let detectedUserscriptVersion = null;
 
     function checkExtensionPresence() {
