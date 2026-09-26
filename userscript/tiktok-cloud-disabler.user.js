@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.3.0
+// @version      1.3.1
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -21,17 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.0';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.1';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.0';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.1';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.0', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.1', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +44,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.3.0',
+    'System: TikTok Studio Cloud Disabler v1.3.1',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -168,6 +168,9 @@
     if (!targetRes || targetRes === 'OFF') return file;
 
     return new Promise((resolve) => {
+      const timeStr = () => new Date().toLocaleTimeString([], { hour12: false });
+      addUiLog(`[${timeStr()}] Compressor: Initializing Canvas + MediaRecorder engine...`);
+
       const video = document.createElement('video');
       video.preload = 'metadata';
       video.src = URL.createObjectURL(file);
@@ -191,6 +194,9 @@
           const targetW = Math.round((origWidth * scale) / 2) * 2;
           const outH = Math.round((origHeight * scale) / 2) * 2;
 
+          addUiLog(`[${timeStr()}] Input Video: ${origWidth}x${origHeight} @ ${(video.duration || 0).toFixed(1)}s`);
+          addUiLog(`[${timeStr()}] Target Scale: ${targetW}x${outH} (${targetRes.toUpperCase()})`);
+
           const canvas = document.createElement('canvas');
           canvas.width = targetW;
           canvas.height = outH;
@@ -209,7 +215,10 @@
             mimeType = 'video/webm';
           }
 
-          const options = { mimeType, videoBitsPerSecond: targetH === 720 ? 5000000 : 10000000 };
+          const targetBitrate = targetH === 720 ? 5000000 : 10000000;
+          addUiLog(`[${timeStr()}] Encoder Config: Bitrate=${(targetBitrate / 1000000).toFixed(1)} Mbps, Codec=${mimeType}`);
+
+          const options = { mimeType, videoBitsPerSecond: targetBitrate };
           let mediaRecorder;
           try {
             mediaRecorder = new MediaRecorder(stream, options);
@@ -226,14 +235,21 @@
             URL.revokeObjectURL(video.src);
             const compressedBlob = new Blob(chunks, { type: file.type || 'video/mp4' });
             const compressedFile = new File([compressedBlob], file.name, { type: file.type || 'video/mp4' });
+            const origMB = (file.size / 1048576).toFixed(2);
+            const compMB = (compressedFile.size / 1048576).toFixed(2);
+            const diffMB = (file.size > compressedFile.size) ? (origMB - compMB).toFixed(2) : 0;
+            addUiLog(`[${timeStr()}] Compression Complete: ${origMB} MB -> ${compMB} MB (Saved: ${diffMB} MB)`);
             resolve(compressedFile);
           };
 
           mediaRecorder.start(100);
+          addUiLog(`[${timeStr()}] Encoding stream started...`);
 
           const duration = video.duration || 10;
           video.currentTime = 0;
           await video.play();
+
+          let lastLoggedMilestone = -1;
 
           const drawFrame = () => {
             if (video.paused || video.ended) {
@@ -241,9 +257,15 @@
               return;
             }
             ctx.drawImage(video, 0, 0, targetW, outH);
-            if (onProgress && duration > 0) {
+            if (duration > 0) {
               const pct = Math.min(Math.round((video.currentTime / duration) * 100), 99);
-              onProgress(pct);
+              if (onProgress) onProgress(pct);
+
+              const milestone = Math.floor(pct / 25) * 25;
+              if (milestone > 0 && milestone !== lastLoggedMilestone && milestone <= 75) {
+                lastLoggedMilestone = milestone;
+                addUiLog(`[${timeStr()}] Encoding progress: ${milestone}%`);
+              }
             }
             requestAnimationFrame(drawFrame);
           };
@@ -254,12 +276,14 @@
           };
         } catch (err) {
           URL.revokeObjectURL(video.src);
+          addUiLog(`[${timeStr()}] Compressor Error: ${err.message}, fallback to raw file`);
           resolve(file);
         }
       };
 
       video.onerror = () => {
         URL.revokeObjectURL(video.src);
+        addUiLog(`[${timeStr()}] Video Load Error, fallback to raw file`);
         resolve(file);
       };
     });
@@ -603,13 +627,10 @@
 
         // Physical In-Browser Re-encoding / Compression if 720p or 1080p selected
         if (selectedCompress !== 'OFF') {
-          addUiLog(`[${timeStr}] Memulai re-encoding kompresi video (${selectedCompress.toUpperCase()})...`);
           videoToPatch = await compressVideoInBrowser(pendingRawFile, selectedCompress, (pct) => {
             progressFill.style.width = pct + '%';
             progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}%`;
           });
-          const compressedMB = (videoToPatch.size / (1024 * 1024)).toFixed(2);
-          addUiLog(`[${timeStr}] Hasil re-encoding kompresi: ${compressedMB} MB`);
         }
 
         progressFill.style.width = '95%';
@@ -617,11 +638,12 @@
 
         let finalFile = videoToPatch;
         if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
+          addUiLog(`[${timeStr}] Executing Sentinel MP4 Box Patcher...`);
           const buf = await videoToPatch.arrayBuffer();
           const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
           const patchedBlob = new Blob([patchedU8], { type: videoToPatch.type || 'video/mp4' });
           finalFile = new File([patchedBlob], pendingRawFile.name, { type: videoToPatch.type || 'video/mp4' });
-          addUiLog(`[${timeStr}] Patch timescale diterapkan (${count} box diperbarui)`);
+          addUiLog(`[${timeStr}] Timescale patch diterapkan (${count} box diperbarui)`);
         }
 
         progressFill.style.width = '100%';
@@ -772,7 +794,7 @@
           opacity: 0 !important;
           max-height: 0 !important;
           overflow: hidden !important;
-          width: 300px !important;
+          width: 320px !important;
           background: #171a13 !important;
           border: 1px solid transparent !important;
           border-radius: 12px !important;
@@ -786,7 +808,7 @@
         }
         .cf-panel.open {
           opacity: 1 !important;
-          max-height: 260px !important;
+          max-height: 280px !important;
           padding: 12px !important;
           margin-bottom: 8px !important;
           border-color: #bedc74 !important;
@@ -839,7 +861,7 @@
           font-size: 10.5px !important;
           line-height: 1.5 !important;
           color: #9aa491 !important;
-          max-height: 140px !important;
+          max-height: 160px !important;
           overflow-y: auto !important;
         }
         .cf-log-row {
