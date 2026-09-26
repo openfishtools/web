@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.1.2
+// @version      1.2.0
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -155,11 +155,10 @@
     };
   }
 
-  // ================= INLINE DROP-ZONE CONTROL PANEL (TIKTOK STUDIO) =================
+  // ================= BINARY PATCHER SENTINEL ENGINE =================
   let selectedMethod = 'BINARY';
-  let selectedCompress = 'OFF';
+  let selectedCompress = '1080p';
 
-  // Binary patcher helper inside Userscript (Timescale 60 FPS Sentinel Engine)
   function patchBinaryBuffer(input) {
     let patchedCount = 0;
     try {
@@ -242,154 +241,210 @@
     };
   }
 
-  // Hook FormData.prototype.append
-  if (typeof FormData !== 'undefined' && FormData.prototype.append) {
-    const origFormDataAppend = FormData.prototype.append;
-    FormData.prototype.append = function(name, value, filename) {
-      if (value && (value instanceof Blob || value instanceof File)) {
-        const isVideo = (value.type && value.type.startsWith('video/')) ||
-                        (filename && /\.(mp4|mov|webm|wmv)$/i.test(filename)) ||
-                        (value.name && /\.(mp4|mov|webm|wmv)$/i.test(value.name));
-        if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
-          const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-          addUiLog(`[${timeStr}] FormData append intercepted: ${filename || value.name || name}`);
-        }
-      }
-      return origFormDataAppend.apply(this, arguments);
-    };
-  }
-
+  // ================= FULL-COVER DRAG & DROP OVERLAY PATCHER =================
   function findUploadContainer() {
     return document.querySelector('.upload-card, .before-upload-new-stage, [class*="upload-card"], [class*="before-upload-new-stage"], [class*="upload-stage"], [class*="uploader-container"], [class*="drop-zone"], [class*="file-uploader"]');
   }
 
-  function injectInlinePatcherUI() {
-    if (document.getElementById('cf-inline-patcher-box')) return;
+  let pendingRawFile = null;
+  let isPatchingFile = false;
 
+  function showPatcherOverlay(file) {
+    pendingRawFile = file;
     const container = findUploadContainer();
     if (!container) return;
 
-    const box = document.createElement('div');
-    box.id = 'cf-inline-patcher-box';
+    container.style.position = 'relative';
+
+    const existing = document.getElementById('cf-drag-patcher-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'cf-drag-patcher-overlay';
+
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
     const style = document.createElement('style');
     style.textContent = `
-      #cf-inline-patcher-box {
-        margin: 12px auto !important;
-        max-width: 440px !important;
-        width: 90% !important;
+      #cf-drag-patcher-overlay {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 360px !important;
         background: #171a13 !important;
-        border: 1.5px solid #bedc74 !important;
-        border-radius: 14px !important;
-        padding: 14px 16px !important;
+        border: 2px solid #bedc74 !important;
+        border-radius: 16px !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px !important;
+        box-sizing: border-box !important;
         color: #edf0e8 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        box-shadow: none !important;
-        text-align: left !important;
-        box-sizing: border-box !important;
-        z-index: 100 !important;
       }
-      #cf-inline-patcher-box * {
+      #cf-drag-patcher-overlay * {
         box-sizing: border-box !important;
       }
-      .cf-inline-header {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        margin-bottom: 10px !important;
+      .cf-overlay-card {
+        width: 100% !important;
+        max-width: 440px !important;
+        text-align: center !important;
       }
-      .cf-inline-title {
-        font-size: 12.5px !important;
+      .cf-overlay-title {
+        font-size: 16px !important;
         font-weight: 700 !important;
         color: #bedc74 !important;
+        margin-bottom: 8px !important;
         display: flex !important;
         align-items: center !important;
-        gap: 6px !important;
+        justify-content: center !important;
+        gap: 8px !important;
       }
-      .cf-inline-tag {
-        font-size: 10px !important;
-        font-weight: 600 !important;
-        color: #bedc74 !important;
-        background: rgba(190, 220, 116, 0.16) !important;
-        padding: 2px 7px !important;
-        border-radius: 999px !important;
+      .cf-file-info {
+        background: #20241a !important;
+        border: 1px solid rgba(190, 220, 116, 0.3) !important;
+        border-radius: 10px !important;
+        padding: 8px 14px !important;
+        font-size: 12px !important;
+        color: #edf0e8 !important;
+        margin-bottom: 16px !important;
+        word-break: break-all !important;
       }
-      .cf-section-label {
+      .cf-overlay-label {
         font-size: 11px !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         color: #bedc74 !important;
-        margin-bottom: 5px !important;
-        margin-top: 8px !important;
+        text-align: left !important;
+        margin-bottom: 6px !important;
+        margin-top: 10px !important;
+        letter-spacing: 0.5px !important;
       }
-      .cf-chip-group {
+      .cf-overlay-group {
         display: flex !important;
-        gap: 6px !important;
-        margin-bottom: 8px !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
       }
-      .cf-chip {
+      .cf-overlay-chip {
         flex: 1 !important;
-        padding: 6px 0 !important;
+        padding: 8px 0 !important;
         text-align: center !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
         background: #20241a !important;
         border: 1px solid rgba(190, 220, 116, 0.3) !important;
         color: #edf0e8 !important;
         border-radius: 999px !important;
         cursor: pointer !important;
-        transition: background 0.15s ease !important;
+        transition: all 0.15s ease !important;
       }
-      .cf-chip.active {
+      .cf-overlay-chip.active {
         background: #bedc74 !important;
         color: #171a13 !important;
         border-color: #bedc74 !important;
       }
-      .cf-compress-box {
-        display: block;
+      .cf-action-btn {
+        width: 100% !important;
+        padding: 12px 0 !important;
+        margin-top: 16px !important;
+        background: #bedc74 !important;
+        color: #171a13 !important;
+        border: none !important;
+        border-radius: 999px !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        transition: background 0.15s ease !important;
       }
-      .cf-compress-box.hidden {
-        display: none !important;
+      .cf-action-btn:hover {
+        background: #d4f090 !important;
+      }
+      .cf-cancel-btn {
+        background: transparent !important;
+        border: none !important;
+        color: #9aa491 !important;
+        font-size: 11.5px !important;
+        margin-top: 10px !important;
+        cursor: pointer !important;
+        text-decoration: underline !important;
+      }
+      .cf-progress-container {
+        width: 100% !important;
+        margin-top: 16px !important;
+        display: none;
+      }
+      .cf-progress-bar-bg {
+        width: 100% !important;
+        height: 8px !important;
+        background: #20241a !important;
+        border-radius: 999px !important;
+        overflow: hidden !important;
+        margin-bottom: 8px !important;
+      }
+      .cf-progress-bar-fill {
+        width: 0% !important;
+        height: 100% !important;
+        background: #bedc74 !important;
+        transition: width 0.1s linear !important;
+      }
+      .cf-progress-text {
+        font-size: 11.5px !important;
+        color: #bedc74 !important;
+        font-weight: 600 !important;
       }
     `;
 
-    box.appendChild(style);
+    overlay.appendChild(style);
 
-    const innerContent = document.createElement('div');
-    innerContent.innerHTML = `
-      <div class="cf-inline-header">
-        <div class="cf-inline-title">⚡ Auto Patch Mode</div>
-        <div class="cf-inline-tag">Cutefish Quality</div>
+    const card = document.createElement('div');
+    card.className = 'cf-overlay-card';
+    card.innerHTML = `
+      <div class="cf-overlay-title">⚡ Cutefish Video Patcher</div>
+      <div class="cf-file-info">📁 <b>${file.name}</b> (${fileSizeMB} MB)</div>
+
+      <div class="cf-overlay-label">PILIH METODE:</div>
+      <div class="cf-overlay-group" id="cf-ov-method-group">
+        <div class="cf-overlay-chip active" data-val="BINARY">BINARY</div>
+        <div class="cf-overlay-chip" data-val="FPS">FPS</div>
+        <div class="cf-overlay-chip" data-val="WMV">WMV</div>
       </div>
 
-      <div class="cf-section-label">PILIH METODE:</div>
-      <div class="cf-chip-group" id="cf-inline-method-group">
-        <div class="cf-chip active" data-val="BINARY">BINARY</div>
-        <div class="cf-chip" data-val="FPS">FPS</div>
-        <div class="cf-chip" data-val="WMV">WMV</div>
-      </div>
-
-      <div class="cf-compress-box" id="cf-inline-compress-section">
-        <div class="cf-section-label">COMPRESS:</div>
-        <div class="cf-chip-group" id="cf-inline-compress-group">
-          <div class="cf-chip active" data-val="OFF">OFF</div>
-          <div class="cf-chip" data-val="720p">720P</div>
-          <div class="cf-chip" data-val="1080p">1080P</div>
+      <div id="cf-ov-compress-section">
+        <div class="cf-overlay-label">COMPRESS RESOLUSI:</div>
+        <div class="cf-overlay-group" id="cf-ov-compress-group">
+          <div class="cf-overlay-chip" data-val="OFF">OFF</div>
+          <div class="cf-overlay-chip" data-val="720p">720P</div>
+          <div class="cf-overlay-chip active" data-val="1080p">1080P</div>
         </div>
       </div>
+
+      <button type="button" class="cf-action-btn" id="cf-btn-start-process">🚀 PROSES & PATCH VIDEO</button>
+      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">✕ Batal / Reset</button></div>
+
+      <div class="cf-progress-container" id="cf-progress-container">
+        <div class="cf-progress-bar-bg">
+          <div class="cf-progress-bar-fill" id="cf-progress-fill"></div>
+        </div>
+        <div class="cf-progress-text" id="cf-progress-text">Memproses Binary Timescale Sentinel... 0%</div>
+      </div>
     `;
 
-    box.appendChild(innerContent);
+    overlay.appendChild(card);
+    container.appendChild(overlay);
 
-    // Insert inline inside container top
-    if (container.firstChild) {
-      container.insertBefore(box, container.firstChild);
-    } else {
-      container.appendChild(box);
-    }
-
-    const methodChips = box.querySelectorAll('#cf-inline-method-group .cf-chip');
-    const compressBox = box.querySelector('#cf-inline-compress-section');
-    const compressChips = box.querySelectorAll('#cf-inline-compress-group .cf-chip');
+    const methodChips = overlay.querySelectorAll('#cf-ov-method-group .cf-overlay-chip');
+    const compressSection = overlay.querySelector('#cf-ov-compress-section');
+    const compressChips = overlay.querySelectorAll('#cf-ov-compress-group .cf-overlay-chip');
+    const processBtn = overlay.querySelector('#cf-btn-start-process');
+    const cancelBtn = overlay.querySelector('#cf-btn-cancel');
+    const progressContainer = overlay.querySelector('#cf-progress-container');
+    const progressFill = overlay.querySelector('#cf-progress-fill');
+    const progressText = overlay.querySelector('#cf-progress-text');
 
     methodChips.forEach(chip => {
       chip.addEventListener('click', (e) => {
@@ -398,12 +453,10 @@
         chip.classList.add('active');
         selectedMethod = chip.dataset.val;
         if (selectedMethod === 'BINARY') {
-          compressBox.classList.remove('hidden');
+          compressSection.style.display = 'block';
         } else {
-          compressBox.classList.add('hidden');
+          compressSection.style.display = 'none';
         }
-        const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-        addUiLog(`[${timeStr}] Method set to: ${selectedMethod}`);
       });
     });
 
@@ -413,51 +466,73 @@
         compressChips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         selectedCompress = chip.dataset.val;
-        const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-        addUiLog(`[${timeStr}] Compress set to: ${selectedCompress}`);
       });
     });
-  }
 
-  let isPatchingFile = false;
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      overlay.remove();
+      pendingRawFile = null;
+    });
 
-  async function processAndUploadFile(originalFile) {
-    if (isPatchingFile) return;
-    isPatchingFile = true;
+    processBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!pendingRawFile || isPatchingFile) return;
+      isPatchingFile = true;
 
-    try {
+      processBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+      progressContainer.style.display = 'block';
+
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Intercepted ${originalFile.name} (${selectedMethod})...`);
+      addUiLog(`[${timeStr}] Starting patch for ${pendingRawFile.name}...`);
 
-      let finalFile = originalFile;
-      if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
-        const buf = await originalFile.arrayBuffer();
-        const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
-        const patchedBlob = new Blob([patchedU8], { type: originalFile.type || 'video/mp4' });
-        finalFile = new File([patchedBlob], originalFile.name, { type: originalFile.type || 'video/mp4' });
-        addUiLog(`[${timeStr}] Sentinel patch applied (${count} boxes updated) ✓`);
-      }
+      let pct = 0;
+      const progressInterval = setInterval(() => {
+        pct = Math.min(pct + 15, 85);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = `Memproses Binary Timescale Sentinel... ${pct}%`;
+      }, 80);
 
-      const input = document.querySelector('input[type="file"]');
-      if (input) {
-        const dt = new DataTransfer();
-        dt.items.add(finalFile);
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        addUiLog(`[${timeStr}] Dispatched patched file to TikTok Studio ✓`);
+      try {
+        let finalFile = pendingRawFile;
+        if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
+          const buf = await pendingRawFile.arrayBuffer();
+          const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
+          const patchedBlob = new Blob([patchedU8], { type: pendingRawFile.type || 'video/mp4' });
+          finalFile = new File([patchedBlob], pendingRawFile.name, { type: pendingRawFile.type || 'video/mp4' });
+          addUiLog(`[${timeStr}] Sentinel patch applied (${count} boxes updated) ✓`);
+        }
+
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = '✓ Patch Selesai! Mengunggah ke TikTok Studio...';
+
+        await new Promise(r => setTimeout(r, 400));
+
+        const input = document.querySelector('input[type="file"]');
+        if (input) {
+          const dt = new DataTransfer();
+          dt.items.add(finalFile);
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          addUiLog(`[${timeStr}] Dispatched patched file to TikTok Studio ✓`);
+        }
+
+        overlay.remove();
+      } catch (err) {
+        clearInterval(progressInterval);
+        progressText.textContent = `❌ Error: ${err.message}`;
+        addUiLog(`[Error] Patch failed: ${err.message}`);
+      } finally {
+        pendingRawFile = null;
+        setTimeout(() => { isPatchingFile = false; }, 1000);
       }
-    } catch (e) {
-      addUiLog(`[Error] Patch failed: ${e.message}`);
-    } finally {
-      setTimeout(() => { isPatchingFile = false; }, 1000);
-    }
+    });
   }
 
   function setupDropHandler() {
     if (!isTikTokStudio) return;
-
-    // Periodically inject inline UI inside upload card if available
-    setInterval(injectInlinePatcherUI, 1000);
 
     document.addEventListener('change', (e) => {
       if (isPatchingFile) return;
@@ -468,10 +543,15 @@
           if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
             e.preventDefault();
             e.stopPropagation();
-            processAndUploadFile(file);
+            e.stopImmediatePropagation();
+            showPatcherOverlay(file);
           }
         }
       }
+    }, true);
+
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
     }, true);
 
     document.addEventListener('drop', (e) => {
@@ -481,7 +561,8 @@
         if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
           e.preventDefault();
           e.stopPropagation();
-          processAndUploadFile(file);
+          e.stopImmediatePropagation();
+          showPatcherOverlay(file);
         }
       }
     }, true);
