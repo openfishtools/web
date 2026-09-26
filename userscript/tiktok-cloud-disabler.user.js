@@ -21,6 +21,8 @@
 // @require      https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
 // ==UserScript==
 
+/* jshint esversion: 11 */
+
 (() => {
   'use strict';
 
