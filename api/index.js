@@ -602,7 +602,106 @@ function ipLookupVariants(raw) {
     return [...set];
 }
 
-function parseVideoMetadataFromBuffer(buffer) {
+function parseWebMMetadataFromBuffer(buffer) {
+    let width = 0;
+    let height = 0;
+    let fps = null;
+    let comment = '';
+
+    function readVInt(offset) {
+        if (offset >= buffer.length) return null;
+        const b = buffer[offset];
+        let mask = 0x80;
+        let length = 1;
+        while (mask > 0 && !(b & mask)) {
+            mask >>= 1;
+            length++;
+        }
+        if (length > 8 || offset + length > buffer.length) return null;
+        let value = b & (mask - 1);
+        for (let i = 1; i < length; i++) {
+            value = (value * 256) + buffer[offset + i];
+        }
+        return { value, length };
+    }
+
+    let pos = 0;
+    let clusterTimecode = 0;
+    let videoTimecodes = [];
+
+    while (pos < buffer.length - 4) {
+        const idRes = readVInt(pos);
+        if (!idRes) break;
+        const idHex = buffer.slice(pos, pos + idRes.length).toString('hex');
+        pos += idRes.length;
+
+        const sizeRes = readVInt(pos);
+        if (!sizeRes) break;
+        pos += sizeRes.length;
+        const dataSize = sizeRes.value;
+
+        if (['1a45dfa3', '18538067', '1549a966', '1654ae6b', 'ae', 'e0', '1f43b675', 'a0'].includes(idHex)) {
+            continue;
+        }
+
+        if (idHex === 'b0') {
+            if (dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                width = buffer.readUIntBE(pos, dataSize);
+            }
+        } else if (idHex === 'ba') {
+            if (dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                height = buffer.readUIntBE(pos, dataSize);
+            }
+        } else if (idHex === '54b0') {
+            if (!width && dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                width = buffer.readUIntBE(pos, dataSize);
+            }
+        } else if (idHex === '54ba') {
+            if (!height && dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                height = buffer.readUIntBE(pos, dataSize);
+            }
+        } else if (idHex === '2383e3') {
+            if (dataSize === 4 && pos + 4 <= buffer.length) {
+                fps = Math.round(buffer.readFloatBE(pos));
+            } else if (dataSize === 8 && pos + 8 <= buffer.length) {
+                fps = Math.round(buffer.readDoubleBE(pos));
+            }
+        } else if (idHex === '23e383') {
+            if (dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                const dur = buffer.readUIntBE(pos, dataSize);
+                if (dur > 0) fps = Math.round(1e9 / dur);
+            }
+        } else if (idHex === 'e7') {
+            if (dataSize > 0 && dataSize <= 8 && pos + dataSize <= buffer.length) {
+                clusterTimecode = buffer.readUIntBE(pos, dataSize);
+            }
+        } else if (idHex === 'a3' || idHex === '91' || idHex === '83') {
+            if (dataSize >= 3) {
+                const trackRes = readVInt(pos);
+                if (trackRes && trackRes.value === 1) {
+                    const relTc = buffer.readInt16BE(pos + trackRes.length);
+                    videoTimecodes.push(clusterTimecode + relTc);
+                }
+            }
+        }
+
+        pos += dataSize;
+    }
+
+    if ((!fps || isNaN(fps) || fps <= 0) && videoTimecodes.length >= 2) {
+        const firstTc = videoTimecodes[0];
+        const lastTc = videoTimecodes[videoTimecodes.length - 1];
+        const deltaMs = lastTc - firstTc;
+        if (deltaMs > 0) {
+            const rawFps = ((videoTimecodes.length - 1) * 1000) / deltaMs;
+            fps = Math.round(rawFps);
+        }
+    }
+
+    return { fps: (fps && !isNaN(fps) && fps > 0 && fps < 300) ? fps : null, width, height, comment };
+}
+
+function parseMp4MetadataFromBuffer(buffer) {
     let moovOffset = -1;
     for (let i = 0; i < buffer.byteLength - 8; i++) {
         if (buffer[i+4] === 0x6D && buffer[i+5] === 0x6F && buffer[i+6] === 0x6F && buffer[i+7] === 0x76) {
@@ -818,6 +917,14 @@ function parseVideoMetadataFromBuffer(buffer) {
     return { fps, width, height, comment };
 }
 
+function parseVideoMetadataFromBuffer(buffer) {
+    if (!buffer || buffer.byteLength < 16) return null;
+    if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) {
+        return parseWebMMetadataFromBuffer(buffer);
+    }
+    return parseMp4MetadataFromBuffer(buffer);
+}
+
 app.get('/api/get-ip', (req, res) => {
     res.json({ ip: getClientIp(req) });
 });
@@ -829,15 +936,29 @@ app.get('/api/tiktok-fps', async (req, res) => {
     }
 
     if (!isAllowedTikTokMediaUrl(url)) {
-        return res.json({ fps: null, width: 0, height: 0, comment: '' });
+        return res.json({ fps: null, width: 0, height: 0, size: 0, comment: '' });
     }
 
     const defaultHeaders = {
-        'Range': 'bytes=0-524287',
+        'Range': 'bytes=0-2097151',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Referer': 'https://www.tiktok.com/',
         'Accept': '*/*'
     };
+
+    function extractSizeFromResponse(response) {
+        const cr = response.headers.get('content-range');
+        if (cr && cr.includes('/')) {
+            const total = parseInt(cr.split('/')[1], 10);
+            if (!isNaN(total) && total > 0) return total;
+        }
+        const cl = response.headers.get('content-length');
+        if (cl) {
+            const len = parseInt(cl, 10);
+            if (!isNaN(len) && len > 0 && response.status !== 206) return len;
+        }
+        return 0;
+    }
 
     try {
         let response = await fetch(url, {
@@ -845,32 +966,34 @@ app.get('/api/tiktok-fps', async (req, res) => {
             signal: AbortSignal.timeout(8000)
         });
 
+        let totalSize = extractSizeFromResponse(response);
+
         if (response.ok || response.status === 206) {
             let buffer = Buffer.from(await response.arrayBuffer());
             let meta = parseVideoMetadataFromBuffer(buffer);
             if (meta && (meta.fps || meta.width)) {
-                return res.json(meta);
+                return res.json({ ...meta, size: totalSize });
             }
         }
 
-        // If moov box is at the end of the file, fetch last 512KB
+        // If moov box is at the end of the file, fetch last 1MB
         try {
             response = await fetch(url, {
-                headers: { ...defaultHeaders, 'Range': 'bytes=-524288' },
+                headers: { ...defaultHeaders, 'Range': 'bytes=-1048576' },
                 signal: AbortSignal.timeout(6000)
             });
             if (response.ok || response.status === 206) {
                 let buffer = Buffer.from(await response.arrayBuffer());
                 let meta = parseVideoMetadataFromBuffer(buffer);
                 if (meta && (meta.fps || meta.width)) {
-                    return res.json(meta);
+                    return res.json({ ...meta, size: totalSize || extractSizeFromResponse(response) });
                 }
             }
         } catch (_) {}
 
-        res.json({ fps: null, width: 0, height: 0, comment: '' });
+        res.json({ fps: null, width: 0, height: 0, size: totalSize, comment: '' });
     } catch (e) {
-        res.json({ fps: null, width: 0, height: 0, comment: '' });
+        res.json({ fps: null, width: 0, height: 0, size: 0, comment: '' });
     }
 });
 

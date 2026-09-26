@@ -282,10 +282,8 @@
                 }
             }
 
-            setButtonState('processing', t('stats_status_analysing_video') || 'Analysing bitstream...');
-
             let videoMeta = await analyseVideoMetadataFromUrl(streamUrl);
-            if ((!videoMeta || !videoMeta.fps) && metadata && metadata.id) {
+            if ((!videoMeta || (!videoMeta.fps && !videoMeta.width)) && metadata && metadata.id) {
                 const proxyStreamUrl = `https://www.tikwm.com/video/media/play/${metadata.id}.mp4`;
                 if (proxyStreamUrl !== streamUrl) {
                     const fallbackMeta = await analyseVideoMetadataFromUrl(proxyStreamUrl);
@@ -293,6 +291,13 @@
                         videoMeta = fallbackMeta;
                     }
                 }
+            }
+
+            const finalSize = metadata.size || (videoMeta && videoMeta.size) || 0;
+            const finalDuration = metadata.duration || (videoMeta && videoMeta.duration) || 0;
+
+            if (statsSize && finalSize) {
+                statsSize.textContent = `${(finalSize / (1024 * 1024)).toFixed(2)} MB`;
             }
 
             const statsFps = document.getElementById('stats-fps');
@@ -318,8 +323,8 @@
             }
 
             if (statsBitrate) {
-                if (size && duration) {
-                    const bitrateKbps = (size * 8) / (duration * 1000);
+                if (finalSize && finalDuration) {
+                    const bitrateKbps = (finalSize * 8) / (finalDuration * 1000);
                     if (bitrateKbps >= 1000) {
                         statsBitrate.textContent = `${(bitrateKbps / 1000).toFixed(2)} Mbps`;
                     } else {
