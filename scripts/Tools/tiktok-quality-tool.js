@@ -357,10 +357,20 @@
         }, 400);
     }
 
+    const TARGET_USERSCRIPT_VERSION = '1.3.0';
+    let detectedUserscriptVersion = null;
+
     function checkExtensionPresence() {
-        if (typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
-            isExtensionDetected = true;
-            return Promise.resolve(true);
+        if (typeof window !== 'undefined') {
+            if (window.__TIKTOK_CLOUD_DISABLER_VERSION__) {
+                detectedUserscriptVersion = window.__TIKTOK_CLOUD_DISABLER_VERSION__;
+            } else if (document.documentElement && document.documentElement.dataset.tiktokCloudDisablerVersion) {
+                detectedUserscriptVersion = document.documentElement.dataset.tiktokCloudDisablerVersion;
+            }
+            if (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active')) {
+                isExtensionDetected = true;
+                return Promise.resolve(true);
+            }
         }
         return new Promise((resolve) => {
             let timer = null;
@@ -368,6 +378,7 @@
                 if (ev.data && (ev.data.type === 'TIKTOK_CLOUD_DISABLER_PONG' || ev.data.type === 'ADJN_PONG')) {
                     window.removeEventListener('message', onMsg);
                     if (timer) clearTimeout(timer);
+                    if (ev.data.version) detectedUserscriptVersion = ev.data.version;
                     isExtensionDetected = true;
                     resolve(true);
                 }
@@ -380,6 +391,9 @@
                 window.removeEventListener('message', onMsg);
                 if (!isExtensionDetected && typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
                     isExtensionDetected = true;
+                    if (window.__TIKTOK_CLOUD_DISABLER_VERSION__) {
+                        detectedUserscriptVersion = window.__TIKTOK_CLOUD_DISABLER_VERSION__;
+                    }
                 }
                 resolve(isExtensionDetected);
             }, 250);
@@ -497,6 +511,11 @@
         if (!isExtensionDetected) {
             if (typeof window !== 'undefined' && (window.__TIKTOK_CLOUD_DISABLER__ || (document.documentElement && document.documentElement.dataset.tiktokCloudDisabler === 'active'))) {
                 isExtensionDetected = true;
+                if (window.__TIKTOK_CLOUD_DISABLER_VERSION__) {
+                    detectedUserscriptVersion = window.__TIKTOK_CLOUD_DISABLER_VERSION__;
+                } else if (document.documentElement && document.documentElement.dataset.tiktokCloudDisablerVersion) {
+                    detectedUserscriptVersion = document.documentElement.dataset.tiktokCloudDisablerVersion;
+                }
             }
         }
 
@@ -510,7 +529,9 @@
             return;
         }
 
-        if (isExtensionDetected) {
+        const isVersionMatch = isExtensionDetected && (detectedUserscriptVersion === TARGET_USERSCRIPT_VERSION);
+
+        if (isVersionMatch) {
             slot.innerHTML = `
                 <div class="tiktok-ext-success">
                     <span class="material-symbols-rounded">verified_user</span>
@@ -521,6 +542,44 @@
                 processBtn.disabled = false;
                 processBtn.dataset.state = 'ready';
                 if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
+            }
+            return;
+        }
+
+        if (isExtensionDetected && !isVersionMatch) {
+            const activeVer = detectedUserscriptVersion || 'lama';
+            const updateTitle = t('patcher_ext_update_title') || 'Pembaruan Userscript Diperlukan';
+            const updateBody = (t('patcher_ext_update_body') || 'Userscript Anda terdeteksi versi lama (aktif: <strong>v{active}</strong>, dibutuhkan: <strong>v{target}</strong>). Silahkan perbarui userscript ke versi terbaru agar pembatasan Cloud Canvas dinonaktifkan.')
+                .replace('{active}', activeVer)
+                .replace('{target}', TARGET_USERSCRIPT_VERSION);
+
+            slot.innerHTML = `
+                <div class="tiktok-ext-warning">
+                    <div class="tiktok-ext-warning-header">
+                        <span class="material-symbols-rounded">system_update</span>
+                        <span>${updateTitle}</span>
+                    </div>
+                    <p class="tiktok-ext-warning-body">${updateBody}</p>
+                    <div class="tiktok-ext-actions">
+                        <a href="userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-update-userscript">
+                            <span class="material-symbols-rounded">download</span>
+                            <span>${t('patcher_ext_btn_update')} (v${TARGET_USERSCRIPT_VERSION})</span>
+                        </a>
+                        <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
+                            <span class="material-symbols-rounded">refresh</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const recheckBtn = slot.querySelector('#btn-tiktok-recheck-ext');
+            if (recheckBtn) {
+                recheckBtn.addEventListener('click', async () => {
+                    recheckBtn.disabled = true;
+                    recheckBtn.classList.add('loading');
+                    await checkExtensionPresence();
+                    updateExtensionWarning();
+                });
             }
             return;
         }

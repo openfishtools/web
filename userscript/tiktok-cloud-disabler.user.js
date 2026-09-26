@@ -21,15 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.0';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.0';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.0', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 

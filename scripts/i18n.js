@@ -244,6 +244,9 @@
             "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler aktif!",
             "patcher_ext_not_found_toast": "Userscript belum terdeteksi aktif.",
             "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> aktif. Pembatasan Cloud Canvas dinonaktifkan, video 120 FPS / resolusi tinggi siap diproses.",
+            "patcher_ext_update_title": "Pembaruan Userscript Diperlukan",
+            "patcher_ext_update_body": "Userscript Anda terdeteksi versi lama (aktif: <strong>v{active}</strong>, dibutuhkan: <strong>v{target}</strong>). Silahkan perbarui userscript ke versi terbaru agar pembatasan Cloud Canvas dinonaktifkan.",
+            "patcher_ext_btn_update": "Update Userscript",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -749,6 +752,9 @@
             "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler is active!",
             "patcher_ext_not_found_toast": "Userscript is not detected yet.",
             "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> is active. Cloud Canvas restriction disabled, ready to process 120 FPS / high-resolution video.",
+            "patcher_ext_update_title": "Userscript Update Required",
+            "patcher_ext_update_body": "Your Userscript version is outdated (active: <strong>v{active}</strong>, required: <strong>v{target}</strong>). Please update the userscript to the latest version to bypass Cloud Canvas.",
+            "patcher_ext_btn_update": "Update Userscript",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
