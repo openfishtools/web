@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.2.1
+// @version      1.2.2
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -40,10 +40,16 @@
     location.pathname.includes('/creator-center')
   );
 
-  // Logs queue for the UI widget
+  // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'Cloud Canvas bypass active',
-    'TikTok Studio hook ready'
+    'System: TikTok Studio Cloud Disabler v1.2.2',
+    `Host: ${location.hostname}`,
+    `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
+    `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
+    `FFmpeg Core: Sentinel MP4 Box Patcher Active (mvhd/mdhd 60000 timescale)`,
+    'Fetch / XHR Hook: Cloud Canvas payload interceptor active',
+    'Blob / FileReader Hook: Auto ArrayBuffer patcher ready',
+    'TikTok Studio Hook: Active'
   ];
 
   let addUiLog = (msg) => {
@@ -484,9 +490,10 @@
       progressContainer.style.display = 'block';
 
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Memulai proses patch ${pendingRawFile.name}...`);
+      addUiLog(`[${timeStr}] Memulai patch file: ${pendingRawFile.name}`);
+      addUiLog(`[${timeStr}] File size: ${fileSizeMB} MB, type: ${pendingRawFile.type || 'video/mp4'}`);
+      addUiLog(`[${timeStr}] Method: ${selectedMethod}, Compress: ${selectedCompress.toUpperCase()}`);
 
-      // Dynamic process timing based on file size (min 2.0s for realistic progress feedback)
       const sizeMB = pendingRawFile.size / (1024 * 1024);
       const totalSteps = 20;
       const stepInterval = Math.max(90, Math.min(220, Math.round((sizeMB * 12) / totalSteps) + 90));
@@ -509,11 +516,12 @@
       try {
         let finalFile = pendingRawFile;
         if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
+          addUiLog(`[${timeStr}] Executing Sentinel MP4 Box Patcher...`);
           const buf = await pendingRawFile.arrayBuffer();
           const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
           const patchedBlob = new Blob([patchedU8], { type: pendingRawFile.type || 'video/mp4' });
           finalFile = new File([patchedBlob], pendingRawFile.name, { type: pendingRawFile.type || 'video/mp4' });
-          addUiLog(`[${timeStr}] Patch timescale diterapkan (${count} box diperbarui)`);
+          addUiLog(`[${timeStr}] Timescale patch result: ${count} box updated (60000 timescale units / 60 FPS precision)`);
         }
 
         clearInterval(progressInterval);
@@ -528,7 +536,7 @@
           dt.items.add(finalFile);
           input.files = dt.files;
           input.dispatchEvent(new Event('change', { bubbles: true }));
-          addUiLog(`[${timeStr}] File dikirim ke TikTok Studio`);
+          addUiLog(`[${timeStr}] DataTransfer payload dispatched to TikTok Studio input element`);
         }
 
         overlay.remove();
@@ -666,7 +674,7 @@
           opacity: 0 !important;
           max-height: 0 !important;
           overflow: hidden !important;
-          width: 280px !important;
+          width: 300px !important;
           background: #171a13 !important;
           border: 1px solid transparent !important;
           border-radius: 12px !important;
@@ -680,7 +688,7 @@
         }
         .cf-panel.open {
           opacity: 1 !important;
-          max-height: 240px !important;
+          max-height: 260px !important;
           padding: 12px !important;
           margin-bottom: 8px !important;
           border-color: #bedc74 !important;
@@ -733,7 +741,7 @@
           font-size: 10.5px !important;
           line-height: 1.5 !important;
           color: #9aa491 !important;
-          max-height: 120px !important;
+          max-height: 140px !important;
           overflow-y: auto !important;
         }
         .cf-log-row {
@@ -765,6 +773,7 @@
             <span>TikTok Studio Cloud Disabler</span>
           </div>
           <div class="cf-panel-actions">
+            <button type="button" class="cf-header-btn" id="cf-btn-copy-log" title="Copy All Logs">📋</button>
             <button type="button" class="cf-header-btn" id="cf-btn-refresh" title="Hard Reload Page">↻</button>
             <button type="button" class="cf-header-btn" id="cf-btn-close" title="Close Panel">✕</button>
           </div>
@@ -787,6 +796,7 @@
       const logBox = panel.querySelector('#cf-log-box');
       const closeBtn = panel.querySelector('#cf-btn-close');
       const refreshBtn = panel.querySelector('#cf-btn-refresh');
+      const copyLogBtn = panel.querySelector('#cf-btn-copy-log');
 
       function renderLogs() {
         if (!logBox) return;
@@ -823,6 +833,38 @@
         refreshBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           location.reload(true);
+        });
+      }
+
+      function fallbackCopyText(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+          addUiLog(`[${timeStr}] All logs copied to clipboard`);
+        } catch (_) {}
+        ta.remove();
+      }
+
+      if (copyLogBtn) {
+        copyLogBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const textToCopy = logEntries.join('\n');
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+              const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+              addUiLog(`[${timeStr}] All logs copied to clipboard`);
+            }).catch(() => {
+              fallbackCopyText(textToCopy);
+            });
+          } else {
+            fallbackCopyText(textToCopy);
+          }
         });
       }
 
