@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.3.2
+// @version      1.3.3
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -21,17 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.2';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.3';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.2';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.3';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.2', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.3', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +44,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.3.2',
+    'System: TikTok Studio Cloud Disabler v1.3.3',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -169,10 +169,10 @@
 
     return new Promise((resolve) => {
       const timeStr = () => new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr()}] Compressor: Initializing Canvas + MediaRecorder engine...`);
+      addUiLog(`[${timeStr()}] Compressor: Initializing Frame-Stepping Canvas + MediaRecorder engine...`);
 
       const video = document.createElement('video');
-      video.preload = 'metadata';
+      video.preload = 'auto';
       video.src = URL.createObjectURL(file);
       video.muted = true;
       video.playsInline = true;
@@ -243,22 +243,18 @@
           };
 
           mediaRecorder.start(100);
-          addUiLog(`[${timeStr()}] Encoding stream started...`);
+          addUiLog(`[${timeStr()}] Frame-stepping 60 FPS encoding started...`);
 
           const duration = video.duration || 10;
-          video.currentTime = 0;
-          await video.play();
-
+          const fps = 60;
+          const frameTime = 1 / fps;
+          let currentTime = 0;
           let lastLoggedMilestone = -1;
 
-          const drawFrame = () => {
-            if (video.paused || video.ended) {
-              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-              return;
-            }
+          const renderFrame = () => {
             ctx.drawImage(video, 0, 0, targetW, outH);
             if (duration > 0) {
-              const pct = Math.min(Math.round((video.currentTime / duration) * 100), 99);
+              const pct = Math.min(Math.round((currentTime / duration) * 100), 99);
               if (onProgress) onProgress(pct);
 
               const milestone = Math.floor(pct / 25) * 25;
@@ -267,13 +263,19 @@
                 addUiLog(`[${timeStr()}] Encoding progress: ${milestone}%`);
               }
             }
-            requestAnimationFrame(drawFrame);
+
+            currentTime += frameTime;
+            if (currentTime >= duration) {
+              setTimeout(() => {
+                if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+              }, 200);
+            } else {
+              video.currentTime = currentTime;
+            }
           };
 
-          drawFrame();
-          video.onended = () => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          };
+          video.onseeked = renderFrame;
+          video.currentTime = 0;
         } catch (err) {
           URL.revokeObjectURL(video.src);
           addUiLog(`[${timeStr()}] Compressor Error: ${err.message}, fallback to raw file`);
@@ -291,7 +293,7 @@
 
   // ================= BINARY PATCHER SENTINEL ENGINE =================
   let selectedMethod = 'BINARY';
-  let selectedCompress = '1080p';
+  let selectedCompress = 'OFF';
 
   function patchBinaryBuffer(input) {
     let patchedCount = 0;
@@ -534,7 +536,7 @@
     overlay.appendChild(style);
 
     let selectedMethod = 'BINARY';
-    let selectedCompress = '1080p';
+    let selectedCompress = 'OFF';
 
     const card = document.createElement('div');
     card.className = 'cf-overlay-card';
@@ -549,9 +551,9 @@
       <div id="cf-ov-compress-section">
         <div class="cf-overlay-label">KOMPRESI RESOLUSI:</div>
         <div class="cf-overlay-group" id="cf-ov-compress-group">
-          <div class="cf-overlay-chip" data-val="OFF">OFF</div>
+          <div class="cf-overlay-chip active" data-val="OFF">OFF</div>
           <div class="cf-overlay-chip" data-val="720p">720P</div>
-          <div class="cf-overlay-chip active" data-val="1080p">1080P</div>
+          <div class="cf-overlay-chip" data-val="1080p">1080P</div>
         </div>
       </div>
 
