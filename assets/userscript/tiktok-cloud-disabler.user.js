@@ -374,10 +374,15 @@
       overlay.classList.remove('active');
       const input = document.querySelector('input[type="file"]');
       if (input) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        isDispatchingInternal = true;
+        try {
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        } finally {
+          setTimeout(() => { isDispatchingInternal = false; }, 500);
+        }
         const timeStr = new Date().toLocaleTimeString([], { hour12: false });
         addUiLog(`[${timeStr}] Uploaded: ${file.name}`);
       }
@@ -410,23 +415,26 @@
     });
   }
 
+  let isDispatchingInternal = false;
+
   function setupDropHandler() {
     if (!isTikTokStudio) return;
 
+    // Intercept Drag & Drop
     window.addEventListener('dragover', (e) => {
       if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
         e.preventDefault();
       }
     }, true);
 
-    window.addEventListener('drop', (e) => {
+    document.addEventListener('drop', (e) => {
+      if (isDispatchingInternal) return;
       const modal = document.getElementById('cf-tktk-drop-modal');
       if (!modal) injectDropOverlay();
 
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
-          // If modal is already processing, let it proceed
           if (e.target.closest('#cf-tktk-drop-modal')) return;
 
           e.preventDefault();
@@ -440,6 +448,33 @@
             fileNameEl.textContent = `File: ${file.name} (${sizeMb} MB)`;
           }
           if (modalEl) modalEl.classList.add('active');
+        }
+      }
+    }, true);
+
+    // Intercept File Input Click / Picker Selection
+    document.addEventListener('change', (e) => {
+      if (isDispatchingInternal) return;
+      const target = e.target;
+      if (target && target.tagName === 'INPUT' && target.type === 'file') {
+        if (target.files && target.files.length > 0) {
+          const file = target.files[0];
+          if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            pendingDroppedFile = file;
+            const modal = document.getElementById('cf-tktk-drop-modal');
+            if (!modal) injectDropOverlay();
+
+            const modalEl = document.getElementById('cf-tktk-drop-modal');
+            const fileNameEl = document.getElementById('cf-file-name');
+            if (fileNameEl) {
+              const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+              fileNameEl.textContent = `File: ${file.name} (${sizeMb} MB)`;
+            }
+            if (modalEl) modalEl.classList.add('active');
+          }
         }
       }
     }, true);
