@@ -553,6 +553,8 @@
                 .replace('{active}', activeVer)
                 .replace('{target}', TARGET_USERSCRIPT_VERSION);
 
+            const rawUserscriptUrl = 'https://raw.githubusercontent.com/cutefishaep/editorstuff/main/userscript/tiktok-cloud-disabler.user.js';
+
             slot.innerHTML = `
                 <div class="tiktok-ext-warning">
                     <div class="tiktok-ext-warning-header">
@@ -561,16 +563,34 @@
                     </div>
                     <p class="tiktok-ext-warning-body">${updateBody}</p>
                     <div class="tiktok-ext-actions">
-                        <a href="userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-update-userscript">
+                        <a href="${rawUserscriptUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download" id="btn-tiktok-update-userscript">
                             <span class="material-symbols-rounded">download</span>
                             <span>${t('patcher_ext_btn_update')} (v${TARGET_USERSCRIPT_VERSION})</span>
                         </a>
+                        <button type="button" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-copy-userscript" title="Salin kode ke clipboard">
+                            <span class="material-symbols-rounded">content_copy</span>
+                            <span>Salin Kode</span>
+                        </button>
                         <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
                             <span class="material-symbols-rounded">refresh</span>
                         </button>
                     </div>
                 </div>
             `;
+
+            const copyBtn = slot.querySelector('#btn-tiktok-copy-userscript');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', async () => {
+                    try {
+                        const res = await fetch('userscript/tiktok-cloud-disabler.user.js');
+                        const code = await res.text();
+                        await navigator.clipboard.writeText(code);
+                        if (typeof window.showToast === 'function') window.showToast('Kode Userscript v' + TARGET_USERSCRIPT_VERSION + ' berhasil disalin ke clipboard!');
+                    } catch (e) {
+                        if (typeof window.showToast === 'function') window.showToast('Gagal menyalin kode: ' + e.message);
+                    }
+                });
+            }
 
             const recheckBtn = slot.querySelector('#btn-tiktok-recheck-ext');
             if (recheckBtn) {
@@ -589,6 +609,7 @@
         const extensionInstallUrl = (browser === 'Firefox')
             ? 'https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/'
             : 'https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag';
+        const rawUserscriptUrl = 'https://raw.githubusercontent.com/cutefishaep/editorstuff/main/userscript/tiktok-cloud-disabler.user.js';
 
         slot.innerHTML = `
             <div class="tiktok-ext-warning">
@@ -598,7 +619,7 @@
                 </div>
                 <p class="tiktok-ext-warning-body">${t('patcher_ext_warn_body')}</p>
                 <div class="tiktok-ext-actions">
-                    <a href="userscript/tiktok-cloud-disabler.user.js" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
+                    <a href="${rawUserscriptUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download" id="btn-tiktok-install-userscript">
                         <span class="material-symbols-rounded">code</span>
                         <span>${t('patcher_ext_btn_userscript')}</span>
                     </a>
