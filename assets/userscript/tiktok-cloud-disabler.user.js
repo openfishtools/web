@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.1.1
+// @version      1.1.2
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -159,36 +159,108 @@
   let selectedMethod = 'BINARY';
   let selectedCompress = 'OFF';
 
-  // Binary patcher helper inside Userscript
-  function patchBinaryBuffer(buffer) {
+  // Binary patcher helper inside Userscript (Timescale 60 FPS Sentinel Engine)
+  function patchBinaryBuffer(input) {
+    let patchedCount = 0;
     try {
+      const buffer = (input && input.buffer) ? input.buffer : input;
+      if (!buffer || !(buffer instanceof ArrayBuffer || buffer instanceof SharedArrayBuffer)) {
+        return { bytes: input, count: 0 };
+      }
       const bytes = new Uint8Array(buffer);
       const view = new DataView(buffer);
-      for (let i = 0; i < bytes.length - 8; i++) {
-        if (bytes[i] === 0x6D && bytes[i+1] === 0x64 && bytes[i+2] === 0x68 && bytes[i+3] === 0x64) {
+      const len = bytes.length;
+
+      for (let i = 0; i < len - 8; i++) {
+        // Match 'mvhd' (Movie Header Box: 0x6d, 0x76, 0x68, 0x64)
+        if (bytes[i] === 0x6D && bytes[i+1] === 0x76 && bytes[i+2] === 0x68 && bytes[i+3] === 0x64) {
           const ver = view.getUint8(i + 4);
-          const timeOffset = ver === 1 ? i + 24 : i + 16;
-          const durOffset = ver === 1 ? i + 28 : i + 20;
-          if (timeOffset + 4 <= bytes.length) {
-            view.setUint32(timeOffset, 60000, false);
+          const timescaleOffset = ver === 1 ? i + 24 : i + 16;
+          if (timescaleOffset + 4 <= len) {
+            view.setUint32(timescaleOffset, 60000, false);
+            patchedCount++;
           }
-          if (durOffset + 4 <= bytes.length) {
-            const curDur = view.getUint32(durOffset);
-            if (curDur > 0 && curDur !== 0xffffffff) {
-              view.setUint32(durOffset, Math.round(curDur * (60000 / 1000)), false);
-            }
+        }
+        // Match 'mdhd' (Media Header Box: 0x6d, 0x64, 0x68, 0x64)
+        else if (bytes[i] === 0x6D && bytes[i+1] === 0x64 && bytes[i+2] === 0x68 && bytes[i+3] === 0x64) {
+          const ver = view.getUint8(i + 4);
+          const timescaleOffset = ver === 1 ? i + 24 : i + 16;
+          if (timescaleOffset + 4 <= len) {
+            view.setUint32(timescaleOffset, 60000, false);
+            patchedCount++;
           }
         }
       }
-      return bytes;
-    } catch (_) {
-      return new Uint8Array(buffer);
+      return { bytes, count: patchedCount };
+    } catch (err) {
+      return { bytes: (input instanceof Uint8Array ? input : new Uint8Array(input || [])), count: 0 };
     }
   }
 
+  // Automatic ArrayBuffer patcher hook for Blobs/Files
+  if (typeof Blob !== 'undefined' && Blob.prototype.arrayBuffer) {
+    const origArrayBuffer = Blob.prototype.arrayBuffer;
+    Blob.prototype.arrayBuffer = async function() {
+      const buffer = await origArrayBuffer.call(this);
+      try {
+        const isVideo = (this.type && this.type.startsWith('video/')) ||
+                        (this.name && /\.(mp4|mov|webm|wmv)$/i.test(this.name)) ||
+                        (buffer.byteLength > 100);
+        if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
+          const { count } = patchBinaryBuffer(buffer);
+          if (count > 0) {
+            const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+            addUiLog(`[${timeStr}] Auto-patched Blob arrayBuffer (${count} boxes) ✓`);
+          }
+        }
+      } catch (_) {}
+      return buffer;
+    };
+  }
+
+  // Hook FileReader.prototype.readAsArrayBuffer
+  if (typeof FileReader !== 'undefined' && FileReader.prototype.readAsArrayBuffer) {
+    const origReadAsArrayBuffer = FileReader.prototype.readAsArrayBuffer;
+    FileReader.prototype.readAsArrayBuffer = function(blob) {
+      this.addEventListener('load', () => {
+        if (this.result && this.result instanceof ArrayBuffer) {
+          try {
+            const isVideo = (blob && blob.type && blob.type.startsWith('video/')) ||
+                            (blob && blob.name && /\.(mp4|mov|webm|wmv)$/i.test(blob.name)) ||
+                            (this.result.byteLength > 100);
+            if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
+              const { count } = patchBinaryBuffer(this.result);
+              if (count > 0) {
+                const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+                addUiLog(`[${timeStr}] Auto-patched FileReader arrayBuffer (${count} boxes) ✓`);
+              }
+            }
+          } catch (_) {}
+        }
+      }, { once: true });
+      return origReadAsArrayBuffer.call(this, blob);
+    };
+  }
+
+  // Hook FormData.prototype.append
+  if (typeof FormData !== 'undefined' && FormData.prototype.append) {
+    const origFormDataAppend = FormData.prototype.append;
+    FormData.prototype.append = function(name, value, filename) {
+      if (value && (value instanceof Blob || value instanceof File)) {
+        const isVideo = (value.type && value.type.startsWith('video/')) ||
+                        (filename && /\.(mp4|mov|webm|wmv)$/i.test(filename)) ||
+                        (value.name && /\.(mp4|mov|webm|wmv)$/i.test(value.name));
+        if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
+          const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+          addUiLog(`[${timeStr}] FormData append intercepted: ${filename || value.name || name}`);
+        }
+      }
+      return origFormDataAppend.apply(this, arguments);
+    };
+  }
+
   function findUploadContainer() {
-    return document.querySelector('.upload-card, .before-upload-new-stage, [class*="upload-card"]') ||
-           document.querySelector('[class*="upload-stage"], [class*="uploader-container"]');
+    return document.querySelector('.upload-card, .before-upload-new-stage, [class*="upload-card"], [class*="before-upload-new-stage"], [class*="upload-stage"], [class*="uploader-container"], [class*="drop-zone"], [class*="file-uploader"]');
   }
 
   function injectInlinePatcherUI() {
@@ -349,20 +421,21 @@
 
   let isPatchingFile = false;
 
-  async function processAndUploadFile(file) {
+  async function processAndUploadFile(originalFile) {
     if (isPatchingFile) return;
     isPatchingFile = true;
 
     try {
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Patching file (${selectedMethod})...`);
+      addUiLog(`[${timeStr}] Intercepted ${originalFile.name} (${selectedMethod})...`);
 
-      let finalFile = file;
+      let finalFile = originalFile;
       if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
-        const buf = await file.arrayBuffer();
-        const patchedU8 = patchBinaryBuffer(buf);
-        const patchedBlob = new Blob([patchedU8], { type: file.type || 'video/mp4' });
-        finalFile = new File([patchedBlob], file.name, { type: file.type || 'video/mp4' });
+        const buf = await originalFile.arrayBuffer();
+        const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
+        const patchedBlob = new Blob([patchedU8], { type: originalFile.type || 'video/mp4' });
+        finalFile = new File([patchedBlob], originalFile.name, { type: originalFile.type || 'video/mp4' });
+        addUiLog(`[${timeStr}] Sentinel patch applied (${count} boxes updated) ✓`);
       }
 
       const input = document.querySelector('input[type="file"]');
@@ -371,12 +444,12 @@
         dt.items.add(finalFile);
         input.files = dt.files;
         input.dispatchEvent(new Event('change', { bubbles: true }));
-        addUiLog(`[${timeStr}] Auto patch applied ✓`);
+        addUiLog(`[${timeStr}] Dispatched patched file to TikTok Studio ✓`);
       }
     } catch (e) {
-      // Fallback
+      addUiLog(`[Error] Patch failed: ${e.message}`);
     } finally {
-      setTimeout(() => { isPatchingFile = false; }, 800);
+      setTimeout(() => { isPatchingFile = false; }, 1000);
     }
   }
 
@@ -432,7 +505,6 @@
     if (!targetParent) return;
 
     if (!root) {
-      injectDropOverlay();
       setupDropHandler();
 
       root = document.createElement('div');
