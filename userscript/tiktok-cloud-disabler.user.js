@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.2.0
+// @version      1.2.1
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -96,8 +96,8 @@
     }
 
     const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-    addUiLog(`[${timeStr}] Cloud Canvas disabled ✓`);
-    addUiLog(`[${timeStr}] 1080p/120fps preserved`);
+    addUiLog(`[${timeStr}] Cloud Canvas disabled`);
+    addUiLog(`[${timeStr}] Kualitas 1080p/120fps dipertahankan`);
   }
 
   function transformJsonString(jsonStr) {
@@ -209,7 +209,7 @@
           const { count } = patchBinaryBuffer(buffer);
           if (count > 0) {
             const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-            addUiLog(`[${timeStr}] Auto-patched Blob arrayBuffer (${count} boxes) ✓`);
+            addUiLog(`[${timeStr}] Auto-patched Blob arrayBuffer (${count} box)`);
           }
         }
       } catch (_) {}
@@ -231,7 +231,7 @@
               const { count } = patchBinaryBuffer(this.result);
               if (count > 0) {
                 const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-                addUiLog(`[${timeStr}] Auto-patched FileReader arrayBuffer (${count} boxes) ✓`);
+                addUiLog(`[${timeStr}] Auto-patched FileReader arrayBuffer (${count} box)`);
               }
             }
           } catch (_) {}
@@ -297,14 +297,13 @@
         text-align: center !important;
       }
       .cf-overlay-title {
-        font-size: 16px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
         color: #bedc74 !important;
         margin-bottom: 8px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 8px !important;
       }
       .cf-file-info {
         background: #20241a !important;
@@ -404,8 +403,8 @@
     const card = document.createElement('div');
     card.className = 'cf-overlay-card';
     card.innerHTML = `
-      <div class="cf-overlay-title">⚡ Cutefish Video Patcher</div>
-      <div class="cf-file-info">📁 <b>${file.name}</b> (${fileSizeMB} MB)</div>
+      <div class="cf-overlay-title">Cutefish Video Patcher</div>
+      <div class="cf-file-info">Nama File: <b>${file.name}</b> (${fileSizeMB} MB)</div>
 
       <div class="cf-overlay-label">PILIH METODE:</div>
       <div class="cf-overlay-group" id="cf-ov-method-group">
@@ -415,7 +414,7 @@
       </div>
 
       <div id="cf-ov-compress-section">
-        <div class="cf-overlay-label">COMPRESS RESOLUSI:</div>
+        <div class="cf-overlay-label">KOMPRESI RESOLUSI:</div>
         <div class="cf-overlay-group" id="cf-ov-compress-group">
           <div class="cf-overlay-chip" data-val="OFF">OFF</div>
           <div class="cf-overlay-chip" data-val="720p">720P</div>
@@ -423,14 +422,14 @@
         </div>
       </div>
 
-      <button type="button" class="cf-action-btn" id="cf-btn-start-process">🚀 PROSES & PATCH VIDEO</button>
-      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">✕ Batal / Reset</button></div>
+      <button type="button" class="cf-action-btn" id="cf-btn-start-process">Proses Video</button>
+      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">Batal / Reset</button></div>
 
       <div class="cf-progress-container" id="cf-progress-container">
         <div class="cf-progress-bar-bg">
           <div class="cf-progress-bar-fill" id="cf-progress-fill"></div>
         </div>
-        <div class="cf-progress-text" id="cf-progress-text">Memproses Binary Timescale Sentinel... 0%</div>
+        <div class="cf-progress-text" id="cf-progress-text">Membaca struktur MP4 header... 0%</div>
       </div>
     `;
 
@@ -485,14 +484,27 @@
       progressContainer.style.display = 'block';
 
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Starting patch for ${pendingRawFile.name}...`);
+      addUiLog(`[${timeStr}] Memulai proses patch ${pendingRawFile.name}...`);
 
-      let pct = 0;
+      // Dynamic process timing based on file size (min 2.0s for realistic progress feedback)
+      const sizeMB = pendingRawFile.size / (1024 * 1024);
+      const totalSteps = 20;
+      const stepInterval = Math.max(90, Math.min(220, Math.round((sizeMB * 12) / totalSteps) + 90));
+
+      let currentStep = 0;
       const progressInterval = setInterval(() => {
-        pct = Math.min(pct + 15, 85);
+        currentStep++;
+        const pct = Math.min(Math.round((currentStep / totalSteps) * 100), 95);
         progressFill.style.width = pct + '%';
-        progressText.textContent = `Memproses Binary Timescale Sentinel... ${pct}%`;
-      }, 80);
+
+        if (pct < 30) {
+          progressText.textContent = `Membaca struktur MP4 header... ${pct}%`;
+        } else if (pct < 70) {
+          progressText.textContent = `Mengubah timescale mvhd & mdhd (60 FPS)... ${pct}%`;
+        } else {
+          progressText.textContent = `Menerapkan parameter kompresi ${selectedCompress.toUpperCase()}... ${pct}%`;
+        }
+      }, stepInterval);
 
       try {
         let finalFile = pendingRawFile;
@@ -501,14 +513,14 @@
           const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
           const patchedBlob = new Blob([patchedU8], { type: pendingRawFile.type || 'video/mp4' });
           finalFile = new File([patchedBlob], pendingRawFile.name, { type: pendingRawFile.type || 'video/mp4' });
-          addUiLog(`[${timeStr}] Sentinel patch applied (${count} boxes updated) ✓`);
+          addUiLog(`[${timeStr}] Patch timescale diterapkan (${count} box diperbarui)`);
         }
 
         clearInterval(progressInterval);
         progressFill.style.width = '100%';
-        progressText.textContent = '✓ Patch Selesai! Mengunggah ke TikTok Studio...';
+        progressText.textContent = 'Proses patch selesai. Mengunggah ke TikTok Studio...';
 
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 500));
 
         const input = document.querySelector('input[type="file"]');
         if (input) {
@@ -516,14 +528,14 @@
           dt.items.add(finalFile);
           input.files = dt.files;
           input.dispatchEvent(new Event('change', { bubbles: true }));
-          addUiLog(`[${timeStr}] Dispatched patched file to TikTok Studio ✓`);
+          addUiLog(`[${timeStr}] File dikirim ke TikTok Studio`);
         }
 
         overlay.remove();
       } catch (err) {
         clearInterval(progressInterval);
-        progressText.textContent = `❌ Error: ${err.message}`;
-        addUiLog(`[Error] Patch failed: ${err.message}`);
+        progressText.textContent = `Error: ${err.message}`;
+        addUiLog(`[Error] Patch gagal: ${err.message}`);
       } finally {
         pendingRawFile = null;
         setTimeout(() => { isPatchingFile = false; }, 1000);
