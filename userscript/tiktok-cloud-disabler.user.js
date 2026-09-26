@@ -9,6 +9,8 @@
 // @match        *://127.0.0.1/*
 // @match        *://cutefish.my.id/*
 // @match        *://*.cutefish.my.id/*
+// @updateURL    https://cutefish.my.id/userscript/tiktok-cloud-disabler.user.js
+// @downloadURL  https://cutefish.my.id/userscript/tiktok-cloud-disabler.user.js
 // @run-at       document-start
 // @grant        unsafeWindow
 // @grant        GM_xmlhttpRequest
