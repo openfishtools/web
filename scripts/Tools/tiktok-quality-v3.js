@@ -855,6 +855,9 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
             }
             s.isProcessing = false;
             if (typeof window.showToast === 'function') window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Patch completed successfully!');
+            if (typeof s.showTikTokStudioUploadPrompt === 'function') {
+                s.showTikTokStudioUploadPrompt();
+            }
             return;
         } catch (jsErr) {
             s.log(`  [Error] Pure JS patch failed: ${jsErr.message}`);
@@ -1024,6 +1027,9 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         }
         if (typeof window.showToast === 'function') {
             window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Processing completed successfully!');
+        }
+        if (typeof s.showTikTokStudioUploadPrompt === 'function') {
+            s.showTikTokStudioUploadPrompt();
         }
 
     } catch (error) {

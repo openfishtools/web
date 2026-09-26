@@ -249,6 +249,9 @@
             "patcher_ext_update_title": "Pembaruan Userscript Diperlukan",
             "patcher_ext_update_body": "Userscript Anda terdeteksi versi lama (aktif: <strong>v{active}</strong>, dibutuhkan: <strong>v{target}</strong>). Silahkan perbarui userscript ke versi terbaru agar pembatasan Cloud Canvas dinonaktifkan.",
             "patcher_ext_btn_update": "Update Userscript",
+            "patcher_upload_studio_title": "Video siap diunggah",
+            "patcher_upload_studio_desc": "Video telah berhasil dipatch. Buka TikTok Studio untuk melanjutkan proses upload.",
+            "patcher_upload_studio_btn": "Buka TikTok Studio",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -759,6 +762,9 @@
             "patcher_ext_update_title": "Userscript Update Required",
             "patcher_ext_update_body": "Your Userscript version is outdated (active: <strong>v{active}</strong>, required: <strong>v{target}</strong>). Please update the userscript to the latest version to bypass Cloud Canvas.",
             "patcher_ext_btn_update": "Update Userscript",
+            "patcher_upload_studio_title": "Ready to upload",
+            "patcher_upload_studio_desc": "Video has been patched. Open TikTok Studio to proceed with your upload.",
+            "patcher_upload_studio_btn": "Open TikTok Studio",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">

@@ -144,6 +144,9 @@ window.processVideoV1 = async function processVideoV1(file) {
         if (typeof window.showToast === 'function') {
             window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'WMV process completed successfully!');
         }
+        if (typeof s.showTikTokStudioUploadPrompt === 'function') {
+            s.showTikTokStudioUploadPrompt();
+        }
     } catch (error) {
         s.log(`  !! V1 ERROR: ${error.name} — ${error.message}`);
         if (error.stack) s.log(`  Stack: ${error.stack.split('\n').slice(0, 3).join(' | ')}`);

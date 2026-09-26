@@ -693,8 +693,36 @@
         }
     }
 
+    function showTikTokStudioUploadPrompt() {
+        const slot = document.getElementById('tiktok-upload-prompt-slot');
+        if (!slot) return;
+        slot.innerHTML = `
+            <div class="tiktok-studio-upload-card" id="tiktok-studio-upload-card" style="background: rgba(190, 220, 116, 0.06); border: 1px solid rgba(190, 220, 116, 0.35); border-radius: 12px; padding: 14px 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; color: var(--md-sys-color-primary, #bedc74); font-size: 13.5px; font-weight: 700;">
+                    <span class="material-symbols-rounded">cloud_upload</span>
+                    <span>${t('patcher_upload_studio_title') || 'Video siap diunggah'}</span>
+                </div>
+                <p style="font-size: 12px; line-height: 1.5; color: var(--md-sys-color-on-surface, #edf0e8); margin: 0;">
+                    ${t('patcher_upload_studio_desc') || 'Video telah berhasil dipatch. Buka TikTok Studio untuk melanjutkan proses upload.'}
+                </p>
+                <div style="display: flex; align-items: center; margin-top: 4px;">
+                    <a href="https://www.tiktok.com/tiktokstudio/upload?from=creator_center&tab=video" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--md-sys-color-primary, #bedc74); color: var(--md-sys-color-on-primary, #1a2c00); font-size: 12.5px; font-weight: 600; text-decoration: none; padding: 8px 16px; border-radius: 9999px; transition: opacity 0.15s ease;">
+                        <span class="material-symbols-rounded" style="font-size: 18px;">open_in_new</span>
+                        <span>${t('patcher_upload_studio_btn') || 'Buka TikTok Studio'}</span>
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    function removeTikTokStudioUploadPrompt() {
+        const slot = document.getElementById('tiktok-upload-prompt-slot');
+        if (slot) slot.innerHTML = '';
+    }
+
     async function inspectAndAlert(file) {
         if (!file) return;
+        removeTikTokStudioUploadPrompt();
         currentInspectedFile = file;
         currentVideoSpecs = await inspectMp4Meta(file);
         await checkExtensionPresence();
@@ -754,6 +782,7 @@
             <div class="tiktok-preset-desc" id="tiktok-info-desc"></div>
 
             <div id="tiktok-ext-alert-slot"></div>
+            <div id="tiktok-upload-prompt-slot"></div>
 
             <div class="process-logs-wrap hidden" id="tiktok-logs-container">
                 <div class="process-logs-header">
@@ -987,6 +1016,7 @@
             if (processIcon) processIcon.textContent = 'restart_alt';
         }
         if (typeof window.showToast === 'function') window.showToast(t('fps_patch_completed'));
+        showTikTokStudioUploadPrompt();
     }
 
     window._tktk = {
@@ -1028,7 +1058,9 @@
         },
         showUploadGuideModal: function() {},
         showAdConsentModal: function() {},
-        closeAdConsentModal: function() {}
+        closeAdConsentModal: function() {},
+        showTikTokStudioUploadPrompt,
+        removeTikTokStudioUploadPrompt
     };
 
     const toolDefinition = {
@@ -1058,6 +1090,7 @@
             selectedFile = null;
             currentInspectedFile = null;
             currentVideoSpecs = null;
+            removeTikTokStudioUploadPrompt();
             const slot = document.getElementById('tiktok-ext-alert-slot');
             if (slot) slot.innerHTML = '';
             const logsContainer = document.getElementById('tiktok-logs-container');
