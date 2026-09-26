@@ -500,18 +500,7 @@
             }
         }
 
-        if (!currentVideoSpecs) {
-            slot.innerHTML = '';
-            if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
-                processBtn.disabled = false;
-                processBtn.dataset.state = 'ready';
-                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
-            }
-            return;
-        }
-
-        const isHighProfile = (currentVideoSpecs.fps > 60 || currentVideoSpecs.width > 1080 || currentVideoSpecs.height > 1920);
-        if (!isHighProfile || currentVersion !== 'v3') {
+        if (currentVersion !== 'v3') {
             slot.innerHTML = '';
             if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
                 processBtn.disabled = false;
