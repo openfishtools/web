@@ -73,6 +73,7 @@ app.use((req, res, next) => {
     next();
 });
 
+const distScriptsPath = path.join(__dirname, '..', 'dist', 'scripts');
 const staticNoCache = {
     setHeaders: (res, filePath) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

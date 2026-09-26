@@ -357,7 +357,7 @@
         }, 400);
     }
 
-    const TARGET_USERSCRIPT_VERSION = '1.4.6';
+    const TARGET_USERSCRIPT_VERSION = '1.5.3';
     let detectedUserscriptVersion = null;
 
     function checkExtensionPresence() {
@@ -529,6 +529,14 @@
             return;
         }
 
+        // Only enforce userscript if video is above 1080p or >= 120fps
+        const isResOver1080p = currentVideoSpecs && (
+            Math.min(currentVideoSpecs.width, currentVideoSpecs.height) > 1080 ||
+            Math.max(currentVideoSpecs.width, currentVideoSpecs.height) > 1920
+        );
+        const isFpsOver120 = currentVideoSpecs && currentVideoSpecs.fps >= 120;
+        const requiresUserscript = isResOver1080p || isFpsOver120;
+
         const isVersionMatch = isExtensionDetected && (detectedUserscriptVersion === TARGET_USERSCRIPT_VERSION);
 
         if (isVersionMatch) {
@@ -546,93 +554,124 @@
             return;
         }
 
-        if (isExtensionDetected && !isVersionMatch) {
-            const activeVer = detectedUserscriptVersion || 'lama';
-            const updateTitle = t('patcher_ext_update_title') || 'Pembaruan Userscript Diperlukan';
-            const updateBody = (t('patcher_ext_update_body') || 'Userscript Anda terdeteksi versi lama (aktif: <strong>v{active}</strong>, dibutuhkan: <strong>v{target}</strong>). Silahkan perbarui userscript ke versi terbaru agar pembatasan Cloud Canvas dinonaktifkan.')
-                .replace('{active}', activeVer)
-                .replace('{target}', TARGET_USERSCRIPT_VERSION);
-
-            const localUserscriptUrl = 'userscript/tiktok-cloud-disabler.user.js';
-
-            slot.innerHTML = `
-                <div class="tiktok-ext-warning">
-                    <div class="tiktok-ext-warning-header">
-                        <span class="material-symbols-rounded">system_update</span>
-                        <span>${updateTitle}</span>
-                    </div>
-                    <p class="tiktok-ext-warning-body">${updateBody}</p>
-                    <div class="tiktok-ext-actions">
-                        <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-update-userscript">
-                            <span class="material-symbols-rounded">download</span>
-                            <span>${t('patcher_ext_btn_update')} (v${TARGET_USERSCRIPT_VERSION})</span>
-                        </a>
-                        <button type="button" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-copy-userscript" title="Salin kode ke clipboard">
-                            <span class="material-symbols-rounded">content_copy</span>
-                            <span>Salin Kode</span>
-                        </button>
-                        <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
-                            <span class="material-symbols-rounded">refresh</span>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            const copyBtn = slot.querySelector('#btn-tiktok-copy-userscript');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', async () => {
-                    try {
-                        const res = await fetch('userscript/tiktok-cloud-disabler.user.js');
-                        const code = await res.text();
-                        await navigator.clipboard.writeText(code);
-                        if (typeof window.showToast === 'function') window.showToast('Kode Userscript v' + TARGET_USERSCRIPT_VERSION + ' berhasil disalin ke clipboard!');
-                    } catch (e) {
-                        if (typeof window.showToast === 'function') window.showToast('Gagal menyalin kode: ' + e.message);
-                    }
-                });
-            }
-
-            const recheckBtn = slot.querySelector('#btn-tiktok-recheck-ext');
-            if (recheckBtn) {
-                recheckBtn.addEventListener('click', async () => {
-                    recheckBtn.disabled = true;
-                    recheckBtn.classList.add('loading');
-                    await checkExtensionPresence();
-                    updateExtensionWarning();
-                });
-            }
-            return;
-        }
-
-        const titleText = t('patcher_ext_warn_title') || 'Bypass Cloud Canvas Diperlukan';
         const browser = detectBrowser();
         const extensionInstallUrl = (browser === 'Firefox')
             ? 'https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/'
             : 'https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag';
         const localUserscriptUrl = 'userscript/tiktok-cloud-disabler.user.js';
 
-        slot.innerHTML = `
-            <div class="tiktok-ext-warning">
-                <div class="tiktok-ext-warning-header">
-                    <span class="material-symbols-rounded">extension</span>
-                    <span>${titleText}</span>
+        if (requiresUserscript) {
+            // Case 1: Video > 1080p or >= 120 FPS -> Userscript is strictly required!
+            if (isExtensionDetected && !isVersionMatch) {
+                const activeVer = detectedUserscriptVersion || 'lama';
+                const updateTitle = t('patcher_ext_update_title') || 'Pembaruan Userscript Diperlukan';
+                const updateBody = (t('patcher_ext_update_body') || 'Userscript Anda terdeteksi versi lama (aktif: <strong>v{active}</strong>, dibutuhkan: <strong>v{target}</strong>). Silahkan perbarui userscript ke versi terbaru agar pembatasan Cloud Canvas dinonaktifkan.')
+                    .replace('{active}', activeVer)
+                    .replace('{target}', TARGET_USERSCRIPT_VERSION);
+
+                slot.innerHTML = `
+                    <div class="tiktok-ext-warning">
+                        <div class="tiktok-ext-warning-header">
+                            <span class="material-symbols-rounded">system_update</span>
+                            <span>${updateTitle}</span>
+                        </div>
+                        <p class="tiktok-ext-warning-body">${updateBody}</p>
+                        <div class="tiktok-ext-actions">
+                            <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-update-userscript">
+                                <span class="material-symbols-rounded">download</span>
+                                <span>${t('patcher_ext_btn_update')} (v${TARGET_USERSCRIPT_VERSION})</span>
+                            </a>
+                            <button type="button" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-copy-userscript" title="Salin kode ke clipboard">
+                                <span class="material-symbols-rounded">content_copy</span>
+                                <span>Salin Kode</span>
+                            </button>
+                            <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
+                                <span class="material-symbols-rounded">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const titleText = t('patcher_ext_warn_title') || 'Bypass Cloud Canvas Diperlukan (>1080p / 120 FPS)';
+                slot.innerHTML = `
+                    <div class="tiktok-ext-warning">
+                        <div class="tiktok-ext-warning-header">
+                            <span class="material-symbols-rounded">extension</span>
+                            <span>${titleText}</span>
+                        </div>
+                        <p class="tiktok-ext-warning-body">${t('patcher_ext_warn_body')}</p>
+                        <div class="tiktok-ext-actions">
+                            <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
+                                <span class="material-symbols-rounded">code</span>
+                                <span>${t('patcher_ext_btn_userscript')}</span>
+                            </a>
+                            <a href="${extensionInstallUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-install-manager">
+                                <span class="material-symbols-rounded">download</span>
+                                <span>${t('patcher_ext_btn_install')}</span>
+                            </a>
+                            <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
+                                <span class="material-symbols-rounded">refresh</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (processBtn && !isProcessing) {
+                processBtn.disabled = true;
+                processBtn.dataset.state = 'blocked';
+                if (processLabel) {
+                    processLabel.textContent = t('patcher_ext_btn_blocked');
+                }
+            }
+        } else {
+            // Case 2: Standard video (<= 1080p, < 120fps) -> Do NOT block process button!
+            if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
+                processBtn.disabled = false;
+                processBtn.dataset.state = 'ready';
+                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
+            }
+
+            const optTitle = t('patcher_ext_optional_title') || 'Jika video yang di-upload tidak HD, coba pasang userscript ini';
+            const optBody = t('patcher_ext_optional_body') || 'TikTok Studio secara otomatis mengaktifkan pipeline <strong>Cloud Canvas Video Editor</strong> di server mereka untuk video tertentu, yang menyebabkan resolusi video di-downscale paksa ke 720p meskipun file sudah di-patch. Userscript ini bertugas mencegat (hook) request API publish TikTok dan menonaktifkan flags internal berikut:<ul style="margin: 6px 0 0 16px; padding: 0; line-height: 1.5; font-size: 11.5px;"><li><code>cloud_edit_is_use_video_canvas: false</code> (mematikan modul editor canvas cloud TikTok)</li><li>Menghapus flag <code>canvas_config</code>, <code>vedit_segment_info</code>, dan <code>draft</code> dari payload agar server tidak me-render ulang timeline video</li><li>Menetapkan <code>post_type: 3</code> dan <code>enter_post_page_from: 1</code> (bypass routing editor)</li><li>Memaksa flag <code>video_quality_score: 1.0</code>, <code>is_high_quality: true</code>, dan <code>psg_vsp_aud: true</code> untuk menjaga bitrate dan resolusi asli 1080p/120fps.</li></ul>';
+
+            slot.innerHTML = `
+                <div class="tiktok-ext-warning" style="border-color: rgba(190, 220, 116, 0.4); background: rgba(190, 220, 116, 0.05);">
+                    <div class="tiktok-ext-warning-header" style="color: var(--md-sys-color-primary, #bedc74);">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>${optTitle}</span>
+                    </div>
+                    <p class="tiktok-ext-warning-body">${optBody}</p>
+                    <div class="tiktok-ext-actions">
+                        <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
+                            <span class="material-symbols-rounded">code</span>
+                            <span>${t('patcher_ext_btn_userscript')}</span>
+                        </a>
+                        <a href="${extensionInstallUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-install-manager">
+                            <span class="material-symbols-rounded">download</span>
+                            <span>${t('patcher_ext_btn_install')}</span>
+                        </a>
+                        <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
+                            <span class="material-symbols-rounded">refresh</span>
+                        </button>
+                    </div>
                 </div>
-                <p class="tiktok-ext-warning-body">${t('patcher_ext_warn_body')}</p>
-                <div class="tiktok-ext-actions">
-                    <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
-                        <span class="material-symbols-rounded">code</span>
-                        <span>${t('patcher_ext_btn_userscript')}</span>
-                    </a>
-                    <a href="${extensionInstallUrl}" target="_blank" rel="noopener noreferrer" class="btn-ext-download btn-ext-download-secondary" id="btn-tiktok-install-manager">
-                        <span class="material-symbols-rounded">download</span>
-                        <span>${t('patcher_ext_btn_install')}</span>
-                    </a>
-                    <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
-                        <span class="material-symbols-rounded">refresh</span>
-                    </button>
-                </div>
-            </div>
-        `;
+            `;
+        }
+
+        const copyBtn = slot.querySelector('#btn-tiktok-copy-userscript');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                try {
+                    const res = await fetch('userscript/tiktok-cloud-disabler.user.js');
+                    const code = await res.text();
+                    await navigator.clipboard.writeText(code);
+                    if (typeof window.showToast === 'function') window.showToast('Kode Userscript v' + TARGET_USERSCRIPT_VERSION + ' berhasil disalin ke clipboard!');
+                } catch (e) {
+                    if (typeof window.showToast === 'function') window.showToast('Gagal menyalin kode: ' + e.message);
+                }
+            });
+        }
 
         const recheckBtn = slot.querySelector('#btn-tiktok-recheck-ext');
         if (recheckBtn) {
@@ -651,14 +690,6 @@
                 }
                 updateExtensionWarning();
             });
-        }
-
-        if (processBtn && !isProcessing) {
-            processBtn.disabled = true;
-            processBtn.dataset.state = 'blocked';
-            if (processLabel) {
-                processLabel.textContent = t('patcher_ext_btn_blocked');
-            }
         }
     }
 
@@ -813,9 +844,14 @@
             currentVideoSpecs = await inspectMp4Meta(file);
         }
         await checkExtensionPresence();
-        const isHighProfile = currentVideoSpecs && (currentVideoSpecs.fps > 60 || currentVideoSpecs.width > 1080 || currentVideoSpecs.height > 1920);
+        const isResOver1080p = currentVideoSpecs && (
+            Math.min(currentVideoSpecs.width, currentVideoSpecs.height) > 1080 ||
+            Math.max(currentVideoSpecs.width, currentVideoSpecs.height) > 1920
+        );
+        const isFpsOver120 = currentVideoSpecs && currentVideoSpecs.fps >= 120;
+        const isHighProfile = isResOver1080p || isFpsOver120;
 
-        if (currentVersion === 'v3' && isHighProfile && !isExtensionDetected) {
+        if (currentVersion === 'v3' && isHighProfile && (!isExtensionDetected || detectedUserscriptVersion !== TARGET_USERSCRIPT_VERSION)) {
             updateExtensionWarning();
             if (typeof window.showToast === 'function') {
                 window.showToast(t('patcher_ext_blocked_toast'));

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.4.6
+// @version      1.5.3
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -13,12 +13,6 @@
 // @downloadURL  https://cutefish.my.id/userscript/tiktok-cloud-disabler.user.js
 // @run-at       document-start
 // @grant        unsafeWindow
-// @grant        GM_xmlhttpRequest
-// @grant        GM.xmlHttpRequest
-// @connect      cdn.jsdelivr.net
-// @connect      cutefish.my.id
-// @require      https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js
-// @require      https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
 // ==/UserScript==
 
 /* jshint esversion: 11 */
@@ -31,17 +25,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.6';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.5.3';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.6';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.5.3';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.6', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.5.3', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -54,13 +48,11 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.4.6',
+    'System: TikTok Studio Cloud Disabler v1.5.3',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
-    `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
-    `FFmpeg Core: In-Browser Canvas Re-Encoder + Sentinel MP4 Box Patcher Active`,
     'Fetch / XHR Hook: Cloud Canvas payload interceptor active',
-    'Blob / FileReader Hook: Auto ArrayBuffer patcher ready',
+    'Metadata Verifier: cutefish.my.id detector ready',
     'TikTok Studio Hook: Active'
   ];
 
@@ -68,6 +60,7 @@
     logEntries.push(msg);
   };
 
+  // ================= PAYLOAD NORMALIZATION & HOOKS =================
   function isPublishPayload(obj) {
     if (!obj || typeof obj !== 'object') return false;
     if (obj.cloud_edit_is_use_video_canvas !== undefined) return true;
@@ -173,693 +166,434 @@
     };
   }
 
-  // ================= IN-BROWSER FFMPEG WASM COMPRESSOR ENGINE =================
-  let ffmpegInstance = null;
+  // ================= CUTEFISH.MY.ID METADATA DETECTOR =================
+  async function isFilePatchedByCutefish(file) {
+    if (!file) return false;
+    try {
+      const targetStr = 'cutefish.my.id';
+      const targetBytes = new Uint8Array(targetStr.length);
+      for (let i = 0; i < targetStr.length; i++) targetBytes[i] = targetStr.charCodeAt(i);
 
-  function fetchBlobWithGM(url, mimeType, onProgress) {
-    return new Promise((resolve, reject) => {
-      const gmx = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
-                  (typeof GM !== 'undefined' && GM.xmlHttpRequest) ? GM.xmlHttpRequest : null;
-      if (gmx) {
-        gmx({
-          method: 'GET',
-          url: url,
-          responseType: 'blob',
-          onprogress: (e) => {
-            if (e.lengthComputable && onProgress) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              onProgress(pct, e.loaded, e.total);
-            }
-          },
-          onload: (res) => {
-            if (res.status >= 200 && res.status < 300 && res.response) {
-              const blob = res.response instanceof Blob ? res.response : new Blob([res.response], { type: mimeType });
-              resolve(URL.createObjectURL(blob));
-            } else {
-              reject(new Error(`HTTP ${res.status} loading ${url}`));
-            }
-          },
-          onerror: () => reject(new Error(`Network error loading ${url}`)),
-          ontimeout: () => reject(new Error(`Timeout loading ${url}`))
-        });
+      // Fast check: inspect first 8MB and last 8MB (where moov/udta box is located)
+      const slices = [];
+      if (file.size <= 16 * 1024 * 1024) {
+        slices.push(await file.arrayBuffer());
       } else {
-        const toBlob = win.FFmpegUtil?.toBlobURL || (async (u, t) => {
-          const resp = await fetch(u);
-          const b = await resp.blob();
-          return URL.createObjectURL(new Blob([b], { type: t }));
-        });
-        toBlob(url, mimeType).then(resolve).catch(reject);
-      }
-    });
-  }
-
-  async function loadFFmpegInUserscript() {
-    let fWasm = win.FFmpegWASM || (typeof FFmpegWASM !== 'undefined' ? FFmpegWASM : null);
-    let fUtil = win.FFmpegUtil || (typeof FFmpegUtil !== 'undefined' ? FFmpegUtil : null);
-
-    if (fWasm && !win.FFmpegWASM) win.FFmpegWASM = fWasm;
-    if (fUtil && !win.FFmpegUtil) win.FFmpegUtil = fUtil;
-
-    if (fWasm && fUtil) return { FFmpegWASM: fWasm, FFmpegUtil: fUtil };
-
-    const loadScriptViaGM = (url) => new Promise((resolve, reject) => {
-      const gmx = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
-                  (typeof GM !== 'undefined' && GM.xmlHttpRequest) ? GM.xmlHttpRequest : null;
-      if (gmx) {
-        gmx({
-          method: 'GET',
-          url: url,
-          onload: (res) => {
-            if (res.status >= 200 && res.status < 300 && res.responseText) {
-              try {
-                const s = document.createElement('script');
-                s.textContent = res.responseText;
-                (document.head || document.documentElement).appendChild(s);
-                s.remove();
-                resolve(true);
-              } catch (e) {
-                reject(e);
-              }
-            } else {
-              reject(new Error(`HTTP ${res.status}`));
-            }
-          },
-          onerror: () => reject(new Error(`GM_xmlhttpRequest error loading ${url}`)),
-          ontimeout: () => reject(new Error(`GM_xmlhttpRequest timeout loading ${url}`))
-        });
-      } else {
-        const s = document.createElement('script');
-        s.src = url;
-        s.onload = () => resolve(true);
-        s.onerror = () => reject(new Error(`Failed to load ${url}`));
-        (document.head || document.documentElement).appendChild(s);
-      }
-    });
-
-    try {
-      if (!win.FFmpegUtil && !(typeof FFmpegUtil !== 'undefined')) {
-        await loadScriptViaGM('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
-      }
-      if (!win.FFmpegWASM && !(typeof FFmpegWASM !== 'undefined')) {
-        await loadScriptViaGM('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-      }
-    } catch (err) {
-      console.error('Error loading FFmpeg WASM scripts:', err);
-    }
-
-    fWasm = win.FFmpegWASM || (typeof FFmpegWASM !== 'undefined' ? FFmpegWASM : null);
-    fUtil = win.FFmpegUtil || (typeof FFmpegUtil !== 'undefined' ? FFmpegUtil : null);
-    if (fWasm && !win.FFmpegWASM) win.FFmpegWASM = fWasm;
-    if (fUtil && !win.FFmpegUtil) win.FFmpegUtil = fUtil;
-
-    if (fWasm && fUtil) return { FFmpegWASM: fWasm, FFmpegUtil: fUtil };
-    return null;
-  }
-
-  async function compressVideoInBrowser(file, targetRes, onProgress) {
-    if (!targetRes || targetRes === 'OFF') return file;
-
-    const timeStr = () => new Date().toLocaleTimeString([], { hour12: false });
-    addUiLog(`[${timeStr()}] Compressor: Loading FFmpeg WASM engine...`);
-
-    try {
-      const libs = await loadFFmpegInUserscript();
-      if (!libs || !libs.FFmpegWASM) throw new Error('Engine FFmpeg WASM tidak dapat dimuat.');
-
-      const { FFmpeg } = libs.FFmpegWASM;
-
-      if (!ffmpegInstance) {
-        ffmpegInstance = new FFmpeg();
-        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        addUiLog(`[${timeStr()}] Downloading FFmpeg Core WASM binaries...`);
-        let lastLogTime = 0;
-        const progressCb = (name) => (pct) => {
-          const now = Date.now();
-          if (now - lastLogTime > 1500 || pct === 100) {
-            addUiLog(`[${timeStr()}] Downloading ${name}... ${pct}%`);
-            lastLogTime = now;
-          }
-          if (onProgress) onProgress(pct, `Downloading ${name}... ${pct}%`);
-        };
-
-        const coreURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript', progressCb('core.js'));
-        const wasmURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm', progressCb('core.wasm'));
-
-        const workerURL = await fetchBlobWithGM(`https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js`, 'text/javascript', progressCb('814.ffmpeg.js'));
-
-        ffmpegInstance.on('log', ({ type, message }) => {
-          addUiLog(`[${timeStr()}] [FFmpeg Init] ${message}`);
-        });
-
-        try {
-          await ffmpegInstance.load({ 
-            coreURL, 
-            wasmURL, 
-            workerURL,
-            classWorkerURL: workerURL 
-          });
-          addUiLog(`[${timeStr()}] FFmpeg WASM engine active & ready.`);
-        } catch (initErr) {
-          addUiLog(`[${timeStr()}] [FFmpeg Init Error] ${initErr.message || initErr}`);
-          throw initErr;
-        }
+        slices.push(await file.slice(0, 8 * 1024 * 1024).arrayBuffer());
+        slices.push(await file.slice(file.size - 8 * 1024 * 1024, file.size).arrayBuffer());
       }
 
-      const ffmpeg = ffmpegInstance;
-      let currentPct = 0;
-
-      const logHandler = ({ type, message }) => {
-        if (!message) return;
-        const msg = String(message);
-
-        if (msg.includes('frame=') || msg.includes('time=')) {
-          const fpsMatch = msg.match(/fps=\s*([\d\.]+)/);
-          const timeMatch = msg.match(/time=\s*([\d\:\.]+)/);
-          const speedMatch = msg.match(/speed=\s*([\d\.]+)x/);
-
-          const stats = [];
-          if (timeMatch) stats.push(`Time: ${timeMatch[1].split('.')[0]}`);
-          if (fpsMatch) stats.push(`FPS: ${fpsMatch[1]}`);
-          if (speedMatch) stats.push(`Speed: ${speedMatch[1]}x`);
-
-          if (stats.length > 0 && onProgress) {
-            onProgress(currentPct, stats.join(' | '));
-          }
-        } else if (msg.includes('faststart') || msg.includes('moov')) {
-          addUiLog(`[${timeStr()}] [FFmpeg] Optimizing MP4 structure: Relocating moov atom header...`);
-          if (onProgress) onProgress(Math.max(currentPct, 85), 'Relocating moov atom (+faststart)...');
-        } else if (type === 'stdout' || msg.includes('encoder') || msg.includes('Stream #')) {
-          addUiLog(`[${timeStr()}] [FFmpeg] ${msg.trim()}`);
-        }
-      };
-
-      const progressHandler = ({ progress }) => {
-        currentPct = Math.max(0, Math.min(99, Math.round(progress * 100)));
-        if (onProgress) onProgress(currentPct);
-      };
-
-      ffmpeg.on('log', logHandler);
-      ffmpeg.on('progress', progressHandler);
-
-      try {
-        addUiLog(`[${timeStr()}] Preparing video input (${(file.size / 1048576).toFixed(2)} MB)...`);
-        const fileBytes = new Uint8Array(await file.arrayBuffer());
-        await ffmpeg.writeFile('input.mp4', fileBytes);
-
-        const targetH = targetRes === '720p' ? 720 : 1080;
-        const vfScale = `scale=-2:min(ih\\,${targetH})`;
-        addUiLog(`[${timeStr()}] Executing FFmpeg WASM encoding (${targetRes.toUpperCase()}, scale=${vfScale})...`);
-
-        const command = [
-          '-y', '-i', 'input.mp4',
-          '-vf', vfScale,
-          '-vsync', 'cfr',
-          '-c:v', 'libx264',
-          '-preset', 'ultrafast',
-          '-crf', targetRes === '720p' ? '20' : '19',
-          '-pix_fmt', 'yuv420p',
-          '-c:a', 'aac',
-          '-b:a', '192k',
-          '-movflags', '+faststart',
-          'output.mp4'
-        ];
-
-        await ffmpeg.exec(command);
-
-        const outData = await ffmpeg.readFile('output.mp4');
-        const compressedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-        const compressedFile = new File([compressedBlob], file.name, { type: 'video/mp4' });
-
-        const origMB = (file.size / 1048576).toFixed(2);
-        const compMB = (compressedFile.size / 1048576).toFixed(2);
-        addUiLog(`[${timeStr()}] FFmpeg WASM Complete: ${origMB} MB -> ${compMB} MB`);
-
-        try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
-        try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
-
-        return compressedFile;
-      } finally {
-        try { ffmpeg.off('log', logHandler); } catch (_) {}
-        try { ffmpeg.off('progress', progressHandler); } catch (_) {}
-      }
-    } catch (err) {
-      addUiLog(`[${timeStr()}] FFmpeg WASM Error: ${err.message}`);
-      throw new Error(`Kompresi video gagal: ${err.message}. Wajib menggunakan FFmpeg WASM.`);
-    }
-  }
-
-  // ================= BINARY PATCHER SENTINEL ENGINE =================
-  let selectedMethod = 'BINARY';
-  let selectedCompress = 'OFF';
-
-  function patchBinaryBuffer(input) {
-    let patchedCount = 0;
-    try {
-      const buffer = (input && input.buffer) ? input.buffer : input;
-      if (!buffer || !(buffer instanceof ArrayBuffer || buffer instanceof SharedArrayBuffer)) {
-        return { bytes: input, count: 0 };
-      }
-      const bytes = new Uint8Array(buffer);
-      const view = new DataView(buffer);
-      const len = bytes.length;
-
-      for (let i = 0; i < len - 8; i++) {
-        // Match 'mvhd' (Movie Header Box: 0x6d, 0x76, 0x68, 0x64)
-        if (bytes[i] === 0x6D && bytes[i+1] === 0x76 && bytes[i+2] === 0x68 && bytes[i+3] === 0x64) {
-          const ver = view.getUint8(i + 4);
-          const timescaleOffset = ver === 1 ? i + 24 : i + 16;
-          if (timescaleOffset + 4 <= len) {
-            view.setUint32(timescaleOffset, 60000, false);
-            patchedCount++;
-          }
-        }
-        // Match 'mdhd' (Media Header Box: 0x6d, 0x64, 0x68, 0x64)
-        else if (bytes[i] === 0x6D && bytes[i+1] === 0x64 && bytes[i+2] === 0x68 && bytes[i+3] === 0x64) {
-          const ver = view.getUint8(i + 4);
-          const timescaleOffset = ver === 1 ? i + 24 : i + 16;
-          if (timescaleOffset + 4 <= len) {
-            view.setUint32(timescaleOffset, 60000, false);
-            patchedCount++;
-          }
-        }
-      }
-      return { bytes, count: patchedCount };
-    } catch (err) {
-      return { bytes: (input instanceof Uint8Array ? input : new Uint8Array(input || [])), count: 0 };
-    }
-  }
-
-  // Automatic ArrayBuffer patcher hook for Blobs/Files
-  if (typeof Blob !== 'undefined' && Blob.prototype.arrayBuffer) {
-    const origArrayBuffer = Blob.prototype.arrayBuffer;
-    Blob.prototype.arrayBuffer = async function() {
-      const buffer = await origArrayBuffer.call(this);
-      try {
-        const isVideo = (this.type && this.type.startsWith('video/')) ||
-                        (this.name && /\.(mp4|mov|webm|wmv)$/i.test(this.name)) ||
-                        (buffer.byteLength > 100);
-        if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
-          const { count } = patchBinaryBuffer(buffer);
-          if (count > 0) {
-            const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-            addUiLog(`[${timeStr}] Auto-patched Blob arrayBuffer (${count} box)`);
-          }
-        }
-      } catch (_) {}
-      return buffer;
-    };
-  }
-
-  // Hook FileReader.prototype.readAsArrayBuffer
-  if (typeof FileReader !== 'undefined' && FileReader.prototype.readAsArrayBuffer) {
-    const origReadAsArrayBuffer = FileReader.prototype.readAsArrayBuffer;
-    FileReader.prototype.readAsArrayBuffer = function(blob) {
-      this.addEventListener('load', () => {
-        if (this.result && this.result instanceof ArrayBuffer) {
-          try {
-            const isVideo = (blob && blob.type && blob.type.startsWith('video/')) ||
-                            (blob && blob.name && /\.(mp4|mov|webm|wmv)$/i.test(blob.name)) ||
-                            (this.result.byteLength > 100);
-            if (isVideo && (selectedMethod === 'BINARY' || selectedMethod === 'FPS')) {
-              const { count } = patchBinaryBuffer(this.result);
-              if (count > 0) {
-                const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-                addUiLog(`[${timeStr}] Auto-patched FileReader arrayBuffer (${count} box)`);
+      for (const buf of slices) {
+        const bytes = new Uint8Array(buf);
+        const max = bytes.length - targetBytes.length;
+        for (let i = 0; i <= max; i++) {
+          if (bytes[i] === targetBytes[0]) {
+            let match = true;
+            for (let j = 1; j < targetBytes.length; j++) {
+              if (bytes[i + j] !== targetBytes[j]) {
+                match = false;
+                break;
               }
             }
-          } catch (_) {}
+            if (match) return true;
+          }
         }
-      }, { once: true });
-      return origReadAsArrayBuffer.call(this, blob);
-    };
+      }
+    } catch (e) {
+      console.warn('[TikTok Cloud Disabler] Error checking file metadata:', e);
+    }
+    return false;
   }
 
-  // ================= FULL-COVER DRAG & DROP OVERLAY PATCHER =================
-  function findUploadContainer() {
-    return document.querySelector('.upload-card, .before-upload-new-stage, [class*="upload-card"], [class*="before-upload-new-stage"], [class*="upload-stage"], [class*="uploader-container"], [class*="drop-zone"], [class*="file-uploader"]');
-  }
+  let isUploadLocked = false;
 
-  let pendingRawFile = null;
-  let isPatchingFile = false;
-
-  function showPatcherOverlay(file) {
-    pendingRawFile = file;
+  function lockUploadContainer() {
+    isUploadLocked = true;
     const container = findUploadContainer();
-    if (!container) return;
-
-    container.style.position = 'relative';
-
+    if (container) {
+      container.style.pointerEvents = 'none';
+      container.style.opacity = '0.6';
+    }
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach(inp => {
       inp.disabled = true;
       inp.style.pointerEvents = 'none';
     });
+  }
 
-    const restoreInputs = () => {
-      fileInputs.forEach(inp => {
-        inp.disabled = false;
-        inp.style.pointerEvents = '';
-      });
-    };
-
-    const existing = document.getElementById('cf-drag-patcher-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'cf-drag-patcher-overlay';
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evtType => {
-      overlay.addEventListener(evtType, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, true);
-    });
-
-    ['click', 'pointerdown', 'mousedown'].forEach(evtType => {
-      overlay.addEventListener(evtType, (e) => {
-        e.stopPropagation();
-      }, false);
-    });
-
-    const style = document.createElement('style');
-    style.textContent = `
-      #cf-drag-patcher-overlay {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 320px !important;
-        background: #171a13 !important;
-        border: 2px solid #bedc74 !important;
-        border-radius: 16px !important;
-        z-index: 99999 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 24px !important;
-        box-sizing: border-box !important;
-        color: #edf0e8 !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        pointer-events: auto !important;
-      }
-      #cf-drag-patcher-overlay * {
-        box-sizing: border-box !important;
-      }
-      .cf-overlay-card {
-        width: 100% !important;
-        max-width: 440px !important;
-        text-align: center !important;
-      }
-      .cf-overlay-label {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #bedc74 !important;
-        text-align: left !important;
-        margin-bottom: 6px !important;
-        margin-top: 10px !important;
-        letter-spacing: 0.5px !important;
-      }
-      .cf-overlay-group {
-        display: flex !important;
-        gap: 8px !important;
-        margin-bottom: 12px !important;
-      }
-      .cf-overlay-chip {
-        flex: 1 !important;
-        padding: 8px 0 !important;
-        text-align: center !important;
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        background: #20241a !important;
-        border: 1px solid rgba(190, 220, 116, 0.3) !important;
-        color: #edf0e8 !important;
-        border-radius: 999px !important;
-        cursor: pointer !important;
-        transition: all 0.15s ease !important;
-      }
-      .cf-overlay-chip.active {
-        background: #bedc74 !important;
-        color: #171a13 !important;
-        border-color: #bedc74 !important;
-      }
-      .cf-action-btn {
-        width: 100% !important;
-        padding: 12px 0 !important;
-        margin-top: 16px !important;
-        background: #bedc74 !important;
-        color: #171a13 !important;
-        border: none !important;
-        border-radius: 999px !important;
-        font-size: 13.5px !important;
-        font-weight: 700 !important;
-        cursor: pointer !important;
-        transition: background 0.15s ease !important;
-      }
-      .cf-action-btn:hover {
-        background: #d4f090 !important;
-      }
-      .cf-cancel-btn {
-        background: transparent !important;
-        border: none !important;
-        color: #9aa491 !important;
-        font-size: 11.5px !important;
-        margin-top: 10px !important;
-        cursor: pointer !important;
-        text-decoration: underline !important;
-      }
-      .cf-progress-container {
-        width: 100% !important;
-        margin-top: 16px !important;
-        display: none;
-      }
-      .cf-progress-bar-bg {
-        width: 100% !important;
-        height: 8px !important;
-        background: #20241a !important;
-        border-radius: 999px !important;
-        overflow: hidden !important;
-        margin-bottom: 8px !important;
-      }
-      .cf-progress-bar-fill {
-        width: 0% !important;
-        height: 100% !important;
-        background: #bedc74 !important;
-        transition: width 0.1s linear !important;
-      }
-      .cf-progress-text {
-        font-size: 11.5px !important;
-        color: #bedc74 !important;
-        font-weight: 600 !important;
-      }
-    `;
-
-    overlay.appendChild(style);
-
-    let selectedMethod = 'BINARY';
-    let selectedCompress = 'OFF';
-
-    const card = document.createElement('div');
-    card.className = 'cf-overlay-card';
-    card.innerHTML = `
-      <div class="cf-overlay-label">PILIH METODE:</div>
-      <div class="cf-overlay-group" id="cf-ov-method-group">
-        <div class="cf-overlay-chip active" data-val="BINARY">BINARY</div>
-        <div class="cf-overlay-chip" data-val="FPS">FPS</div>
-        <div class="cf-overlay-chip" data-val="WMV">WMV</div>
-      </div>
-
-      <div id="cf-ov-compress-section">
-        <div class="cf-overlay-label">KOMPRESI RESOLUSI:</div>
-        <div class="cf-overlay-group" id="cf-ov-compress-group">
-          <div class="cf-overlay-chip active" data-val="OFF">OFF</div>
-          <div class="cf-overlay-chip" data-val="720p">720P</div>
-          <div class="cf-overlay-chip" data-val="1080p">1080P</div>
-        </div>
-      </div>
-
-      <button type="button" class="cf-action-btn" id="cf-btn-start-process">patch & upload</button>
-      <div><button type="button" class="cf-cancel-btn" id="cf-btn-cancel">Batal</button></div>
-
-      <div class="cf-progress-container" id="cf-progress-container">
-        <div class="cf-progress-bar-bg">
-          <div class="cf-progress-bar-fill" id="cf-progress-fill"></div>
-        </div>
-        <div class="cf-progress-text" id="cf-progress-text">Memproses video... 0%</div>
-      </div>
-    `;
-
-    overlay.appendChild(card);
-    container.appendChild(overlay);
-
-    const removeOverlay = () => {
-      restoreInputs();
-      overlay.remove();
-    };
-
-    const methodChips = overlay.querySelectorAll('#cf-ov-method-group .cf-overlay-chip');
-    const compressSection = overlay.querySelector('#cf-ov-compress-section');
-    const compressChips = overlay.querySelectorAll('#cf-ov-compress-group .cf-overlay-chip');
-    const processBtn = overlay.querySelector('#cf-btn-start-process');
-    const cancelBtn = overlay.querySelector('#cf-btn-cancel');
-    const progressContainer = overlay.querySelector('#cf-progress-container');
-    const progressFill = overlay.querySelector('#cf-progress-fill');
-    const progressText = overlay.querySelector('#cf-progress-text');
-
-    methodChips.forEach(chip => {
-      chip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        methodChips.forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        selectedMethod = chip.dataset.val;
-        if (selectedMethod === 'BINARY') {
-          compressSection.style.display = 'block';
-        } else {
-          compressSection.style.display = 'none';
-        }
-      });
-    });
-
-    compressChips.forEach(chip => {
-      chip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        compressChips.forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        selectedCompress = chip.dataset.val;
-      });
-    });
-
-    cancelBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeOverlay();
-      pendingRawFile = null;
-    });
-
-    processBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!pendingRawFile || isPatchingFile) return;
-      isPatchingFile = true;
-
-      processBtn.style.display = 'none';
-      cancelBtn.style.display = 'none';
-      progressContainer.style.display = 'block';
-
-      const fileSizeMB = (pendingRawFile.size / (1024 * 1024)).toFixed(2);
-      const timeStr = new Date().toLocaleTimeString([], { hour12: false });
-      addUiLog(`[${timeStr}] Memulai proses patch & upload: ${pendingRawFile.name}`);
-      addUiLog(`[${timeStr}] Ukuran awal: ${fileSizeMB} MB, Tipe: ${pendingRawFile.type || 'video/mp4'}`);
-      addUiLog(`[${timeStr}] Metode: ${selectedMethod}, Kompresi Target: ${selectedCompress.toUpperCase()}`);
-
-      try {
-        let videoToPatch = pendingRawFile;
-
-        // Physical In-Browser Re-encoding / Compression if 720p or 1080p selected
-        if (selectedCompress !== 'OFF') {
-          videoToPatch = await compressVideoInBrowser(pendingRawFile, selectedCompress, (pct, detail) => {
-            progressFill.style.width = pct + '%';
-            if (detail) {
-              progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}% [${detail}]`;
-            } else {
-              progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}%`;
-            }
-          });
-        }
-
-        progressFill.style.width = '95%';
-        progressText.textContent = 'Menerapkan patch binary timescale (60 FPS)...';
-
-        let finalFile = videoToPatch;
-        if (selectedMethod === 'BINARY' || selectedMethod === 'FPS') {
-          addUiLog(`[${timeStr}] Executing Sentinel MP4 Box Patcher...`);
-          const buf = await videoToPatch.arrayBuffer();
-          const { bytes: patchedU8, count } = patchBinaryBuffer(buf);
-          const patchedBlob = new Blob([patchedU8], { type: videoToPatch.type || 'video/mp4' });
-          finalFile = new File([patchedBlob], pendingRawFile.name, { type: videoToPatch.type || 'video/mp4' });
-          addUiLog(`[${timeStr}] Timescale patch diterapkan (${count} box diperbarui)`);
-        }
-
-        progressFill.style.width = '100%';
-        progressText.textContent = 'Proses patch selesai. Mengunggah ke TikTok Studio...';
-
-        await new Promise(r => setTimeout(r, 400));
-
-        overlay.remove();
-        restoreInputs();
-        isPatchingFile = false;
-        pendingRawFile = null;
-
-        const input = document.querySelector('input[type="file"]');
-        if (input) {
-          const dt = new DataTransfer();
-          dt.items.add(finalFile);
-          input.files = dt.files;
-
-          const changeEvt = new Event('change', { bubbles: true });
-          changeEvt._cfPatched = true;
-          input.dispatchEvent(changeEvt);
-          addUiLog(`[${timeStr}] File terkompresi & ter-patch dikirim ke TikTok Studio`);
-        }
-      } catch (err) {
-        restoreInputs();
-        progressText.textContent = `Error: ${err.message}`;
-        addUiLog(`[Error] Proses gagal: ${err.message}`);
-      } finally {
-        pendingRawFile = null;
-        setTimeout(() => { isPatchingFile = false; }, 300);
-      }
+  function unlockUploadContainer() {
+    isUploadLocked = false;
+    const container = findUploadContainer();
+    if (container) {
+      container.style.pointerEvents = '';
+      container.style.opacity = '';
+    }
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(inp => {
+      inp.disabled = false;
+      inp.style.pointerEvents = '';
     });
   }
 
-  function setupDropHandler() {
+  function forwardFileToUpload(file) {
+    if (isUploadLocked) return;
+
+    const input = document.querySelector('input[type="file"]');
+    if (input) {
+      input.disabled = false;
+      input.style.pointerEvents = '';
+
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+
+      const changeEvt = new Event('change', { bubbles: true });
+      changeEvt._cfVerified = true;
+      input.dispatchEvent(changeEvt);
+
+      // Lock drag & drop container immediately to prevent double upload trigger
+      lockUploadContainer();
+      const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+      addUiLog(`[${timeStr}] Upload dikirim ke TikTok Studio (Drag & drop dikunci)`);
+
+      // Auto-unlock after navigation or timeout
+      setTimeout(() => {
+        if (document.querySelector('.upload-card, [class*="upload-card"], [class*="drop-zone"]')) {
+          unlockUploadContainer();
+        }
+      }, 10000);
+    }
+  }
+
+  function findUploadContainer() {
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      let cur = fileInput.parentElement;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        const cl = String(cur.className || '');
+        const rect = cur.getBoundingClientRect();
+        if (
+          cl.includes('upload-card') ||
+          cl.includes('before-upload') ||
+          cl.includes('upload-stage') ||
+          cl.includes('uploader-container') ||
+          cl.includes('drop-zone') ||
+          cl.includes('file-uploader') ||
+          cl.includes('upload-container') ||
+          (rect.height >= 240 && rect.width >= 350 && !cl.includes('sidebar') && !cl.includes('header') && !cl.includes('nav'))
+        ) {
+          return cur;
+        }
+        cur = cur.parentElement;
+      }
+    }
+    return document.querySelector('.upload-card, .before-upload-new-stage, [class*="upload-card"], [class*="before-upload-new-stage"], [class*="upload-stage"], [class*="uploader-container"], [class*="drop-zone"], [class*="file-uploader"]');
+  }
+
+  // ================= CLEAN NON-HYPERBOLIC CONFIRMATION MODAL =================
+  function showUnpatchedModal(file, onContinue) {
+    const existing = document.getElementById('cf-unpatched-modal-root');
+    if (existing) existing.remove();
+
+    const container = findUploadContainer();
+    const targetParent = container || document.body;
+    const isInsideContainer = !!container;
+
+    if (isInsideContainer) {
+      container.style.position = 'relative';
+    }
+
+    const root = document.createElement('div');
+    root.id = 'cf-unpatched-modal-root';
+    if (isInsideContainer) {
+      root.classList.add('cf-in-container');
+    }
+
+    const safeName = file.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    root.innerHTML = `
+      <style>
+        #cf-unpatched-modal-root {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 2147483646 !important;
+          background: rgba(10, 12, 8, 0.78) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 16px !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          color: #edf0e8 !important;
+          box-sizing: border-box !important;
+        }
+        #cf-unpatched-modal-root.cf-in-container {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 280px !important;
+          border-radius: inherit !important;
+          background: rgba(23, 26, 19, 0.95) !important;
+          backdrop-filter: blur(4px) !important;
+          z-index: 99999 !important;
+        }
+        #cf-unpatched-modal-root * {
+          box-sizing: border-box !important;
+        }
+        .cf-modal-box {
+          background: #171a13 !important;
+          border: 1.5px solid #bedc74 !important;
+          border-radius: 16px !important;
+          max-width: 440px !important;
+          width: 100% !important;
+          padding: 24px !important;
+          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 16px !important;
+          text-align: left !important;
+        }
+        .cf-modal-header {
+          display: flex !important;
+          align-items: flex-start !important;
+          justify-content: space-between !important;
+          gap: 12px !important;
+        }
+        .cf-modal-title {
+          font-size: 15px !important;
+          font-weight: 700 !important;
+          color: #edf0e8 !important;
+          line-height: 1.35 !important;
+          margin: 0 !important;
+        }
+        .cf-modal-close {
+          background: transparent !important;
+          border: none !important;
+          color: #9aa491 !important;
+          font-size: 18px !important;
+          line-height: 1 !important;
+          cursor: pointer !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+        }
+        .cf-modal-close:hover {
+          color: #edf0e8 !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+        }
+        .cf-modal-desc {
+          font-size: 12.5px !important;
+          color: #b5c0ad !important;
+          line-height: 1.5 !important;
+          margin: 0 !important;
+        }
+        .cf-file-badge {
+          display: inline-block !important;
+          background: #20241a !important;
+          border: 1px solid rgba(190, 220, 116, 0.25) !important;
+          border-radius: 6px !important;
+          padding: 4px 8px !important;
+          font-size: 11px !important;
+          font-family: ui-monospace, monospace !important;
+          color: #bedc74 !important;
+          word-break: break-all !important;
+          margin-top: 6px !important;
+        }
+        .cf-modal-actions {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+          margin-top: 4px !important;
+        }
+        .cf-btn-patch {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          padding: 11px 0 !important;
+          background: transparent !important;
+          color: #bedc74 !important;
+          border: 1.5px solid #bedc74 !important;
+          border-radius: 9999px !important;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          cursor: pointer !important;
+          text-decoration: none !important;
+          transition: background 0.15s ease, color 0.15s ease !important;
+        }
+        .cf-btn-patch:hover {
+          background: rgba(190, 220, 116, 0.12) !important;
+        }
+        .cf-btn-continue {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          padding: 11px 0 !important;
+          background: #bedc74 !important;
+          color: #171a13 !important;
+          border: none !important;
+          border-radius: 9999px !important;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          cursor: pointer !important;
+          transition: background 0.15s ease !important;
+        }
+        .cf-btn-continue:hover {
+          background: #d4f090 !important;
+        }
+      </style>
+      <div class="cf-modal-box">
+        <div class="cf-modal-header">
+          <h3 class="cf-modal-title">Video is not patched, continue uploading ?</h3>
+          <button type="button" class="cf-modal-close" id="cf-btn-modal-dismiss" title="Tutup">&times;</button>
+        </div>
+        <div class="cf-modal-desc">
+          File ini belum dipatch dengan metadata <strong>cutefish.my.id</strong>. Tanpa patch, TikTok Studio mungkin menurunkan kualitas video ke 720p.
+          <div><span class="cf-file-badge">${safeName} (${fileSizeMB} MB)</span></div>
+        </div>
+        <div class="cf-modal-actions">
+          <a href="https://cutefish.my.id/#tiktok-quality-tool" target="_blank" rel="noopener noreferrer" class="cf-btn-patch" id="cf-btn-go-patch">
+            Patch on cutefish.my.id
+          </a>
+          <button type="button" class="cf-btn-continue" id="cf-btn-confirm-continue">
+            Continue uploading
+          </button>
+        </div>
+      </div>
+    `;
+
+    targetParent.appendChild(root);
+
+    const closeModal = () => {
+      if (root.parentNode) root.remove();
+      unlockUploadContainer();
+    };
+
+    const dismissBtn = root.querySelector('#cf-btn-modal-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeModal();
+      });
+    }
+
+    const continueBtn = root.querySelector('#cf-btn-confirm-continue');
+    if (continueBtn) {
+      continueBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeModal();
+        if (typeof onContinue === 'function') onContinue();
+      });
+    }
+
+    const patchBtn = root.querySelector('#cf-btn-go-patch');
+    if (patchBtn) {
+      patchBtn.addEventListener('click', () => {
+        // Keep modal or allow continue later
+      });
+    }
+  }
+
+  // ================= UPLOAD EVENT INTERCEPTOR =================
+  function setupUploadInterceptor() {
     if (!isTikTokStudio) return;
 
-    document.addEventListener('change', (e) => {
-      if (e._cfPatched) return;
+    let isChecking = false;
 
-      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
+    // Prevent dragover while locked / checking
+    document.addEventListener('dragover', (e) => {
+      if (isUploadLocked || isChecking || document.getElementById('cf-unpatched-modal-root')) {
+        e.preventDefault();
+      }
+    }, true);
+
+    // 1. Intercept file input change
+    document.addEventListener('change', async (e) => {
+      if (e._cfVerified) return;
+      if (isUploadLocked || isChecking || document.getElementById('cf-unpatched-modal-root')) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         return;
       }
+
       const target = e.target;
-      if (target && target.tagName === 'INPUT' && target.type === 'file') {
-        if (target.files && target.files.length > 0) {
-          const file = target.files[0];
-          if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            showPatcherOverlay(file);
+      if (target && target.tagName === 'INPUT' && target.type === 'file' && target.files && target.files.length > 0) {
+        const file = target.files[0];
+        if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+
+          isChecking = true;
+          const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+          addUiLog(`[${timeStr}] Memeriksa metadata patch: ${file.name}`);
+
+          try {
+            const isPatched = await isFilePatchedByCutefish(file);
+            if (isPatched) {
+              addUiLog(`[${timeStr}] Video terverifikasi: Patched via cutefish.my.id`);
+              forwardFileToUpload(file);
+            } else {
+              addUiLog(`[${timeStr}] Video belum di-patch: ${file.name}`);
+              showUnpatchedModal(file, () => {
+                addUiLog(`[${new Date().toLocaleTimeString([], { hour12: false })}] Upload dilanjutkan tanpa patch`);
+                forwardFileToUpload(file);
+              });
+            }
+          } catch (err) {
+            console.error(err);
+            forwardFileToUpload(file);
+          } finally {
+            isChecking = false;
           }
         }
       }
     }, true);
 
-    document.addEventListener('dragover', (e) => {
-      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) return;
-      e.preventDefault();
-    }, true);
-
-    document.addEventListener('drop', (e) => {
-      if (e._cfPatched) return;
-
-      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
+    // 2. Intercept drop event
+    document.addEventListener('drop', async (e) => {
+      if (e._cfVerified) return;
+      if (isUploadLocked || isChecking || document.getElementById('cf-unpatched-modal-root')) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         return;
       }
+
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          showPatcherOverlay(file);
+
+          isChecking = true;
+          const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+          addUiLog(`[${timeStr}] Memeriksa metadata patch: ${file.name}`);
+
+          try {
+            const isPatched = await isFilePatchedByCutefish(file);
+            if (isPatched) {
+              addUiLog(`[${timeStr}] Video terverifikasi: Patched via cutefish.my.id`);
+              forwardFileToUpload(file);
+            } else {
+              addUiLog(`[${timeStr}] Video belum di-patch: ${file.name}`);
+              showUnpatchedModal(file, () => {
+                addUiLog(`[${new Date().toLocaleTimeString([], { hour12: false })}] Upload dilanjutkan tanpa patch`);
+                forwardFileToUpload(file);
+              });
+            }
+          } catch (err) {
+            console.error(err);
+            forwardFileToUpload(file);
+          } finally {
+            isChecking = false;
+          }
         }
       }
     }, true);
@@ -883,12 +617,11 @@
     if (!targetParent) return;
 
     if (!root) {
-      setupDropHandler();
+      setupUploadInterceptor();
 
       root = document.createElement('div');
       root.id = 'cf-tktk-disabler-root';
 
-      // Inject styles: GreenTea Material You, NO BLUR, pure solid lightweight
       const style = document.createElement('style');
       style.textContent = `
         #cf-tktk-disabler-root {
@@ -920,9 +653,6 @@
           font-weight: 600 !important;
           color: #edf0e8 !important;
           cursor: pointer !important;
-          box-shadow: none !important;
-          filter: none !important;
-          backdrop-filter: none !important;
         }
         .cf-badge:hover {
           background: #20241a !important;
@@ -932,12 +662,7 @@
           height: 6px !important;
           border-radius: 50% !important;
           background: #bedc74 !important;
-          box-shadow: none !important;
-          filter: none !important;
           flex-shrink: 0 !important;
-        }
-        .cf-badge-text {
-          letter-spacing: 0 !important;
         }
         .cf-badge-tag {
           color: #bedc74 !important;
@@ -957,9 +682,6 @@
           border-radius: 12px !important;
           padding: 0 12px !important;
           margin-bottom: 0 !important;
-          box-shadow: none !important;
-          filter: none !important;
-          backdrop-filter: none !important;
           pointer-events: none !important;
           transition: opacity 0.22s ease, max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s ease, margin 0.22s ease, border-color 0.22s ease !important;
         }
