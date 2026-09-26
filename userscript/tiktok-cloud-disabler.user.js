@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.3.1
+// @version      1.3.2
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -21,17 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.1';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.3.2';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.1';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.3.2';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.1', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.3.2', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +44,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.3.1',
+    'System: TikTok Studio Cloud Disabler v1.3.2',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -390,13 +390,30 @@
 
     container.style.position = 'relative';
 
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(inp => {
+      inp.disabled = true;
+      inp.style.pointerEvents = 'none';
+    });
+
+    const restoreInputs = () => {
+      fileInputs.forEach(inp => {
+        inp.disabled = false;
+        inp.style.pointerEvents = '';
+      });
+    };
+
     const existing = document.getElementById('cf-drag-patcher-overlay');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'cf-drag-patcher-overlay';
 
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    ['dragenter', 'dragover', 'dragleave', 'drop', 'click', 'pointerdown', 'mousedown'].forEach(evtType => {
+      overlay.addEventListener(evtType, (e) => {
+        e.stopPropagation();
+      }, true);
+    });
 
     const style = document.createElement('style');
     style.textContent = `
@@ -408,7 +425,7 @@
         bottom: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        min-height: 360px !important;
+        min-height: 320px !important;
         background: #171a13 !important;
         border: 2px solid #bedc74 !important;
         border-radius: 16px !important;
@@ -421,6 +438,7 @@
         box-sizing: border-box !important;
         color: #edf0e8 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        pointer-events: auto !important;
       }
       #cf-drag-patcher-overlay * {
         box-sizing: border-box !important;
@@ -429,25 +447,6 @@
         width: 100% !important;
         max-width: 440px !important;
         text-align: center !important;
-      }
-      .cf-overlay-title {
-        font-size: 15px !important;
-        font-weight: 700 !important;
-        color: #bedc74 !important;
-        margin-bottom: 8px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
-      .cf-file-info {
-        background: #20241a !important;
-        border: 1px solid rgba(190, 220, 116, 0.3) !important;
-        border-radius: 10px !important;
-        padding: 8px 14px !important;
-        font-size: 12px !important;
-        color: #edf0e8 !important;
-        margin-bottom: 16px !important;
-        word-break: break-all !important;
       }
       .cf-overlay-label {
         font-size: 11px !important;
@@ -534,12 +533,12 @@
 
     overlay.appendChild(style);
 
+    let selectedMethod = 'BINARY';
+    let selectedCompress = '1080p';
+
     const card = document.createElement('div');
     card.className = 'cf-overlay-card';
     card.innerHTML = `
-      <div class="cf-overlay-title">Cutefish Video Patcher</div>
-      <div class="cf-file-info">Nama File: <b>${file.name}</b> (${fileSizeMB} MB)</div>
-
       <div class="cf-overlay-label">PILIH METODE:</div>
       <div class="cf-overlay-group" id="cf-ov-method-group">
         <div class="cf-overlay-chip active" data-val="BINARY">BINARY</div>
@@ -569,6 +568,11 @@
 
     overlay.appendChild(card);
     container.appendChild(overlay);
+
+    const removeOverlay = () => {
+      restoreInputs();
+      overlay.remove();
+    };
 
     const methodChips = overlay.querySelectorAll('#cf-ov-method-group .cf-overlay-chip');
     const compressSection = overlay.querySelector('#cf-ov-compress-section');
@@ -604,7 +608,7 @@
 
     cancelBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      overlay.remove();
+      removeOverlay();
       pendingRawFile = null;
     });
 
@@ -617,6 +621,7 @@
       cancelBtn.style.display = 'none';
       progressContainer.style.display = 'block';
 
+      const fileSizeMB = (pendingRawFile.size / (1024 * 1024)).toFixed(2);
       const timeStr = new Date().toLocaleTimeString([], { hour12: false });
       addUiLog(`[${timeStr}] Memulai proses patch & upload: ${pendingRawFile.name}`);
       addUiLog(`[${timeStr}] Ukuran awal: ${fileSizeMB} MB, Tipe: ${pendingRawFile.type || 'video/mp4'}`);
@@ -651,6 +656,7 @@
 
         await new Promise(r => setTimeout(r, 400));
 
+        restoreInputs();
         const input = document.querySelector('input[type="file"]');
         if (input) {
           const dt = new DataTransfer();
@@ -662,6 +668,7 @@
 
         overlay.remove();
       } catch (err) {
+        restoreInputs();
         progressText.textContent = `Error: ${err.message}`;
         addUiLog(`[Error] Proses gagal: ${err.message}`);
       } finally {
@@ -675,7 +682,12 @@
     if (!isTikTokStudio) return;
 
     document.addEventListener('change', (e) => {
-      if (isPatchingFile) return;
+      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
       const target = e.target;
       if (target && target.tagName === 'INPUT' && target.type === 'file') {
         if (target.files && target.files.length > 0) {
@@ -695,7 +707,12 @@
     }, true);
 
     document.addEventListener('drop', (e) => {
-      if (isPatchingFile) return;
+      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('video/') || /\.(mp4|mov|webm|wmv)$/i.test(file.name)) {
