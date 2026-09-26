@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.4.1
+// @version      1.4.2
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -21,17 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.1';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.2';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.1';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.2';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.1', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.2', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +44,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.4.1',
+    'System: TikTok Studio Cloud Disabler v1.4.2',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -424,10 +424,17 @@
     const overlay = document.createElement('div');
     overlay.id = 'cf-drag-patcher-overlay';
 
-    ['dragenter', 'dragover', 'dragleave', 'drop', 'click', 'pointerdown', 'mousedown'].forEach(evtType => {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evtType => {
       overlay.addEventListener(evtType, (e) => {
+        e.preventDefault();
         e.stopPropagation();
       }, true);
+    });
+
+    ['click', 'pointerdown', 'mousedown'].forEach(evtType => {
+      overlay.addEventListener(evtType, (e) => {
+        e.stopPropagation();
+      }, false);
     });
 
     const style = document.createElement('style');
@@ -675,24 +682,29 @@
 
         await new Promise(r => setTimeout(r, 400));
 
+        overlay.remove();
         restoreInputs();
+        isPatchingFile = false;
+        pendingRawFile = null;
+
         const input = document.querySelector('input[type="file"]');
         if (input) {
           const dt = new DataTransfer();
           dt.items.add(finalFile);
           input.files = dt.files;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+
+          const changeEvt = new Event('change', { bubbles: true });
+          changeEvt._cfPatched = true;
+          input.dispatchEvent(changeEvt);
           addUiLog(`[${timeStr}] File terkompresi & ter-patch dikirim ke TikTok Studio`);
         }
-
-        overlay.remove();
       } catch (err) {
         restoreInputs();
         progressText.textContent = `Error: ${err.message}`;
         addUiLog(`[Error] Proses gagal: ${err.message}`);
       } finally {
         pendingRawFile = null;
-        setTimeout(() => { isPatchingFile = false; }, 1000);
+        setTimeout(() => { isPatchingFile = false; }, 300);
       }
     });
   }
@@ -701,6 +713,8 @@
     if (!isTikTokStudio) return;
 
     document.addEventListener('change', (e) => {
+      if (e._cfPatched) return;
+
       if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
         e.preventDefault();
         e.stopPropagation();
@@ -722,10 +736,13 @@
     }, true);
 
     document.addEventListener('dragover', (e) => {
+      if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) return;
       e.preventDefault();
     }, true);
 
     document.addEventListener('drop', (e) => {
+      if (e._cfPatched) return;
+
       if (isPatchingFile || document.getElementById('cf-drag-patcher-overlay')) {
         e.preventDefault();
         e.stopPropagation();
