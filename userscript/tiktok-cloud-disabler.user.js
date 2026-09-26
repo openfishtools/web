@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.4.3
+// @version      1.4.6
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -19,7 +19,7 @@
 // @connect      cutefish.my.id
 // @require      https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js
 // @require      https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
-// ==UserScript==
+// ==/UserScript==
 
 /* jshint esversion: 11 */
 
@@ -31,17 +31,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.3';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.6';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.3';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.6';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.3', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.6', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -54,7 +54,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.4.3',
+    'System: TikTok Studio Cloud Disabler v1.4.6',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -176,7 +176,7 @@
   // ================= IN-BROWSER FFMPEG WASM COMPRESSOR ENGINE =================
   let ffmpegInstance = null;
 
-  function fetchBlobWithGM(url, mimeType) {
+  function fetchBlobWithGM(url, mimeType, onProgress) {
     return new Promise((resolve, reject) => {
       const gmx = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
                   (typeof GM !== 'undefined' && GM.xmlHttpRequest) ? GM.xmlHttpRequest : null;
@@ -185,6 +185,12 @@
           method: 'GET',
           url: url,
           responseType: 'blob',
+          onprogress: (e) => {
+            if (e.lengthComputable && onProgress) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              onProgress(pct, e.loaded, e.total);
+            }
+          },
           onload: (res) => {
             if (res.status >= 200 && res.status < 300 && res.response) {
               const blob = res.response instanceof Blob ? res.response : new Blob([res.response], { type: mimeType });
@@ -286,12 +292,37 @@
         ffmpegInstance = new FFmpeg();
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         addUiLog(`[${timeStr()}] Downloading FFmpeg Core WASM binaries...`);
+        let lastLogTime = 0;
+        const progressCb = (name) => (pct) => {
+          const now = Date.now();
+          if (now - lastLogTime > 1500 || pct === 100) {
+            addUiLog(`[${timeStr()}] Downloading ${name}... ${pct}%`);
+            lastLogTime = now;
+          }
+          if (onProgress) onProgress(pct, `Downloading ${name}... ${pct}%`);
+        };
 
-        const coreURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript');
-        const wasmURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm');
+        const coreURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.js`, 'text/javascript', progressCb('core.js'));
+        const wasmURL = await fetchBlobWithGM(`${cdnBaseST}/ffmpeg-core.wasm`, 'application/wasm', progressCb('core.wasm'));
 
-        await ffmpegInstance.load({ coreURL, wasmURL });
-        addUiLog(`[${timeStr()}] FFmpeg WASM engine active & ready.`);
+        const workerURL = await fetchBlobWithGM(`https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js`, 'text/javascript', progressCb('814.ffmpeg.js'));
+
+        ffmpegInstance.on('log', ({ type, message }) => {
+          addUiLog(`[${timeStr()}] [FFmpeg Init] ${message}`);
+        });
+
+        try {
+          await ffmpegInstance.load({ 
+            coreURL, 
+            wasmURL, 
+            workerURL,
+            classWorkerURL: workerURL 
+          });
+          addUiLog(`[${timeStr()}] FFmpeg WASM engine active & ready.`);
+        } catch (initErr) {
+          addUiLog(`[${timeStr()}] [FFmpeg Init Error] ${initErr.message || initErr}`);
+          throw initErr;
+        }
       }
 
       const ffmpeg = ffmpegInstance;
