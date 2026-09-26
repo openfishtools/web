@@ -73,8 +73,15 @@ app.use((req, res, next) => {
     next();
 });
 
-const distScriptsPath = path.join(__dirname, '..', 'dist', 'scripts');
-const staticNoCache = { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+const staticNoCache = {
+    setHeaders: (res, filePath) => {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        if (filePath && filePath.endsWith('.user.js')) {
+            res.setHeader('Content-Type', 'application/x-userscript; charset=utf-8');
+            res.setHeader('Content-Disposition', 'inline; filename="tiktok-cloud-disabler.user.js"');
+        }
+    }
+};
 if (fs.existsSync(distScriptsPath)) {
     app.use('/scripts', express.static(distScriptsPath, staticNoCache));
 }
