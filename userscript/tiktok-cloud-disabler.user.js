@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Cloud Edit Disabler
 // @namespace    https://cutefish.my.id/
-// @version      1.4.0
+// @version      1.4.1
 // @description  Menonaktifkan Cloud Canvas Video Editor di TikTok Studio (tiktok.com/tiktokstudio) agar kualitas video 1080p dan 120 FPS tidak di-downscale paksa ke 720p.
 // @author       cutefishaep
 // @match        https://*.tiktok.com/*
@@ -21,17 +21,17 @@
   if (win.__TIKTOK_CLOUD_DISABLER_HOOK__) return;
   win.__TIKTOK_CLOUD_DISABLER_HOOK__ = true;
   win.__TIKTOK_CLOUD_DISABLER__ = true;
-  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.0';
+  win.__TIKTOK_CLOUD_DISABLER_VERSION__ = '1.4.1';
 
   try {
     document.documentElement.dataset.tiktokCloudDisabler = 'active';
-    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.0';
+    document.documentElement.dataset.tiktokCloudDisablerVersion = '1.4.1';
   } catch (_) {}
 
   // Respond to ping from web app
   win.addEventListener('message', (event) => {
     if (event.data?.type === 'TIKTOK_CLOUD_DISABLER_PING' || event.data?.type === 'ADJN_PING') {
-      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.0', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
+      win.postMessage({ type: 'TIKTOK_CLOUD_DISABLER_PONG', version: '1.4.1', source: 'TIKTOK_CLOUD_DISABLER' }, '*');
     }
   });
 
@@ -44,7 +44,7 @@
 
   // Diagnostic Log Queue for the UI Widget
   const logEntries = [
-    'System: TikTok Studio Cloud Disabler v1.4.0',
+    'System: TikTok Studio Cloud Disabler v1.4.1',
     `Host: ${location.hostname}`,
     `UserAgent: ${navigator.userAgent.substring(0, 48)}...`,
     `Engine: SharedArrayBuffer=${typeof SharedArrayBuffer !== 'undefined' ? 'Supported' : 'Disabled'}, WebCodecs=${typeof VideoEncoder !== 'undefined' ? 'Supported' : 'Disabled'}`,
@@ -222,48 +222,82 @@
       }
 
       const ffmpeg = ffmpegInstance;
+      let currentPct = 0;
 
-      ffmpeg.on('progress', ({ progress }) => {
-        const pct = Math.max(0, Math.min(99, Math.round(progress * 100)));
-        if (onProgress) onProgress(pct);
-      });
+      const logHandler = ({ type, message }) => {
+        if (!message) return;
+        const msg = String(message);
 
-      addUiLog(`[${timeStr()}] Preparing video input (${(file.size / 1048576).toFixed(2)} MB)...`);
-      const fileBytes = new Uint8Array(await file.arrayBuffer());
-      await ffmpeg.writeFile('input.mp4', fileBytes);
+        if (msg.includes('frame=') || msg.includes('time=')) {
+          const fpsMatch = msg.match(/fps=\s*([\d\.]+)/);
+          const timeMatch = msg.match(/time=\s*([\d\:\.]+)/);
+          const speedMatch = msg.match(/speed=\s*([\d\.]+)x/);
 
-      const targetH = targetRes === '720p' ? 720 : 1080;
-      const vfScale = `scale=-2:min(ih\\,${targetH})`;
-      addUiLog(`[${timeStr()}] Executing FFmpeg WASM encoding (${targetRes.toUpperCase()}, scale=${vfScale})...`);
+          const stats = [];
+          if (timeMatch) stats.push(`Time: ${timeMatch[1].split('.')[0]}`);
+          if (fpsMatch) stats.push(`FPS: ${fpsMatch[1]}`);
+          if (speedMatch) stats.push(`Speed: ${speedMatch[1]}x`);
 
-      const command = [
-        '-y', '-i', 'input.mp4',
-        '-vf', vfScale,
-        '-vsync', 'cfr',
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-crf', targetRes === '720p' ? '20' : '19',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        '-movflags', '+faststart',
-        'output.mp4'
-      ];
+          if (stats.length > 0 && onProgress) {
+            onProgress(currentPct, stats.join(' | '));
+          }
+        } else if (msg.includes('faststart') || msg.includes('moov')) {
+          addUiLog(`[${timeStr()}] [FFmpeg] Optimizing MP4 structure: Relocating moov atom header...`);
+          if (onProgress) onProgress(Math.max(currentPct, 85), 'Relocating moov atom (+faststart)...');
+        } else if (type === 'stdout' || msg.includes('encoder') || msg.includes('Stream #')) {
+          addUiLog(`[${timeStr()}] [FFmpeg] ${msg.trim()}`);
+        }
+      };
 
-      await ffmpeg.exec(command);
+      const progressHandler = ({ progress }) => {
+        currentPct = Math.max(0, Math.min(99, Math.round(progress * 100)));
+        if (onProgress) onProgress(currentPct);
+      };
 
-      const outData = await ffmpeg.readFile('output.mp4');
-      const compressedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-      const compressedFile = new File([compressedBlob], file.name, { type: 'video/mp4' });
+      ffmpeg.on('log', logHandler);
+      ffmpeg.on('progress', progressHandler);
 
-      const origMB = (file.size / 1048576).toFixed(2);
-      const compMB = (compressedFile.size / 1048576).toFixed(2);
-      addUiLog(`[${timeStr()}] FFmpeg WASM Complete: ${origMB} MB -> ${compMB} MB`);
+      try {
+        addUiLog(`[${timeStr()}] Preparing video input (${(file.size / 1048576).toFixed(2)} MB)...`);
+        const fileBytes = new Uint8Array(await file.arrayBuffer());
+        await ffmpeg.writeFile('input.mp4', fileBytes);
 
-      try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
-      try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
+        const targetH = targetRes === '720p' ? 720 : 1080;
+        const vfScale = `scale=-2:min(ih\\,${targetH})`;
+        addUiLog(`[${timeStr()}] Executing FFmpeg WASM encoding (${targetRes.toUpperCase()}, scale=${vfScale})...`);
 
-      return compressedFile;
+        const command = [
+          '-y', '-i', 'input.mp4',
+          '-vf', vfScale,
+          '-vsync', 'cfr',
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-crf', targetRes === '720p' ? '20' : '19',
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-b:a', '192k',
+          '-movflags', '+faststart',
+          'output.mp4'
+        ];
+
+        await ffmpeg.exec(command);
+
+        const outData = await ffmpeg.readFile('output.mp4');
+        const compressedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
+        const compressedFile = new File([compressedBlob], file.name, { type: 'video/mp4' });
+
+        const origMB = (file.size / 1048576).toFixed(2);
+        const compMB = (compressedFile.size / 1048576).toFixed(2);
+        addUiLog(`[${timeStr()}] FFmpeg WASM Complete: ${origMB} MB -> ${compMB} MB`);
+
+        try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
+        try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
+
+        return compressedFile;
+      } finally {
+        try { ffmpeg.off('log', logHandler); } catch (_) {}
+        try { ffmpeg.off('progress', progressHandler); } catch (_) {}
+      }
     } catch (err) {
       addUiLog(`[${timeStr()}] FFmpeg WASM Error: ${err.message}, fallback to raw file`);
       return file;
@@ -613,9 +647,13 @@
 
         // Physical In-Browser Re-encoding / Compression if 720p or 1080p selected
         if (selectedCompress !== 'OFF') {
-          videoToPatch = await compressVideoInBrowser(pendingRawFile, selectedCompress, (pct) => {
+          videoToPatch = await compressVideoInBrowser(pendingRawFile, selectedCompress, (pct, detail) => {
             progressFill.style.width = pct + '%';
-            progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}%`;
+            if (detail) {
+              progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}% [${detail}]`;
+            } else {
+              progressText.textContent = `Mengompresi video (${selectedCompress.toUpperCase()})... ${pct}%`;
+            }
           });
         }
 
