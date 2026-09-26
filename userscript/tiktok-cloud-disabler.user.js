@@ -299,8 +299,8 @@
         try { ffmpeg.off('progress', progressHandler); } catch (_) {}
       }
     } catch (err) {
-      addUiLog(`[${timeStr()}] FFmpeg WASM Error: ${err.message}, fallback to raw file`);
-      return file;
+      addUiLog(`[${timeStr()}] FFmpeg WASM Error: ${err.message}`);
+      throw new Error(`Kompresi video gagal: ${err.message}. Wajib menggunakan FFmpeg WASM.`);
     }
   }
 
