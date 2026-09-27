@@ -67,7 +67,7 @@ app.use((req, res, next) => {
     // Protect all /api and /realesrgan routes
     if (req.path.startsWith('/api') || req.path.startsWith('/realesrgan')) {
         const clientSecret = req.headers['x-cf-secret'];
-        if (clientSecret !== PROXY_SECRET) {
+        if (!PROXY_SECRET || clientSecret !== PROXY_SECRET) {
             return res.status(403).json({
                 error: 'Forbidden',
                 message: 'Please use cutefish.my.id to access this feature instead of using this API directly, AND STOP MAKING ME SWAP VERCEL ACCOUNTS OVER AND OVER AGAIN JUST TO RESET THE VERCEL LIMIT!'
