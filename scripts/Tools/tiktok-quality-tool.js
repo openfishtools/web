@@ -12,7 +12,7 @@
     let selectedFile = null;
     let currentFileBuffer = null;
     let isProcessing = false;
-    let currentVersion = 'v3';
+    let currentVersion = 'binary';
     let compressMode = 'off';
     let currentInspectedFile = null;
     let currentVideoSpecs = null;
@@ -917,7 +917,7 @@
         if (!optContainer) return;
 
         const vIdx = ['v1', 'v3', 'binary', 'fps'].indexOf(currentVersion);
-        const selectedIdx = vIdx >= 0 ? vIdx : 1;
+        const selectedIdx = vIdx >= 0 ? vIdx : 2;
         const showCompress = (currentVersion !== 'v1');
 
         optContainer.innerHTML = `
@@ -970,7 +970,7 @@
                     const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
                     allOpts.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
-                    currentVersion = opt.getAttribute('data-version') || 'v3';
+                    currentVersion = opt.getAttribute('data-version') || 'binary';
                     vSwitch.setAttribute('data-selected', currentVersion);
                     const optIdx = allOpts.indexOf(opt);
                     if (optIdx >= 0) vSwitch.setAttribute('data-selected-idx', optIdx.toString());
@@ -1293,6 +1293,7 @@
             currentInspectedFile = null;
             currentVideoSpecs = null;
             compressMode = 'off';
+            currentVersion = 'binary';
             removeTikTokStudioUploadPrompt();
             updateCompressUIForSpecs();
             const slot = document.getElementById('tiktok-ext-alert-slot');
