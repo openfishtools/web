@@ -78,17 +78,19 @@ async function compressVideo(file, mode, inputBuffer) {
     // Both 1080p and 720p use preset ultrafast for maximum encoding speed in WebAssembly (WASM)
     const x264Preset = 'ultrafast';
 
-    // H.264 WebAssembly High-Definition Exploit Parameters (Applied to both 1080p & 720p):
-    // - preset ultrafast: fastest execution in WebAssembly single/multi-thread
-    // - crf 20 (1080p) / 21 (720p): clean visual detail retention
-    // - maxrate & bufsize: bit ceiling control for high motion
-    // - aq-mode=3: Auto-variance AQ prevents dark/gradient blocking
-    // - aq-strength=0.8: fine edge preservation
-    // - qcomp=0.75: smooth bit distribution during rapid movement
-    // - deblock=-1,-1: prevents blur on sharp contours
-    const crfValue     = (mode === '720p') ? '21' : '20';
-    const maxRate      = (mode === '720p') ? '5500k' : '9800k';
-    const bufSize      = (mode === '720p') ? '8M' : '16M';
+    // Flexible Dynamic VBR H.264 Settings (20 Mbps Motion Burst Ceiling + Deep Static Compression):
+    // - preset ultrafast: fastest execution in WebAssembly
+    // - maxrate 20000k (20 Mbps) for both 1080p and 720p: shoots up to 20 Mbps during fast motion so 60 FPS is crystal clear HD
+    // - crf 19: dynamic ratecontrol target; drops bitrate drastically down to 1-3 Mbps when scenes are static/minimal motion
+    // - bframes=3:b-adapt=1: enables adaptive bidirectional B-frames that use skip-macroblocks on static frames (huge space savings)
+    // - scenecut=40: automatically inserts keyframes at scene transitions to prevent wasting motion vectors across cuts
+    // - qcomp=0.75: quantizer curve flexibility allowing bitrate to swing dynamically between static and fast motion
+    // - 8x8dct=1 & cabac=1: High Profile 8x8 DCT transform + arithmetic coding (eliminates 4x4 block mosaic)
+    // - deblock=0,0: standard in-loop deblocking filter (smooths macroblock boundaries)
+    // - aq-mode=2: Auto-variance AQ balances bits across flat areas and rapid motion
+    const crfValue     = '19';
+    const maxRate      = '20000k';
+    const bufSize      = '25M';
     const audioBitrate = (mode === '720p') ? '128k' : '160k';
     const gopSize      = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
 
@@ -107,7 +109,7 @@ async function compressVideo(file, mode, inputBuffer) {
         '-crf', crfValue,
         '-maxrate', maxRate,
         '-bufsize', bufSize,
-        '-x264-params', 'aq-mode=3:aq-strength=0.8:qcomp=0.75:deblock=-1,-1',
+        '-x264-params', '8x8dct=1:cabac=1:bframes=3:b-adapt=1:scenecut=40:qcomp=0.75:aq-mode=2:aq-strength=1.0:deblock=0,0',
         '-colorspace', 'bt709',
         '-color_primaries', 'bt709',
         '-color_trc', 'bt709',
@@ -118,7 +120,7 @@ async function compressVideo(file, mode, inputBuffer) {
         '-movflags', '+faststart',
         'output.mp4'
     ];
-    s.log(`  Encoder: libx264 (WASM Fast) ${x264Preset} crf=${crfValue} maxrate=${maxRate}`);
+    s.log(`  Encoder: libx264 (WASM Dynamic VBR) ${x264Preset} crf=${crfValue} maxrate=${maxRate}`);
 
     try {
         await ffmpeg.exec(command);
