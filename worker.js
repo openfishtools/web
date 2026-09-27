@@ -2,11 +2,6 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
-        // Redirect www to non-www
-        if (url.hostname === 'www.cutefish.my.id') {
-            return Response.redirect(`https://cutefish.my.id${url.pathname}${url.search}`, 301);
-        }
-
         // Handle CORS Preflight
         if (request.method === 'OPTIONS') {
             return new Response(null, {
