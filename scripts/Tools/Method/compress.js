@@ -23,6 +23,7 @@ async function compressVideo(file, mode, inputBuffer) {
     const { toBlobURL } = window.FFmpegUtil;
     let ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
     let oomDetected = false;
+    let lastLogTime = 0;
 
     ffmpeg.on('progress', ({ progress }) => {
         const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
@@ -38,6 +39,15 @@ async function compressVideo(file, mode, inputBuffer) {
     ffmpeg.on('log', ({ message }) => {
         const lc = message.toLowerCase();
         if (lc.includes('oom') || lc.includes('out of memory')) oomDetected = true;
+        // Output live encoding status so user sees real-time progress
+        if (message.includes('frame=') && (message.includes('fps=') || message.includes('size='))) {
+            const now = Date.now();
+            if (now - lastLogTime > 2500) {
+                lastLogTime = now;
+                const cleanMsg = message.trim().replace(/\s+/g, ' ');
+                s.log(`    ${cleanMsg}`);
+            }
+        }
     });
 
     s.log(`  [1/3] Loading video data for compression...`);
@@ -65,28 +75,24 @@ async function compressVideo(file, mode, inputBuffer) {
     const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
     s.log(`  FFmpeg filters: ${procOpts.vfString}`);
 
-    // Both 1080p and 720p use preset ultrafast for maximum encoding speed
-    const x265Preset = 'ultrafast';
+    // Both 1080p and 720p use preset ultrafast for maximum encoding speed in WebAssembly (WASM)
+    const x264Preset = 'ultrafast';
 
-    // HEVC (H.265) Ultra-Fast HD Exploit Parameters (Applied to both 1080p & 720p):
-    // - no-sao=1: disables Sample Adaptive Offset (eliminates waxy/smudged blur)
-    // - ctu=32: forces 32x32 block evaluation instead of 64x64 for razor-sharp motion vectors
-    // - me=hex & subme=2: fast motion vector estimation optimized for ultrafast encoding
-    // - rect=1: rectangular block partitioning for sharp grid lines & striped clothing
-    // - b-intra=1 & weightb=1: allows intra prediction in B-frames when new geometry appears
-    // - pbratio=1.15: forces B-frames to retain high quality close to I/P frames
-    // - ref=3: 3 reference frames for accurate motion tracking
-    // - qcomp=0.78: prevents quantizer spikes during high-motion scenes
-    // - aq-mode=3 & aq-strength=0.9: distributes bits to complex edges and shadow gradients
-    // - deblock=-1,-1: prevents artificial edge softening
-    // - no-strong-intra-smoothing=1: preserves sharp keyframe details
+    // H.264 WebAssembly High-Definition Exploit Parameters (Applied to both 1080p & 720p):
+    // - preset ultrafast: fastest execution in WebAssembly single/multi-thread
+    // - crf 20 (1080p) / 21 (720p): clean visual detail retention
+    // - maxrate & bufsize: bit ceiling control for high motion
+    // - aq-mode=3: Auto-variance AQ prevents dark/gradient blocking
+    // - aq-strength=0.8: fine edge preservation
+    // - qcomp=0.75: smooth bit distribution during rapid movement
+    // - deblock=-1,-1: prevents blur on sharp contours
     const crfValue     = (mode === '720p') ? '21' : '20';
     const maxRate      = (mode === '720p') ? '5500k' : '9800k';
     const bufSize      = (mode === '720p') ? '8M' : '16M';
     const audioBitrate = (mode === '720p') ? '128k' : '160k';
     const gopSize      = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
 
-    const hevcCommand = [
+    const command = [
         '-y', '-i', 'input.mp4',
         '-threads', threads,
         '-map', '0:v:0',
@@ -96,16 +102,15 @@ async function compressVideo(file, mode, inputBuffer) {
         '-map_chapters', '-1',
         '-vf', procOpts.vfString,
         '-vsync', 'cfr',
-        '-c:v', 'libx265',
-        '-preset', x265Preset,
+        '-c:v', 'libx264',
+        '-preset', x264Preset,
         '-crf', crfValue,
         '-maxrate', maxRate,
         '-bufsize', bufSize,
-        '-x265-params', 'no-sao=1:no-strong-intra-smoothing=1:ctu=32:qcomp=0.78:aq-mode=3:aq-strength=0.9:deblock=-1,-1:psy-rd=1.0:psy-rdoq=1.0:me=hex:subme=2:rc-lookahead=30:b-intra=1:weightb=1:pbratio=1.15:ref=3:rect=1',
+        '-x264-params', 'aq-mode=3:aq-strength=0.8:qcomp=0.75:deblock=-1,-1',
         '-colorspace', 'bt709',
         '-color_primaries', 'bt709',
         '-color_trc', 'bt709',
-        '-tag:v', 'hvc1',
         '-g', gopSize,
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
@@ -113,13 +118,13 @@ async function compressVideo(file, mode, inputBuffer) {
         '-movflags', '+faststart',
         'output.mp4'
     ];
-    s.log(`  Encoder: libx265 (HEVC / H.265) ${x265Preset} crf=${crfValue} maxrate=${maxRate} tag=hvc1`);
+    s.log(`  Encoder: libx264 (WASM Fast) ${x264Preset} crf=${crfValue} maxrate=${maxRate}`);
 
     try {
-        await ffmpeg.exec(hevcCommand);
+        await ffmpeg.exec(command);
     } catch (execError) {
-        s.log(`  [Notice] HEVC encoding retry/fallback with H.264...`);
-        const h264Command = [
+        s.log(`  [Notice] Encoding retry with standard libx264...`);
+        const fallbackCommand = [
             '-y', '-i', 'input.mp4',
             '-threads', threads,
             '-map', '0:v:0',
@@ -130,11 +135,10 @@ async function compressVideo(file, mode, inputBuffer) {
             '-vf', procOpts.vfString,
             '-vsync', 'cfr',
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-crf', (mode === '720p') ? '20' : '18',
-            '-maxrate', (mode === '720p') ? '5500k' : '11000k',
-            '-bufsize', (mode === '720p') ? '8M' : '16M',
-            '-x264-params', 'aq-mode=3:qcomp=0.75:deblock=-1,-1',
+            '-preset', 'ultrafast',
+            '-crf', crfValue,
+            '-maxrate', maxRate,
+            '-bufsize', bufSize,
             '-colorspace', 'bt709',
             '-color_primaries', 'bt709',
             '-color_trc', 'bt709',
@@ -146,7 +150,7 @@ async function compressVideo(file, mode, inputBuffer) {
             'output.mp4'
         ];
         try {
-            await ffmpeg.exec(h264Command);
+            await ffmpeg.exec(fallbackCommand);
         } catch (h264Err) {
             try {
                 const testData = await ffmpeg.readFile('output.mp4');
