@@ -2,4 +2,3 @@ server.js
 run.bat
 dist-cf/
 functions/
-scripts/build-cf.js

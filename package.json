@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "build": "node scripts/build-cf.js",
+    "build": "node scripts/build.js",
     "build:cf": "node scripts/build-cf.js",
     "deploy:cf": "npm run build:cf && npx wrangler pages deploy dist-cf --project-name=editorstuff"
   },
