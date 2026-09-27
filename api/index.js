@@ -50,6 +50,33 @@ app.use((req, res, next) => {
     next();
 });
 
+// API Protection Shield - Block direct external access outside cutefish.my.id
+const PROXY_SECRET = process.env.PROXY_SECRET;
+
+app.use((req, res, next) => {
+    // Allow localhost during local development
+    if (req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
+        return next();
+    }
+
+    // Skip root redirect and CORS preflight
+    if (req.method === 'OPTIONS' || req.path === '/') {
+        return next();
+    }
+
+    // Protect all /api and /realesrgan routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/realesrgan')) {
+        const clientSecret = req.headers['x-cf-secret'];
+        if (clientSecret !== PROXY_SECRET) {
+            return res.status(403).json({
+                error: 'Forbidden',
+                message: 'Please use cutefish.my.id to access this feature instead of using this API directly, AND STOP MAKING ME SWAP VERCEL ACCOUNTS OVER AND OVER AGAIN JUST TO RESET THE VERCEL LIMIT!'
+            });
+        }
+    }
+    next();
+});
+
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;

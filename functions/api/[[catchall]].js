@@ -5,6 +5,9 @@ export async function onRequest(context) {
 
     const headers = new Headers(context.request.headers);
     headers.set('host', targetUrl.host);
+    if (context.env.PROXY_SECRET) {
+        headers.set('x-cf-secret', context.env.PROXY_SECRET);
+    }
 
     const init = {
         method: context.request.method,
