@@ -1,21 +1,5 @@
-# Server scripts
 server.js
 run.bat
-
-# Cloudflare Pages specific files
 dist-cf/
-_headers
-_redirects
 functions/
 scripts/build-cf.js
-
-# Frontend static files (Served by Cloudflare Pages)
-assets/
-scripts/
-styles/
-userscript/
-index.html
-admin.html
-favicon.ico
-sw.js
-t_version.json
