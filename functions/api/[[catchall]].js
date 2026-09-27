@@ -1,6 +1,6 @@
 export async function onRequest(context) {
     const url = new URL(context.request.url);
-    const backendOrigin = context.env.BACKEND_API_URL || 'https://cutefish.my.id';
+    const backendOrigin = context.env.BACKEND_API_URL || 'https://editorstuff.vercel.app';
     const targetUrl = new URL(url.pathname + url.search, backendOrigin);
 
     const headers = new Headers(context.request.headers);
