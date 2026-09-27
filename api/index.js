@@ -26,6 +26,22 @@ const app = express();
 const fs = require('fs');
 app.use(express.json());
 
+// Global CORS & preflight
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    next();
+});
+
+// Redirect root visit to Cloudflare frontend
+app.get('/', (req, res) => {
+    res.redirect(302, 'https://cutefish.my.id');
+});
+
 app.use((req, res, next) => {
     const rawPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;
     if (rawPath && req.url.startsWith('/api/index.js')) {
