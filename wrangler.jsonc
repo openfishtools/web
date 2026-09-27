@@ -1,10 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "editorstuff",
+  "main": "worker.js",
   "compatibility_date": "2026-09-27",
-  "pages_build_output_dir": "dist-cf",
   "assets": {
     "directory": "dist-cf",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   }
 }
