@@ -1,4 +1,5 @@
-window.processVideoV1 = async function processVideoV1(file) {
+window.processVideoV1 = async function processVideoV1(file, mode) {
+    if (mode === undefined) mode = 'off';
     const s = window._tktk;
     s.isProcessing = true;
     if (s.btnStart) s.btnStart.disabled = true;
@@ -12,9 +13,19 @@ window.processVideoV1 = async function processVideoV1(file) {
     s.progressText.textContent = window.getTranslation('status_processing');
     s.logSection('WMV PROCESS START');
     s.log(`  File : ${file.name}`);
-    s.log(`  Mode : WMV lossless re-encode`);
+    s.log(`  Mode : WMV lossless re-encode (${mode.toUpperCase()})`);
     s.logEnd();
     try {
+        if (typeof window.isEmergencyFpsNeeded === 'function' && window.isEmergencyFpsNeeded(s.currentFileBuffer)) {
+            s.log(`  [Emergency FPS] Video > 60fps terdeteksi. Menerapkan patch 60fps slowmo...`);
+            try {
+                const emOut = window.patchEmergencyFpsMethod(s.currentFileBuffer, s.log);
+                s.currentFileBuffer = (emOut && emOut.buffer) ? emOut.buffer : emOut;
+            } catch (emErr) {
+                s.log(`  [Notice] Emergency FPS patch error: ${emErr.message}`);
+            }
+        }
+
         const isReady = await s.loadFFmpegLibraries();
         if (!isReady) {
             throw new Error('FFmpeg library failed to load. Please check your network connection and reload the page.');
@@ -56,12 +67,13 @@ window.processVideoV1 = async function processVideoV1(file) {
         s.logSection('FFmpeg V1 — Command');
         s.log(`  Hardware threads : ${hardwareThreads}`);
         s.log(`  Using threads    : ${threads}`);
+        const maxDim = (mode === '720p') ? 720 : 1080;
         const command = [
             '-i', 'input.mp4',
             '-threads', threads,
             '-map_metadata', '-1',
             '-map_chapters', '-1',
-            '-vf', "scale='if(lt(iw,ih),trunc(min(iw,1080)/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,1080)/2)*2)'",
+            '-vf', `scale='if(lt(iw,ih),trunc(min(iw,${maxDim})/2)*2,-2)':'if(lt(iw,ih),-2,trunc(min(ih,${maxDim})/2)*2)'`,
             '-c:v', 'wmv2',
             '-qscale:v', '1',
             '-c:a', 'wmav2',

@@ -546,257 +546,7 @@ function _v3_patchMp4HDMethod(inputBuffer) {
 }
 window.patchMp4HDMethod = _v3_patchMp4HDMethod;
 
-function _v3_patchMp4FPS(inputData, _logFn) {
-    const _log  = _logFn || (() => {});
-    const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
-    const data   = new Uint8Array(srcArr.byteLength);
-    data.set(srcArr);
-    const view = new DataView(data.buffer);
-    _log(`Input buffer size: ${data.byteLength} bytes`);
-
-    const topLevel  = _v3_parseBoxes(data, view, 0, data.length, '');
-    const ftyp      = _v3_findTopLevel(topLevel, 'ftyp');
-    const moov      = _v3_findTopLevel(topLevel, 'moov');
-    const mdat      = _v3_findTopLevel(topLevel, 'mdat');
-    if (!ftyp || !moov || !mdat) throw new Error('Missing required MP4 boxes.');
-
-    const ftypPayload = new Uint8Array([
-        0x69, 0x73, 0x6f, 0x6d,
-        0x00, 0x00, 0x02, 0x00,
-        0x69, 0x73, 0x6f, 0x6d,
-        0x69, 0x73, 0x6f, 0x32,
-        0x61, 0x76, 0x63, 0x31,
-        0x6d, 0x70, 0x34, 0x31
-    ]);
-    const ftypBytes = _v3_makeBox('ftyp', ftypPayload);
-
-    const origMdatPayload = data.subarray(mdat.contentStart, mdat.end);
-    const origMdatContentStart = mdat.contentStart;
-
-    const traks     = moov.children.filter(c => c.type === 'trak');
-    const videoTrak = traks.find(c => _v3_handlerTypeForTrak(c) === 'vide');
-    const audioTrak = traks.find(c => _v3_handlerTypeForTrak(c) === 'soun');
-    if (!videoTrak) throw new Error('Video track not found.');
-
-    const vStbl    = _v3_findDescendant(videoTrak, ['mdia', 'minf', 'stbl']);
-    const vStcoBox = _v3_findChild(vStbl, 'stco') || _v3_findChild(vStbl, 'co64');
-    const vSttsBox = _v3_findChild(vStbl, 'stts');
-    const vStszBox = _v3_findChild(vStbl, 'stsz');
-
-    const vOrigOffsets = _v3_parseStco(vStcoBox);
-    const vRelOffsets  = vOrigOffsets.map(off => off - origMdatContentStart);
-    const vStsz        = _v3_parseStsz(vStszBox);
-    const vStts        = _v3_parseStts(vSttsBox);
-
-    const vTimescale   = _v3_getTimescale(videoTrak);
-    const vSampleCount = vStsz.length;
-    const vBaseDelta   = vStts[0] ? vStts[0][1] : 1500;
-    const newVStts = [
-        [vSampleCount - 1, vBaseDelta * 2],
-        [1, vBaseDelta]
-    ];
-    const vMdhdDur = (vSampleCount - 1) * (vBaseDelta * 2) + vBaseDelta;
-    const vMvhdDur = Math.floor(vMdhdDur * 1000 / vTimescale);
-
-    let aRelOffsets = [];
-    let aStcoBox = null;
-    let newAStts = [];
-    let aMdhdDur = 0;
-    let aMvhdDur = 0;
-
-    if (audioTrak) {
-        const aTimescale = _v3_getTimescale(audioTrak);
-        const aStbl      = _v3_findDescendant(audioTrak, ['mdia', 'minf', 'stbl']);
-        aStcoBox = _v3_findChild(aStbl, 'stco') || _v3_findChild(aStbl, 'co64');
-        const aStszBox = _v3_findChild(aStbl, 'stsz');
-        const aSttsBox = _v3_findChild(aStbl, 'stts');
-
-        const aOrigSizes = _v3_parseStsz(aStszBox);
-        const aOrigOffsets = _v3_parseStco(aStcoBox);
-        aRelOffsets = aOrigOffsets.map(off => off - origMdatContentStart);
-        const aOrigStts = _v3_parseStts(aSttsBox);
-        const aBaseDelta = aOrigStts[0] ? aOrigStts[0][1] : 1024;
-        const aSampleCount = aOrigSizes.length;
-        const lastDelta = aOrigStts.length > 1 ? aOrigStts[aOrigStts.length - 1][1] : 992;
-        newAStts = [
-            [aSampleCount - 1, aBaseDelta * 2],
-            [1, lastDelta]
-        ];
-        aMdhdDur = (aSampleCount - 1) * (aBaseDelta * 2) + lastDelta;
-        aMvhdDur = Math.floor(aMdhdDur * 1000 / aTimescale);
-    }
-
-    let moovHeaderLen = moov.size;
-    let finalOutput   = null;
-    let patchResultStats = null;
-
-    for (let pass = 0; pass < 3; pass++) {
-        const newMdatContentStart = ftypBytes.byteLength + moovHeaderLen + 8;
-        const replacements = new Map();
-
-        const newVOffsets = vRelOffsets.map(off => off + newMdatContentStart);
-        replacements.set(vStcoBox, _v3_buildStco(newVOffsets));
-        replacements.set(vSttsBox, _v3_buildStts(newVStts));
-
-        const vMdhd = _v3_findDescendant(videoTrak, ['mdia', 'mdhd']);
-        if (vMdhd) {
-            const vMdhdData = _v3_boxBytes(vMdhd);
-            const isV1 = vMdhdData[8] === 1;
-            const durOff = isV1 ? 32 : 24;
-            _v3_writeU32BE(vMdhdData, durOff, vMdhdDur);
-            replacements.set(vMdhd, vMdhdData);
-        }
-
-        const vTkhd = _v3_findChild(videoTrak, 'tkhd');
-        if (vTkhd) {
-            const vTkhdData = _v3_boxBytes(vTkhd);
-            const isV1 = vTkhdData[8] === 1;
-            const durOff = isV1 ? 32 : 28;
-            _v3_writeU32BE(vTkhdData, durOff, vMvhdDur);
-            replacements.set(vTkhd, vTkhdData);
-        }
-
-        const vElst = _v3_findDescendant(videoTrak, ['edts', 'elst']);
-        if (vElst) {
-            const vElstData = _v3_boxBytes(vElst);
-            const isV1 = vElstData[8] === 1;
-            const durOff = isV1 ? 20 : 16;
-            _v3_writeU32BE(vElstData, durOff, vMvhdDur);
-            replacements.set(vElst, vElstData);
-        }
-
-        if (audioTrak) {
-            const newAOffsets = aRelOffsets.map(off => off + newMdatContentStart);
-            replacements.set(aStcoBox, _v3_buildStco(newAOffsets));
-            const aSttsBox = _v3_findDescendant(audioTrak, ['mdia', 'minf', 'stbl', 'stts']);
-            replacements.set(aSttsBox, _v3_buildStts(newAStts));
-
-            const aMdhd = _v3_findDescendant(audioTrak, ['mdia', 'mdhd']);
-            if (aMdhd) {
-                const aMdhdData = _v3_boxBytes(aMdhd);
-                const isV1 = aMdhdData[8] === 1;
-                const durOff = isV1 ? 32 : 24;
-                _v3_writeU32BE(aMdhdData, durOff, aMdhdDur);
-                replacements.set(aMdhd, aMdhdData);
-            }
-
-            const aTkhd = _v3_findChild(audioTrak, 'tkhd');
-            if (aTkhd) {
-                const aTkhdData = _v3_boxBytes(aTkhd);
-                const isV1 = aTkhdData[8] === 1;
-                const durOff = isV1 ? 32 : 28;
-                _v3_writeU32BE(aTkhdData, durOff, aMvhdDur);
-                replacements.set(aTkhd, aTkhdData);
-            }
-
-            const aElst = _v3_findDescendant(audioTrak, ['edts', 'elst']);
-            if (aElst) {
-                const aElstData = _v3_boxBytes(aElst);
-                const isV1 = aElstData[8] === 1;
-                const durOff = isV1 ? 20 : 16;
-                _v3_writeU32BE(aElstData, durOff, aMvhdDur);
-                replacements.set(aElst, aElstData);
-            }
-        }
-
-        const mvhd = _v3_findChild(moov, 'mvhd');
-        if (mvhd) {
-            const mvhdData = _v3_boxBytes(mvhd);
-            const isV1 = mvhdData[8] === 1;
-            const durOff = isV1 ? 32 : 24;
-            const maxMvhdDur = Math.max(vMvhdDur, aMvhdDur);
-            _v3_writeU32BE(mvhdData, durOff, maxMvhdDur);
-            replacements.set(mvhd, mvhdData);
-        }
-
-        _v3_addCommentMetadata(moov, replacements);
-        const moovFinal = _v3_rebuildBox(moov, replacements);
-        moovHeaderLen   = moovFinal.byteLength;
-
-        if (pass === 2) {
-            const newMdatBox = _v3_makeBox('mdat', origMdatPayload);
-            finalOutput      = _v3_concatBytes([ftypBytes, moovFinal, newMdatBox]);
-            const inputFps   = Math.round(vTimescale / vBaseDelta);
-            const patchedFps = Math.round(vTimescale / (vBaseDelta * 2));
-            patchResultStats = {
-                output: finalOutput,
-                realSamples:  vStsz.length,
-                fakeSamples:  0,
-                timescale:    vTimescale,
-                sampleDelta:  vBaseDelta * 2,
-                duration:     vMdhdDur,
-                chunkCount:   vRelOffsets.length,
-                inputFps,
-                patchedFps
-            };
-        }
-    }
-
-    _log(`FPS MP4 patch completed successfully. Total output: ${finalOutput.byteLength} bytes.`);
-    return patchResultStats;
-}
-
-function _v3_patchMp4FPSMethod(inputBuffer) {
-    const result = _v3_patchMp4FPS(inputBuffer);
-    return result.output;
-}
-window.patchMp4FPSMethod = _v3_patchMp4FPSMethod;
-
-window.processVideoFPS = async function processVideoFPS(file) {
-    const s = window._tktk;
-    // NOTE: do not early-return on s.isProcessing here — the caller
-    // (processQualityMethod) already set it before dispatching to this
-    // method, so a guard would abort every run ("stuck at Reading file").
-    s.isProcessing = true;
-
-    const safeName = s.escapeHTML(file.name);
-    s.btnStart.classList.add('hidden');
-    s.progressContainer.classList.remove('hidden');
-    s.logsContainer.classList.remove('hidden');
-    s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
-    s.progressFill.style.width = '0%';
-    s.progressPercent.textContent = '0%';
-    s.progressText.textContent = 'Processing FPS Method...';
-
-    s.logSection('FPS METHOD PROCESSING');
-    s.log(`  File   : ${safeName}`);
-    s.log(`  Mode   : Timescale / FPS Presentation Patch`);
-    s.logEnd();
-
-    try {
-        s.log(`  [1/2] Executing FPS Metadata Patch...`);
-        const patchedBytes = _v3_patchMp4FPSMethod(s.currentFileBuffer);
-        s.log(`  [2/2] Finalizing output package...`);
-        const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
-        const url      = URL.createObjectURL(blob);
-        const filename = `${file.name.replace(/\.[^.]+$/, '')}_fps.mp4`;
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        s.log(`  Process Completed Successfully!`);
-        s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
-        s.progressFill.style.width = '100%';
-        s.progressPercent.textContent = '100%';
-        s.progressText.textContent = window.getTranslation('status_completed');
-        s.btnStart.classList.remove('hidden');
-        s.isProcessing = false;
-        s.showUploadGuideModal(filename);
-    } catch (jsErr) {
-        s.log(`  [Error] FPS patch failed: ${s.escapeHTML(jsErr.message)}`);
-        console.error(jsErr);
-        s.showStatusError(`Error: ${s.escapeHTML(jsErr.message)}`);
-        s.btnStart.classList.remove('hidden');
-    } finally {
-        s.isProcessing = false;
-    }
-};
-
-window.processVideoV3 = async function processVideoV3(file, mode) {
+window.processVideoFRY = async function processVideoFRY(file, mode) {
     if (mode === undefined) mode = 'off';
     const s = window._tktk;
     s.isProcessing = true;
@@ -812,51 +562,44 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
     s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_loading_engine')}</span>`;
     s.progressFill.style.width = '0%';
     s.progressPercent.textContent = '0%';
-    s.progressText.textContent = 'Processing Binary...';
+    s.progressText.textContent = 'Processing F R Y...';
 
     const modeLabel = isOff ? 'Pass-Through (No Compression)' : (mode === '720p' ? '720p Compression + Patch' : '1080p Compression + Patch');
-    s.logSection('BINARY PROCESSING');
+    s.logSection('F R Y PROCESSING');
     s.log(`  File : ${safeName}`);
     s.log(`  Mode : ${modeLabel}`);
     s.logEnd();
 
     if (isOff) {
-        s.log(`  [1/2] Applying binary metadata patch...`);
+        let baseBuffer = s.currentFileBuffer;
+        if (typeof window.isEmergencyFpsNeeded === 'function' && window.isEmergencyFpsNeeded(baseBuffer)) {
+            s.log(`  [Emergency FPS] Video > 60fps terdeteksi. Menerapkan patch 60fps slowmo...`);
+            try {
+                baseBuffer = window.patchEmergencyFpsMethod(baseBuffer, s.log);
+            } catch (emErr) {
+                s.log(`  [Notice] Emergency FPS patch error: ${emErr.message}`);
+            }
+        }
+
+        s.log(`  [1/2] Applying F R Y metadata patch...`);
         try {
-            const patchRes = _v3_patchMp4ADJN(s.currentFileBuffer, s.log);
+            const patchRes = _v3_patchMp4ADJN(baseBuffer, s.log);
             const patchedBytes = patchRes.output;
             s.log(`  [2/2] Finalizing output package...`);
-            const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
-            const url      = URL.createObjectURL(blob);
-            const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            s.log(`  Process Completed Successfully!`);
-            s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
-            s.progressFill.style.width = '100%';
-            s.progressPercent.textContent = '100%';
-            s.progressText.textContent = window.getTranslation('status_completed');
-            if (window.ToolProgressManager) {
-                window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
-            }
-            const processBtn = document.getElementById('tool-process-btn');
-            const processLabel = document.getElementById('tool-process-label');
-            const processIcon = document.getElementById('tool-process-icon');
-            if (processBtn) {
-                processBtn.disabled = false;
-                processBtn.dataset.state = 'completed';
-                if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
-                if (processIcon) processIcon.textContent = 'restart_alt';
-            }
-            s.isProcessing = false;
-            if (typeof window.showToast === 'function') window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Patch completed successfully!');
-            if (typeof s.showTikTokStudioUploadPrompt === 'function') {
-                s.showTikTokStudioUploadPrompt();
+            const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
+            if (typeof finalizeFn === 'function') {
+                finalizeFn(file, patchedBytes, 'hd');
+            } else {
+                const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
+                const url      = URL.createObjectURL(blob);
+                const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
             return;
         } catch (jsErr) {
@@ -866,118 +609,26 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
     }
 
     try {
-        const isReady = await s.loadFFmpegLibraries();
-        if (!isReady) throw new Error('Processing engine failed to load.');
-
-        const { toBlobURL } = window.FFmpegUtil;
-        let ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
-        let oomDetected = false;
-
-        ffmpeg.on('progress', ({ progress }) => {
-            const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
-            s.progressFill.style.width = `${percent}%`;
-            s.progressPercent.textContent = `${percent}%`;
-            const stMsg = `${window.getTranslation('status_encoding')}...`;
-            s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${stMsg}</span>`;
-            if (window.ToolProgressManager) {
-                window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent, status: stMsg, file });
-            }
-        });
-        ffmpeg.on('log', ({ message }) => {
-            const lc = message.toLowerCase();
-            if (lc.includes('oom') || lc.includes('out of memory')) oomDetected = true;
-        });
-
-        s.log(`  [1/3] Loading video data...`);
-        const preParseBuffer = s.currentFileBuffer ? s.currentFileBuffer.slice(0) : null;
-        await ffmpeg.writeFile('input.mp4', new Uint8Array(s.currentFileBuffer));
-
-        const fileMB         = file.size / (1024 * 1024);
-        const hardwareThreads = navigator.hardwareConcurrency || 4;
-        const safeThreads    = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
-
-        s.log(`  [2/3] Optimizing video quality...`);
-        const threads = fileMB > 50 ? '2' : safeThreads;
-
-        let vInfoFps = null, vInfoW = 0, vInfoH = 0;
-        if (preParseBuffer) {
-            try {
-                vInfoFps = s.parseFpsFromMp4(preParseBuffer);
-                const r  = s.parseResolutionFromMp4(preParseBuffer);
-                if (r) { vInfoW = r.width; vInfoH = r.height; }
-            } catch (e) {}
-        }
-        const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
-        s.log(`  FFmpeg filters: ${procOpts.vfString}`);
-
-        // High-motion sources (esp. 60fps) looked muddy because "ultrafast"
-        // skips nearly all x264 refinement. A slower preset produces sharper
-        // motion at the SAME CRF (often smaller), while higher maxrate only
-        // lifts the ceiling during movement spikes — average size stays put.
-        const isMobileDev = (typeof s.isMobileDevice === 'function') ? s.isMobileDevice() : true;
-        const x264Preset  = (isMobileDev || fileMB > 50) ? 'superfast' : 'veryfast';
-
-        const crfValue = (mode === '720p') ? '20' : '19';
-        const maxRate  = (mode === '720p') ? '14M' : '24M';
-        const bufSize  = (mode === '720p') ? '21M' : '38M';
-        const gopSize  = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
-
-        const command = [
-            '-y', '-i', 'input.mp4',
-            '-threads', threads,
-            '-map', '0:v:0',
-            '-map', '0:a:0?',
-            '-dn',
-            '-map_metadata', '-1',
-            '-map_chapters', '-1',
-            '-vf', procOpts.vfString,
-            '-vsync', 'cfr',
-            '-c:v', 'libx264',
-            '-preset', x264Preset,
-            '-crf', crfValue,
-            '-maxrate', maxRate,
-            '-bufsize', bufSize,
-            '-g', gopSize,
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', '192k',
-            '-movflags', '+faststart',
-            'output.mp4'
-        ];
-        s.log(`  Encoder: libx264 ${x264Preset} crf=${crfValue} maxrate=${maxRate} gop=${gopSize}`);
-
-        try {
-            await ffmpeg.exec(command);
-        } catch (execError) {
-            try {
-                const testData = await ffmpeg.readFile('output.mp4');
-                if (!testData || testData.byteLength < 1024) throw execError;
-            } catch (rErr) {
-                throw execError;
-            }
+        const compressFn = window.compressVideo || (s && s.compressVideo);
+        if (typeof compressFn !== 'function') {
+            throw new Error('Compression module (compress.js) is not loaded.');
         }
 
-        if (oomDetected) throw new Error('Memory limit reached during video processing.');
+        const rawOutput = await compressFn(file, mode, s.currentFileBuffer);
 
-        s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
-        s.progressText.textContent = 'Finalizing package...';
-        s.progressFill.style.width = '95%';
-        s.progressPercent.textContent = '95%';
-        if (window.ToolProgressManager) {
-            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 95, status: window.getTranslation('status_finalizing'), file });
-        }
-
-        s.log(`  [3/3] Finalizing output package...`);
-        const compressedData = await ffmpeg.readFile('output.mp4');
-        try {
-            await ffmpeg.deleteFile('input.mp4');
-            await ffmpeg.deleteFile('output.mp4');
-        } catch (cleanErr) {}
-
-        const rawOutput = new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
+        s.log(`  Applying F R Y metadata patch on compressed video...`);
         let finalResultBytes;
         try {
-            const patchRes = _v3_patchMp4ADJN(rawOutput, s.log);
+            let bufferToPatch = rawOutput;
+            if (typeof window.isEmergencyFpsNeeded === 'function' && window.isEmergencyFpsNeeded(bufferToPatch)) {
+                s.log(`  [Emergency FPS] Video kompresi > 60fps terdeteksi. Menerapkan patch 60fps slowmo...`);
+                try {
+                    bufferToPatch = window.patchEmergencyFpsMethod(bufferToPatch, s.log);
+                } catch (emErr2) {
+                    s.log(`  [Notice] Emergency FPS patch error: ${emErr2.message}`);
+                }
+            }
+            const patchRes = _v3_patchMp4ADJN(bufferToPatch, s.log);
             finalResultBytes = patchRes.output;
         } catch (pErr) {
             s.log(`  [Notice] Metadata patch failed, using compressed output as-is: ${pErr.message}`);
@@ -985,51 +636,19 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         }
         s.logEnd();
 
-        const blob     = new Blob([finalResultBytes], { type: 'video/mp4' });
-        const url      = URL.createObjectURL(blob);
-        const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        const dlBtn = document.getElementById('tool-download-btn');
-        if (dlBtn) {
-            dlBtn.classList.remove('hidden');
-            dlBtn.onclick = () => {
-                const da = document.createElement('a');
-                da.href = url;
-                da.download = filename;
-                document.body.appendChild(da);
-                da.click();
-                document.body.removeChild(da);
-            };
-        }
-
-        s.log(`  Process Completed Successfully!`);
-        s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
-        s.progressFill.style.width = '100%';
-        s.progressPercent.textContent = '100%';
-        s.progressText.textContent = window.getTranslation('status_completed');
-        if (window.ToolProgressManager) {
-            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
-        }
-        const processBtn = document.getElementById('tool-process-btn');
-        const processLabel = document.getElementById('tool-process-label');
-        const processIcon = document.getElementById('tool-process-icon');
-        if (processBtn) {
-            processBtn.disabled = false;
-            processBtn.dataset.state = 'completed';
-            if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
-            if (processIcon) processIcon.textContent = 'restart_alt';
-        }
-        if (typeof window.showToast === 'function') {
-            window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Processing completed successfully!');
-        }
-        if (typeof s.showTikTokStudioUploadPrompt === 'function') {
-            s.showTikTokStudioUploadPrompt();
+        const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
+        if (typeof finalizeFn === 'function') {
+            finalizeFn(file, finalResultBytes, 'hd');
+        } else {
+            const blob     = new Blob([finalResultBytes], { type: 'video/mp4' });
+            const url      = URL.createObjectURL(blob);
+            const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
     } catch (error) {
@@ -1042,3 +661,4 @@ window.processVideoV3 = async function processVideoV3(file, mode) {
         if (s.btnStart) s.btnStart.disabled = false;
     }
 };
+window.processVideoV3 = window.processVideoFRY;

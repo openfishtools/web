@@ -223,9 +223,10 @@
             "tools_title": "Alat",
             "contact_title": "Hubungi Kami",
             "patcher_overlay_title": "Metode Ter-patch",
-            "patcher_overlay_desc": "Metode WMV saat ini tidak tersedia. Silakan gunakan metode BINARY atau FPS.",
+            "patcher_overlay_desc": "Metode WMV saat ini tidak tersedia. Silakan gunakan metode F R Y atau FPS.",
             "patcher_overlay_ignore": "Abaikan",
             "patcher_method_wmv": "WMV",
+            "patcher_method_fry": "F R Y",
             "patcher_method_binary": "BINARY",
             "patcher_method_fps": "FPS",
             "patcher_compress_title": "Compress",
@@ -236,13 +237,14 @@
             "patcher_fixaudio_title": "Menambahkan track audio kedua yang bersih agar TikTok tidak salah membaca suara.",
             "patcher_ext_warn_title": "Bypass Cloud Canvas Diperlukan (>1080p / 120 FPS)",
             "patcher_ext_warn_body": "Video Anda memiliki resolusi tinggi (>1080p) atau frame rate 120 FPS. Userscript wajib aktif di browser Anda agar TikTok Studio tidak men-downscale video ke 720p.",
-            "patcher_ext_optional_title": "Jika video yang di-upload tidak HD, coba pasang userscript ini",
-            "patcher_ext_optional_body": "TikTok Studio secara otomatis mengaktifkan pipeline <strong>Cloud Canvas Video Editor</strong> di server mereka untuk video tertentu, yang menyebabkan resolusi video di-downscale paksa ke 720p meskipun file sudah di-patch. Userscript ini bertugas mencegat (hook) request API publish TikTok dan menonaktifkan flags internal berikut:<ul style=\"margin: 6px 0 0 16px; padding: 0; line-height: 1.5; font-size: 11.5px;\"><li><code>cloud_edit_is_use_video_canvas: false</code> (mematikan modul editor canvas cloud TikTok)</li><li>Menghapus flag <code>canvas_config</code>, <code>vedit_segment_info</code>, dan <code>draft</code> dari payload agar server tidak me-render ulang timeline video</li><li>Menetapkan <code>post_type: 3</code> dan <code>enter_post_page_from: 1</code> (bypass routing editor)</li><li>Memaksa flag <code>video_quality_score: 1.0</code>, <code>is_high_quality: true</code>, dan <code>psg_vsp_aud: true</code> untuk menjaga bitrate dan resolusi asli 1080p/120fps.</li></ul>",
+            "patcher_ext_optional_title": "Opsional",
+            "patcher_ext_optional_body": "Pasang userscript ini jika hasil video yang Anda unggah ke TikTok Studio otomatis ter-downscale atau terlihat buram. Userscript akan menonaktifkan modul editor cloud TikTok agar kualitas asli video tetap terjaga.",
             "patcher_ext_btn_userscript": "Userscript",
             "patcher_ext_btn_install": "Install",
             "patcher_ext_recheck_btn": "Periksa Ulang",
             "patcher_ext_btn_blocked": "Userscript Diperlukan (>1080p/120fps)",
             "patcher_ext_blocked_toast": "Video >1080p atau 120 FPS wajib memasang userscript TikTok Cloud Edit Disabler.",
+            "patcher_compress_required_toast": "Resolusi video > 1080p wajib dikompres (pilih 1080P atau 720P).",
             "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler aktif!",
             "patcher_ext_not_found_toast": "Userscript belum terdeteksi aktif.",
             "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> aktif. Pembatasan Cloud Canvas dinonaktifkan, video siap diproses.",
@@ -252,6 +254,9 @@
             "patcher_upload_studio_title": "Video siap diunggah",
             "patcher_upload_studio_desc": "Video telah berhasil dipatch. Buka TikTok Studio untuk melanjutkan proses upload.",
             "patcher_upload_studio_btn": "Buka TikTok Studio",
+            "patcher_notice_res_limit": "Resolusi <strong>{res}</strong> (&gt; 1080p) terdeteksi. Kompresi otomatis diatur ke <strong>1080p</strong>.",
+            "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong>.",
+            "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong> sebelum patch <strong>{method}</strong>.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -265,11 +270,11 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_off": `
+            "patcher_desc_fry_off": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -283,12 +288,12 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_720p": `
+            "patcher_desc_fry_720p": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 720p</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -302,12 +307,12 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_1080p": `
+            "patcher_desc_fry_1080p": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 1080p</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Metode:</strong> Kompresi + F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -318,6 +323,47 @@
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">favorite</span>
                         <span>Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Mode:</strong> Direct Pass-Through</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Menata ulang struktur metadata dan susunan streaming MP4 secara langsung tanpa kompresi, menjaga resolusi serta kualitas visual asli tetap utuh 100%.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 720p</li>
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Mengompresi dan menyesuaikan batas resolusi ke 720p dengan alokasi bitrate teroptimasi, lalu menerapkan rekonstruksi metadata kontainer MP4.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 1080p</li>
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Mengompresi video pada resolusi Full HD 1080p dengan batas bitrate tinggi untuk menjaga ketajaman gerak, dilanjutkan dengan rekonstruksi metadata kontainer MP4.</span>
                     </div>
                 </div>
             `,
@@ -335,6 +381,52 @@
                     <div class="tiktok-desc-warning-row">
                         <span class="material-symbols-rounded">warning</span>
                         <span>Metode ini tidak membypass quality, hanya FPS saja.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">speed</span><strong>Kecepatan:</strong> Sangat Cepat (Tanpa Encode Ulang)</li>
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">auto_fix_high</span><strong>Modifikasi:</strong> Timescale & Duration Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.</span>
+                    </div>
+                    <div class="tiktok-desc-warning-row">
+                        <span class="material-symbols-rounded">warning</span>
+                        <span>Metode ini tidak membypass quality, hanya FPS saja.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi Target:</strong> HD 720p</li>
+                        <li><span class="material-symbols-rounded">compress</span><strong>Kompresi:</strong> H.264 VBR Hemat Ukuran</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Frame Rate:</strong> 30 FPS Presentation Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Mengompresi video ke 720p dengan bitrate hemat MB, lalu menerapkan timescale patch agar playback di TikTok berjalan halus.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi Target:</strong> Full HD 1080p</li>
+                        <li><span class="material-symbols-rounded">compress</span><strong>Kompresi:</strong> H.264 HD Crisp (Film Tune)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Frame Rate:</strong> 30 FPS Presentation Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Mengompresi video pada resolusi Full HD 1080p dengan ukuran MB kecil dan tajam pada pergerakan cepat, lalu menerapkan timescale patch.</span>
                     </div>
                 </div>
             `,
@@ -736,9 +828,10 @@
             "tools_title": "Tools",
             "contact_title": "Contact Us",
             "patcher_overlay_title": "Method Patched",
-            "patcher_overlay_desc": "WMV method is currently unavailable. Please use BINARY or FPS method.",
+            "patcher_overlay_desc": "WMV method is currently unavailable. Please use F R Y or FPS method.",
             "patcher_overlay_ignore": "Ignore",
             "patcher_method_wmv": "WMV",
+            "patcher_method_fry": "F R Y",
             "patcher_method_binary": "BINARY",
             "patcher_method_fps": "FPS",
             "patcher_compress_title": "Compress",
@@ -749,13 +842,14 @@
             "patcher_fixaudio_title": "Adds a second clean audio track so TikTok does not misidentify the sound.",
             "patcher_ext_warn_title": "Cloud Canvas Bypass Required (>1080p / 120 FPS)",
             "patcher_ext_warn_body": "Your video exceeds 1080p or has 120 FPS. The userscript is strictly required to disable Cloud Canvas and prevent TikTok Studio from force-downscaling to 720p.",
-            "patcher_ext_optional_title": "If your uploaded video is not HD, try installing this userscript",
-            "patcher_ext_optional_body": "TikTok Studio automatically triggers the <strong>Cloud Canvas Video Editor</strong> pipeline on their servers for certain uploads, force-downscaling videos to 720p even if the file is already patched. This userscript intercepts TikTok publish API requests and overrides key system payload flags:<ul style=\"margin: 6px 0 0 16px; padding: 0; line-height: 1.5; font-size: 11.5px;\"><li><code>cloud_edit_is_use_video_canvas: false</code> (forcefully disables TikTok cloud canvas processing)</li><li>Strips <code>canvas_config</code>, <code>vedit_segment_info</code>, and <code>draft</code> from payload to avoid cloud segment re-rendering</li><li>Enforces <code>post_type: 3</code> and <code>enter_post_page_from: 1</code> (bypasses editor routing)</li><li>Forces <code>video_quality_score: 1.0</code>, <code>is_high_quality: true</code>, and <code>psg_vsp_aud: true</code> to preserve native 1080p/120fps quality.</li></ul>",
+            "patcher_ext_optional_title": "Optional",
+            "patcher_ext_optional_body": "Install this userscript if your uploaded video to TikTok Studio is automatically downscaled or loses quality. It disables TikTok's cloud canvas editor pipeline to preserve your native video resolution.",
             "patcher_ext_btn_userscript": "Userscript",
             "patcher_ext_btn_install": "Install",
             "patcher_ext_recheck_btn": "Recheck",
             "patcher_ext_btn_blocked": "Userscript Required (>1080p/120fps)",
             "patcher_ext_blocked_toast": "Videos >1080p or 120 FPS require the TikTok Cloud Edit Disabler userscript.",
+            "patcher_compress_required_toast": "Video resolution > 1080p must be compressed (select 1080P or 720P).",
             "patcher_ext_detected_toast": "TikTok Cloud Edit Disabler is active!",
             "patcher_ext_not_found_toast": "Userscript is not detected yet.",
             "patcher_ext_active_notice": "Userscript <strong>TikTok Cloud Edit Disabler</strong> is active. Cloud Canvas restriction disabled, video ready to process.",
@@ -765,6 +859,9 @@
             "patcher_upload_studio_title": "Ready to upload",
             "patcher_upload_studio_desc": "Video has been patched. Open TikTok Studio to proceed with your upload.",
             "patcher_upload_studio_btn": "Open TikTok Studio",
+            "patcher_notice_res_limit": "Video resolution <strong>{res}</strong> (&gt; 1080p) detected. Auto-compression set to <strong>1080p</strong>.",
+            "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong>.",
+            "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong> before <strong>{method}</strong> patch.",
             "patcher_desc_wmv": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -778,11 +875,11 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_off": `
+            "patcher_desc_fry_off": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -796,12 +893,12 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_720p": `
+            "patcher_desc_fry_720p": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 720p</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -815,12 +912,12 @@
                     </div>
                 </div>
             `,
-            "patcher_desc_binary_1080p": `
+            "patcher_desc_fry_1080p": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
                         <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
                         <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 1080p</li>
-                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + Binary Patch</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Method:</strong> Compression + F R Y Patch</li>
                     </ul>
                     <hr class="tiktok-desc-divider">
                     <div class="tiktok-desc-footer">
@@ -831,6 +928,47 @@
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">favorite</span>
                         <span>Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>Mode:</strong> Direct Pass-Through</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Restructures MP4 container metadata and stream layout directly without compression, preserving 100% of original visual quality and resolution.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 720p</li>
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Compresses and scales resolution up to 720p with optimized bitrate allocation, followed by MP4 container metadata reconstruction.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_binary_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 1080p</li>
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Compresses video at Full HD 1080p resolution with high bitrate allocation to preserve motion clarity, followed by MP4 container metadata reconstruction.</span>
                     </div>
                 </div>
             `,
@@ -848,6 +986,52 @@
                     <div class="tiktok-desc-warning-row">
                         <span class="material-symbols-rounded">warning</span>
                         <span>This method does not bypass quality, only FPS.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">speed</span><strong>Speed:</strong> Instant (No Re-encoding)</li>
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4</li>
+                        <li><span class="material-symbols-rounded">auto_fix_high</span><strong>Patch:</strong> Timescale & Duration Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Video will appear in slow motion in local playback, but will play smoothly at 60 FPS once uploaded to TikTok.</span>
+                    </div>
+                    <div class="tiktok-desc-warning-row">
+                        <span class="material-symbols-rounded">warning</span>
+                        <span>This method does not bypass quality, only FPS.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Target Resolution:</strong> HD 720p</li>
+                        <li><span class="material-symbols-rounded">compress</span><strong>Compression:</strong> Light H.264 VBR</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Frame Rate:</strong> 30 FPS Presentation Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Compresses video to 720p for low file size, then applies timescale patch for smooth playback on TikTok.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_fps_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Target Resolution:</strong> Full HD 1080p</li>
+                        <li><span class="material-symbols-rounded">compress</span><strong>Compression:</strong> Crisp H.264 (Film Tune)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Frame Rate:</strong> 30 FPS Presentation Patch</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Compresses video at Full HD 1080p with optimized compact file size and high motion retention, then applies timescale patch.</span>
                     </div>
                 </div>
             `,

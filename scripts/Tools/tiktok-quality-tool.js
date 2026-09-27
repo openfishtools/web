@@ -220,6 +220,33 @@
         try {
             const data = new Uint8Array(buffer);
             const view = new DataView(buffer);
+
+            // Prioritize video track ('vide') to avoid audio track sample rates (e.g. 48000/1024=47fps)
+            for (let i = 0; i < data.length - 8; i++) {
+                if (data[i] === 0x76 && data[i+1] === 0x69 && data[i+2] === 0x64 && data[i+3] === 0x65) {
+                    const searchStart = Math.max(0, i - 300);
+                    const searchEnd = Math.min(data.length, i + 8000);
+                    let timescale = 0;
+                    let sampleDelta = 0;
+                    for (let j = searchStart; j < searchEnd - 8; j++) {
+                        if (data[j] === 0x6D && data[j+1] === 0x64 && data[j+2] === 0x68 && data[j+3] === 0x64) {
+                            const version = view.getUint8(j + 4);
+                            timescale = version === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
+                        }
+                        if (data[j] === 0x73 && data[j+1] === 0x74 && data[j+2] === 0x74 && data[j+3] === 0x73) {
+                            const entryCount = view.getUint32(j + 8);
+                            if (entryCount > 0) {
+                                sampleDelta = view.getUint32(j + 16);
+                            }
+                        }
+                        if (timescale && sampleDelta) {
+                            const fps = Math.round(timescale / sampleDelta);
+                            if (fps > 0 && fps < 300) return fps;
+                        }
+                    }
+                }
+            }
+
             let timescale = 0;
             let sampleDelta = 0;
             for (let i = 0; i < data.length - 8; i++) {
@@ -412,6 +439,31 @@
             try {
                 const data = new Uint8Array(buffer);
                 const view = new DataView(buffer);
+
+                // Prioritize video track ('vide') for fps
+                for (let i = 0; i < data.length - 8; i++) {
+                    if (data[i] === 0x76 && data[i+1] === 0x69 && data[i+2] === 0x64 && data[i+3] === 0x65) {
+                        const sStart = Math.max(0, i - 300);
+                        const sEnd = Math.min(data.length, i + 8000);
+                        let ts = 0, sd = 0;
+                        for (let j = sStart; j < sEnd - 8; j++) {
+                            if (data[j] === 0x6D && data[j+1] === 0x64 && data[j+2] === 0x68 && data[j+3] === 0x64) {
+                                const ver = view.getUint8(j + 4);
+                                ts = ver === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
+                            }
+                            if (data[j] === 0x73 && data[j+1] === 0x74 && data[j+2] === 0x74 && data[j+3] === 0x73) {
+                                const ec = view.getUint32(j + 8);
+                                if (ec > 0) sd = view.getUint32(j + 16);
+                            }
+                            if (ts && sd) {
+                                const f = Math.round(ts / sd);
+                                if (f > 0 && f < 300) { foundFps = f; break; }
+                            }
+                        }
+                    }
+                    if (foundFps) break;
+                }
+
                 let timescale = 0;
                 let sampleDelta = 0;
                 for (let i = 0; i < data.length - 8; i++) {
@@ -519,7 +571,7 @@
             }
         }
 
-        if (currentVersion !== 'v3') {
+        if (currentVersion !== 'v3' && currentVersion !== 'binary') {
             slot.innerHTML = '';
             if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
                 processBtn.disabled = false;
@@ -632,8 +684,8 @@
                 if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('patcher_start_process')) || 'Process Video';
             }
 
-            const optTitle = t('patcher_ext_optional_title') || 'Jika video yang di-upload tidak HD, coba pasang userscript ini';
-            const optBody = t('patcher_ext_optional_body') || 'TikTok Studio secara otomatis mengaktifkan pipeline <strong>Cloud Canvas Video Editor</strong> di server mereka untuk video tertentu, yang menyebabkan resolusi video di-downscale paksa ke 720p meskipun file sudah di-patch. Userscript ini bertugas mencegat (hook) request API publish TikTok dan menonaktifkan flags internal berikut:<ul style="margin: 6px 0 0 16px; padding: 0; line-height: 1.5; font-size: 11.5px;"><li><code>cloud_edit_is_use_video_canvas: false</code> (mematikan modul editor canvas cloud TikTok)</li><li>Menghapus flag <code>canvas_config</code>, <code>vedit_segment_info</code>, dan <code>draft</code> dari payload agar server tidak me-render ulang timeline video</li><li>Menetapkan <code>post_type: 3</code> dan <code>enter_post_page_from: 1</code> (bypass routing editor)</li><li>Memaksa flag <code>video_quality_score: 1.0</code>, <code>is_high_quality: true</code>, dan <code>psg_vsp_aud: true</code> untuk menjaga bitrate dan resolusi asli 1080p/120fps.</li></ul>';
+            const optTitle = t('patcher_ext_optional_title') || 'Opsional';
+            const optBody = t('patcher_ext_optional_body') || 'Pasang userscript ini jika hasil video yang Anda unggah ke TikTok Studio otomatis ter-downscale atau terlihat buram. Userscript akan menonaktifkan modul editor cloud TikTok agar kualitas asli video tetap terjaga.';
 
             slot.innerHTML = `
                 <div class="tiktok-ext-warning" style="border-color: rgba(190, 220, 116, 0.4); background: rgba(190, 220, 116, 0.05);">
@@ -641,7 +693,7 @@
                         <span class="material-symbols-rounded">info</span>
                         <span>${optTitle}</span>
                     </div>
-                    <p class="tiktok-ext-warning-body">${optBody}</p>
+                    <div class="tiktok-ext-warning-body">${optBody}</div>
                     <div class="tiktok-ext-actions">
                         <a href="${localUserscriptUrl}" target="_blank" class="btn-ext-download" id="btn-tiktok-install-userscript">
                             <span class="material-symbols-rounded">code</span>
@@ -651,8 +703,8 @@
                             <span class="material-symbols-rounded">download</span>
                             <span>${t('patcher_ext_btn_install')}</span>
                         </a>
-                        <button type="button" class="btn-ext-recheck" id="btn-tiktok-recheck-ext" title="${t('patcher_ext_recheck_btn')}">
-                            <span class="material-symbols-rounded">refresh</span>
+                        <button type="button" class="btn-ext-recheck" id="btn-tiktok-hardreset-ext" title="${t('patcher_clear_cache') || 'Hard Reset (Bersihkan Cache & Muat Ulang)'}">
+                            <span class="material-symbols-rounded">restart_alt</span>
                         </button>
                     </div>
                 </div>
@@ -691,6 +743,14 @@
                 updateExtensionWarning();
             });
         }
+
+        const hardresetBtn = slot.querySelector('#btn-tiktok-hardreset-ext');
+        if (hardresetBtn) {
+            hardresetBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                clearAllToolCache(hardresetBtn);
+            });
+        }
     }
 
     function showTikTokStudioUploadPrompt() {
@@ -720,12 +780,60 @@
         if (slot) slot.innerHTML = '';
     }
 
+    function isSpecsOver1080p() {
+        if (!currentVideoSpecs) return false;
+        const shortSide = Math.min(currentVideoSpecs.width, currentVideoSpecs.height);
+        const longSide = Math.max(currentVideoSpecs.width, currentVideoSpecs.height);
+        return shortSide > 1080 || longSide > 1920;
+    }
+
+    function isSpecsOver60Fps() {
+        if (!currentVideoSpecs) return false;
+        return currentVideoSpecs.fps > 60;
+    }
+
+    function updateCompressUIForSpecs() {
+        const cSwitch = document.getElementById('tiktok-compress-mode');
+        if (!cSwitch) return;
+
+        const offOpt = cSwitch.querySelector('.tiktok-switch-option[data-mode="off"]');
+        if (isSpecsOver1080p()) {
+            if (offOpt) {
+                offOpt.classList.add('disabled');
+                offOpt.setAttribute('title', 'Resolusi > 1080p wajib dikompres (pilihan OFF dinonaktifkan)');
+                offOpt.style.opacity = '0.35';
+                offOpt.style.cursor = 'not-allowed';
+            }
+            if (compressMode === 'off') {
+                compressMode = '1080p';
+            }
+        } else {
+            if (offOpt) {
+                offOpt.classList.remove('disabled');
+                offOpt.removeAttribute('title');
+                offOpt.style.opacity = '';
+                offOpt.style.cursor = '';
+            }
+        }
+
+        cSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => {
+            if (o.getAttribute('data-mode') === compressMode) {
+                o.classList.add('active');
+            } else {
+                o.classList.remove('active');
+            }
+        });
+        cSwitch.setAttribute('data-selected', compressMode);
+        updateDesc();
+    }
+
     async function inspectAndAlert(file) {
         if (!file) return;
         removeTikTokStudioUploadPrompt();
         currentInspectedFile = file;
         currentVideoSpecs = await inspectMp4Meta(file);
         await checkExtensionPresence();
+        updateCompressUIForSpecs();
         updateExtensionWarning();
     }
 
@@ -745,31 +853,84 @@
     function updateDesc() {
         const descEl = document.getElementById('tiktok-info-desc');
         if (!descEl) return;
+        let baseDesc = '';
         if (currentVersion === 'v1') {
-            descEl.innerHTML = t('patcher_desc_wmv');
+            baseDesc = t('patcher_desc_wmv');
         } else if (currentVersion === 'fps') {
-            descEl.innerHTML = t('patcher_desc_fps');
+            if (compressMode === '720p') baseDesc = t('patcher_desc_fps_720p') || t('patcher_desc_fps');
+            else if (compressMode === '1080p') baseDesc = t('patcher_desc_fps_1080p') || t('patcher_desc_fps');
+            else baseDesc = t('patcher_desc_fps_off') || t('patcher_desc_fps');
+        } else if (currentVersion === 'binary') {
+            if (compressMode === '720p') baseDesc = t('patcher_desc_binary_720p');
+            else if (compressMode === '1080p') baseDesc = t('patcher_desc_binary_1080p');
+            else baseDesc = t('patcher_desc_binary_off');
         } else {
-            if (compressMode === '720p') descEl.innerHTML = t('patcher_desc_binary_720p');
-            else if (compressMode === '1080p') descEl.innerHTML = t('patcher_desc_binary_1080p');
-            else descEl.innerHTML = t('patcher_desc_binary_off');
+            if (compressMode === '720p') baseDesc = t('patcher_desc_fry_720p');
+            else if (compressMode === '1080p') baseDesc = t('patcher_desc_fry_1080p');
+            else baseDesc = t('patcher_desc_fry_off');
         }
+
+        if (currentVideoSpecs) {
+            const badges = [];
+            let patchName = currentVersion.toUpperCase();
+            if (currentVersion === 'v3') patchName = 'F R Y';
+
+            if (isSpecsOver1080p()) {
+                const resText = (t('patcher_notice_res_limit') || 'Resolusi <strong>{res}</strong> (&gt; 1080p) terdeteksi. Kompresi otomatis diatur ke <strong>1080p</strong>.')
+                    .replace('{res}', `${currentVideoSpecs.width}x${currentVideoSpecs.height}`);
+                badges.push(`
+                    <div class="tiktok-desc-warning-row">
+                        <span class="material-symbols-rounded">warning</span>
+                        <span>${resText}</span>
+                    </div>
+                `);
+            }
+            if (isSpecsOver60Fps()) {
+                let fpsText = '';
+                if (currentVersion === 'fps') {
+                    fpsText = (t('patcher_notice_fps_direct') || 'Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong>.')
+                        .replace('{fps}', currentVideoSpecs.fps);
+                } else {
+                    fpsText = (t('patcher_notice_fps_emergency') || 'Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong> sebelum patch <strong>{method}</strong>.')
+                        .replace('{fps}', currentVideoSpecs.fps)
+                        .replace('{method}', patchName);
+                }
+                badges.push(`
+                    <div class="tiktok-desc-info-row">
+                        <span class="material-symbols-rounded">speed</span>
+                        <span>${fpsText}</span>
+                    </div>
+                `);
+            }
+
+            if (badges.length > 0) {
+                const noticeHtml = badges.join('');
+                baseDesc = noticeHtml + baseDesc;
+            }
+        }
+
+        descEl.innerHTML = baseDesc;
     }
 
     function initQualityMethodUI() {
         const optContainer = document.getElementById('tool-dynamic-options');
         if (!optContainer) return;
 
+        const vIdx = ['v1', 'v3', 'binary', 'fps'].indexOf(currentVersion);
+        const selectedIdx = vIdx >= 0 ? vIdx : 1;
+        const showCompress = (currentVersion !== 'v1');
+
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
-            <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}">
+            <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="4" data-selected-idx="${selectedIdx}">
                 <div class="tiktok-switch-indicator"></div>
-                <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">WMV</div>
-                <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">BINARY</div>
-                <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">FPS</div>
+                <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
+                <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
+                <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
+                <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
             </div>
 
-            <div id="tiktok-compress-row" style="display: ${currentVersion === 'v3' ? 'block' : 'none'};">
+            <div id="tiktok-compress-row" style="display: ${showCompress ? 'block' : 'none'};">
                 <div class="tiktok-switcher-label">${t('patcher_compress_title')}</div>
                 <div class="tiktok-switch-track" id="tiktok-compress-mode" data-selected="${compressMode}">
                     <div class="tiktok-switch-indicator"></div>
@@ -796,7 +957,7 @@
             </div>
         `;
 
-        updateDesc();
+        updateCompressUIForSpecs();
         checkExtensionPresence().then(updateExtensionWarning);
 
         const vSwitch = document.getElementById('tiktok-version-switch');
@@ -806,14 +967,17 @@
         if (vSwitch) {
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
-                    vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
+                    const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allOpts.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     currentVersion = opt.getAttribute('data-version') || 'v3';
                     vSwitch.setAttribute('data-selected', currentVersion);
+                    const optIdx = allOpts.indexOf(opt);
+                    if (optIdx >= 0) vSwitch.setAttribute('data-selected-idx', optIdx.toString());
                     if (cRow) {
-                        cRow.style.display = (currentVersion === 'v3') ? 'block' : 'none';
+                        cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
                     }
-                    updateDesc();
+                    updateCompressUIForSpecs();
                     updateExtensionWarning();
                 });
             });
@@ -822,6 +986,12 @@
         if (cSwitch) {
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
+                    if (opt.classList.contains('disabled')) {
+                        if (typeof window.showToast === 'function') {
+                            window.showToast(t('patcher_compress_required_toast') || 'Resolusi video > 1080p wajib dikompres (pilih 1080P atau 720P).');
+                        }
+                        return;
+                    }
                     cSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     compressMode = opt.getAttribute('data-mode') || 'off';
@@ -873,14 +1043,19 @@
             currentVideoSpecs = await inspectMp4Meta(file);
         }
         await checkExtensionPresence();
-        const isResOver1080p = currentVideoSpecs && (
-            Math.min(currentVideoSpecs.width, currentVideoSpecs.height) > 1080 ||
-            Math.max(currentVideoSpecs.width, currentVideoSpecs.height) > 1920
-        );
+
+        const isResOver1080p = isSpecsOver1080p();
+        const isFpsOver60 = isSpecsOver60Fps();
         const isFpsOver120 = currentVideoSpecs && currentVideoSpecs.fps >= 120;
         const isHighProfile = isResOver1080p || isFpsOver120;
 
-        if (currentVersion === 'v3' && isHighProfile && (!isExtensionDetected || detectedUserscriptVersion !== TARGET_USERSCRIPT_VERSION)) {
+        // If resolution > 1080p, compress mode cannot be off! Force to 1080p
+        if (isResOver1080p && compressMode === 'off') {
+            compressMode = '1080p';
+            updateCompressUIForSpecs();
+        }
+
+        if ((currentVersion === 'v3' || currentVersion === 'binary') && isHighProfile && (!isExtensionDetected || detectedUserscriptVersion !== TARGET_USERSCRIPT_VERSION)) {
             updateExtensionWarning();
             if (typeof window.showToast === 'function') {
                 window.showToast(t('patcher_ext_blocked_toast'));
@@ -913,16 +1088,34 @@
 
         logSection('Quality Method — Initializing');
         log(`  File : ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
-        log(`  Method : ${currentVersion.toUpperCase()}`);
-        // Compress mode only applies to the Binary (V3) method.
-        if (currentVersion === 'v3') {
-            log(`  Compress : ${compressMode.toUpperCase()}`);
+        let methodLogName = currentVersion.toUpperCase();
+        if (currentVersion === 'v3') methodLogName = 'F R Y';
+        else if (currentVersion === 'binary') methodLogName = 'BINARY';
+        else if (currentVersion === 'fps') methodLogName = 'FPS';
+        log(`  Method : ${methodLogName}`);
+
+        // Effective compress mode calculation
+        let effectiveCompressMode = compressMode;
+        if (isResOver1080p && effectiveCompressMode === 'off') {
+            effectiveCompressMode = '1080p';
+        }
+
+        if (currentVersion !== 'v1') {
+            log(`  Compress : ${effectiveCompressMode.toUpperCase()}`);
+        }
+        if (isFpsOver60) {
+            if (currentVersion === 'fps') {
+                log(`  FPS Profile : ${currentVideoSpecs.fps} FPS -> Converting to 60 FPS slow motion`);
+            } else {
+                log(`  FPS Profile : ${currentVideoSpecs.fps} FPS -> Converting to 60 FPS slow motion before ${methodLogName} patch`);
+            }
         }
         logEnd();
 
         try {
             if (!currentVideoSpecs) {
                 currentVideoSpecs = await inspectMp4Meta(file);
+                updateCompressUIForSpecs();
                 updateExtensionWarning();
             }
             if (!currentFileBuffer) {
@@ -937,21 +1130,29 @@
 
             if (currentVersion === 'v1') {
                 if (typeof window.processVideoV1 === 'function') {
-                    await window.processVideoV1(file);
+                    await window.processVideoV1(file, effectiveCompressMode);
                 } else {
                     throw new Error('V1 WMV module is not loaded.');
                 }
             } else if (currentVersion === 'fps') {
                 if (typeof window.processVideoFPS === 'function') {
-                    await window.processVideoFPS(file);
+                    await window.processVideoFPS(file, effectiveCompressMode);
                 } else {
                     await processFpsInternal(file, currentFileBuffer);
                 }
-            } else {
-                if (typeof window.processVideoV3 === 'function') {
-                    await window.processVideoV3(file, compressMode);
+            } else if (currentVersion === 'binary') {
+                if (typeof window.processVideoBinary === 'function') {
+                    await window.processVideoBinary(file, effectiveCompressMode);
                 } else {
-                    throw new Error('V3 Binary module is not loaded.');
+                    throw new Error('Binary module is not loaded.');
+                }
+            } else {
+                if (typeof window.processVideoFRY === 'function') {
+                    await window.processVideoFRY(file, effectiveCompressMode);
+                } else if (typeof window.processVideoV3 === 'function') {
+                    await window.processVideoV3(file, effectiveCompressMode);
+                } else {
+                    throw new Error('F R Y module is not loaded.');
                 }
             }
         } catch (err) {
@@ -1071,7 +1272,8 @@
         icon: 'high_quality',
         category: 'TikTok',
         features: [
-            'Binary Patch',
+            'F R Y Patch',
+            'Binary Patch (Classic 0.2.0)',
             'WMV Container Re-encode',
             '60 FPS Timescale Patch',
             '720p & 1080p Compression'
@@ -1090,7 +1292,9 @@
             selectedFile = null;
             currentInspectedFile = null;
             currentVideoSpecs = null;
+            compressMode = 'off';
             removeTikTokStudioUploadPrompt();
+            updateCompressUIForSpecs();
             const slot = document.getElementById('tiktok-ext-alert-slot');
             if (slot) slot.innerHTML = '';
             const logsContainer = document.getElementById('tiktok-logs-container');

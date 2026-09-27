@@ -867,6 +867,31 @@ function parseMp4MetadataFromBuffer(buffer) {
                     }
                 }
             }
+
+            if (!comment) {
+                const trakUdta = findBox(offset + 8, offset + size, 'udta');
+                if (trakUdta) {
+                    const udtaEnd = trakUdta.offset + trakUdta.size;
+                    let uOff = trakUdta.offset + 8;
+                    while (uOff < udtaEnd - 8) {
+                        const uSize = view.getUint32(uOff);
+                        if (uSize <= 0 || uOff + uSize > udtaEnd) break;
+                        const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
+                        if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
+                            comment = extractTextFromBox(uOff, uSize);
+                            if (comment) break;
+                        }
+                        if (uType === 'meta') {
+                            const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
+                            if (ilst) {
+                                const cmt = extractCommentFromILST(ilst.offset, ilst.size);
+                                if (cmt) { comment = cmt; break; }
+                            }
+                        }
+                        uOff += uSize;
+                    }
+                }
+            }
         }
 
         if (type === 'udta' && !comment) {
