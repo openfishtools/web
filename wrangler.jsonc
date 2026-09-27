@@ -7,6 +7,10 @@
     {
       "pattern": "cutefish.my.id",
       "custom_domain": true
+    },
+    {
+      "pattern": "www.cutefish.my.id",
+      "custom_domain": true
     }
   ],
   "assets": {
