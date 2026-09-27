@@ -449,9 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<span class="material-symbols-rounded">${icon}</span>`;
     };
 
+    let socialsLoaded = false;
+    let socialsLoading = false;
     const renderSocialButtons = async () => {
         const container = document.getElementById('social-buttons-container');
-        if (!container) return;
+        if (!container || socialsLoaded || socialsLoading) return;
+        socialsLoading = true;
 
         let socials = [];
         try {
@@ -490,6 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="material-symbols-rounded social-btn-arrow">arrow_outward</span>
             </a>
         `).join('');
+        socialsLoaded = true;
+        socialsLoading = false;
     };
 
     const socialContainer = document.getElementById('social-buttons-container');
@@ -503,11 +508,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    renderSocialButtons();
-
+    let contactsLoaded = false;
+    let contactsLoading = false;
     const renderContactButtons = async () => {
         const container = document.getElementById('contact-buttons-container');
-        if (!container) return;
+        if (!container || contactsLoaded || contactsLoading) return;
+        contactsLoading = true;
 
         let contacts = [];
         try {
@@ -540,6 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="material-symbols-rounded social-btn-arrow">arrow_outward</span>
             </a>
         `).join('');
+        contactsLoaded = true;
+        contactsLoading = false;
     };
 
     const contactContainer = document.getElementById('contact-buttons-container');
@@ -552,8 +560,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    renderContactButtons();
 
 
     let activeSocialBtn = null;
@@ -1400,11 +1406,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    let resourcesLoaded = false;
+    let resourcesLoading = false;
     const renderResources = async (query = '', filterCategory = 'All') => {
         const container = document.getElementById('resource-grid');
         if (!container) return;
 
-        if (allResources.length === 0) {
+        if (!resourcesLoaded && !resourcesLoading && allResources.length === 0) {
+            resourcesLoading = true;
             let fetchSucceeded = false;
             try {
                 const res = await fetch('/api/resources');
@@ -1546,7 +1555,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ];
             }
-
+            resourcesLoaded = true;
+            resourcesLoading = false;
         }
 
         renderResourceCategories(allResources);
@@ -2959,7 +2969,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    renderResources();
     renderTools();
 
     const views = {
@@ -3052,6 +3061,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let cubeRotationTimer = null;
+
+    function onTabSettled(viewKey) {
+        if (viewKey === 'social') {
+            renderSocialButtons();
+        } else if (viewKey === 'contact') {
+            renderContactButtons();
+        } else if (viewKey === 'resource') {
+            const resSearchInput = document.getElementById('resource-search');
+            renderResources(resSearchInput ? resSearchInput.value : '', activeResourceCategory);
+        } else if (viewKey === 'preset') {
+            if (typeof window.loadPresetsIfNeeded === 'function') {
+                window.loadPresetsIfNeeded();
+            }
+        }
+    }
 
     function navigateToRoute() {
         if (document.body.classList.contains('legal-modal-open') || isModalAnimating) {
@@ -3171,6 +3195,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeViewKey === 'home') {
                     requestAnimationFrame(updateTimelineConnector);
                 }
+
+                onTabSettled(activeViewKey);
             }, 700);
         } else if (targetViewEl) {
             document.documentElement.style.setProperty('--cube-rot-y', `${targetAngle}deg`);
@@ -3191,6 +3217,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeViewKey === 'home') {
                 requestAnimationFrame(updateTimelineConnector);
             }
+
+            onTabSettled(activeViewKey);
         }
     }
 

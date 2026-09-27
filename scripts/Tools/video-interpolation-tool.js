@@ -158,12 +158,16 @@
             this.device=await adapter.requestDevice();
             onLog('[RIFE] Loading RIFE model...');
             const localModelUrl='assets/models/rife47_ensemble_True_scale_1_sim.onnx';
-            const remoteUrls=['https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx','https://hf-mirror.com/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx'];
+            const hfBase = window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main';
+            const remoteUrls=[
+                `${hfBase}/models/rife47_ensemble_True_scale_1_sim.onnx`,
+                'https://huggingface.co/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx',
+                'https://hf-mirror.com/yuvraj108c/rife-onnx/resolve/main/rife47_ensemble_True_scale_1_sim.onnx'
+            ];
             let modelBuffer=null;
             const cacheName='chros-offline-assets-v1'; let cache=null; if('caches' in window) try{cache=await caches.open(cacheName);}catch(e){}
             if(cache){ try{ const full=new URL(localModelUrl,window.location.origin).href; const m=await cache.match(full)||await cache.match(localModelUrl); if(m){ onLog('[RIFE] Loading from offline cache...'); modelBuffer=await m.arrayBuffer(); } }catch(e){} }
-            if(!modelBuffer){ try{ onLog('[RIFE] Fetching local model...'); const r=await fetch(localModelUrl); if(r.ok) modelBuffer=await r.arrayBuffer(); }catch(e){} }
-            if(!modelBuffer){ for(const u of remoteUrls){ try{ onLog('[RIFE] Fetching remote model...'); const r=await fetch(u); if(r.ok){ modelBuffer=await r.arrayBuffer(); if(cache){ try{ const full=new URL(localModelUrl,window.location.origin).href; const cr=new Response(modelBuffer.slice(0),{headers:{'Content-Type':'application/octet-stream'}}); await cache.put(full,cr.clone()); await cache.put(localModelUrl,cr);}catch(e){} } break; } }catch(e){} } }
+            if(!modelBuffer){ for(const u of remoteUrls){ try{ onLog('[RIFE] Fetching RIFE model from HuggingFace...'); const r=await fetch(u); if(r.ok){ modelBuffer=await r.arrayBuffer(); if(cache){ try{ const full=new URL(localModelUrl,window.location.origin).href; const cr=new Response(modelBuffer.slice(0),{headers:{'Content-Type':'application/octet-stream'}}); await cache.put(full,cr.clone()); await cache.put(localModelUrl,cr);}catch(e){} } break; } }catch(e){} } }
             if(!modelBuffer) throw new Error('Failed to load RIFE model');
             if (typeof ort === 'undefined' || !ort.InferenceSession) {
                 if (typeof window.ensureOnnxRuntime !== 'function') throw new Error('ONNX Runtime failed to load.');
@@ -234,12 +238,13 @@
             );
         });
 
+        const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
         const attempts = [];
         if (isMultiThread) {
-            attempts.push({ label: 'local assets (MT)', base: localBaseURL, core: 'ffmpeg-core', mt: true, timeout: 15000 });
+            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true, timeout: 30000 });
             attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
         }
-        attempts.push({ label: 'local assets (ST)', base: localBaseURL, core: 'ffmpeg-core-st', mt: false, timeout: 20000 });
+        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false, timeout: 35000 });
         attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
 
         for (const attempt of attempts) {

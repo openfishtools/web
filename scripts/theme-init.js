@@ -12,4 +12,6 @@
         root.classList.remove('light-theme');
         root.classList.add('dark-theme');
     }
+
+    window.HF_RESOURCE_BASE = 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main';
 })();

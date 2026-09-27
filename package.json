@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "build": "echo 'Static build done'"
+    "build": "echo 'Backend ready'",
+    "build:cf": "node scripts/build-cf.js",
+    "deploy:cf": "npm run build:cf && npx wrangler pages deploy dist-cf --project-name=editorstuff"
   },
   "dependencies": {
     "@vercel/otel": "^1.14.2",

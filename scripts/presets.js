@@ -1546,7 +1546,9 @@
             presetDeepLinkToken++;
             closeAllPresetPickers();
             closePresetModal(true);
-            if ((location.hash || '') === '#preset') {
+            const curH = (location.hash || '').toLowerCase();
+            if (curH === '#preset' || curH === '#presets') {
+                loadPresetsData();
                 const grid = document.getElementById('preset-grid');
                 if (grid) observeTikTokThumbs(grid);
             }
@@ -1564,19 +1566,34 @@
             cardEl.style.borderRadius = geom.borderRadius;
         });
 
-        fetch('/api/presets')
-            .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
-            .then(data => {
-                if (Array.isArray(data)) allPresetsCache = data.filter(p => !p.hidden);
-                presetsFetched = true;
-                renderPresets(activePresetSoftware);
-                handlePendingPresetDeepLink();
-            })
-            .catch(err => {
-                console.warn('[Presets] Failed to load:', err);
-                presetsFetched = true;
-                renderPresets(activePresetSoftware);
-            });
+        let presetsFetching = false;
+        function loadPresetsData() {
+            if (presetsFetched || presetsFetching) return;
+            presetsFetching = true;
+            fetch('/api/presets')
+                .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
+                .then(data => {
+                    if (Array.isArray(data)) allPresetsCache = data.filter(p => !p.hidden);
+                    presetsFetched = true;
+                    presetsFetching = false;
+                    renderPresets(activePresetSoftware);
+                    handlePendingPresetDeepLink();
+                })
+                .catch(err => {
+                    console.warn('[Presets] Failed to load:', err);
+                    presetsFetched = true;
+                    presetsFetching = false;
+                    renderPresets(activePresetSoftware);
+                });
+        }
+
+        window.loadPresetsIfNeeded = loadPresetsData;
+
+        const rawHash = (location.hash || '').toLowerCase();
+        const isPresetRoute = rawHash === '#preset' || rawHash === '#presets' || !!window.pendingPresetIndex;
+        if (isPresetRoute) {
+            loadPresetsData();
+        }
     }
 
     initPresetPage();

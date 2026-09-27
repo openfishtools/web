@@ -1,5 +1,7 @@
 .env
 node_modules
 dist
+dist-cf
 .vercel
+.wrangler
 *.log

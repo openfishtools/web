@@ -396,12 +396,13 @@
             );
         });
 
+        const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
         const attempts = [];
         if (isMultiThread) {
-            attempts.push({ label: 'local assets (MT)', base: localBaseURL, core: 'ffmpeg-core', mt: true, timeout: 15000 });
+            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true, timeout: 30000 });
             attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
         }
-        attempts.push({ label: 'local assets (ST)', base: localBaseURL, core: 'ffmpeg-core-st', mt: false, timeout: 20000 });
+        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false, timeout: 35000 });
         attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
 
         for (const attempt of attempts) {
