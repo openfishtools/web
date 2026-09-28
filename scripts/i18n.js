@@ -368,6 +368,48 @@
                     </div>
                 </div>
             `,
+            "patcher_desc_tbt_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Bitrate:</strong> Capped 9.5 Mbps (Sweetspot)</li>
+                        <li><span class="material-symbols-rounded">palette</span><strong>Color:</strong> Rec.709 (CFR)</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Optimasi stream cerdas agar tepat di bawah ambang pemicu kompresi TikTok (CRF 18, GOP 60) tanpa memanipulasi durasi kontainer.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_tbt_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 720p</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Bitrate:</strong> Capped 6.0 Mbps</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Konversi ke 720p dengan profil ingest optimal untuk hemat kuota dan unggahan kilat tanpa degradasi warna.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_tbt_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolusi:</strong> 1080p Full HD</li>
+                        <li><span class="material-symbols-rounded">auto_fix_high</span><strong>Detail:</strong> Micro-Unsharp Sharpener</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Menyelaraskan resolusi ke standar 1080p dengan penajaman mikro dan batas bitrate 9.5 Mbps untuk hasil upload paling jernih.</span>
+                    </div>
+                </div>
+            `,
             "patcher_desc_fps": `
                 <div class="tiktok-desc-card">
                     <ul class="tiktok-desc-list">
@@ -971,6 +1013,48 @@
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
                         <span>Compresses video at Full HD 1080p resolution with high bitrate allocation to preserve motion clarity, followed by MP4 container metadata reconstruction.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_tbt_off": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Bitrate:</strong> Capped 9.5 Mbps (Sweetspot)</li>
+                        <li><span class="material-symbols-rounded">palette</span><strong>Color:</strong> Rec.709 (CFR)</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Smart stream optimization tuned right below TikTok's compression threshold (CRF 18, GOP 60) without container header corruption.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_tbt_720p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 720p</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Bitrate:</strong> Capped 6.0 Mbps</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>720p conversion with optimized ingest profile for fast, bandwidth-friendly uploads without color degradation.</span>
+                    </div>
+                </div>
+            `,
+            "patcher_desc_tbt_1080p": `
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">movie</span><strong>Format:</strong> .mp4 (Faststart)</li>
+                        <li><span class="material-symbols-rounded">aspect_ratio</span><strong>Resolution:</strong> 1080p Full HD</li>
+                        <li><span class="material-symbols-rounded">auto_fix_high</span><strong>Detail:</strong> Micro-Unsharp Sharpener</li>
+                    </ul>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Aligns video to 1080p Full HD standard with micro-sharpening and capped 9.5 Mbps bitrate for ultra-crisp playback.</span>
                     </div>
                 </div>
             `,
