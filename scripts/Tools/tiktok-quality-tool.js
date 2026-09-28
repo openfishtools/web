@@ -1074,20 +1074,32 @@
         checkExtensionPresence().then(updateExtensionWarning);
 
         // Position indicator based on the active option element (JS-driven, works for N options)
-        function updateIndicator(track) {
+        function updateIndicator(track, instant) {
             const indicator = track.querySelector('.tiktok-switch-indicator');
             const active = track.querySelector('.tiktok-switch-option.active');
             if (!indicator || !active) return;
-            indicator.style.left = active.offsetLeft + 'px';
-            indicator.style.width = active.offsetWidth + 'px';
+            if (instant) {
+                // Disable transition for initial paint so it snaps to correct position
+                indicator.style.transition = 'none';
+                indicator.style.left = active.offsetLeft + 'px';
+                indicator.style.width = active.offsetWidth + 'px';
+                // Re-enable transition after paint
+                requestAnimationFrame(() => {
+                    indicator.style.transition = '';
+                });
+            } else {
+                indicator.style.left = active.offsetLeft + 'px';
+                indicator.style.width = active.offsetWidth + 'px';
+            }
         }
 
         const vSwitch = document.getElementById('tiktok-version-switch');
         const cRow = document.getElementById('tiktok-compress-row');
         const cSwitch = document.getElementById('tiktok-compress-mode');
 
+        // Use rAF so browser finishes layout before we read offsetLeft/offsetWidth
         if (vSwitch) {
-            updateIndicator(vSwitch);
+            requestAnimationFrame(() => updateIndicator(vSwitch, true));
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
@@ -1105,7 +1117,7 @@
         }
 
         if (cSwitch) {
-            updateIndicator(cSwitch);
+            requestAnimationFrame(() => updateIndicator(cSwitch, true));
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     if (opt.classList.contains('disabled')) {
