@@ -1073,33 +1073,39 @@
         updateCompressUIForSpecs();
         checkExtensionPresence().then(updateExtensionWarning);
 
-        // Position indicator based on the active option element (JS-driven, works for N options)
+        // Position indicator based on active option. JS-driven, works for any N options.
         function updateIndicator(track, instant) {
             const indicator = track.querySelector('.tiktok-switch-indicator');
             const active = track.querySelector('.tiktok-switch-option.active');
             if (!indicator || !active) return;
             if (instant) {
-                // Disable transition for initial paint so it snaps to correct position
                 indicator.style.transition = 'none';
                 indicator.style.left = active.offsetLeft + 'px';
                 indicator.style.width = active.offsetWidth + 'px';
-                // Re-enable transition after paint
-                requestAnimationFrame(() => {
-                    indicator.style.transition = '';
-                });
+                requestAnimationFrame(() => { indicator.style.transition = ''; });
             } else {
                 indicator.style.left = active.offsetLeft + 'px';
                 indicator.style.width = active.offsetWidth + 'px';
             }
         }
 
+        // Retry until the active option has a real width (handles modal open animations)
+        function snapWhenReady(track, tries) {
+            if (tries === undefined) tries = 30; // max ~500ms at 60fps
+            const active = track.querySelector('.tiktok-switch-option.active');
+            if (!active || active.offsetWidth === 0) {
+                if (tries > 0) requestAnimationFrame(() => snapWhenReady(track, tries - 1));
+                return;
+            }
+            updateIndicator(track, true);
+        }
+
         const vSwitch = document.getElementById('tiktok-version-switch');
         const cRow = document.getElementById('tiktok-compress-row');
         const cSwitch = document.getElementById('tiktok-compress-mode');
 
-        // Use double rAF so browser fully finishes layout+paint before reading offsetLeft
         if (vSwitch) {
-            requestAnimationFrame(() => requestAnimationFrame(() => updateIndicator(vSwitch, true)));
+            snapWhenReady(vSwitch);
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
@@ -1117,7 +1123,7 @@
         }
 
         if (cSwitch) {
-            requestAnimationFrame(() => requestAnimationFrame(() => updateIndicator(cSwitch, true)));
+            snapWhenReady(cSwitch);
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     if (opt.classList.contains('disabled')) {
