@@ -1037,7 +1037,7 @@
                     <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
                     <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
                     <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
-                    <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'T B T'}</div>
+                    <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'TEMP'}</div>
                 </div>
             </div>
 
