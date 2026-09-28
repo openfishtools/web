@@ -920,14 +920,19 @@
             }
         }
 
-        cSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => {
+        const allOpts = Array.from(cSwitch.querySelectorAll('.tiktok-switch-option'));
+        let activeIdx = 0;
+        allOpts.forEach((o, i) => {
             if (o.getAttribute('data-mode') === compressMode) {
                 o.classList.add('active');
+                activeIdx = i;
             } else {
                 o.classList.remove('active');
             }
         });
         cSwitch.setAttribute('data-selected', compressMode);
+        cSwitch.setAttribute('data-selected-idx', activeIdx.toString());
+        cSwitch.style.setProperty('--idx', activeIdx.toString());
         updateDesc();
     }
 
@@ -1024,14 +1029,19 @@
         const optContainer = document.getElementById('tool-dynamic-options');
         if (!optContainer) return;
 
-        const vIdx = ['v1', 'v3', 'binary', 'fps'].indexOf(currentVersion);
+        const versionList = ['v1', 'v3', 'binary', 'fps', 'tbt'];
+        const vIdx = versionList.indexOf(currentVersion);
         const selectedIdx = vIdx >= 0 ? vIdx : 2;
         const showCompress = (currentVersion !== 'v1');
+
+        const compressList = ['off', '720p', '1080p'];
+        const cIdx = compressList.indexOf(compressMode);
+        const selectedCIdx = cIdx >= 0 ? cIdx : 0;
 
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
             <div class="tiktok-switch-scroll">
-                <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}">
+                <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="5" data-selected-idx="${selectedIdx}" style="--total: 5; --idx: ${selectedIdx};">
                     <div class="tiktok-switch-indicator"></div>
                     <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
                     <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
@@ -1044,7 +1054,7 @@
             <div id="tiktok-compress-row" style="display: ${showCompress ? 'block' : 'none'};">
                 <div class="tiktok-switcher-label">${t('patcher_compress_title')}</div>
                 <div class="tiktok-switch-scroll">
-                    <div class="tiktok-switch-track" id="tiktok-compress-mode" data-selected="${compressMode}">
+                    <div class="tiktok-switch-track" id="tiktok-compress-mode" data-selected="${compressMode}" data-count="3" data-selected-idx="${selectedCIdx}" style="--total: 3; --idx: ${selectedCIdx};">
                         <div class="tiktok-switch-indicator"></div>
                         <div class="tiktok-switch-option ${compressMode === 'off' ? 'active' : ''}" data-mode="off">OFF</div>
                         <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
@@ -1073,46 +1083,21 @@
         updateCompressUIForSpecs();
         checkExtensionPresence().then(updateExtensionWarning);
 
-        // Position indicator based on active option. JS-driven, works for any N options.
-        function updateIndicator(track, instant) {
-            const indicator = track.querySelector('.tiktok-switch-indicator');
-            const active = track.querySelector('.tiktok-switch-option.active');
-            if (!indicator || !active) return;
-            if (instant) {
-                indicator.style.transition = 'none';
-                indicator.style.left = active.offsetLeft + 'px';
-                indicator.style.width = active.offsetWidth + 'px';
-                requestAnimationFrame(() => { indicator.style.transition = ''; });
-            } else {
-                indicator.style.left = active.offsetLeft + 'px';
-                indicator.style.width = active.offsetWidth + 'px';
-            }
-        }
-
-        // Retry until the active option has a real width (handles modal open animations)
-        function snapWhenReady(track, tries) {
-            if (tries === undefined) tries = 30; // max ~500ms at 60fps
-            const active = track.querySelector('.tiktok-switch-option.active');
-            if (!active || active.offsetWidth === 0) {
-                if (tries > 0) requestAnimationFrame(() => snapWhenReady(track, tries - 1));
-                return;
-            }
-            updateIndicator(track, true);
-        }
-
         const vSwitch = document.getElementById('tiktok-version-switch');
         const cRow = document.getElementById('tiktok-compress-row');
         const cSwitch = document.getElementById('tiktok-compress-mode');
 
         if (vSwitch) {
-            snapWhenReady(vSwitch);
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
-                    vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
+                    const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allOpts.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     currentVersion = opt.getAttribute('data-version') || 'binary';
+                    const optIdx = allOpts.indexOf(opt);
                     vSwitch.setAttribute('data-selected', currentVersion);
-                    updateIndicator(vSwitch);
+                    vSwitch.setAttribute('data-selected-idx', optIdx.toString());
+                    vSwitch.style.setProperty('--idx', optIdx.toString());
                     if (cRow) {
                         cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
                     }
@@ -1123,7 +1108,6 @@
         }
 
         if (cSwitch) {
-            snapWhenReady(cSwitch);
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     if (opt.classList.contains('disabled')) {
@@ -1132,11 +1116,14 @@
                         }
                         return;
                     }
-                    cSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
+                    const allOpts = Array.from(cSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allOpts.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     compressMode = opt.getAttribute('data-mode') || 'off';
+                    const optIdx = allOpts.indexOf(opt);
                     cSwitch.setAttribute('data-selected', compressMode);
-                    updateIndicator(cSwitch);
+                    cSwitch.setAttribute('data-selected-idx', optIdx.toString());
+                    cSwitch.style.setProperty('--idx', optIdx.toString());
                     updateDesc();
                     updateExtensionWarning();
                 });

@@ -38,13 +38,19 @@
         const optContainer = document.getElementById('tool-dynamic-options');
         if (!optContainer) return;
 
+        const presetList = ['slow', 'medium', 'fast'];
+        const pIdx = presetList.indexOf(selectedPreset);
+        const selectedPIdx = pIdx >= 0 ? pIdx : 1;
+
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('compressor_preset_title') || 'Choose Compression Preset'}</div>
-            <div class="tiktok-switch-track" id="compressor-preset-switch" data-selected="${selectedPreset}">
-                <div class="tiktok-switch-indicator"></div>
-                <div class="tiktok-switch-option ${selectedPreset === 'slow' ? 'active' : ''}" data-preset="slow">SLOW</div>
-                <div class="tiktok-switch-option ${selectedPreset === 'medium' ? 'active' : ''}" data-preset="medium">MEDIUM</div>
-                <div class="tiktok-switch-option ${selectedPreset === 'fast' ? 'active' : ''}" data-preset="fast">FAST</div>
+            <div class="tiktok-switch-scroll">
+                <div class="tiktok-switch-track" id="compressor-preset-switch" data-selected="${selectedPreset}" data-count="3" data-selected-idx="${selectedPIdx}" style="--total: 3; --idx: ${selectedPIdx};">
+                    <div class="tiktok-switch-indicator"></div>
+                    <div class="tiktok-switch-option ${selectedPreset === 'slow' ? 'active' : ''}" data-preset="slow">SLOW</div>
+                    <div class="tiktok-switch-option ${selectedPreset === 'medium' ? 'active' : ''}" data-preset="medium">MEDIUM</div>
+                    <div class="tiktok-switch-option ${selectedPreset === 'fast' ? 'active' : ''}" data-preset="fast">FAST</div>
+                </div>
             </div>
 
             <div class="tiktok-preset-desc" id="compressor-info-desc"></div>
@@ -67,10 +73,14 @@
         if (pSwitch) {
             pSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
-                    pSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
+                    const allOpts = Array.from(pSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allOpts.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     selectedPreset = opt.getAttribute('data-preset') || 'medium';
+                    const optIdx = allOpts.indexOf(opt);
                     pSwitch.setAttribute('data-selected', selectedPreset);
+                    pSwitch.setAttribute('data-selected-idx', optIdx.toString());
+                    pSwitch.style.setProperty('--idx', optIdx.toString());
                     updateDesc();
                 });
             });
