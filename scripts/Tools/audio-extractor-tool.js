@@ -157,35 +157,43 @@
                 );
             });
 
-            const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-            const attempts = [];
-            if (isMultiThread) {
-                attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true, timeout: 30000 });
-                attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
-            }
-            attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false, timeout: 35000 });
-            attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
-
             let ffmpeg = null;
-            for (const attempt of attempts) {
-                let inst = null;
-                try {
-                    const config = {
-                        coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), attempt.timeout, `${attempt.label} core download`),
-                        wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), attempt.timeout, `${attempt.label} wasm download`)
-                    };
-                    if (attempt.mt) {
-                        config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), attempt.timeout, `${attempt.label} worker download`);
+
+            if (window.CutefishFFmpegLoader) {
+                const logFn = (msg) => console.log(msg);
+                ffmpeg = await window.CutefishFFmpegLoader.buildFFmpegInstance({ isMultiThread, log: logFn });
+            } else {
+                // Fallback: CDN-first, no hard download timeout
+                const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
+                const withInitTimeout = (p, lbl) => new Promise((res, rej) => {
+                    const t = setTimeout(() => rej(new Error(`${lbl} engine init timed out after 30s`)), 30000);
+                    p.then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+                });
+                const attempts = [];
+                if (isMultiThread) {
+                    attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
+                    attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
+                }
+                attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
+                attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
+                for (const attempt of attempts) {
+                    let inst = null;
+                    try {
+                        const config = {
+                            coreURL: await toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'),
+                            wasmURL: await toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm')
+                        };
+                        if (attempt.mt) {
+                            config.workerURL = await toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript');
+                        }
+                        inst = new FFmpeg();
+                        await withInitTimeout(inst.load(config), attempt.label);
+                        ffmpeg = inst;
+                        break;
+                    } catch (err) {
+                        if (inst) { try { inst.terminate(); } catch (_) {} }
+                        console.warn(`[Audio Extractor] ${attempt.label} failed:`, errMsg(err));
                     }
-                    inst = new FFmpeg();
-                    await withTimeout(inst.load(config), attempt.timeout, `${attempt.label} engine init`);
-                    ffmpeg = inst;
-                    break;
-                } catch (err) {
-                    if (inst) {
-                        try { inst.terminate(); } catch (_) {}
-                    }
-                    console.warn(`[Audio Extractor] ${attempt.label} failed:`, errMsg(err));
                 }
             }
 

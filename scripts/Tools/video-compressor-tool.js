@@ -210,10 +210,6 @@
                 try { return JSON.stringify(e); } catch (_) { return String(e); }
             };
 
-            let localBaseURL = window.location.origin + '/assets/ffmpeg';
-            try {
-                localBaseURL = new URL('assets/ffmpeg', window.location.href).href.replace(/\/$/, '');
-            } catch (_) {}
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
             const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) ||
@@ -260,17 +256,93 @@
                 );
             });
 
+            // Cache-aware WASM fetcher: CacheStorage first, then streaming download with
+            // live progress, then saves to cache. No hard download timeout — stall detector
+            // resets each chunk, so slow connections keep going while truly stalled ones fail.
+            const CACHE_NAME = 'cutefish-ffmpeg-wasm-v1';
+            const fetchWasmWithCache = async (url, mimeType, label) => {
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    const hit = await cache.match(url);
+                    if (hit) {
+                        log(`  [Cache] ${label}: Loaded from local cache (instant).`);
+                        const buf = await hit.arrayBuffer();
+                        return URL.createObjectURL(new Blob([buf], { type: mimeType }));
+                    }
+                } catch (_) {}
+                const resp = await fetch(url, { mode: 'cors' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${label}`);
+                const contentLength = parseInt(resp.headers.get('Content-Length') || '0');
+                log(`  Downloading ${label}${contentLength > 0 ? ` (${(contentLength / 1048576).toFixed(1)} MB)` : ''}...`);
+                if (!resp.body) {
+                    const buf = await resp.arrayBuffer();
+                    try {
+                        const cache = await caches.open(CACHE_NAME);
+                        await cache.put(url, new Response(buf.slice(0), { headers: { 'Content-Type': mimeType, 'Content-Length': String(buf.byteLength) } }));
+                        log(`  [Cache] ${label}: Saved to local cache for future use.`);
+                    } catch (_) {}
+                    return URL.createObjectURL(new Blob([buf], { type: mimeType }));
+                }
+                const reader = resp.body.getReader();
+                const chunks = [];
+                let received = 0, lastLogTime = 0, stallTimer = null;
+                const STALL_MS = 60000;
+                const resetStall = (reject) => {
+                    clearTimeout(stallTimer);
+                    stallTimer = setTimeout(() => reject(new Error(`${label} download stalled (no data for 60s)`)), STALL_MS);
+                };
+                await new Promise((resolve, reject) => {
+                    resetStall(reject);
+                    (async () => {
+                        try {
+                            for (;;) {
+                                const { done, value } = await reader.read();
+                                if (done) { clearTimeout(stallTimer); break; }
+                                resetStall(reject);
+                                chunks.push(value);
+                                received += value.length;
+                                const now = Date.now();
+                                if (contentLength > 0 && now - lastLogTime > 2000) {
+                                    lastLogTime = now;
+                                    const pct = Math.round(received / contentLength * 100);
+                                    log(`    ${pct}% — ${(received / 1048576).toFixed(1)} MB / ${(contentLength / 1048576).toFixed(1)} MB`);
+                                }
+                            }
+                            resolve();
+                        } catch (e) { clearTimeout(stallTimer); reject(e); }
+                    })();
+                });
+                const merged = new Uint8Array(received);
+                let off = 0;
+                for (const c of chunks) { merged.set(c, off); off += c.length; }
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(url, new Response(merged.buffer, { headers: { 'Content-Type': mimeType, 'Content-Length': String(merged.length) } }));
+                    log(`  [Cache] ${label}: Saved to local cache for future use.`);
+                } catch (_) {}
+                return URL.createObjectURL(new Blob([merged], { type: mimeType }));
+            };
+
             logSection('FFmpeg Core Initialization');
             log(`  Multi-threading: ${isMultiThread ? 'Enabled' : 'Disabled'}`);
 
-            const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
+            if (window.CutefishFFmpegLoader) {
+                loadedInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({
+                    isMultiThread,
+                    log,
+                    hfBase: (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg'
+                });
+            } else {
+                const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
+            // CDN first: direct CORS *, no 302 redirect chains — Safari-friendly.
+            // HuggingFace as fallback (redirect chain triggers Safari CORS strictness).
             const attempts = [];
             if (isMultiThread) {
-                attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true, timeout: 30000 });
-                attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
+                attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
+                attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
             }
-            attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false, timeout: 35000 });
-            attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
+            attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
+            attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
 
             let loadedInstance = null;
             for (const attempt of attempts) {
@@ -278,14 +350,15 @@
                 try {
                     log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
                     const config = {
-                        coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), attempt.timeout, `${attempt.label} core download`),
-                        wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), attempt.timeout, `${attempt.label} wasm download`)
+                        coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`, 'text/javascript', `${attempt.label} core.js`),
+                        wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm', `${attempt.label} core.wasm`)
                     };
                     if (attempt.mt) {
-                        config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), attempt.timeout, `${attempt.label} worker download`);
+                        config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`);
                     }
                     inst = new FFmpeg();
-                    await withTimeout(inst.load(config), attempt.timeout, `${attempt.label} engine init`);
+                    // 30s for WASM JIT compilation (download already done above)
+                    await withTimeout(inst.load(config), 30000, `${attempt.label} engine init`);
                     log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
                     loadedInstance = inst;
                     break;
@@ -295,6 +368,7 @@
                     }
                     log(`  ${attempt.label} failed: ${errMsg(err)}`);
                 }
+            }
             }
 
             if (!loadedInstance) {

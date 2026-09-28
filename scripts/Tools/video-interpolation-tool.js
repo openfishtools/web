@@ -207,7 +207,7 @@
         if(ffmpegInstance) return ffmpegInstance;
         const ready = await loadFFmpegLibraries();
         if(!ready || !window.FFmpegWASM || !window.FFmpegUtil) throw new Error('FFmpeg library failed to load');
-        const {FFmpeg} = window.FFmpegWASM; 
+        const {FFmpeg} = window.FFmpegWASM;
         const {toBlobURL} = window.FFmpegUtil;
         const errMsg = (e) => {
             if (!e) return 'unknown error';
@@ -216,56 +216,50 @@
             try { return JSON.stringify(e); } catch (_) { return String(e); }
         };
 
-        let localBaseURL = window.location.origin + '/assets/ffmpeg';
-        try {
-            localBaseURL = new URL('assets/ffmpeg', window.location.href).href.replace(/\/$/, '');
-        } catch (_) {}
-        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || 
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) ||
                            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
         const isMultiThread = !isMobileDevice && typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated === true;
 
-        const withTimeout = (promise, ms, label) => new Promise((resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error(`${label || 'Operation'} timed out after ${Math.round(ms / 1000)}s`)), ms);
-            Promise.resolve(promise).then(
-                (v) => { clearTimeout(timer); resolve(v); },
-                (e) => {
-                    clearTimeout(timer);
-                    reject(e instanceof Error ? e : new Error(errMsg(e)));
-                }
-            );
-        });
+        const logFn = (msg) => console.log(msg);
 
+        if (window.CutefishFFmpegLoader) {
+            ffmpegInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({ isMultiThread, log: logFn });
+            ffmpegInstance.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
+            return ffmpegInstance;
+        }
+
+        // Fallback: CDN-first with no hard download timeout
+        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
+        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
+        const withInitTimeout = (p, lbl) => new Promise((res, rej) => {
+            const t = setTimeout(() => rej(new Error(`${lbl} engine init timed out after 30s`)), 30000);
+            p.then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+        });
         const attempts = [];
         if (isMultiThread) {
-            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true, timeout: 30000 });
-            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true, timeout: 30000 });
+            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
+            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
         }
-        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false, timeout: 35000 });
-        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false, timeout: 35000 });
-
+        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
+        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
         for (const attempt of attempts) {
             let inst = null;
             try {
                 const config = {
-                    coreURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'), attempt.timeout, `${attempt.label} core download`),
-                    wasmURL: await withTimeout(toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm'), attempt.timeout, `${attempt.label} wasm download`)
+                    coreURL: await toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'),
+                    wasmURL: await toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm')
                 };
                 if (attempt.mt) {
-                    config.workerURL = await withTimeout(toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript'), attempt.timeout, `${attempt.label} worker download`);
+                    config.workerURL = await toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript');
                 }
                 inst = new FFmpeg();
                 inst.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
-                await withTimeout(inst.load(config), attempt.timeout, `${attempt.label} engine init`);
+                await withInitTimeout(inst.load(config), attempt.label);
                 ffmpegInstance = inst;
                 return ffmpegInstance;
             } catch (err) {
-                if (inst) {
-                    try { inst.terminate(); } catch (_) {}
-                }
+                if (inst) { try { inst.terminate(); } catch (_) {} }
                 console.warn(`[Video Interp] ${attempt.label} failed:`, errMsg(err));
             }
         }

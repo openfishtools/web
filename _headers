@@ -16,6 +16,9 @@
 /assets/ffmpeg/*
   Cache-Control: public, max-age=31536000, immutable
 
+/assets/ffmpeg/ffmpeg-loader.js
+  Cache-Control: no-cache, must-revalidate
+
 /assets/icon/*
   Cache-Control: public, max-age=3600, must-revalidate
 
