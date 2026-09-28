@@ -37,10 +37,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// Redirect root visit to Cloudflare frontend
-app.get('/', (req, res) => {
-    res.redirect(302, 'https://cutefish.my.id');
-});
+// Serve static files locally (frontend is on Cloudflare Pages in production)
+app.use(express.static(path.join(__dirname, '..')));
 
 app.use((req, res, next) => {
     const rawPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;

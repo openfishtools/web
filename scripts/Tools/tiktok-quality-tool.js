@@ -968,6 +968,10 @@
             if (compressMode === '720p') baseDesc = t('patcher_desc_binary_720p');
             else if (compressMode === '1080p') baseDesc = t('patcher_desc_binary_1080p');
             else baseDesc = t('patcher_desc_binary_off');
+        } else if (currentVersion === 'tbt') {
+            if (compressMode === '720p') baseDesc = t('patcher_desc_tbt_720p') || 'TBT 720p Compress + Patch';
+            else if (compressMode === '1080p') baseDesc = t('patcher_desc_tbt_1080p') || 'TBT 1080p Compress + Patch';
+            else baseDesc = t('patcher_desc_tbt_off') || 'TBT Metadata Patch Only (Direct pass-through)';
         } else {
             if (compressMode === '720p') baseDesc = t('patcher_desc_fry_720p');
             else if (compressMode === '1080p') baseDesc = t('patcher_desc_fry_1080p');
@@ -1026,12 +1030,13 @@
 
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
-            <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="4" data-selected-idx="${selectedIdx}">
+            <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="5" data-selected-idx="${selectedIdx}">
                 <div class="tiktok-switch-indicator"></div>
                 <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
                 <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
                 <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
                 <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
+                <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'T B T'}</div>
             </div>
 
             <div id="tiktok-compress-row" style="display: ${showCompress ? 'block' : 'none'};">
@@ -1249,6 +1254,12 @@
                     await window.processVideoBinary(file, effectiveCompressMode);
                 } else {
                     throw new Error('Binary module is not loaded.');
+                }
+            } else if (currentVersion === 'tbt') {
+                if (typeof window.processVideoTBT === 'function') {
+                    await window.processVideoTBT(file, effectiveCompressMode);
+                } else {
+                    throw new Error('TBT module is not loaded.');
                 }
             } else {
                 if (typeof window.processVideoFRY === 'function') {

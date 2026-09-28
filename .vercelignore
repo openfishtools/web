@@ -2,3 +2,15 @@ server.js
 run.bat
 dist-cf/
 functions/
+index.html
+admin.html
+styles/
+scripts/
+assets/
+sw.js
+favicon.ico
+_headers
+_redirects
+userscript/
+t_version.json
+wrangler.jsonc
