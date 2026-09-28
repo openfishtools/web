@@ -1030,22 +1030,26 @@
 
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
-            <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="5" data-selected-idx="${selectedIdx}">
-                <div class="tiktok-switch-indicator"></div>
-                <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
-                <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
-                <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
-                <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
-                <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'T B T'}</div>
+            <div class="tiktok-switch-scroll">
+                <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}">
+                    <div class="tiktok-switch-indicator"></div>
+                    <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
+                    <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
+                    <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
+                    <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
+                    <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'T B T'}</div>
+                </div>
             </div>
 
             <div id="tiktok-compress-row" style="display: ${showCompress ? 'block' : 'none'};">
                 <div class="tiktok-switcher-label">${t('patcher_compress_title')}</div>
-                <div class="tiktok-switch-track" id="tiktok-compress-mode" data-selected="${compressMode}">
-                    <div class="tiktok-switch-indicator"></div>
-                    <div class="tiktok-switch-option ${compressMode === 'off' ? 'active' : ''}" data-mode="off">OFF</div>
-                    <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
-                    <div class="tiktok-switch-option ${compressMode === '1080p' ? 'active' : ''}" data-mode="1080p">1080P</div>
+                <div class="tiktok-switch-scroll">
+                    <div class="tiktok-switch-track" id="tiktok-compress-mode" data-selected="${compressMode}">
+                        <div class="tiktok-switch-indicator"></div>
+                        <div class="tiktok-switch-option ${compressMode === 'off' ? 'active' : ''}" data-mode="off">OFF</div>
+                        <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
+                        <div class="tiktok-switch-option ${compressMode === '1080p' ? 'active' : ''}" data-mode="1080p">1080P</div>
+                    </div>
                 </div>
             </div>
 
@@ -1069,20 +1073,28 @@
         updateCompressUIForSpecs();
         checkExtensionPresence().then(updateExtensionWarning);
 
+        // Position indicator based on the active option element (JS-driven, works for N options)
+        function updateIndicator(track) {
+            const indicator = track.querySelector('.tiktok-switch-indicator');
+            const active = track.querySelector('.tiktok-switch-option.active');
+            if (!indicator || !active) return;
+            indicator.style.left = active.offsetLeft + 'px';
+            indicator.style.width = active.offsetWidth + 'px';
+        }
+
         const vSwitch = document.getElementById('tiktok-version-switch');
         const cRow = document.getElementById('tiktok-compress-row');
         const cSwitch = document.getElementById('tiktok-compress-mode');
 
         if (vSwitch) {
+            updateIndicator(vSwitch);
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
-                    const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
-                    allOpts.forEach(o => o.classList.remove('active'));
+                    vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     currentVersion = opt.getAttribute('data-version') || 'binary';
                     vSwitch.setAttribute('data-selected', currentVersion);
-                    const optIdx = allOpts.indexOf(opt);
-                    if (optIdx >= 0) vSwitch.setAttribute('data-selected-idx', optIdx.toString());
+                    updateIndicator(vSwitch);
                     if (cRow) {
                         cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
                     }
@@ -1093,6 +1105,7 @@
         }
 
         if (cSwitch) {
+            updateIndicator(cSwitch);
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     if (opt.classList.contains('disabled')) {
@@ -1105,6 +1118,7 @@
                     opt.classList.add('active');
                     compressMode = opt.getAttribute('data-mode') || 'off';
                     cSwitch.setAttribute('data-selected', compressMode);
+                    updateIndicator(cSwitch);
                     updateDesc();
                     updateExtensionWarning();
                 });
