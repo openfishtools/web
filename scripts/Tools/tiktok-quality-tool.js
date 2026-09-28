@@ -1097,9 +1097,9 @@
         const cRow = document.getElementById('tiktok-compress-row');
         const cSwitch = document.getElementById('tiktok-compress-mode');
 
-        // Use rAF so browser finishes layout before we read offsetLeft/offsetWidth
+        // Use double rAF so browser fully finishes layout+paint before reading offsetLeft
         if (vSwitch) {
-            requestAnimationFrame(() => updateIndicator(vSwitch, true));
+            requestAnimationFrame(() => requestAnimationFrame(() => updateIndicator(vSwitch, true)));
             vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     vSwitch.querySelectorAll('.tiktok-switch-option').forEach(o => o.classList.remove('active'));
@@ -1117,7 +1117,7 @@
         }
 
         if (cSwitch) {
-            requestAnimationFrame(() => updateIndicator(cSwitch, true));
+            requestAnimationFrame(() => requestAnimationFrame(() => updateIndicator(cSwitch, true)));
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
                     if (opt.classList.contains('disabled')) {
