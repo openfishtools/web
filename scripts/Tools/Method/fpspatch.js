@@ -503,11 +503,11 @@ window.processVideoFPS = async function processVideoFPS(file, mode) {
             s.log(`  [2/2] Finalizing output package...`);
             const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
             if (typeof finalizeFn === 'function') {
-                finalizeFn(file, patchedBytes, 'fps');
+                finalizeFn(file, patchedBytes, 'hd');
             } else {
                 const blob     = new Blob([patchedBytes], { type: 'video/mp4' });
                 const url      = URL.createObjectURL(blob);
-                const filename = `${file.name.replace(/\.[^.]+$/, '')}_fps.mp4`;
+                const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = filename;
@@ -543,11 +543,11 @@ window.processVideoFPS = async function processVideoFPS(file, mode) {
 
         const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
         if (typeof finalizeFn === 'function') {
-            finalizeFn(file, finalResultBytes, 'fps');
+            finalizeFn(file, finalResultBytes, 'hd');
         } else {
             const blob     = new Blob([finalResultBytes], { type: 'video/mp4' });
             const url      = URL.createObjectURL(blob);
-            const filename = `${file.name.replace(/\.[^.]+$/, '')}_fps.mp4`;
+            const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;

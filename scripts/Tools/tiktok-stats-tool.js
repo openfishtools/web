@@ -84,6 +84,94 @@
         }
     }
 
+    let streamProgressInterval = null;
+    let currentProgressPct = 0;
+
+    function showErrorCard(msg) {
+        const errorCard = document.getElementById('stats-error-display');
+        const errorTitle = document.getElementById('stats-error-title');
+        const errorMsg = document.getElementById('stats-error-message');
+        if (!errorCard) return;
+
+        if (errorTitle) errorTitle.textContent = t('stats_err_title') || 'Video Tidak Ditemukan';
+        if (errorMsg) errorMsg.textContent = msg || t('stats_err_not_found') || 'Video mungkin telah dihapus, bersifat privat, atau tautan tidak valid.';
+        errorCard.classList.remove('hidden');
+
+        if (typeof window.updateOpenModalsLayout === 'function') {
+            window.updateOpenModalsLayout(true);
+        }
+    }
+
+    function hideErrorCard() {
+        const errorCard = document.getElementById('stats-error-display');
+        if (errorCard) errorCard.classList.add('hidden');
+    }
+
+    function startStreamProgress() {
+        const card = document.getElementById('stats-stream-progress-card');
+        const fill = document.getElementById('stats-progress-fill');
+        const pct = document.getElementById('stats-stream-progress-pct');
+        const label = document.getElementById('stats-stream-progress-text');
+        if (!card || !fill || !pct) return;
+
+        if (label) label.textContent = t('stats_downloading_stream') || 'Mengunduh stream video untuk cek FPS & Resolusi...';
+
+        currentProgressPct = 15;
+        fill.style.width = `${currentProgressPct}%`;
+        pct.textContent = `${currentProgressPct}%`;
+        card.classList.remove('hidden');
+
+        if (typeof window.updateOpenModalsLayout === 'function') {
+            window.updateOpenModalsLayout(true);
+        }
+
+        if (streamProgressInterval) clearInterval(streamProgressInterval);
+        streamProgressInterval = setInterval(() => {
+            if (currentProgressPct < 88) {
+                const step = Math.max(1, Math.round((90 - currentProgressPct) / 6));
+                currentProgressPct += step;
+                fill.style.width = `${currentProgressPct}%`;
+                pct.textContent = `${currentProgressPct}%`;
+            }
+        }, 180);
+    }
+
+    function completeStreamProgress() {
+        if (streamProgressInterval) {
+            clearInterval(streamProgressInterval);
+            streamProgressInterval = null;
+        }
+        const card = document.getElementById('stats-stream-progress-card');
+        const fill = document.getElementById('stats-progress-fill');
+        const pct = document.getElementById('stats-stream-progress-pct');
+        if (!card || !fill || !pct) return;
+
+        fill.style.width = '100%';
+        pct.textContent = '100%';
+
+        setTimeout(() => {
+            card.classList.add('hidden');
+            fill.style.width = '0%';
+            pct.textContent = '0%';
+            if (typeof window.updateOpenModalsLayout === 'function') {
+                window.updateOpenModalsLayout(true);
+            }
+        }, 320);
+    }
+
+    function hideStreamProgress() {
+        if (streamProgressInterval) {
+            clearInterval(streamProgressInterval);
+            streamProgressInterval = null;
+        }
+        const card = document.getElementById('stats-stream-progress-card');
+        const fill = document.getElementById('stats-progress-fill');
+        const pct = document.getElementById('stats-stream-progress-pct');
+        if (card) card.classList.add('hidden');
+        if (fill) fill.style.width = '0%';
+        if (pct) pct.textContent = '0%';
+    }
+
     function setInitialSkeletons() {
         const statsCover = document.getElementById('stats-video-cover');
         const statsCreatorName = document.getElementById('stats-creator-name');
@@ -95,16 +183,33 @@
         if (statsCreatorHandle) statsCreatorHandle.innerHTML = '<span class="stats-skeleton" style="width: 70px;"></span>';
         if (statsCaption) statsCaption.innerHTML = '<span class="stats-skeleton" style="width: 100%;"></span>';
 
-        const skeletonIds = [
+        const infoSkeletonIds = [
             'stats-upload-date', 'stats-region', 'stats-shadowban',
-            'stats-resolution', 'stats-fps', 'stats-bitrate', 'stats-duration', 'stats-size', 'stats-method',
             'stats-views', 'stats-likes', 'stats-comments', 'stats-shares', 'stats-saves', 'stats-engagement'
         ];
 
-        skeletonIds.forEach(id => {
+        infoSkeletonIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerHTML = '<span class="stats-skeleton"></span>';
         });
+
+        const streamValueIds = [
+            'stats-resolution', 'stats-fps', 'stats-bitrate', 'stats-duration', 'stats-size'
+        ];
+        streamValueIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
+
+        const statsMethod = document.getElementById('stats-method');
+        if (statsMethod) {
+            statsMethod.classList.remove('is-marquee');
+            statsMethod.textContent = '—';
+        }
+        const methodContainer = document.getElementById('stats-method-marquee-container');
+        if (methodContainer) {
+            methodContainer.classList.remove('is-overflowing');
+        }
     }
 
     function renderDynamicFields() {
@@ -112,6 +217,8 @@
         const statsUploadDate = document.getElementById('stats-upload-date');
         const statsRegion = document.getElementById('stats-region');
         const statsShadowban = document.getElementById('stats-shadowban');
+        const errorTitle = document.getElementById('stats-error-title');
+        const progressText = document.getElementById('stats-stream-progress-text');
 
         if (statsUploadDate) statsUploadDate.textContent = formatUploadDate(lastMetadata.create_time);
         if (statsRegion) statsRegion.textContent = formatRegion(lastMetadata.region);
@@ -124,6 +231,9 @@
                 statsShadowban.innerHTML = `<span class="stats-badge-safe"><span class="material-symbols-rounded">check_circle</span>${t('stats_safe')}</span>`;
             }
         }
+
+        if (errorTitle) errorTitle.textContent = t('stats_err_title') || 'Video Tidak Ditemukan';
+        if (progressText) progressText.textContent = t('stats_downloading_stream') || 'Mengunduh stream video untuk cek FPS & Resolusi...';
     }
 
     window.addEventListener('languageChanged', renderDynamicFields);
@@ -166,21 +276,46 @@
     function displayMethod(comment) {
         const statsMethod = document.getElementById('stats-method');
         if (!statsMethod) return;
-        if (!comment) {
-            statsMethod.textContent = 'Unknown';
+        const container = statsMethod.closest('.stats-method-marquee-container') || statsMethod.parentElement;
+
+        statsMethod.classList.remove('is-marquee');
+        if (container) container.classList.remove('is-overflowing');
+        statsMethod.style.removeProperty('--marquee-distance');
+        statsMethod.style.removeProperty('animation-duration');
+
+        const cleanComment = (comment || '').trim();
+        if (!cleanComment) {
+            statsMethod.textContent = '—';
             return;
         }
-        if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?$/.test(comment)) {
+
+        if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?$/.test(cleanComment)) {
             statsMethod.innerHTML = '';
             const a = document.createElement('a');
-            a.href = 'https://' + comment;
+            a.href = 'https://' + cleanComment;
             a.target = '_blank';
             a.rel = 'noopener';
             a.className = 'stats-method-link';
-            a.textContent = comment;
+            a.textContent = cleanComment;
             statsMethod.appendChild(a);
         } else {
-            statsMethod.textContent = comment;
+            statsMethod.textContent = cleanComment;
+        }
+
+        if (container) {
+            setTimeout(() => {
+                const scrollW = statsMethod.scrollWidth;
+                const clientW = container.clientWidth;
+                const diff = scrollW - clientW;
+                if (diff > 4) {
+                    container.classList.add('is-overflowing');
+                    const distance = diff + 16;
+                    statsMethod.style.setProperty('--marquee-distance', `-${distance}px`);
+                    const duration = Math.max(5, Math.min(14, Math.round(distance / 22) + 3));
+                    statsMethod.style.animationDuration = `${duration}s`;
+                    statsMethod.classList.add('is-marquee');
+                }
+            }, 60);
         }
     }
 
@@ -199,6 +334,8 @@
         if (isRunning) return;
         isRunning = true;
 
+        hideErrorCard();
+        hideStreamProgress();
         setButtonState('processing', t('status_processing') || 'Fetching details...');
 
         setInitialSkeletons();
@@ -282,6 +419,7 @@
                 }
             }
 
+            startStreamProgress();
             let videoMeta = await analyseVideoMetadataFromUrl(streamUrl);
             if ((!videoMeta || (!videoMeta.fps && !videoMeta.width)) && metadata && metadata.id) {
                 const proxyStreamUrl = `https://www.tikwm.com/video/media/play/${metadata.id}.mp4`;
@@ -292,6 +430,7 @@
                     }
                 }
             }
+            completeStreamProgress();
 
             const finalSize = metadata.size || (videoMeta && videoMeta.size) || 0;
             const finalDuration = metadata.duration || (videoMeta && videoMeta.duration) || 0;
@@ -340,8 +479,19 @@
 
         } catch (err) {
             console.error(err);
-            const failMsg = err.message || t('stats_err_failed') || 'Analysis failed.';
-            setButtonState('error', failMsg);
+            if (resultsContainer) {
+                resultsContainer.classList.add('hidden');
+            }
+            hideStreamProgress();
+            let failMsg = err.message || '';
+            if (!failMsg || failMsg.includes('Unable to resolve') || failMsg.includes('unavailable') || failMsg.includes('not found') || failMsg.includes('Could not extract') || failMsg.includes('Failed to fetch')) {
+                failMsg = t('stats_err_not_found') || 'Video mungkin telah dihapus, bersifat privat, atau tautan tidak valid.';
+            }
+            showErrorCard(failMsg);
+            setButtonState('error', t('stats_err_failed') || 'Analisis gagal.');
+            if (typeof window.showToast === 'function') {
+                window.showToast(failMsg);
+            }
         } finally {
             isRunning = false;
         }
@@ -365,6 +515,16 @@
             if (processLabel) processLabel.textContent = t('tool_stats_btn') || 'Analyse';
 
             optContainer.innerHTML = `
+                <div id="stats-error-display" class="stats-error-card hidden">
+                    <div class="stats-error-icon-wrapper">
+                        <span class="material-symbols-rounded">error_outline</span>
+                    </div>
+                    <div class="stats-error-content">
+                        <div class="stats-error-title" id="stats-error-title">${t('stats_err_title')}</div>
+                        <div class="stats-error-message" id="stats-error-message">${t('stats_err_not_found')}</div>
+                    </div>
+                </div>
+
                 <div id="tiktok-stats-results" class="stats-results-container hidden">
                     <div class="stats-preview-container">
                         <div class="stats-video-cover-wrapper">
@@ -393,6 +553,19 @@
 
                         <hr class="stats-section-divider">
 
+                        <div id="stats-stream-progress-card" class="stats-stream-progress-card hidden">
+                            <div class="stats-stream-progress-info">
+                                <span class="stats-stream-progress-label">
+                                    <span class="material-symbols-rounded">downloading</span>
+                                    <span id="stats-stream-progress-text">${t('stats_downloading_stream')}</span>
+                                </span>
+                                <span id="stats-stream-progress-pct" class="stats-stream-progress-pct">0%</span>
+                            </div>
+                            <div class="stats-stream-progress-track">
+                                <div id="stats-progress-fill" class="stats-stream-progress-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
                         <div class="stats-detail-row">
                             <span class="stats-detail-label"><span class="material-symbols-rounded">aspect_ratio</span><span>${t('stats_resolution')}</span></span>
                             <strong id="stats-resolution">—</strong>
@@ -413,9 +586,11 @@
                             <span class="stats-detail-label"><span class="material-symbols-rounded">save</span><span>${t('stats_size')}</span></span>
                             <strong id="stats-size">—</strong>
                         </div>
-                        <div class="stats-detail-row">
+                        <div class="stats-detail-row stats-method-row">
                             <span class="stats-detail-label"><span class="material-symbols-rounded">build</span><span>${t('stats_method')}</span></span>
-                            <strong id="stats-method">—</strong>
+                            <div class="stats-method-marquee-container" id="stats-method-marquee-container">
+                                <strong id="stats-method" class="stats-method-text">—</strong>
+                            </div>
                         </div>
 
                         <hr class="stats-section-divider">
@@ -474,6 +649,7 @@
                 clearBtn.addEventListener('click', () => {
                     inputUrl.value = '';
                     clearBtn.classList.add('hidden');
+                    hideErrorCard();
                     inputUrl.focus();
                 });
 
@@ -492,11 +668,13 @@
 
             let rawInput = inputUrl.value.trim();
             if (!rawInput) {
+                hideErrorCard();
                 showStatus(t('stats_err_enter_url') || 'Please enter a valid TikTok video URL.', "var(--md-sys-color-error)");
                 return;
             }
 
             if (!isTikTokUrl(rawInput)) {
+                hideErrorCard();
                 showStatus(t('stats_err_invalid_url') || 'URL is not a valid TikTok link.', "var(--md-sys-color-error)");
                 return;
             }

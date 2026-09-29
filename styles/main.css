@@ -4709,11 +4709,47 @@ body.dark .tiktok-ext-warning-header {
     align-items: center;
     gap: 6px;
     font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-right: 12px;
 }
 
 .stats-detail-label .material-symbols-rounded {
     font-size: 16px;
     color: var(--md-sys-color-primary);
+}
+
+.stats-method-marquee-container {
+    max-width: 60%;
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.stats-method-marquee-container.is-overflowing {
+    justify-content: flex-start;
+}
+
+.stats-method-text {
+    display: inline-block;
+    white-space: nowrap;
+    text-overflow: clip;
+    will-change: transform;
+}
+
+.stats-method-text.is-marquee {
+    animation-name: stats-method-scroll;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+}
+
+.stats-method-text.is-marquee:hover {
+    animation-play-state: paused;
 }
 
 .stats-method-link {
@@ -4764,6 +4800,114 @@ body.dark .tiktok-ext-warning-header {
     margin: 4px 0;
 }
 
+.stats-error-card {
+    background: rgba(244, 67, 54, 0.08);
+    border: 1px solid rgba(244, 67, 54, 0.28);
+    border-radius: var(--radius-m);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: var(--md-sys-color-on-surface);
+    animation: stats-fade-in 0.25s ease-out;
+}
+
+.stats-error-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(244, 67, 54, 0.16);
+    color: #f44336;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stats-error-icon-wrapper .material-symbols-rounded {
+    font-size: 22px;
+}
+
+.stats-error-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.stats-error-title {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: #f44336;
+}
+
+.stats-error-message {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.stats-stream-progress-card {
+    background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--radius-s);
+    padding: 10px 12px;
+    margin: 4px 0 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+    animation: stats-fade-in 0.2s ease-out;
+}
+
+.stats-stream-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.stats-stream-progress-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-weight: 500;
+}
+
+.stats-stream-progress-label .material-symbols-rounded {
+    font-size: 16px;
+    color: var(--md-sys-color-primary);
+    animation: stats-spin 2s linear infinite;
+}
+
+.stats-stream-progress-pct {
+    font-weight: 600;
+    font-family: monospace;
+    color: var(--md-sys-color-primary);
+    font-size: 12px;
+}
+
+.stats-stream-progress-track {
+    width: 100%;
+    height: 6px;
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.stats-stream-progress-fill {
+    height: 100%;
+    background: var(--md-sys-color-primary);
+    border-radius: var(--radius-full);
+    width: 0%;
+    transition: width 0.2s ease-out;
+}
+
 .stats-skeleton {
     display: inline-block;
     height: 13px;
@@ -4781,6 +4925,28 @@ body.dark .tiktok-ext-warning-header {
     0% { opacity: 0.35; }
     50% { opacity: 0.85; }
     100% { opacity: 0.35; }
+}
+
+@keyframes stats-method-scroll {
+    0%, 20% {
+        transform: translateX(0);
+    }
+    50%, 70% {
+        transform: translateX(var(--marquee-distance, -50px));
+    }
+    90%, 100% {
+        transform: translateX(0);
+    }
+}
+
+@keyframes stats-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes stats-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 

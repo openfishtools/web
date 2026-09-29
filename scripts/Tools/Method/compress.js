@@ -245,8 +245,8 @@ async function remuxFaststart(file, inputBuffer) {
 function finalizePatcherDownload(file, finalBytes, suffix) {
     const s = window._tktk;
     const blob = new Blob([finalBytes], { type: 'video/mp4' });
-    const url = URL.createObjectURL(blob);
-    const filename = `${file.name.replace(/\.[^.]+$/, '')}_${suffix || 'hd'}.mp4`;
+    const cleanSuffix = (!suffix || suffix === 'shield') ? 'hd' : suffix;
+    const filename = `${file.name.replace(/\.[^.]+$/, '')}_${cleanSuffix}.mp4`;
 
     const a = document.createElement('a');
     a.href = url;

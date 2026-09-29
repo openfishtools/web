@@ -343,11 +343,11 @@ window.processVideoStreamShield = async function processVideoStreamShield(file, 
 
             const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
             if (typeof finalizeFn === 'function') {
-                finalizeFn(file, patchedBytes, 'shield');
+                finalizeFn(file, patchedBytes, 'hd');
             } else {
                 const blob = new Blob([patchedBytes], { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
-                const filename = `${file.name.replace(/\.[^.]+$/, '')}_shield.mp4`;
+                const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = filename;
@@ -376,11 +376,11 @@ window.processVideoStreamShield = async function processVideoStreamShield(file, 
 
         const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
         if (typeof finalizeFn === 'function') {
-            finalizeFn(file, finalResultBytes, 'shield');
+            finalizeFn(file, finalResultBytes, 'hd');
         } else {
             const blob = new Blob([finalResultBytes], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
-            const filename = `${file.name.replace(/\.[^.]+$/, '')}_shield.mp4`;
+            const filename = `${file.name.replace(/\.[^.]+$/, '')}_hd.mp4`;
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;

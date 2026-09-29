@@ -112,52 +112,20 @@ window.processVideoV1 = async function processVideoV1(file, mode) {
             throw new Error('Processing failed (output is empty or too small).');
         }
         s.logEnd();
-        const blob = new Blob([data.buffer], { type: 'video/x-ms-wmv' });
-        const url = URL.createObjectURL(blob);
-        const outName = `${file.name.replace(/\.[^.]+$/, '')}_hq.wmv`;
-        s.log(`  Blob URL created, triggering download...`);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = outName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        const dlBtn = document.getElementById('tool-download-btn');
-        if (dlBtn) {
-            dlBtn.classList.remove('hidden');
-            dlBtn.onclick = () => {
-                const da = document.createElement('a');
-                da.href = url;
-                da.download = outName;
-                document.body.appendChild(da);
-                da.click();
-                document.body.removeChild(da);
-            };
-        }
-
-        s.log(`  Download triggered: ${outName}`);
-        s.logEnd();
-        s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
-        s.progressFill.style.width = '100%';
-        s.progressPercent.textContent = '100%';
-        if (window.ToolProgressManager) {
-            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
-        }
-        const processBtn = document.getElementById('tool-process-btn');
-        const processLabel = document.getElementById('tool-process-label');
-        const processIcon = document.getElementById('tool-process-icon');
-        if (processBtn) {
-            processBtn.disabled = false;
-            processBtn.dataset.state = 'completed';
-            if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
-            if (processIcon) processIcon.textContent = 'restart_alt';
-        }
-        if (typeof window.showToast === 'function') {
-            window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'WMV process completed successfully!');
-        }
-        if (typeof s.showTikTokStudioUploadPrompt === 'function') {
-            s.showTikTokStudioUploadPrompt();
+        const finalizeFn = window.finalizePatcherDownload || (s && s.finalizePatcherDownload);
+        if (typeof finalizeFn === 'function') {
+            finalizeFn(file, data, { suffix: 'hd', ext: 'wmv', mimeType: 'video/x-ms-wmv' });
+        } else {
+            const blob = new Blob([data.buffer || data], { type: 'video/x-ms-wmv' });
+            const url = URL.createObjectURL(blob);
+            const outName = `${file.name.replace(/\.[^.]+$/, '')}_hd.wmv`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = outName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
     } catch (error) {
         s.log(`  !! V1 ERROR: ${error.name} — ${error.message}`);
