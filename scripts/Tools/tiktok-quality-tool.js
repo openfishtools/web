@@ -1031,8 +1031,10 @@
                 if (items.length > 0 || idx > 0) {
                     html += '<hr class="tiktok-desc-divider">';
                 }
+                const isWarn = (footer.icon === 'warning');
+                const rowClass = isWarn ? 'tiktok-desc-warning-row' : 'tiktok-desc-footer';
                 html += `
-                    <div class="tiktok-desc-footer">
+                    <div class="${rowClass}">
                         <span class="material-symbols-rounded">${footer.icon || 'info'}</span>
                         <span>${footer.text}</span>
                     </div>
@@ -1046,11 +1048,31 @@
     function renderModularDescCard(parsedOrHtml) {
         if (!parsedOrHtml) return '';
         if (typeof parsedOrHtml === 'string') {
-            const trimmed = parsedOrHtml.trim();
-            if (trimmed.startsWith('<div class="tiktok-desc-card"')) {
-                return trimmed;
+            let str = parsedOrHtml.trim();
+            if (str.startsWith('<div class="tiktok-desc-card"')) {
+                const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
+                if (tagMatch.test(str)) {
+                    const parsed = parseDescTags(str);
+                    if (parsed && parsed.items.length > 0 && str.includes('</ul>')) {
+                        const extraLi = parsed.items.map(it => `<li><span class="material-symbols-rounded">${it.icon || 'info'}</span><strong>${it.label}:</strong> ${it.value}</li>`).join('');
+                        str = str.replace('</ul>', `${extraLi}</ul>`);
+                    }
+                    if (parsed && parsed.footers.length > 0 && str.includes('</div>')) {
+                        const extraFooters = parsed.footers.map(f => `
+                            <hr class="tiktok-desc-divider">
+                            <div class="${f.icon === 'warning' ? 'tiktok-desc-warning-row' : 'tiktok-desc-footer'}">
+                                <span class="material-symbols-rounded">${f.icon || 'info'}</span>
+                                <span>${f.text}</span>
+                            </div>
+                        `).join('');
+                        const lastDivIdx = str.lastIndexOf('</div>');
+                        str = str.slice(0, lastDivIdx) + extraFooters + '</div>';
+                    }
+                    str = str.replace(/\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\][\s\S]*?(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi, '');
+                }
+                return str.trim();
             }
-            const parsed = parseDescTags(trimmed);
+            const parsed = parseDescTags(str);
             if (parsed && (parsed.items.length > 0 || parsed.footers.length > 0)) {
                 return buildDescCardHtml(parsed);
             }
@@ -1058,7 +1080,7 @@
                 <div class="tiktok-desc-card">
                     <div class="tiktok-desc-footer">
                         <span class="material-symbols-rounded">info</span>
-                        <span>${trimmed}</span>
+                        <span>${str}</span>
                     </div>
                 </div>
             `;
@@ -1078,15 +1100,59 @@
         if (!descEl) return;
         let baseDesc = '';
         if (currentVersion === 'v1') {
-            baseDesc = t('patcher_desc_wmv');
+            baseDesc = t('patcher_desc_wmv') || `
+                [format] .wmv
+                [codec] WMV2
+                [info] Mengonversi video ke format Windows Media Video (.wmv) melalui penyandian ulang lossless.
+            `;
         } else if (currentVersion === 'fps') {
-            if (compressMode === '720p') baseDesc = t('patcher_desc_fps_720p') || t('patcher_desc_fps');
-            else if (compressMode === '1080p') baseDesc = t('patcher_desc_fps_1080p') || t('patcher_desc_fps');
-            else baseDesc = t('patcher_desc_fps_off') || t('patcher_desc_fps');
+            if (compressMode === '720p') {
+                baseDesc = t('patcher_desc_fps_720p') || `
+                    [format] .mp4
+                    [resolution] 720p
+                    [framerate] 30 FPS Presentation Patch
+                    [info] Mengompresi video ke 720p dengan bitrate hemat MB, lalu menerapkan timescale patch agar playback di TikTok berjalan halus.
+                    [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                `;
+            } else if (compressMode === '1080p') {
+                baseDesc = t('patcher_desc_fps_1080p') || `
+                    [format] .mp4
+                    [resolution] 1080p
+                    [framerate] 30 FPS Presentation Patch
+                    [info] Mengompresi video pada resolusi Full HD 1080p dengan ukuran MB kecil dan tajam, lalu menerapkan timescale patch.
+                    [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                `;
+            } else {
+                baseDesc = t('patcher_desc_fps_off') || t('patcher_desc_fps') || `
+                    [format] .mp4
+                    [mode] Direct Pass-Through
+                    [framerate] 30 FPS Presentation Patch
+                    [info] Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.
+                    [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                `;
+            }
         } else if (currentVersion === 'binary') {
-            if (compressMode === '720p') baseDesc = t('patcher_desc_binary_720p');
-            else if (compressMode === '1080p') baseDesc = t('patcher_desc_binary_1080p');
-            else baseDesc = t('patcher_desc_binary_off');
+            if (compressMode === '720p') {
+                baseDesc = t('patcher_desc_binary_720p') || `
+                    [format] .mp4
+                    [resolution] 720p
+                    [codec] H.264
+                    [info] Mengompresi dan menyesuaikan batas resolusi ke 720p dengan alokasi bitrate teroptimasi, lalu menerapkan rekonstruksi metadata kontainer MP4.
+                `;
+            } else if (compressMode === '1080p') {
+                baseDesc = t('patcher_desc_binary_1080p') || `
+                    [format] .mp4
+                    [resolution] 1080p
+                    [codec] H.264
+                    [info] Mengompresi video pada resolusi Full HD 1080p dengan batas bitrate tinggi untuk menjaga ketajaman gerak, dilanjutkan dengan rekonstruksi metadata kontainer MP4.
+                `;
+            } else {
+                baseDesc = t('patcher_desc_binary_off') || `
+                    [format] .mp4
+                    [mode] Direct Pass-Through
+                    [info] Menata ulang struktur metadata dan susunan streaming MP4 secara langsung tanpa kompresi, menjaga resolusi serta kualitas visual asli tetap utuh 100%.
+                `;
+            }
         } else if (currentVersion === 'tbt' || currentVersion === 'streamshield' || currentVersion === 'fish') {
             if (compressMode === '720p') {
                 baseDesc = t('patcher_desc_fish_720p') || `
@@ -1108,9 +1174,29 @@
                 `;
             }
         } else {
-            if (compressMode === '720p') baseDesc = t('patcher_desc_fry_720p');
-            else if (compressMode === '1080p') baseDesc = t('patcher_desc_fry_1080p');
-            else baseDesc = t('patcher_desc_fry_off');
+            // v3 (F R Y)
+            if (compressMode === '720p') {
+                baseDesc = t('patcher_desc_fry_720p') || `
+                    [format] .mp4
+                    [resolution] 720p
+                    [info] Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menerapkan patch metadata MP4.
+                    [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
+                `;
+            } else if (compressMode === '1080p') {
+                baseDesc = t('patcher_desc_fry_1080p') || `
+                    [format] .mp4
+                    [resolution] 1080p
+                    [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menerapkan patch metadata MP4.
+                    [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
+                `;
+            } else {
+                baseDesc = t('patcher_desc_fry_off') || `
+                    [format] .mp4
+                    [mode] Direct Pass-Through
+                    [info] Menata ulang metadata MP4 tanpa encode ulang, menjaga kualitas video dan audio tetap asli.
+                    [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
+                `;
+            }
         }
 
         if (hdrMode === 'on') {
