@@ -21,49 +21,11 @@ async function compressVideo(file, mode, inputBuffer) {
     if (!isReady) throw new Error('Processing engine failed to load.');
 
     const { toBlobURL } = window.FFmpegUtil;
-    let ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
-    let oomDetected = false;
-    let lastLogTime = 0;
-
-    ffmpeg.on('progress', ({ progress }) => {
-        const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
-        if (s.progressFill) s.progressFill.style.width = `${percent}%`;
-        if (s.progressPercent) s.progressPercent.textContent = `${percent}%`;
-        const stMsg = `${window.getTranslation('status_encoding')}...`;
-        if (s.statusText) s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${stMsg}</span>`;
-        if (window.ToolProgressManager) {
-            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent, status: stMsg, file });
-        }
-    });
-
-    ffmpeg.on('log', ({ message }) => {
-        const lc = message.toLowerCase();
-        if (lc.includes('oom') || lc.includes('out of memory')) oomDetected = true;
-        // Output live encoding status so user sees real-time progress
-        if (message.includes('frame=') && (message.includes('fps=') || message.includes('size='))) {
-            const now = Date.now();
-            if (now - lastLogTime > 2500) {
-                lastLogTime = now;
-                const cleanMsg = message.trim().replace(/\s+/g, ' ');
-                s.log(`    ${cleanMsg}`);
-            }
-        }
-    });
-
-    s.log(`  [1/3] Loading video data for compression...`);
     const buffer = inputBuffer || s.currentFileBuffer;
     if (!buffer) throw new Error('Video buffer is empty.');
 
-    const preParseBuffer = buffer ? buffer.slice(0) : null;
-    await ffmpeg.writeFile('input.mp4', new Uint8Array(buffer));
-
     const fileMB = file.size / (1024 * 1024);
-    const hardwareThreads = navigator.hardwareConcurrency || 4;
-    const safeThreads = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
-
-    s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()})...`);
-    const threads = fileMB > 50 ? '2' : safeThreads;
-
+    const preParseBuffer = buffer ? buffer.slice(0) : null;
     let vInfoFps = null, vInfoW = 0, vInfoH = 0;
     if (preParseBuffer) {
         try {
@@ -73,60 +35,61 @@ async function compressVideo(file, mode, inputBuffer) {
         } catch (e) {}
     }
     const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
-    s.log(`  FFmpeg filters: ${procOpts.vfString}`);
 
-    // Both 1080p and 720p use preset ultrafast for maximum encoding speed in WebAssembly (WASM)
-    const x264Preset = 'ultrafast';
+    // H.264 Fast Compression Settings (Unified for 1080P & 720P):
+    // veryfast, CRF 20, maxrate 12.5M, bufsize 18M
+    // Natural color pass-through (no forced color parameters)
+    const x264Preset = 'veryfast';
+    const crfValue = '20';
+    const maxRate = '12.5M';
+    const bufSize = '18M';
+    const audioBitrate = '128k';
+    const gopSize = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
 
-    // Flexible Dynamic VBR H.264 Settings (20 Mbps Motion Burst Ceiling + Deep Static Compression):
-    // - preset ultrafast: fastest execution in WebAssembly
-    // - maxrate 20000k (20 Mbps) for both 1080p and 720p: shoots up to 20 Mbps during fast motion so 60 FPS is crystal clear HD
-    // - crf 19: dynamic ratecontrol target; drops bitrate drastically down to 1-3 Mbps when scenes are static/minimal motion
-    // - bframes=3:b-adapt=1: enables adaptive bidirectional B-frames that use skip-macroblocks on static frames (huge space savings)
-    // - scenecut=40: automatically inserts keyframes at scene transitions to prevent wasting motion vectors across cuts
-    // - qcomp=0.75: quantizer curve flexibility allowing bitrate to swing dynamically between static and fast motion
-    // - 8x8dct=1 & cabac=1: High Profile 8x8 DCT transform + arithmetic coding (eliminates 4x4 block mosaic)
-    // - deblock=0,0: standard in-loop deblocking filter (smooths macroblock boundaries)
-    // - aq-mode=2: Auto-variance AQ balances bits across flat areas and rapid motion
-    const crfValue     = '19';
-    const maxRate      = '20000k';
-    const bufSize      = '25M';
-    const audioBitrate = (mode === '720p') ? '128k' : '160k';
-    const gopSize      = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
+    const runCompressionPass = async (useMT) => {
+        let ffmpeg = null;
+        let oomDetected = false;
+        let lastLogTime = 0;
 
-    const command = [
-        '-y', '-i', 'input.mp4',
-        '-threads', threads,
-        '-map', '0:v:0',
-        '-map', '0:a:0?',
-        '-dn',
-        '-map_metadata', '-1',
-        '-map_chapters', '-1',
-        '-vf', procOpts.vfString,
-        '-vsync', 'cfr',
-        '-c:v', 'libx264',
-        '-preset', x264Preset,
-        '-crf', crfValue,
-        '-maxrate', maxRate,
-        '-bufsize', bufSize,
-        '-x264-params', '8x8dct=1:cabac=1:bframes=3:b-adapt=1:scenecut=40:qcomp=0.75:aq-mode=2:aq-strength=1.0:deblock=0,0',
-        '-colorspace', 'bt709',
-        '-color_primaries', 'bt709',
-        '-color_trc', 'bt709',
-        '-g', gopSize,
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', audioBitrate,
-        '-movflags', '+faststart',
-        'output.mp4'
-    ];
-    s.log(`  Encoder: libx264 (WASM Dynamic VBR) ${x264Preset} crf=${crfValue} maxrate=${maxRate}`);
+        ffmpeg = await s.loadFFmpegHelper(null, toBlobURL, !useMT);
 
-    try {
-        await ffmpeg.exec(command);
-    } catch (execError) {
-        s.log(`  [Notice] Encoding retry with standard libx264...`);
-        const fallbackCommand = [
+        ffmpeg.on('progress', ({ progress }) => {
+            const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
+            if (s.progressFill) s.progressFill.style.width = `${percent}%`;
+            if (s.progressPercent) s.progressPercent.textContent = `${percent}%`;
+            const stMsg = `${window.getTranslation('status_encoding')}...`;
+            if (s.statusText) s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${stMsg}</span>`;
+            if (window.ToolProgressManager) {
+                window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent, status: stMsg, file });
+            }
+        });
+
+        ffmpeg.on('log', ({ message }) => {
+            const lc = message.toLowerCase();
+            if (lc.includes('oom') || lc.includes('out of memory') || lc.includes('cannot allocate memory') || lc.includes('abort(')) {
+                oomDetected = true;
+            }
+            if (message.includes('frame=') && (message.includes('fps=') || message.includes('size='))) {
+                const now = Date.now();
+                if (now - lastLogTime > 2500) {
+                    lastLogTime = now;
+                    const cleanMsg = message.trim().replace(/\s+/g, ' ');
+                    s.log(`    ${cleanMsg}`);
+                }
+            }
+        });
+
+        s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread' : 'Single-Thread'})...`);
+        await ffmpeg.writeFile('input.mp4', new Uint8Array(buffer));
+
+        const hardwareThreads = navigator.hardwareConcurrency || 4;
+        const safeThreads = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
+        const threads = useMT ? safeThreads : '1';
+
+        s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — Threads: ${threads}...`);
+        s.log(`  FFmpeg filters: ${procOpts.vfString}`);
+
+        const command = [
             '-y', '-i', 'input.mp4',
             '-threads', threads,
             '-map', '0:v:0',
@@ -137,13 +100,11 @@ async function compressVideo(file, mode, inputBuffer) {
             '-vf', procOpts.vfString,
             '-vsync', 'cfr',
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', x264Preset,
             '-crf', crfValue,
             '-maxrate', maxRate,
             '-bufsize', bufSize,
-            '-colorspace', 'bt709',
-            '-color_primaries', 'bt709',
-            '-color_trc', 'bt709',
+            '-x264-params', '8x8dct=1:cabac=1:bframes=3:b-adapt=1:scenecut=40:qcomp=0.7:deblock=0,0',
             '-g', gopSize,
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac',
@@ -151,36 +112,98 @@ async function compressVideo(file, mode, inputBuffer) {
             '-movflags', '+faststart',
             'output.mp4'
         ];
+        s.log(`  Encoder: libx264 (H.264 ${x264Preset}) crf=${crfValue} maxrate=${maxRate}`);
+
         try {
-            await ffmpeg.exec(fallbackCommand);
-        } catch (h264Err) {
+            await ffmpeg.exec(command);
+        } catch (execError) {
+            if (oomDetected) {
+                try { await ffmpeg.terminate(); } catch (_) {}
+                throw new Error('Memory limit exceeded during video processing (OOM).');
+            }
+            s.log(`  [Notice] Encoding retry with standard libx264...`);
+            const fallbackCommand = [
+                '-y', '-i', 'input.mp4',
+                '-threads', threads,
+                '-map', '0:v:0',
+                '-map', '0:a:0?',
+                '-dn',
+                '-map_metadata', '-1',
+                '-map_chapters', '-1',
+                '-vf', procOpts.vfString,
+                '-vsync', 'cfr',
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-crf', crfValue,
+                '-maxrate', maxRate,
+                '-bufsize', bufSize,
+                '-g', gopSize,
+                '-pix_fmt', 'yuv420p',
+                '-c:a', 'aac',
+                '-b:a', audioBitrate,
+                '-movflags', '+faststart',
+                'output.mp4'
+            ];
             try {
-                const testData = await ffmpeg.readFile('output.mp4');
-                if (!testData || testData.byteLength < 1024) throw execError;
-            } catch (rErr) {
-                throw execError;
+                await ffmpeg.exec(fallbackCommand);
+            } catch (h264Err) {
+                try {
+                    const testData = await ffmpeg.readFile('output.mp4');
+                    if (!testData || testData.byteLength < 1024) throw execError;
+                } catch (rErr) {
+                    try { await ffmpeg.terminate(); } catch (_) {}
+                    throw execError;
+                }
             }
         }
+
+        if (oomDetected) {
+            try { await ffmpeg.terminate(); } catch (_) {}
+            throw new Error('Memory limit exceeded during video processing (OOM).');
+        }
+
+        if (s.statusText) s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
+        if (s.progressText) s.progressText.textContent = 'Finalizing package...';
+        if (s.progressFill) s.progressFill.style.width = '95%';
+        if (s.progressPercent) s.progressPercent.textContent = '95%';
+        if (window.ToolProgressManager) {
+            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 95, status: window.getTranslation('status_finalizing'), file });
+        }
+
+        s.log(`  [3/3] Reading compressed video stream...`);
+        const compressedData = await ffmpeg.readFile('output.mp4');
+        try {
+            await ffmpeg.deleteFile('input.mp4');
+            await ffmpeg.deleteFile('output.mp4');
+            await ffmpeg.terminate();
+        } catch (cleanErr) {}
+
+        return new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
+    };
+
+    const isMobile = (typeof s.isMobileDevice === 'function') ? s.isMobileDevice() : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const canAttemptMT = !isMobile
+        && typeof SharedArrayBuffer !== 'undefined'
+        && typeof Atomics !== 'undefined'
+        && window.crossOriginIsolated === true;
+
+    let rawOutput = null;
+    if (canAttemptMT) {
+        try {
+            rawOutput = await runCompressionPass(true);
+        } catch (mtErr) {
+            s.log(`\n⚠️ [AUTO-FALLBACK] Multi-Thread gagal / Out of Memory (${mtErr.message || mtErr}).`);
+            s.log(`🔄 Mengulang otomatis menggunakan Single-Thread (Safe Mode)...\n`);
+            if (s.statusText) s.statusText.innerHTML = `<span style="color: #ff9800;">OOM / Error. Fallback ke Single-Thread...</span>`;
+            if (s.progressFill) s.progressFill.style.width = '10%';
+            if (s.progressPercent) s.progressPercent.textContent = '10%';
+            rawOutput = await runCompressionPass(false);
+        }
+    } else {
+        s.log(`  [Notice] Multi-thread tidak tersedia atau tidak didukung di lingkungan ini. Menggunakan Single-Thread.`);
+        rawOutput = await runCompressionPass(false);
     }
 
-    if (oomDetected) throw new Error('Memory limit reached during video processing.');
-
-    if (s.statusText) s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
-    if (s.progressText) s.progressText.textContent = 'Finalizing package...';
-    if (s.progressFill) s.progressFill.style.width = '95%';
-    if (s.progressPercent) s.progressPercent.textContent = '95%';
-    if (window.ToolProgressManager) {
-        window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 95, status: window.getTranslation('status_finalizing'), file });
-    }
-
-    s.log(`  [3/3] Reading compressed video stream...`);
-    const compressedData = await ffmpeg.readFile('output.mp4');
-    try {
-        await ffmpeg.deleteFile('input.mp4');
-        await ffmpeg.deleteFile('output.mp4');
-    } catch (cleanErr) {}
-
-    const rawOutput = new Uint8Array(compressedData.buffer, compressedData.byteOffset, compressedData.byteLength);
     return rawOutput;
 }
 

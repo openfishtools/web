@@ -37,8 +37,19 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve static files locally (frontend is on Cloudflare Pages in production)
-app.use(express.static(path.join(__dirname, '..')));
+// Multi-Threading & Isolation headers for WebAssembly SharedArrayBuffer
+app.use((req, res, next) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    const ua = req.headers['user-agent'] || '';
+    const isSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua) && !/Chromium/i.test(ua);
+    res.setHeader('Cross-Origin-Embedder-Policy', isSafari ? 'require-corp' : 'credentialless');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    if (req.path && req.path.endsWith('.user.js')) {
+        res.setHeader('Content-Type', 'application/x-userscript; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+    next();
+});
 
 app.use((req, res, next) => {
     const rawPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;
@@ -104,16 +115,6 @@ function recordLoginFailure(ip) {
     }
 }
 
-app.use((req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    if (req.path && req.path.endsWith('.user.js')) {
-        res.setHeader('Content-Type', 'application/x-userscript; charset=utf-8');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-    next();
-});
 
 const distScriptsPath = path.join(__dirname, '..', 'dist', 'scripts');
 const staticNoCache = {

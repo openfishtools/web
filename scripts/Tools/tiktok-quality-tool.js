@@ -14,7 +14,6 @@
     let isProcessing = false;
     let currentVersion = 'tbt';
     let compressMode = 'off';
-    let hdrMode = 'off';
     let currentInspectedFile = null;
     let currentVideoSpecs = null;
     let isExtensionDetected = false;
@@ -105,7 +104,7 @@
         if (isMobileDevice()) return false;
         if (typeof SharedArrayBuffer === 'undefined' || typeof Atomics === 'undefined') return false;
         if (window.crossOriginIsolated !== true) return false;
-        return await canShareSABWithWorker();
+        return true;
     }
 
     // ffmpeg.load()/toBlobURL can hang silently on mobile — never leave the
@@ -265,11 +264,11 @@
         return URL.createObjectURL(new Blob([merged], { type: mimeType }));
     }
 
-    async function loadFFmpegHelper(ffmpeg, toBlobURL) {
+    async function loadFFmpegHelper(ffmpeg, toBlobURL, forceSingleThread = false) {
         const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
         const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
         const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-        const isMultiThread = await supportsMultiThread();
+        const isMultiThread = forceSingleThread ? false : await supportsMultiThread();
         const { FFmpeg } = window.FFmpegWASM;
 
         logSection('FFmpeg Initialization');
@@ -977,14 +976,14 @@
         if (str.startsWith('<div class="tiktok-desc-card"')) {
             return null;
         }
-        const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
+        const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
         if (!tagMatch.test(str)) {
             return null;
         }
         const isEn = (typeof window !== 'undefined' && window.currentLang === 'en');
         const items = [];
         const footers = [];
-        const re = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]([\s\S]*?)(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi;
+        const re = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]([\s\S]*?)(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi;
         let match;
         while ((match = re.exec(str)) !== null) {
             const rawTag = match[1].trim().toLowerCase();
@@ -1010,7 +1009,6 @@
                 else if (rawTag === 'resolution' || rawTag === 'res') { icon = 'aspect_ratio'; label = isEn ? 'Resolution' : 'Resolusi'; }
                 else if (rawTag === 'method') { icon = 'verified'; label = isEn ? 'Method' : 'Metode'; }
                 else if (rawTag === 'fps' || rawTag === 'framerate') { icon = 'speed'; label = 'Framerate'; }
-                else if (rawTag === 'hdr') { icon = 'hdr_on'; label = 'HDR'; }
                 items.push({ icon, label, value: content });
             }
         }
@@ -1050,7 +1048,7 @@
         if (typeof parsedOrHtml === 'string') {
             let str = parsedOrHtml.trim();
             if (str.startsWith('<div class="tiktok-desc-card"')) {
-                const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
+                const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
                 if (tagMatch.test(str)) {
                     const parsed = parseDescTags(str);
                     if (parsed && parsed.items.length > 0 && str.includes('</ul>')) {
@@ -1068,7 +1066,7 @@
                         const lastDivIdx = str.lastIndexOf('</div>');
                         str = str.slice(0, lastDivIdx) + extraFooters + '</div>';
                     }
-                    str = str.replace(/\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\][\s\S]*?(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi, '');
+                    str = str.replace(/\[(?:format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\][\s\S]*?(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi, '');
                 }
                 return str.trim();
             }
@@ -1197,10 +1195,6 @@
                     [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
                 `;
             }
-        }
-
-        if (hdrMode === 'on') {
-            baseDesc += '\n[hdr] HLG Rec.2020';
         }
 
         baseDesc = renderModularDescCard(baseDesc);
@@ -1351,17 +1345,6 @@
                 </div>
             </div>
 
-            <div id="tiktok-hdr-row">
-                <div class="tiktok-switcher-label">${t('patcher_hdr_title') || 'HDR (BETA)'}</div>
-                <div class="tiktok-switch-scroll">
-                    <div class="tiktok-switch-track" id="tiktok-hdr-mode" data-selected="${hdrMode}" data-count="2" data-selected-idx="${hdrMode === 'on' ? 1 : 0}" style="--total: 2; --idx: ${hdrMode === 'on' ? 1 : 0};">
-                        <div class="tiktok-switch-indicator"></div>
-                        <div class="tiktok-switch-option ${hdrMode === 'off' ? 'active' : ''}" data-hdr="off">OFF</div>
-                        <div class="tiktok-switch-option ${hdrMode === 'on' ? 'active' : ''}" data-hdr="on">ON</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="tiktok-preset-desc" id="tiktok-info-desc"></div>
 
             <div id="tiktok-ext-alert-slot"></div>
@@ -1479,27 +1462,6 @@
             });
         }
 
-        const hdrSwitch = document.getElementById('tiktok-hdr-mode');
-        if (hdrSwitch) {
-            hdrSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
-                opt.addEventListener('click', () => {
-                    const allHdrOpts = Array.from(hdrSwitch.querySelectorAll('.tiktok-switch-option'));
-                    allHdrOpts.forEach(o => o.classList.remove('active'));
-                    opt.classList.add('active');
-                    hdrMode = opt.getAttribute('data-hdr') || 'off';
-                    const idx = hdrMode === 'on' ? 1 : 0;
-                    hdrSwitch.setAttribute('data-selected', hdrMode);
-                    hdrSwitch.setAttribute('data-selected-idx', idx.toString());
-                    hdrSwitch.style.setProperty('--idx', idx.toString());
-                    if (window._tktk) {
-                        window._tktk.hdrMode = hdrMode;
-                        window._tktk.hdrEnabled = (hdrMode === 'on');
-                    }
-                    window.hdrEnabled = (hdrMode === 'on');
-                    updateDesc();
-                });
-            });
-        }
 
         const copyLogsBtn = document.getElementById('btn-copy-logs');
         if (copyLogsBtn) {
@@ -1734,10 +1696,8 @@
         get currentFileBuffer() { return currentFileBuffer; },
         set currentFileBuffer(v) { currentFileBuffer = v; },
         get compressMode() { return compressMode; },
-        get hdrMode() { return hdrMode; },
-        set hdrMode(v) { hdrMode = v; },
-        get hdrEnabled() { return hdrMode === 'on'; },
-        set hdrEnabled(v) { hdrMode = v ? 'on' : 'off'; },
+        get hdrMode() { return 'off'; },
+        get hdrEnabled() { return false; },
         get selectedFile() { return selectedFile; },
         set selectedFile(v) { selectedFile = v; },
         get statusText() { return document.getElementById('tool-progress-status') || { innerHTML: '' }; },

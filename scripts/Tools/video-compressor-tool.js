@@ -12,6 +12,7 @@
     let selectedFile = null;
     let isProcessing = false;
     let selectedPreset = 'medium';
+    let selectedThreadMode = 'multi'; // 'multi' | 'single'
 
     const MAX_FILE_MB_HARD = 1500;
     const MAX_DIMENSION = 3840;
@@ -31,7 +32,52 @@
     function updateDesc() {
         const descEl = document.getElementById('compressor-info-desc');
         if (!descEl) return;
-        descEl.innerHTML = t('ffmpeg_preset_' + selectedPreset + '_desc');
+
+        const isEn = (typeof window !== 'undefined' && window.currentLang === 'en');
+
+        const isSingleThread = (selectedThreadMode === 'single');
+        let codecLabel = isSingleThread ? 'H.264 (libx264)' : 'H.265 / HEVC';
+        let presetLabel = isSingleThread ? 'Medium' : 'Ultrafast';
+        let crfLabel = '20';
+        let infoText = isEn 
+            ? 'Optimal balance between compression speed, visual quality, and file size.' 
+            : 'Keseimbangan optimal antara kecepatan kompresi, kualitas visual, dan ukuran file.';
+
+        if (selectedPreset === 'slow') {
+            codecLabel = isSingleThread ? 'H.264 (libx264)' : 'H.265 / HEVC';
+            presetLabel = isSingleThread ? 'Slow' : 'Superfast';
+            crfLabel = '19';
+            infoText = isEn
+                ? 'Higher compression with deep motion analysis. Smaller file size, longer encoding time.'
+                : 'Kompresi lebih padat dengan analisis gerakan mendalam. Ukuran file lebih kecil, waktu encoding lebih lama.';
+        } else if (selectedPreset === 'fast') {
+            codecLabel = 'H.264 (libx264)';
+            presetLabel = 'Veryfast';
+            crfLabel = '23';
+            infoText = isEn
+                ? 'Fastest encoding with universal compatibility and compact file size.'
+                : 'Proses encoding paling cepat dengan kompatibilitas universal dan ukuran file hemat.';
+        }
+
+        const threadingLabel = isSingleThread
+            ? 'Single-Thread (Safe Mode)'
+            : 'Multi-Thread (Auto Fallback)';
+
+        descEl.innerHTML = `
+            <div class="tiktok-desc-card">
+                <ul class="tiktok-desc-list">
+                    <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> ${codecLabel}</li>
+                    <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> ${presetLabel}</li>
+                    <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> ${crfLabel}</li>
+                    <li><span class="material-symbols-rounded">bolt</span><strong>Threading:</strong> ${threadingLabel}</li>
+                </ul>
+                <hr class="tiktok-desc-divider">
+                <div class="tiktok-desc-footer">
+                    <span class="material-symbols-rounded">info</span>
+                    <span>${infoText}</span>
+                </div>
+            </div>
+        `;
     }
 
     function initCompressorUI() {
@@ -42,6 +88,10 @@
         const pIdx = presetList.indexOf(selectedPreset);
         const selectedPIdx = pIdx >= 0 ? pIdx : 1;
 
+        const threadList = ['multi', 'single'];
+        const tIdx = threadList.indexOf(selectedThreadMode);
+        const selectedTIdx = tIdx >= 0 ? tIdx : 0;
+
         optContainer.innerHTML = `
             <div class="tiktok-switcher-label">${t('compressor_preset_title') || 'Choose Compression Preset'}</div>
             <div class="tiktok-switch-scroll">
@@ -50,6 +100,15 @@
                     <div class="tiktok-switch-option ${selectedPreset === 'slow' ? 'active' : ''}" data-preset="slow">SLOW</div>
                     <div class="tiktok-switch-option ${selectedPreset === 'medium' ? 'active' : ''}" data-preset="medium">MEDIUM</div>
                     <div class="tiktok-switch-option ${selectedPreset === 'fast' ? 'active' : ''}" data-preset="fast">FAST</div>
+                </div>
+            </div>
+
+            <div class="tiktok-switcher-label">${t('compressor_threading_title') || 'Threading Mode'}</div>
+            <div class="tiktok-switch-scroll">
+                <div class="tiktok-switch-track" id="compressor-thread-switch" data-selected="${selectedThreadMode}" data-count="2" data-selected-idx="${selectedTIdx}" style="--total: 2; --idx: ${selectedTIdx};">
+                    <div class="tiktok-switch-indicator"></div>
+                    <div class="tiktok-switch-option ${selectedThreadMode === 'multi' ? 'active' : ''}" data-thread="multi">MULTI THREADS</div>
+                    <div class="tiktok-switch-option ${selectedThreadMode === 'single' ? 'active' : ''}" data-thread="single">SINGLE THREAD</div>
                 </div>
             </div>
 
@@ -81,6 +140,23 @@
                     pSwitch.setAttribute('data-selected', selectedPreset);
                     pSwitch.setAttribute('data-selected-idx', optIdx.toString());
                     pSwitch.style.setProperty('--idx', optIdx.toString());
+                    updateDesc();
+                });
+            });
+        }
+
+        const tSwitch = document.getElementById('compressor-thread-switch');
+        if (tSwitch) {
+            tSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const allOpts = Array.from(tSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allOpts.forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    selectedThreadMode = opt.getAttribute('data-thread') || 'multi';
+                    const optIdx = allOpts.indexOf(opt);
+                    tSwitch.setAttribute('data-selected', selectedThreadMode);
+                    tSwitch.setAttribute('data-selected-idx', optIdx.toString());
+                    tSwitch.style.setProperty('--idx', optIdx.toString());
                     updateDesc();
                 });
             });
@@ -249,11 +325,17 @@
                 }
             });
 
-            const isMultiThread = !isMobileDevice
-                && typeof SharedArrayBuffer !== 'undefined'
-                && typeof Atomics !== 'undefined'
-                && window.crossOriginIsolated === true
-                && await canShareSABWithWorker();
+            let attemptMultiThread = (selectedThreadMode === 'multi');
+            if (attemptMultiThread) {
+                const canUseMT = !isMobileDevice
+                    && typeof SharedArrayBuffer !== 'undefined'
+                    && typeof Atomics !== 'undefined'
+                    && window.crossOriginIsolated === true;
+                if (!canUseMT) {
+                    log(`  [Notice] Multi-thread environment tidak didukung browser ini. Menggunakan Single-Thread.`);
+                    attemptMultiThread = false;
+                }
+            }
 
             const withTimeout = (promise, ms, label) => new Promise((resolve, reject) => {
                 const timer = setTimeout(() => reject(new Error(`${label || 'Operation'} timed out after ${Math.round(ms / 1000)}s`)), ms);
@@ -266,9 +348,7 @@
                 );
             });
 
-            // Cache-aware WASM fetcher: CacheStorage first, then streaming download with
-            // live progress, then saves to cache. No hard download timeout — stall detector
-            // resets each chunk, so slow connections keep going while truly stalled ones fail.
+            // Cache-aware WASM fetcher: CacheStorage first, then streaming download with live progress
             const CACHE_NAME = 'cutefish-ffmpeg-wasm-v1';
             const fetchWasmWithCache = async (url, mimeType, label) => {
                 try {
@@ -333,184 +413,255 @@
                 return URL.createObjectURL(new Blob([merged], { type: mimeType }));
             };
 
-            logSection('FFmpeg Core Initialization');
-            log(`  Multi-threading: ${isMultiThread ? 'Enabled' : 'Disabled'}`);
+            const runCompressionPass = async (useMT) => {
+                let ffmpeg = null;
+                let oomDetected = false;
 
-            let loadedInstance = null;
-            if (window.CutefishFFmpegLoader) {
-                loadedInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({
-                    isMultiThread,
-                    log,
-                    hfBase: (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg'
+                logSection(`FFmpeg Core Initialization (${useMT ? 'Multi-Thread' : 'Single-Thread'})`);
+                log(`  Multi-threading: ${useMT ? 'Enabled' : 'Disabled'}`);
+
+                let loadedInstance = null;
+                if (window.CutefishFFmpegLoader) {
+                    loadedInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({
+                        isMultiThread: useMT,
+                        log,
+                        hfBase: (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg'
+                    });
+                } else {
+                    const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
+                    const attempts = [];
+                    if (useMT) {
+                        attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
+                        attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
+                    }
+                    attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
+                    attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
+
+                    for (const attempt of attempts) {
+                        let inst = null;
+                        try {
+                            log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
+                            const config = {
+                                coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`, 'text/javascript', `${attempt.label} core.js`),
+                                wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm', `${attempt.label} core.wasm`)
+                            };
+                            if (attempt.mt) {
+                                config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`);
+                            }
+                            inst = new FFmpeg();
+                            await withTimeout(inst.load(config), 30000, `${attempt.label} engine init`);
+                            log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
+                            loadedInstance = inst;
+                            break;
+                        } catch (err) {
+                            if (inst) {
+                                try { inst.terminate(); } catch (_) {}
+                            }
+                            log(`  ${attempt.label} failed: ${errMsg(err)}`);
+                        }
+                    }
+                }
+
+                if (!loadedInstance) {
+                    throw new Error('Failed to load FFmpeg WASM from all sources.');
+                }
+                ffmpeg = loadedInstance;
+                logEnd();
+
+                ffmpeg.on('progress', ({ progress }) => {
+                    const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
+                    if (progressFill) progressFill.style.width = `${percent}%`;
+                    if (progressPercent) progressPercent.textContent = `${percent}%`;
+                    const statusMsg = `${t('status_encoding')}...`;
+                    if (progressStatus) progressStatus.textContent = statusMsg;
+                    if (window.ToolProgressManager) {
+                        window.ToolProgressManager.set('tool-video-compressor', { isProcessing: true, percent, status: statusMsg, file });
+                    }
                 });
-            } else {
-                const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-            // CDN first: direct CORS *, no 302 redirect chains — Safari-friendly.
-            // HuggingFace as fallback (redirect chain triggers Safari CORS strictness).
-            const attempts = [];
-            if (isMultiThread) {
-                attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
-                attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
-            }
-            attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
-            attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
 
-            for (const attempt of attempts) {
-                let inst = null;
-                try {
-                    log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
-                    const config = {
-                        coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`, 'text/javascript', `${attempt.label} core.js`),
-                        wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm', `${attempt.label} core.wasm`)
-                    };
-                    if (attempt.mt) {
-                        config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`);
+                ffmpeg.on('log', ({ message }) => {
+                    const lc = message.toLowerCase();
+                    if (lc.includes('oom') || lc.includes('out of memory') || lc.includes('cannot allocate memory') || lc.includes('abort(')) {
+                        oomDetected = true;
                     }
-                    inst = new FFmpeg();
-                    // 30s for WASM JIT compilation (download already done above)
-                    await withTimeout(inst.load(config), 30000, `${attempt.label} engine init`);
-                    log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
-                    loadedInstance = inst;
-                    break;
-                } catch (err) {
-                    if (inst) {
-                        try { inst.terminate(); } catch (_) {}
+                    log(message);
+                });
+
+                logSection('FFmpeg — Writing Input File');
+                await ffmpeg.writeFile('input.mp4', await fetchFile(file));
+                log('  Write: DONE');
+                logEnd();
+
+                const threads = navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4).toString() : '2';
+                const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
+
+                let command = [];
+                if (selectedPreset === 'fast') {
+                    // FAST: H.264 Veryfast, smallest size while maintaining HD
+                    command = [
+                        '-y', '-i', 'input.mp4',
+                        '-threads', useMT ? threads : '1',
+                        '-map', '0:v:0',
+                        '-map', '0:a:0?',
+                        ...(needsScale ? ['-vf', scaleFilter] : []),
+                        '-c:v', 'libx264',
+                        '-preset', 'veryfast',
+                        '-crf', '23',
+                        '-maxrate', '8M',
+                        '-bufsize', '12M',
+                        '-pix_fmt', 'yuv420p',
+                        '-c:a', 'aac',
+                        '-b:a', '128k',
+                        '-movflags', '+faststart',
+                        'output.mp4'
+                    ];
+                } else if (selectedPreset === 'slow') {
+                    // SLOW: HEVC Deep Tuned (Multi-Thread) or H.264 Slow (Single-Thread Safe)
+                    if (useMT) {
+                        command = [
+                            '-y', '-i', 'input.mp4',
+                            '-threads', '2',
+                            '-map', '0:v:0',
+                            '-map', '0:a:0?',
+                            ...(needsScale ? ['-vf', scaleFilter] : []),
+                            '-c:v', 'libx265',
+                            '-tag:v', 'hvc1',
+                            '-preset', 'superfast',
+                            '-crf', '19',
+                            '-maxrate', '10M',
+                            '-bufsize', '15M',
+                            '-pix_fmt', 'yuv420p',
+                            '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=34:qcomp=0.75:deblock=-1,-1',
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            '-movflags', '+faststart',
+                            'output.mp4'
+                        ];
+                    } else {
+                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Slow, CRF 19) untuk mencegah deadlock WebAssembly.`);
+                        command = [
+                            '-y', '-i', 'input.mp4',
+                            '-threads', '1',
+                            '-map', '0:v:0',
+                            '-map', '0:a:0?',
+                            ...(needsScale ? ['-vf', scaleFilter] : []),
+                            '-c:v', 'libx264',
+                            '-preset', 'slow',
+                            '-crf', '19',
+                            '-maxrate', '10M',
+                            '-bufsize', '15M',
+                            '-pix_fmt', 'yuv420p',
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            '-movflags', '+faststart',
+                            'output.mp4'
+                        ];
                     }
-                    log(`  ${attempt.label} failed: ${errMsg(err)}`);
+                } else {
+                    // MEDIUM (Normal): HEVC (Multi-Thread) or H.264 Medium (Single-Thread Safe)
+                    if (useMT) {
+                        command = [
+                            '-y', '-i', 'input.mp4',
+                            '-threads', '2',
+                            '-map', '0:v:0',
+                            '-map', '0:a:0?',
+                            ...(needsScale ? ['-vf', scaleFilter] : []),
+                            '-c:v', 'libx265',
+                            '-tag:v', 'hvc1',
+                            '-preset', 'ultrafast',
+                            '-crf', '20',
+                            '-maxrate', '12.5M',
+                            '-bufsize', '18M',
+                            '-pix_fmt', 'yuv420p',
+                            '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=36:qcomp=0.7:deblock=-1,-1',
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            '-movflags', '+faststart',
+                            'output.mp4'
+                        ];
+                    } else {
+                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Medium, CRF 20) untuk mencegah deadlock WebAssembly.`);
+                        command = [
+                            '-y', '-i', 'input.mp4',
+                            '-threads', '1',
+                            '-map', '0:v:0',
+                            '-map', '0:a:0?',
+                            ...(needsScale ? ['-vf', scaleFilter] : []),
+                            '-c:v', 'libx264',
+                            '-preset', 'medium',
+                            '-crf', '20',
+                            '-maxrate', '12.5M',
+                            '-bufsize', '18M',
+                            '-pix_fmt', 'yuv420p',
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            '-movflags', '+faststart',
+                            'output.mp4'
+                        ];
+                    }
                 }
-            }
-            }
 
-            if (!loadedInstance) {
-                throw new Error('Failed to load FFmpeg WASM from all sources.');
-            }
-            ffmpeg = loadedInstance;
-            logEnd();
+                logSection('FFmpeg — Execution');
+                log(`  Command: ffmpeg ${command.join(' ')}`);
+                try {
+                    await ffmpeg.exec(command);
+                } catch (execError) {
+                    try {
+                        const testData = await ffmpeg.readFile('output.mp4');
+                        if (!testData || testData.byteLength < 1024) throw execError;
+                    } catch (rErr) {
+                        throw execError;
+                    }
+                }
+                logEnd();
 
-            ffmpeg.on('progress', ({ progress }) => {
-                const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
-                if (progressFill) progressFill.style.width = `${percent}%`;
-                if (progressPercent) progressPercent.textContent = `${percent}%`;
-                const statusMsg = `${t('status_encoding')}...`;
-                if (progressStatus) progressStatus.textContent = statusMsg;
+                if (oomDetected) throw new Error('Memory limit exceeded during video processing (OOM).');
+
+                if (progressStatus) progressStatus.textContent = t('status_finalizing');
                 if (window.ToolProgressManager) {
-                    window.ToolProgressManager.set('tool-video-compressor', { isProcessing: true, percent, status: statusMsg, file });
+                    window.ToolProgressManager.set('tool-video-compressor', { isProcessing: true, percent: 99, status: t('status_finalizing'), file });
                 }
-            });
-
-            ffmpeg.on('log', ({ message }) => {
-                const lc = message.toLowerCase();
-                if (lc.includes('oom') || lc.includes('out of memory')) {
-                    oomDetected = true;
+                const data = await ffmpeg.readFile('output.mp4');
+                if (!data || data.byteLength < 1024) {
+                    throw new Error('Compression failed: output file is empty or corrupt.');
                 }
-                log(message);
-            });
 
-            logSection('FFmpeg — Writing Input File');
-            await ffmpeg.writeFile('input.mp4', await fetchFile(file));
-            log('  Write: DONE');
-            logEnd();
+                const blob = new Blob([data], { type: 'video/mp4' });
+                const outName = `compressed_${selectedPreset}_${file.name.replace(/\.[^.]+$/, '')}.mp4`;
+                const url = URL.createObjectURL(blob);
 
-            const threads = navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4).toString() : '2';
-            const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = outName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
 
-            let command = [];
-            if (selectedPreset === 'slow') {
-                command = [
-                    '-y', '-i', 'input.mp4',
-                    '-threads', threads,
-                    '-map', '0:v:0',
-                    '-map', '0:a:0?',
-                    '-dn',
-                    '-map_metadata', '-1',
-                    '-map_chapters', '-1',
-                    '-vf', "scale='trunc(iw/2)*2':'trunc(ih/2)*2'",
-                    '-c:v', 'libx264',
-                    '-preset', 'fast',
-                    '-crf', '22',
-                    '-maxrate', '12M',
-                    '-bufsize', '20M',
-                    '-pix_fmt', 'yuv420p',
-                    '-c:a', 'aac',
-                    '-b:a', '192k',
-                    '-movflags', '+faststart',
-                    'output.mp4'
-                ];
-            } else if (selectedPreset === 'fast') {
-                command = [
-                    '-y', '-i', 'input.mp4',
-                    '-threads', threads,
-                    '-map', '0:v:0',
-                    '-map', '0:a:0?',
-                    ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx264',
-                    '-preset', 'veryfast',
-                    '-crf', '23',
-                    '-pix_fmt', 'yuv420p',
-                    '-c:a', 'aac',
-                    '-b:a', '128k',
-                    '-movflags', '+faststart',
-                    'output.mp4'
-                ];
-            } else {
-                command = [
-                    '-y', '-i', 'input.mp4',
-                    '-threads', threads,
-                    '-map', '0:v:0',
-                    '-map', '0:a:0?',
-                    ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx264',
-                    '-preset', 'medium',
-                    '-crf', '20',
-                    '-pix_fmt', 'yuv420p',
-                    '-c:a', 'aac',
-                    '-b:a', '128k',
-                    '-movflags', '+faststart',
-                    'output.mp4'
-                ];
-            }
-
-            logSection('FFmpeg — Execution');
-            log(`  Command: ffmpeg ${command.join(' ')}`);
-            try {
-                await ffmpeg.exec(command);
-            } catch (execError) {
                 try {
-                    const testData = await ffmpeg.readFile('output.mp4');
-                    if (!testData || testData.byteLength < 1024) throw execError;
-                } catch (rErr) {
-                    throw execError;
+                    await ffmpeg.deleteFile('input.mp4');
+                    await ffmpeg.deleteFile('output.mp4');
+                    await ffmpeg.terminate();
+                } catch (_) {}
+
+                return { outName, byteLength: data.byteLength };
+            };
+
+            let passResult = null;
+            try {
+                passResult = await runCompressionPass(attemptMultiThread);
+            } catch (firstErr) {
+                if (attemptMultiThread) {
+                    log(`\n⚠️ [AUTO-FALLBACK] Multi-Thread gagal / Out of Memory (${errMsg(firstErr)}).`);
+                    log(`🔄 Mengulang otomatis menggunakan Single-Thread (Safe Mode)...\n`);
+                    if (progressStatus) progressStatus.textContent = 'Memori penuh (OOM). Beralih ke Single-Thread...';
+                    if (progressFill) progressFill.style.width = '10%';
+                    if (progressPercent) progressPercent.textContent = '10%';
+                    passResult = await runCompressionPass(false);
+                } else {
+                    throw firstErr;
                 }
             }
-            logEnd();
-
-            if (oomDetected) throw new Error('Memory limit exceeded during video processing.');
-
-            if (progressStatus) progressStatus.textContent = t('status_finalizing');
-            if (window.ToolProgressManager) {
-                window.ToolProgressManager.set('tool-video-compressor', { isProcessing: true, percent: 99, status: t('status_finalizing'), file });
-            }
-            const data = await ffmpeg.readFile('output.mp4');
-            if (!data || data.byteLength < 1024) {
-                throw new Error('Compression failed: output file is empty or corrupt.');
-            }
-
-            const blob = new Blob([data], { type: 'video/mp4' });
-            const outName = `compressed_${selectedPreset}_${file.name.replace(/\.[^.]+$/, '')}.mp4`;
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = outName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            try {
-                await ffmpeg.deleteFile('input.mp4');
-                await ffmpeg.deleteFile('output.mp4');
-            } catch (_) {}
 
             if (progressFill) progressFill.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
@@ -520,8 +671,8 @@
             }
 
             logSection('Video Compressor — Completed');
-            log(`  Output: ${outName}`);
-            log(`  Output size: ${(data.byteLength / (1024 * 1024)).toFixed(2)} MB`);
+            log(`  Output: ${passResult.outName}`);
+            log(`  Output size: ${(passResult.byteLength / (1024 * 1024)).toFixed(2)} MB`);
             logEnd();
 
             const processIcon = document.getElementById('tool-process-icon');
@@ -559,9 +710,9 @@
         category: 'Tools',
         features: [
             'H.264 & H.265 (HEVC) Codecs',
-            'Slow (CRF 22), Medium, & Fast Presets',
-            '4K / UltraHD Auto Scaling Protection',
-            'Client-side Local WebAssembly Processing'
+            'Fast (H.264), Normal (HEVC), & Slow (Deep Tuned)',
+            'Multi-Thread with Auto OOM Single-Thread Fallback',
+            '100% Client-side Local WebAssembly Processing'
         ],
         specs: [
             { label: 'ENGINE', value: 'FFmpeg WebAssembly' },

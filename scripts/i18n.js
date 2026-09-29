@@ -124,6 +124,7 @@
             "status_fps_adjusting": "Menyesuaikan FPS...",
             "fps_patch_completed": "Patch FPS selesai!",
             "compressor_preset_title": "Pilih Preset Kompresi",
+            "compressor_threading_title": "Mode Threading",
             "tool_interp_btn": "Interpolasi Video",
             "tool_audio_btn": "Ekstrak Audio",
             "tool_drop_formats": "Mendukung MP4, MOV, WebM",
@@ -250,8 +251,6 @@
                 [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menata ulang metadata MP4.
             `,
             "patcher_compress_title": "Compress",
-            "patcher_hdr_title": "HDR (BETA)",
-            "patcher_hdr_desc": "Injeksi metadata kurva HLG Rec.2020 untuk memicu badge HDR & boost kecerahan layar di TikTok.",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
@@ -373,44 +372,44 @@
             "preset_medium": "Sedang",
             "preset_fast": "Cepat",
             "ffmpeg_preset_slow_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Lambat</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (Kualitas Tinggi)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.265 / HEVC</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Superfast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 19</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Memprioritaskan kualitas maksimal dan ukuran file terkecil dengan konsekuensi waktu penyandian (encoding) yang jauh lebih lama.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Kompresi lebih padat dengan analisis gerakan mendalam. Ukuran file lebih kecil, waktu encoding lebih lama.</span>
                     </div>
                 </div>
             `,
             "ffmpeg_preset_medium_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Sedang</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (Kualitas Tinggi)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.265 / HEVC</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Ultrafast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 20</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Menawarkan keseimbangan yang seimbang antara kecepatan encoding, ukuran file, dan kualitas visual. Direkomendasikan untuk penggunaan umum.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Keseimbangan optimal antara kecepatan kompresi, kualitas visual, dan ukuran file.</span>
                     </div>
                 </div>
             `,
             "ffmpeg_preset_fast_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.265 / HEVC (libx265)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Sangat Cepat</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (Kualitas Tinggi)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264 (libx264)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Veryfast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 23</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Menggunakan HEVC dengan preset encoding sangat cepat untuk kompresi yang lebih cepat. Ukuran file sedikit lebih besar dari preset lambat, namun tetap menjaga kualitas dengan baik.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Proses encoding paling cepat dengan kompatibilitas universal dan ukuran file hemat.</span>
                     </div>
                 </div>
             `,
@@ -792,8 +791,6 @@
                 [info] Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 atom restructuring.
             `,
             "patcher_compress_title": "Compress",
-            "patcher_hdr_title": "HDR (BETA)",
-            "patcher_hdr_desc": "Inject HLG Rec.2020 curve metadata to trigger TikTok HDR badge & screen brightness boost.",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
@@ -914,45 +911,47 @@
             "preset_slow": "Slow",
             "preset_medium": "Medium",
             "preset_fast": "Fast",
+            "compressor_preset_title": "Choose Compression Preset",
+            "compressor_threading_title": "Threading Mode",
             "ffmpeg_preset_slow_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Slow</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.265 / HEVC</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Superfast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 19</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Prioritizes maximum quality and smallest file size at the cost of significantly longer encoding time.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Higher compression with deep motion analysis. Smaller file size, longer encoding time.</span>
                     </div>
                 </div>
             `,
             "ffmpeg_preset_medium_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.264 (libx264)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Medium</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.265 / HEVC</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Ultrafast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 20</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Offers a balanced trade-off between encoding speed, file size, and visual quality. Recommended for general use.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Optimal balance between compression speed, visual quality, and file size.</span>
                     </div>
                 </div>
             `,
             "ffmpeg_preset_fast_desc": `
-                <div style="background: var(--md-sys-color-surface-container); padding: 16px; border-radius: 16px; border: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px; text-align: left;">
-                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.6;">
-                        <li style="display: flex; align-items: center;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">memory</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Codec:</strong> H.265 / HEVC (libx265)</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">speed</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">Preset:</strong> Very Fast</li>
-                        <li style="display: flex; align-items: center; margin-top: 4px;"><span class="material-symbols-rounded" style="font-size: 18px; margin-right: 8px; color: var(--md-sys-color-primary);">high_quality</span><strong style="color: var(--md-sys-color-on-surface); margin-right: 4px;">CRF:</strong> 20 (High Quality)</li>
+                <div class="tiktok-desc-card">
+                    <ul class="tiktok-desc-list">
+                        <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> H.264 (libx264)</li>
+                        <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> Veryfast</li>
+                        <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> 23</li>
                     </ul>
-                    <hr style="border: none; border-top: 1px dashed var(--md-sys-color-outline-variant); margin: 12px 0;">
-                    <div style="color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start;">
-                        <span class="material-symbols-rounded" style="font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 2px;">info</span>
-                        <span>Utilizes HEVC with a very fast encoding preset for faster compression. File size is slightly larger than slow preset, but still maintains good quality.</span>
+                    <hr class="tiktok-desc-divider">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>Fastest encoding with universal compatibility and compact file size.</span>
                     </div>
                 </div>
             `,

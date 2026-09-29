@@ -4082,12 +4082,14 @@ body:not([data-view="home"]) .signpost-overlay {
 
 /* Automatic --idx mapping via data-selected attributes */
 .tiktok-switch-track[data-selected="off"],
-.tiktok-switch-track[data-selected="slow"] {
+.tiktok-switch-track[data-selected="slow"],
+.tiktok-switch-track[data-selected="multi"] {
     --idx: 0;
 }
 .tiktok-switch-track[data-selected="on"],
 .tiktok-switch-track[data-selected="720p"],
-.tiktok-switch-track[data-selected="medium"] {
+.tiktok-switch-track[data-selected="medium"],
+.tiktok-switch-track[data-selected="single"] {
     --idx: 1;
 }
 .tiktok-switch-track[data-selected="1080p"],
