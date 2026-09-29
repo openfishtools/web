@@ -128,8 +128,9 @@
         }
 
         if (moovOffset !== -1 && mdatOffset !== -1 && moovOffset < mdatOffset) {
+            const newMoovEnd = moovOffset + newView.getUint32(moovOffset, false);
             // Shift stco (32-bit chunk offsets)
-            for (let i = 0; i < newBytes.length - 8; i++) {
+            for (let i = moovOffset; i < newMoovEnd - 8; i++) {
                 if (newBytes[i+4] === 0x73 && newBytes[i+5] === 0x74 && newBytes[i+6] === 0x63 && newBytes[i+7] === 0x6F) {
                     const count = newView.getUint32(i + 12, false);
                     for (let c = 0; c < count; c++) {
