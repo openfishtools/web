@@ -4025,6 +4025,8 @@ body:not([data-view="home"]) .signpost-overlay {
         flex: 1;
         justify-content: center;
     }
+}
+
 .tiktok-badge-beta {
     display: inline-flex;
     align-items: center;
@@ -4098,6 +4100,7 @@ body:not([data-view="home"]) .signpost-overlay {
 .tiktok-switch-track[data-selected="slow"] {
     --idx: 0;
 }
+.tiktok-switch-track[data-selected="on"],
 .tiktok-switch-track[data-selected="720p"],
 .tiktok-switch-track[data-selected="medium"] {
     --idx: 1;

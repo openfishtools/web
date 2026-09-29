@@ -977,14 +977,14 @@
         if (str.startsWith('<div class="tiktok-desc-card"')) {
             return null;
         }
-        const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
+        const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
         if (!tagMatch.test(str)) {
             return null;
         }
         const isEn = (typeof window !== 'undefined' && window.currentLang === 'en');
         const items = [];
         const footers = [];
-        const re = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]([\s\S]*?)(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi;
+        const re = /\[(format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]([\s\S]*?)(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|hdr|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi;
         let match;
         while ((match = re.exec(str)) !== null) {
             const rawTag = match[1].trim().toLowerCase();
@@ -1010,6 +1010,7 @@
                 else if (rawTag === 'resolution' || rawTag === 'res') { icon = 'aspect_ratio'; label = isEn ? 'Resolution' : 'Resolusi'; }
                 else if (rawTag === 'method') { icon = 'verified'; label = isEn ? 'Method' : 'Metode'; }
                 else if (rawTag === 'fps' || rawTag === 'framerate') { icon = 'speed'; label = 'Framerate'; }
+                else if (rawTag === 'hdr') { icon = 'hdr_on'; label = 'HDR'; }
                 items.push({ icon, label, value: content });
             }
         }
@@ -1112,6 +1113,10 @@
             else baseDesc = t('patcher_desc_fry_off');
         }
 
+        if (hdrMode === 'on') {
+            baseDesc += '\n[hdr] HLG Rec.2020 (BETA)';
+        }
+
         baseDesc = renderModularDescCard(baseDesc);
 
         if (currentVideoSpecs) {
@@ -1172,15 +1177,6 @@
                 const noticeHtml = badges.join('');
                 baseDesc = noticeHtml + baseDesc;
             }
-        }
-
-        if (hdrMode === 'on') {
-            baseDesc += `
-                <div class="tiktok-desc-info-row" style="border-left: 3px solid #ff9800; background: rgba(255, 152, 0, 0.08); margin-top: 8px;">
-                    <span class="material-symbols-rounded" style="color: #ff9800;">hdr_on</span>
-                    <span><strong>HDR (BETA):</strong> Injeksi kurva HLG Rec.2020 aktif di finalize untuk memicu badge HDR &amp; boost kecerahan layar.</span>
-                </div>
-            `;
         }
 
         descEl.innerHTML = baseDesc;
