@@ -14,6 +14,7 @@
     let isProcessing = false;
     let currentVersion = 'tbt';
     let compressMode = 'off';
+    let hdrMode = 'off';
     let currentInspectedFile = null;
     let currentVideoSpecs = null;
     let isExtensionDetected = false;
@@ -653,7 +654,8 @@
         return {
             width: width || 1080,
             height: height || 1920,
-            fps: fps || 60
+            fps: fps || 60,
+            size: file.size || 0
         };
     }
 
@@ -891,6 +893,16 @@
         return shortSide > 1080 || longSide > 1920;
     }
 
+    function isSpecsOver60Mb() {
+        const sz = (currentVideoSpecs && currentVideoSpecs.size) || (currentInspectedFile && currentInspectedFile.size) || 0;
+        return sz > 60 * 1024 * 1024;
+    }
+
+    function isSpecsOver120Fps() {
+        if (!currentVideoSpecs) return false;
+        return currentVideoSpecs.fps >= 120;
+    }
+
     function isSpecsOver60Fps() {
         if (!currentVideoSpecs) return false;
         return currentVideoSpecs.fps > 60;
@@ -1118,7 +1130,27 @@
                     </div>
                 `);
             }
-            if (isSpecsOver60Fps()) {
+            if (isSpecsOver60Mb()) {
+                const sizeVal = ((currentVideoSpecs.size || (currentInspectedFile && currentInspectedFile.size) || 0) / (1024 * 1024)).toFixed(1);
+                const sizeText = (t('patcher_notice_size_60mb') || 'Ukuran video <strong>{size} MB</strong> (&gt; 60 MB) terdeteksi. Disarankan untuk dikompresi agar proses upload lancar (opsional).')
+                    .replace('{size}', sizeVal);
+                badges.push(`
+                    <div class="tiktok-desc-info-row">
+                        <span class="material-symbols-rounded">folder_open</span>
+                        <span>${sizeText}</span>
+                    </div>
+                `);
+            }
+            if (isSpecsOver120Fps()) {
+                const fpsText = (t('patcher_notice_fps_120') || 'Video <strong>{fps} FPS</strong> (&gt; 120 FPS) terdeteksi. Wajib normalisasi slow motion atau gunakan Userscript Bypass Cloud Canvas.')
+                    .replace('{fps}', currentVideoSpecs.fps);
+                badges.push(`
+                    <div class="tiktok-desc-warning-row">
+                        <span class="material-symbols-rounded">speed</span>
+                        <span>${fpsText}</span>
+                    </div>
+                `);
+            } else if (isSpecsOver60Fps()) {
                 let fpsText = '';
                 if (currentVersion === 'fps') {
                     fpsText = (t('patcher_notice_fps_direct') || 'Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong>.')
@@ -1140,6 +1172,15 @@
                 const noticeHtml = badges.join('');
                 baseDesc = noticeHtml + baseDesc;
             }
+        }
+
+        if (hdrMode === 'on') {
+            baseDesc += `
+                <div class="tiktok-desc-info-row" style="border-left: 3px solid #ff9800; background: rgba(255, 152, 0, 0.08); margin-top: 8px;">
+                    <span class="material-symbols-rounded" style="color: #ff9800;">hdr_on</span>
+                    <span><strong>HDR (BETA):</strong> Injeksi kurva HLG Rec.2020 aktif di finalize untuk memicu badge HDR &amp; boost kecerahan layar.</span>
+                </div>
+            `;
         }
 
         descEl.innerHTML = baseDesc;
@@ -1224,6 +1265,20 @@
                         <div class="tiktok-switch-option ${compressMode === 'off' ? 'active' : ''}" data-mode="off">OFF</div>
                         <div class="tiktok-switch-option ${compressMode === '720p' ? 'active' : ''}" data-mode="720p">720P</div>
                         <div class="tiktok-switch-option ${compressMode === '1080p' ? 'active' : ''}" data-mode="1080p">1080P</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tiktok-hdr-row" style="margin-top: 12px;">
+                <div class="tiktok-switcher-label" style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>${t('patcher_hdr_title') || 'HDR (BETA)'}</span>
+                    <span class="tiktok-badge-beta">BETA</span>
+                </div>
+                <div class="tiktok-switch-scroll">
+                    <div class="tiktok-switch-track" id="tiktok-hdr-mode" data-selected="${hdrMode}" data-count="2" data-selected-idx="${hdrMode === 'on' ? 1 : 0}" style="--total: 2; --idx: ${hdrMode === 'on' ? 1 : 0};">
+                        <div class="tiktok-switch-indicator"></div>
+                        <div class="tiktok-switch-option ${hdrMode === 'off' ? 'active' : ''}" data-hdr="off">OFF</div>
+                        <div class="tiktok-switch-option ${hdrMode === 'on' ? 'active' : ''}" data-hdr="on">ON</div>
                     </div>
                 </div>
             </div>
@@ -1341,6 +1396,28 @@
                     cSwitch.style.setProperty('--idx', optIdx.toString());
                     updateDesc();
                     updateExtensionWarning();
+                });
+            });
+        }
+
+        const hdrSwitch = document.getElementById('tiktok-hdr-mode');
+        if (hdrSwitch) {
+            hdrSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const allHdrOpts = Array.from(hdrSwitch.querySelectorAll('.tiktok-switch-option'));
+                    allHdrOpts.forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    hdrMode = opt.getAttribute('data-hdr') || 'off';
+                    const idx = hdrMode === 'on' ? 1 : 0;
+                    hdrSwitch.setAttribute('data-selected', hdrMode);
+                    hdrSwitch.setAttribute('data-selected-idx', idx.toString());
+                    hdrSwitch.style.setProperty('--idx', idx.toString());
+                    if (window._tktk) {
+                        window._tktk.hdrMode = hdrMode;
+                        window._tktk.hdrEnabled = (hdrMode === 'on');
+                    }
+                    window.hdrEnabled = (hdrMode === 'on');
+                    updateDesc();
                 });
             });
         }
@@ -1578,6 +1655,10 @@
         get currentFileBuffer() { return currentFileBuffer; },
         set currentFileBuffer(v) { currentFileBuffer = v; },
         get compressMode() { return compressMode; },
+        get hdrMode() { return hdrMode; },
+        set hdrMode(v) { hdrMode = v; },
+        get hdrEnabled() { return hdrMode === 'on'; },
+        set hdrEnabled(v) { hdrMode = v ? 'on' : 'off'; },
         get selectedFile() { return selectedFile; },
         set selectedFile(v) { selectedFile = v; },
         get statusText() { return document.getElementById('tool-progress-status') || { innerHTML: '' }; },

@@ -273,6 +273,48 @@
         }
     }
 
+    function isUndetectedMethod(str) {
+        if (!str || typeof str !== 'string') return true;
+        let s = str.trim();
+        if (!s || s === '—' || s === '-' || s.toLowerCase() === 'unknown' || s.toLowerCase() === 'undetected') return true;
+        
+        // Strip outer quotes/brackets if wrapped
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+            s = s.slice(1, -1).trim();
+        }
+        if (!s) return true;
+
+        // JSON payloads (e.g. {"aigc_label_type":0})
+        if (s.startsWith('{') && s.endsWith('}')) return true;
+        try {
+            if (s.startsWith('{')) {
+                JSON.parse(s);
+                return true;
+            }
+        } catch (_) {}
+
+        // FFmpeg / encoder muxer signatures (e.g. Lavf60.3.100, Lavc, x264, HandBrake)
+        if (/^(lavf|lavc|ffmpeg|handbrake|libav|x264|x265)/i.test(s)) return true;
+
+        // ByteDance internal video identifiers & hashes (e.g. vid:v10025g..., v10025g...)
+        if (/^vid:[a-zA-Z0-9_-]+/i.test(s)) return true;
+        if (/^v\d{4,}[a-zA-Z0-9_-]{8,}/i.test(s)) return true;
+
+        // Generic internal server keys
+        if (/^(item_id|video_id|tos_id|aweme_id|music_id|author_id):/i.test(s)) return true;
+
+        // Generic container brand signatures
+        if (/^(isom|mp42|dash|iso2|qt|avc1|mp41)$/i.test(s)) return true;
+
+        // Purely numeric strings (e.g. "1", "0", "26400000")
+        if (/^\d+$/.test(s)) return true;
+
+        // Must contain at least one alphabet letter
+        if (!/[a-zA-Z]/.test(s)) return true;
+
+        return false;
+    }
+
     function displayMethod(comment) {
         const statsMethod = document.getElementById('stats-method');
         if (!statsMethod) return;
@@ -283,20 +325,43 @@
         statsMethod.style.removeProperty('--marquee-distance');
         statsMethod.style.removeProperty('animation-duration');
 
-        const cleanComment = (comment || '').trim();
-        if (!cleanComment) {
-            statsMethod.textContent = '—';
+        let cleanComment = (comment || '').trim();
+        if ((cleanComment.startsWith('"') && cleanComment.endsWith('"')) || (cleanComment.startsWith("'") && cleanComment.endsWith("'"))) {
+            cleanComment = cleanComment.slice(1, -1).trim();
+        }
+
+        if (isUndetectedMethod(cleanComment)) {
+            statsMethod.textContent = 'Undetected';
             return;
         }
 
-        if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?$/.test(cleanComment)) {
+        const domainOnlyMatch = cleanComment.match(/^(?:https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,}))(?:\/.*)?$/i);
+        const urlMatch = cleanComment.match(/(https?:\/\/[^\s]+)/i);
+
+        if (urlMatch) {
             statsMethod.innerHTML = '';
+            const textBefore = cleanComment.slice(0, urlMatch.index);
+            const url = urlMatch[0];
+            const textAfter = cleanComment.slice(urlMatch.index + url.length);
+
+            if (textBefore) statsMethod.appendChild(document.createTextNode(textBefore));
             const a = document.createElement('a');
-            a.href = 'https://' + cleanComment;
+            a.href = url;
             a.target = '_blank';
             a.rel = 'noopener';
             a.className = 'stats-method-link';
-            a.textContent = cleanComment;
+            a.textContent = url;
+            statsMethod.appendChild(a);
+            if (textAfter) statsMethod.appendChild(document.createTextNode(textAfter));
+        } else if (domainOnlyMatch) {
+            const domain = domainOnlyMatch[1];
+            statsMethod.innerHTML = '';
+            const a = document.createElement('a');
+            a.href = cleanComment.startsWith('http') ? cleanComment : ('https://' + cleanComment);
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.className = 'stats-method-link';
+            a.textContent = domain;
             statsMethod.appendChild(a);
         } else {
             statsMethod.textContent = cleanComment;

@@ -810,9 +810,23 @@ function parseMp4MetadataFromBuffer(buffer) {
         return str.trim();
     }
 
+    function isCleanMetadataComment(val) {
+        if (!val || typeof val !== 'string') return false;
+        const s = val.trim();
+        if (!s || s === '-' || s === '—') return false;
+        if (/^\d+$/.test(s)) return false; // purely numeric like "1" or "26400000"
+        if (s.startsWith('{') && s.endsWith('}')) return false; // json payloads
+        if (/^lavf\d*(\.\d+)*$/i.test(s)) return false; // default FFmpeg muxer tags
+        if (/^lavc\d*(\.\d+)*$/i.test(s)) return false; // default FFmpeg codec tags
+        if (/^vid:[a-zA-Z0-9_-]+/i.test(s)) return false; // internal vid tags
+        if (/^v\d{4,}[a-zA-Z0-9_-]{8,}/i.test(s)) return false;
+        if (/^(item_id|video_id|tos_id|aweme_id|music_id|author_id):/i.test(s)) return false;
+        if (/^(isom|mp42|dash|iso2|qt)$/i.test(s)) return false;
+        return true;
+    }
+
     function extractCommentFromILST(ilstOffset, ilstSize) {
-        const ilstPriority = ['\u00A9cmt', '\u00A9ART', '\u00A9grp'];
-        const ilstExtra = ['\u00A9desc', '\u00A9name', '\u00A9atom'];
+        const ilstPriority = ['\u00A9cmt', '\u00A9desc', '\u00A9too', '\u00A9ART', '\u00A9grp', '\u00A9name'];
         const vals = {};
 
         function readItemValue(item) {
@@ -829,42 +843,25 @@ function parseMp4MetadataFromBuffer(buffer) {
             return value.trim();
         }
 
-        for (const k of [...ilstPriority, ...ilstExtra]) {
+        for (const k of ilstPriority) {
             const item = findBoxAny(ilstOffset + 8, ilstOffset + ilstSize, k);
             if (item) {
                 const value = readItemValue(item);
-                if (value) vals[k] = value;
+                if (value && isCleanMetadataComment(value)) {
+                    vals[k] = value;
+                }
             }
-        }
-
-        let offset = ilstOffset + 8;
-        while (offset < ilstOffset + ilstSize - 8) {
-            const size = view.getUint32(offset);
-            if (size <= 0 || offset + size > ilstOffset + ilstSize) break;
-            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
-            if (!vals[type]) {
-                const value = readItemValue({ offset, size });
-                if (value) vals[type] = value;
-            }
-            offset += size;
         }
 
         const domainRe = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,}))/i;
         for (const k of ilstPriority) {
             if (vals[k]) {
                 const m = vals[k].match(domainRe);
-                if (m) return m[1];
+                if (m && vals[k].length < 60) return m[1];
+                return vals[k];
             }
         }
-        for (const k of ilstPriority) {
-            if (vals[k]) return vals[k];
-        }
-        for (const k of ilstExtra) {
-            if (vals[k]) return vals[k];
-        }
-        for (const value of Object.values(vals)) {
-            if (value) return value;
-        }
+
         return '';
     }
 
@@ -919,15 +916,21 @@ function parseMp4MetadataFromBuffer(buffer) {
                         const uSize = view.getUint32(uOff);
                         if (uSize <= 0 || uOff + uSize > udtaEnd) break;
                         const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
-                        if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
-                            comment = extractTextFromBox(uOff, uSize);
-                            if (comment) break;
+                        if (['desc', 'cmt'].includes(uType)) {
+                            const val = extractTextFromBox(uOff, uSize);
+                            if (val && isCleanMetadataComment(val)) {
+                                comment = val;
+                                break;
+                            }
                         }
                         if (uType === 'meta') {
                             const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
                             if (ilst) {
                                 const cmt = extractCommentFromILST(ilst.offset, ilst.size);
-                                if (cmt) { comment = cmt; break; }
+                                if (cmt && isCleanMetadataComment(cmt)) {
+                                    comment = cmt;
+                                    break;
+                                }
                             }
                         }
                         uOff += uSize;
@@ -943,15 +946,21 @@ function parseMp4MetadataFromBuffer(buffer) {
                 const uSize = view.getUint32(uOff);
                 if (uSize <= 0 || uOff + uSize > udtaEnd) break;
                 const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
-                if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
-                    comment = extractTextFromBox(uOff, uSize);
-                    if (comment) break;
+                if (['desc', 'cmt'].includes(uType)) {
+                    const val = extractTextFromBox(uOff, uSize);
+                    if (val && isCleanMetadataComment(val)) {
+                        comment = val;
+                        break;
+                    }
                 }
                 if (uType === 'meta') {
                     const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
                     if (ilst) {
                         const cmt = extractCommentFromILST(ilst.offset, ilst.size);
-                        if (cmt) { comment = cmt; break; }
+                        if (cmt && isCleanMetadataComment(cmt)) {
+                            comment = cmt;
+                            break;
+                        }
                     }
                 }
                 uOff += uSize;
@@ -974,15 +983,21 @@ function parseMp4MetadataFromBuffer(buffer) {
                     const uSize = view.getUint32(uOff);
                     if (uSize <= 0 || uOff + uSize > udtaEnd) break;
                     const uType = String.fromCharCode(view.getUint8(uOff + 4), view.getUint8(uOff + 5), view.getUint8(uOff + 6), view.getUint8(uOff + 7));
-                    if (['desc', 'cmt', 'name', 'labl'].includes(uType)) {
-                        comment = extractTextFromBox(uOff, uSize);
-                        if (comment) break;
+                    if (['desc', 'cmt'].includes(uType)) {
+                        const val = extractTextFromBox(uOff, uSize);
+                        if (val && isCleanMetadataComment(val)) {
+                            comment = val;
+                            break;
+                        }
                     }
                     if (uType === 'meta') {
                         const ilst = findBoxAny(uOff + 12, uOff + uSize, 'ilst');
                         if (ilst) {
                             const cmt = extractCommentFromILST(ilst.offset, ilst.size);
-                            if (cmt) { comment = cmt; break; }
+                            if (cmt && isCleanMetadataComment(cmt)) {
+                                comment = cmt;
+                                break;
+                            }
                         }
                     }
                     uOff += uSize;

@@ -51,16 +51,21 @@ Ketika user mengetik atau memerintahkan `/newmethod`, agent harus menjalankan al
 ## 📐 Arsitektur Pipeline Patcher & CMT
 
 Konsep alur kerja mutlak:
-$$\text{Upload} \longrightarrow \text{Method (Compress ON / OFF)} \longrightarrow \text{Process} \longrightarrow \text{Finalize}$$
+$$\text{Upload} \longrightarrow \text{Analisa Video} \longrightarrow \text{Method (Compress ON / OFF)} \longrightarrow \text{Process} \longrightarrow \text{Finalize}$$
 
-1. **Upload**: User mengunggah video $\rightarrow$ sistem menginspeksi metadata atom (`inspectMp4Meta`) dan deteksi userscript.
-2. **Method (Compress ON / OFF)**:
+1. **Upload**: User mengunggah file video.
+2. **Analisa Video**:
+   - Sistem secara instan menginspeksi metadata atom MP4 (`inspectMp4Meta`) dan status ekstensi/userscript:
+     - **Size > 60MB**: *Optionally need to be compressed*. Menampilkan rekomendasi kompresi agar proses upload ke TikTok lancar tanpa kegagalan transfer, namun mode kompresi tetap opsional (user bebas memilih `OFF`, `720P`, atau `1080P`).
+     - **Resolusi > 1080p**: *Wajib dikompres* (`Compress OFF` di-disable secara mutlak, otomatis dikunci ke `1080P` atau `720P`).
+     - **FPS > 120 FPS**: Deteksi high framerate yang memerlukan konversi slow motion atau Userscript Bypass Cloud Canvas agar tidak rusak/di-transcode paksa oleh TikTok.
+3. **Method (Compress ON / OFF)**:
    - Pemilihan kategori & metode (Rekomendasi: `FISH`, `BINARY`, `F R Y`; Backup: `FPS`, `WMV`).
-   - Pemilihan mode kompresi (`OFF`, `720P`, `1080P`). Video > 1080p otomatis dikunci ke 1080P.
-3. **Process**:
+   - Pemilihan mode kompresi (`OFF`, `720P`, `1080P`). Jika resolusi > 1080p, opsi `OFF` dinonaktifkan (`disabled`).
+4. **Process**:
    - Jika kompresi aktif $\rightarrow$ jalankan pipeline kompresi (`compress.js`).
    - Terapkan patch atom MP4 murni dalam memori sesuai engine metode yang dipilih tanpa re-encode lossy.
-4. **Finalize**:
+5. **Finalize**:
    - Seluruh hasil patch WAJIB dialirkan ke `finalize.js` (`finalizePatcherDownload`).
    - Format nama output distandarisasi ke: `(nama file)_hd.mp4`.
    - Menangani trigger auto-download, tombol download modal, progres 100%, toast notifikasi, dan prompt upload TikTok Studio.

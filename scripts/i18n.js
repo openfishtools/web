@@ -250,6 +250,8 @@
                 [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menata ulang metadata MP4.
             `,
             "patcher_compress_title": "Compress",
+            "patcher_hdr_title": "HDR (BETA)",
+            "patcher_hdr_desc": "Injeksi metadata kurva HLG Rec.2020 untuk memicu badge HDR & boost kecerahan layar di TikTok.",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
@@ -275,6 +277,8 @@
             "patcher_upload_studio_desc": "Video telah berhasil dipatch. Buka TikTok Studio untuk melanjutkan proses upload.",
             "patcher_upload_studio_btn": "Buka TikTok Studio",
             "patcher_notice_res_limit": "Resolusi <strong>{res}</strong> (&gt; 1080p) terdeteksi. Kompresi otomatis diatur ke <strong>1080p</strong>.",
+            "patcher_notice_size_60mb": "Ukuran video <strong>{size} MB</strong> (&gt; 60 MB) terdeteksi. Disarankan untuk dikompresi agar proses upload lancar (opsional).",
+            "patcher_notice_fps_120": "Video <strong>{fps} FPS</strong> (&gt; 120 FPS) terdeteksi. Wajib normalisasi slow motion atau gunakan Userscript Bypass Cloud Canvas.",
             "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong>.",
             "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong> sebelum patch <strong>{method}</strong>.",
             "patcher_desc_wmv": `
@@ -566,6 +570,7 @@
             "stats_downloading_stream": "Mengunduh stream video untuk cek FPS & Resolusi...",
             "stats_err_title": "Video Tidak Ditemukan",
             "stats_err_not_found": "Video mungkin telah dihapus, bersifat privat, atau tautan tidak valid.",
+            "stats_method_undetected": "Undetected",
             "stats_err_failed": "Analisis gagal.",
             "btn_copy": "Salin",
             "btn_copied": "Tersalin!",
@@ -920,6 +925,8 @@
                 [info] Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 atom restructuring.
             `,
             "patcher_compress_title": "Compress",
+            "patcher_hdr_title": "HDR (BETA)",
+            "patcher_hdr_desc": "Inject HLG Rec.2020 curve metadata to trigger TikTok HDR badge & screen brightness boost.",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
             "patcher_mode_1080p": "1080P",
@@ -945,6 +952,8 @@
             "patcher_upload_studio_desc": "Video has been patched. Open TikTok Studio to proceed with your upload.",
             "patcher_upload_studio_btn": "Open TikTok Studio",
             "patcher_notice_res_limit": "Video resolution <strong>{res}</strong> (&gt; 1080p) detected. Auto-compression set to <strong>1080p</strong>.",
+            "patcher_notice_size_60mb": "Video size <strong>{size} MB</strong> (&gt; 60 MB) detected. Compression is recommended for smooth upload (optional).",
+            "patcher_notice_fps_120": "Video <strong>{fps} FPS</strong> (&gt; 120 FPS) detected. Slow motion normalization or Cloud Canvas Bypass Userscript required.",
             "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong>.",
             "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong> before <strong>{method}</strong> patch.",
             "patcher_desc_wmv": `
@@ -1236,6 +1245,7 @@
             "stats_downloading_stream": "Downloading video stream to check FPS & Resolution...",
             "stats_err_title": "Video Not Found",
             "stats_err_not_found": "Video may have been deleted, is private, or the link is invalid.",
+            "stats_method_undetected": "Undetected",
             "stats_err_failed": "Analysis failed.",
             "btn_copy": "Copy",
             "btn_copied": "Copied!",

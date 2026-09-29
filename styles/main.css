@@ -4025,6 +4025,19 @@ body:not([data-view="home"]) .signpost-overlay {
         flex: 1;
         justify-content: center;
     }
+.tiktok-badge-beta {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    border-radius: 6px;
+    background: rgba(255, 152, 0, 0.16);
+    color: #ff9800;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 .tiktok-switch-track[data-count="2"] {
