@@ -336,6 +336,7 @@
             logSection('FFmpeg Core Initialization');
             log(`  Multi-threading: ${isMultiThread ? 'Enabled' : 'Disabled'}`);
 
+            let loadedInstance = null;
             if (window.CutefishFFmpegLoader) {
                 loadedInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({
                     isMultiThread,
@@ -354,7 +355,6 @@
             attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
             attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
 
-            let loadedInstance = null;
             for (const attempt of attempts) {
                 let inst = null;
                 try {
@@ -438,24 +438,34 @@
                 ];
             } else if (selectedPreset === 'fast') {
                 command = [
-                    '-i', 'input.mp4',
+                    '-y', '-i', 'input.mp4',
                     '-threads', threads,
+                    '-map', '0:v:0',
+                    '-map', '0:a:0?',
                     ...(needsScale ? ['-vf', scaleFilter] : []),
-                    '-c:v', 'libx265',
+                    '-c:v', 'libx264',
                     '-preset', 'veryfast',
-                    '-crf', '20',
-                    '-c:a', 'copy',
+                    '-crf', '23',
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '128k',
+                    '-movflags', '+faststart',
                     'output.mp4'
                 ];
             } else {
                 command = [
-                    '-i', 'input.mp4',
+                    '-y', '-i', 'input.mp4',
                     '-threads', threads,
+                    '-map', '0:v:0',
+                    '-map', '0:a:0?',
                     ...(needsScale ? ['-vf', scaleFilter] : []),
                     '-c:v', 'libx264',
                     '-preset', 'medium',
                     '-crf', '20',
-                    '-c:a', 'copy',
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '128k',
+                    '-movflags', '+faststart',
                     'output.mp4'
                 ];
             }
@@ -485,7 +495,7 @@
                 throw new Error('Compression failed: output file is empty or corrupt.');
             }
 
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const blob = new Blob([data], { type: 'video/mp4' });
             const outName = `compressed_${selectedPreset}_${file.name.replace(/\.[^.]+$/, '')}.mp4`;
             const url = URL.createObjectURL(blob);
 
@@ -496,6 +506,11 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+
+            try {
+                await ffmpeg.deleteFile('input.mp4');
+                await ffmpeg.deleteFile('output.mp4');
+            } catch (_) {}
 
             if (progressFill) progressFill.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';

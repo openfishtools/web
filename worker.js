@@ -6,17 +6,25 @@ export default {
         const referer = request.headers.get('referer');
         const secFetchDest = request.headers.get('sec-fetch-dest');
 
-        const allowedOrigins = [
-            'https://cutefish.my.id',
-            'https://www.cutefish.my.id',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'http://localhost:5173',
-            'http://127.0.0.1:5173'
-        ];
+        const isAllowedHost = (hostStr) => {
+            if (!hostStr) return false;
+            const h = hostStr.toLowerCase().split(':')[0];
+            if (h === 'cutefish.my.id' || h === 'www.cutefish.my.id' || h === 'localhost' || h === '127.0.0.1') return true;
+            if (h.endsWith('.pages.dev') || h.endsWith('.vercel.app')) return true;
+            return false;
+        };
+
+        const isOriginAllowed = (originStr) => {
+            if (!originStr) return true;
+            try {
+                return isAllowedHost(new URL(originStr).hostname);
+            } catch (_) {
+                return false;
+            }
+        };
 
         // 1. Anti-Leech: Reject requests originating from unauthorized external websites
-        if (origin && !allowedOrigins.includes(origin)) {
+        if (origin && !isOriginAllowed(origin)) {
             return new Response(JSON.stringify({
                 error: 'Forbidden',
                 message: 'Cross-origin API access from external websites is strictly forbidden. Please use https://cutefish.my.id'
@@ -32,8 +40,7 @@ export default {
         if (referer) {
             try {
                 const refHost = new URL(referer).hostname;
-                const allowedHosts = ['cutefish.my.id', 'www.cutefish.my.id', 'localhost', '127.0.0.1'];
-                if (!allowedHosts.includes(refHost)) {
+                if (!isAllowedHost(refHost)) {
                     return new Response(JSON.stringify({
                         error: 'Forbidden',
                         message: 'Hotlinking or embedding from external sites is strictly blocked. Please use https://cutefish.my.id'
@@ -50,7 +57,7 @@ export default {
         }
 
         // Determine CORS origin - never allow wildcard *
-        const corsOrigin = (origin && allowedOrigins.includes(origin)) ? origin : 'https://cutefish.my.id';
+        const corsOrigin = (origin && isOriginAllowed(origin)) ? origin : 'https://cutefish.my.id';
 
         // Handle CORS Preflight
         if (request.method === 'OPTIONS') {
@@ -64,8 +71,43 @@ export default {
             });
         }
 
-        // Proxy API and RealESRGAN requests to Vercel Backend with Security Shield & Edge Caching
-        if (url.pathname.startsWith('/api') || url.pathname.startsWith('/realesrgan')) {
+        // Proxy RealESRGAN model requests directly to upscale host (saves Vercel limits completely)
+        if (url.pathname.startsWith('/realesrgan')) {
+            const chinoTarget = new URL(url.pathname + url.search, 'https://upscale.chino.icu');
+            const chinoHeaders = new Headers(request.headers);
+            chinoHeaders.set('host', chinoTarget.host);
+            try {
+                let chinoRes = await fetch(chinoTarget.toString(), {
+                    method: request.method,
+                    headers: chinoHeaders,
+                    redirect: 'follow'
+                });
+                if (!chinoRes.ok && env.BACKEND_API_URL) {
+                    const fallbackUrl = new URL(url.pathname + url.search, env.BACKEND_API_URL);
+                    const fbHeaders = new Headers(request.headers);
+                    fbHeaders.set('host', fallbackUrl.host);
+                    if (env.PROXY_SECRET) fbHeaders.set('x-cf-secret', env.PROXY_SECRET);
+                    chinoRes = await fetch(fallbackUrl.toString(), { method: request.method, headers: fbHeaders });
+                }
+                const newHeaders = new Headers(chinoRes.headers);
+                newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                newHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                newHeaders.set('Cache-Control', 'public, max-age=604800, s-maxage=604800');
+                return new Response(chinoRes.body, {
+                    status: chinoRes.status,
+                    statusText: chinoRes.statusText,
+                    headers: newHeaders
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Realesrgan proxy failed', details: err.message }), {
+                    status: 502,
+                    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': corsOrigin }
+                });
+            }
+        }
+
+        // Proxy API requests to Vercel Backend with Security Shield & Edge Caching
+        if (url.pathname.startsWith('/api')) {
             // 3. Browser direct address bar visit protection: redirect to home
             if (secFetchDest === 'document' && request.method === 'GET') {
                 return Response.redirect('https://cutefish.my.id', 302);

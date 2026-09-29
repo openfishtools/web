@@ -16,7 +16,8 @@ const COPY_TARGETS = [
     'assets',
     'scripts',
     'styles',
-    'userscript'
+    'userscript',
+    'functions'
 ];
 
 function rmDirRecursive(dir) {

@@ -5,17 +5,25 @@ export async function onRequest(context) {
     const referer = context.request.headers.get('referer');
     const secFetchDest = context.request.headers.get('sec-fetch-dest');
 
-    const allowedOrigins = [
-        'https://cutefish.my.id',
-        'https://www.cutefish.my.id',
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5173',
-        'http://127.0.0.1:5173'
-    ];
+    const isAllowedHost = (hostStr) => {
+        if (!hostStr) return false;
+        const h = hostStr.toLowerCase().split(':')[0];
+        if (h === 'cutefish.my.id' || h === 'www.cutefish.my.id' || h === 'localhost' || h === '127.0.0.1') return true;
+        if (h.endsWith('.pages.dev') || h.endsWith('.vercel.app')) return true;
+        return false;
+    };
+
+    const isOriginAllowed = (originStr) => {
+        if (!originStr) return true;
+        try {
+            return isAllowedHost(new URL(originStr).hostname);
+        } catch (_) {
+            return false;
+        }
+    };
 
     // Anti-Leech: Reject cross-origin calls from foreign websites
-    if (origin && !allowedOrigins.includes(origin)) {
+    if (origin && !isOriginAllowed(origin)) {
         return new Response(JSON.stringify({
             error: 'Forbidden',
             message: 'Cross-origin API access from external websites is strictly forbidden. Please use https://cutefish.my.id'
@@ -29,8 +37,7 @@ export async function onRequest(context) {
     if (referer) {
         try {
             const refHost = new URL(referer).hostname;
-            const allowedHosts = ['cutefish.my.id', 'www.cutefish.my.id', 'localhost', '127.0.0.1'];
-            if (!allowedHosts.includes(refHost)) {
+            if (!isAllowedHost(refHost)) {
                 return new Response(JSON.stringify({
                     error: 'Forbidden',
                     message: 'Hotlinking or embedding from external sites is strictly blocked. Please use https://cutefish.my.id'
@@ -46,7 +53,7 @@ export async function onRequest(context) {
         return Response.redirect('https://cutefish.my.id', 302);
     }
 
-    const corsOrigin = (origin && allowedOrigins.includes(origin)) ? origin : 'https://cutefish.my.id';
+    const corsOrigin = (origin && isOriginAllowed(origin)) ? origin : 'https://cutefish.my.id';
 
     if (context.request.method === 'OPTIONS') {
         return new Response(null, {

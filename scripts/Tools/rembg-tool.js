@@ -1602,13 +1602,14 @@
                     }
 
                     const data = await ffmpeg.readFile('matting.mov');
-                    finalBlob = new Blob([data.buffer], { type: selectedFormatMeta.mime });
+                    finalBlob = new Blob([data], { type: selectedFormatMeta.mime });
                     finalPreviewBlob = null;
                 } else if (selectedFormat === 'webm') {
                     log(`[RemBG] Encoding transparent video to WebM (VP9/Alpha @ ${fps} FPS)...`);
                     setProgress(88, 'Encoding WebM with alpha channel...');
 
                     await ffmpeg.exec([
+                        '-y',
                         '-framerate', String(fps),
                         '-threads', threads,
                         '-i', `frame_%05d.png`,
@@ -1628,13 +1629,14 @@
                     }
 
                     const data = await ffmpeg.readFile('matting.webm');
-                    finalBlob = new Blob([data.buffer], { type: 'video/webm' });
+                    finalBlob = new Blob([data], { type: 'video/webm' });
                     finalPreviewBlob = finalBlob;
                 } else if (selectedFormat === 'mp4') {
                     log(`[RemBG] Encoding transparent video to MP4 (HEVC/Alpha @ ${fps} FPS)...`);
                     setProgress(88, 'Encoding MP4 HEVC with alpha channel...');
 
                     await ffmpeg.exec([
+                        '-y',
                         '-framerate', String(fps),
                         '-threads', threads,
                         '-i', `frame_%05d.png`,
@@ -1654,7 +1656,7 @@
                     }
 
                     const data = await ffmpeg.readFile('matting.mp4');
-                    finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                    finalBlob = new Blob([data], { type: 'video/mp4' });
                     finalPreviewBlob = finalBlob;
                 }
             } else {
@@ -1663,6 +1665,7 @@
                 setProgress(88, 'Encoding MP4 video...');
 
                 await ffmpeg.exec([
+                    '-y',
                     '-framerate', String(fps),
                     '-threads', threads,
                     '-i', `frame_%05d.jpg`,
@@ -1683,7 +1686,7 @@
                 }
 
                 const data = await ffmpeg.readFile('matting.mp4');
-                finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                finalBlob = new Blob([data], { type: 'video/mp4' });
             }
 
             setProgress(95, t('status_finalizing') || 'Finalizing video...');

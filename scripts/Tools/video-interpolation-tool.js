@@ -472,7 +472,7 @@
 
             const hardwareThreads = navigator.hardwareConcurrency || 4;
             const threads = Math.min(4, hardwareThreads).toString();
-            const encodeArgs = ['-framerate', String(targetFps), '-threads', threads, '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(targetFps), '-preset', 'ultrafast', '-shortest', 'output.mp4'];
+            const encodeArgs = ['-y', '-framerate', String(targetFps), '-threads', threads, '-i', 'frame_%05d.jpg', '-i', inName, '-map', '0:v', '-map', '1:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(targetFps), '-preset', 'ultrafast', '-shortest', 'output.mp4'];
             await ffmpeg.exec(encodeArgs);
             setProgress(95, t('status_finalizing') || 'Finalizing video...');
             const data = await ffmpeg.readFile('output.mp4');
@@ -481,7 +481,7 @@
                 throw new Error("Video interpolation rendering failed.");
             }
 
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const blob = new Blob([data], { type: 'video/mp4' });
             const outUrl = URL.createObjectURL(blob);
 
             const outName = file.name.replace(/\.[^/.]+$/, '') + `_${multiplier}x_${targetFps}fps.mp4`;

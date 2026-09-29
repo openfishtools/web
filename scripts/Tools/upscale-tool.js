@@ -555,7 +555,7 @@
         await ffmpeg.createDir('up');
         for (let i = 0; i < selected.length; i++) {
             const fdata = await ffmpeg.readFile('frames/' + selected[i]);
-            const fblob = new Blob([fdata.buffer], { type: 'image/jpeg' });
+            const fblob = new Blob([fdata], { type: 'image/jpeg' });
             const furl = URL.createObjectURL(fblob);
             try {
                 const img = await loadImageEl(furl);
@@ -598,6 +598,7 @@
         log('[AI-Video] Reassembling MP4 with audio...');
         const outFps = (fps / step).toFixed(3);
         await ffmpeg.exec([
+            '-y',
             '-framerate', outFps,
             '-i', 'up/o_%06d.jpg',
             '-i', inName,
@@ -1475,12 +1476,12 @@
 
                     setProgress(60, t('status_encoding') || 'Encoding enhanced video...');
                     log(`[Enhance] FFmpeg filter chain: ${vf}`);
-                    await ffmpeg.exec(['-i', inName, '-vf', vf, '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'copy', 'enhanced.mp4']);
+                    await ffmpeg.exec(['-y', '-i', inName, '-map', '0:v:0', '-map', '0:a:0?', '-vf', vf, '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'copy', 'enhanced.mp4']);
                 }
 
                 setProgress(95, t('status_finalizing') || 'Finalizing output video...');
                 const data = await ffmpeg.readFile('enhanced.mp4');
-                const blob = new Blob([data.buffer], { type: 'video/mp4' });
+                const blob = new Blob([data], { type: 'video/mp4' });
 
                 const outName = file.name.replace(/\.[^/.]+$/, '') + `_enhanced.mp4`;
                 triggerDownload(blob, outName);
@@ -1655,10 +1656,10 @@
 
         log(`[Batch] FFmpeg filter chain: ${vf}`);
         onProgress(0.15);
-        await ffmpeg.exec(['-i', `input.${ext}`, '-vf', vf, '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'copy', 'enhanced.mp4']);
+        await ffmpeg.exec(['-y', '-i', `input.${ext}`, '-map', '0:v:0', '-map', '0:a:0?', '-vf', vf, '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'copy', 'enhanced.mp4']);
         onProgress(0.9);
         const data = await ffmpeg.readFile('enhanced.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        const blob = new Blob([data], { type: 'video/mp4' });
         return { blob, outName: batchOutName(file) };
     }
 

@@ -223,7 +223,7 @@
                 ? Math.min(navigator.hardwareConcurrency, 4).toString() 
                 : '2';
 
-            const command = ['-i', inputName, '-threads', threads, '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', 'audio.mp3'];
+            const command = ['-y', '-i', inputName, '-threads', threads, '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', 'audio.mp3'];
 
             try {
                 await ffmpeg.exec(command);
@@ -247,7 +247,7 @@
                 throw Object.assign(new Error('OOM'), { _oom: true });
             }
 
-            const blob = new Blob([data.buffer], { type: 'audio/mp3' });
+            const blob = new Blob([data], { type: 'audio/mpeg' });
             const url = URL.createObjectURL(blob);
 
             const a = document.createElement('a');
@@ -257,6 +257,11 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+
+            try {
+                await ffmpeg.deleteFile(inputName);
+                await ffmpeg.deleteFile('audio.mp3');
+            } catch (_) {}
 
             setProgress(100, t('status_completed') || 'Done!');
             setButtonState('completed', t('status_process_another') || 'Process Another');

@@ -372,6 +372,7 @@
             const threads = navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4).toString() : '2';
 
             const ffmpegArgs = [
+                '-y',
                 '-framerate', String(fps),
                 '-i', `frame_%06d.${firstExt}`
             ];
@@ -404,7 +405,7 @@
                 throw new Error("Output video file generation failed.");
             }
 
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const blob = new Blob([data], { type: 'video/mp4' });
             const url = URL.createObjectURL(blob);
 
             const outBase = zipFile.name.replace(/\.[^/.]+$/, '');
