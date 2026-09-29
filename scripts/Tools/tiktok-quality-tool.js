@@ -1114,7 +1114,7 @@
         }
 
         if (hdrMode === 'on') {
-            baseDesc += '\n[hdr] HLG Rec.2020 (BETA)';
+            baseDesc += '\n[hdr] HLG Rec.2020';
         }
 
         baseDesc = renderModularDescCard(baseDesc);
@@ -1265,11 +1265,8 @@
                 </div>
             </div>
 
-            <div id="tiktok-hdr-row" style="margin-top: 12px;">
-                <div class="tiktok-switcher-label" style="display: flex; align-items: center; justify-content: space-between;">
-                    <span>${t('patcher_hdr_title') || 'HDR (BETA)'}</span>
-                    <span class="tiktok-badge-beta">BETA</span>
-                </div>
+            <div id="tiktok-hdr-row">
+                <div class="tiktok-switcher-label">${t('patcher_hdr_title') || 'HDR (BETA)'}</div>
                 <div class="tiktok-switch-scroll">
                     <div class="tiktok-switch-track" id="tiktok-hdr-mode" data-selected="${hdrMode}" data-count="2" data-selected-idx="${hdrMode === 'on' ? 1 : 0}" style="--total: 2; --idx: ${hdrMode === 'on' ? 1 : 0};">
                         <div class="tiktok-switch-indicator"></div>
