@@ -317,33 +317,6 @@ function _v3_updateTkhd(tkhd, trackId, durationInMovieTimescale) {
     return d;
 }
 
-/**
- * Builds udta container metadata placed inside moov and Track 1.
- */
-function _v3_buildUdta(toolName, comment) {
-    const buildItem = (tag, str) => {
-        const textBytes = new TextEncoder().encode(str);
-        const dataPayload = new Uint8Array(8 + textBytes.length);
-        const dv = new DataView(dataPayload.buffer);
-        dv.setUint32(0, 1, false); // type 1 = utf-8
-        dv.setUint32(4, 0, false); // flags = 0
-        dataPayload.set(textBytes, 8);
-        return _v3_makeBox(tag, _v3_makeBox('data', dataPayload));
-    };
-
-    const itemToo = buildItem('\u00A9too', toolName || 'Cutefish Binary Quality Method (cutefish.my.id)');
-    const itemCmt = buildItem('\u00A9cmt', comment  || 'cutefish.my.id');
-    const ilst = _v3_makeBox('ilst', _v3_concatBytes([itemToo, itemCmt]));
-
-    const hdlrPayload = new Uint8Array(25);
-    hdlrPayload.set([0x6d, 0x64, 0x69, 0x72], 4); // "mdir"
-    const hdlr = _v3_makeBox('hdlr', hdlrPayload);
-
-    const metaPayload = _v3_concatBytes([new Uint8Array(4), hdlr, ilst]);
-    const meta = _v3_makeBox('meta', metaPayload);
-
-    return _v3_makeBox('udta', meta);
-}
 
 /**
  * Builds Track 3: The cloned audio track that holds the fake-sample payload.
@@ -474,16 +447,13 @@ function _v3_patchMp4(inputData, _logFn) {
     // Video is Track 1
     // Audio is Track 2 (clean)
     // Audio Clone is Track 3 (padded)
-    // udta under moov for universal metadata analyzer detection (cutefish.my.id)
     const cloneTrackStub = audioTrak ? { type: 'trak' } : null;
-    const moovUdtaStub   = { type: 'udta' };
     const mvhdBox = _v3_findChild(moov, 'mvhd');
-    const otherMoovChildren = moov.children.filter(c => c !== mvhdBox && c !== videoTrak && c !== audioTrak && c.type !== 'udta');
+    const otherMoovChildren = moov.children.filter(c => c !== mvhdBox && c !== videoTrak && c !== audioTrak);
 
     const moovChildrenList = [mvhdBox, videoTrak];
     if (audioTrak) moovChildrenList.push(audioTrak);
     if (cloneTrackStub) moovChildrenList.push(cloneTrackStub);
-    moovChildrenList.push(moovUdtaStub);
     for (const c of otherMoovChildren) moovChildrenList.push(c);
     moov.children = moovChildrenList;
 
@@ -498,27 +468,13 @@ function _v3_patchMp4(inputData, _logFn) {
         // 1. mvhd: Version 1 (64-bit) with timescale 1000, duration 0xFFFFFFFFFFFFFFFF, nextTrackId 4
         replacements.set(mvhdBox, _v3_buildMvhdV1(audioTrak ? 4 : 2));
 
-        // 2. Video track: Track ID 1, preserve edts, attach udta metadata
+        // 2. Video track: Track ID 1, preserve edts
         const vTkhd = _v3_findChild(videoTrak, 'tkhd');
         if (vTkhd) {
             replacements.set(vTkhd, _v3_updateTkhd(vTkhd, 1, movieDurationMs));
         }
         const newVOffsets = vRelOffsets.map(off => off + newMdatContentStart);
         replacements.set(vStcoBox, _v3_buildStco(newVOffsets));
-
-        const existingVUdta = _v3_findChild(videoTrak, 'udta');
-        const trackUdtaBox = _v3_buildUdta();
-        if (existingVUdta) {
-            replacements.set(existingVUdta, trackUdtaBox);
-        } else {
-            const nonUdta = videoTrak.children.filter(c => c.type !== 'udta');
-            videoTrak.children = [...nonUdta, { type: 'udta', _customBytes: trackUdtaBox }];
-            const stub = videoTrak.children.find(c => c._customBytes);
-            if (stub) replacements.set(stub, stub._customBytes);
-        }
-
-        // 3. Moov-level udta metadata (cutefish.my.id)
-        replacements.set(moovUdtaStub, _v3_buildUdta());
 
         // 3. Audio track (Track 2): Track ID 2, preserve edts, strip udta
         if (audioTrak) {

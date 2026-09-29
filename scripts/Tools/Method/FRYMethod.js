@@ -443,7 +443,6 @@ function _v3_executePatch(bytes, parsed, _log) {
     if (!mvhd || mvhd.payload.length < 4) _v3_throwError('Invalid MP4 — mvhd hilang.');
 
     mvhd.payload = _v3_patchMvhdToV1Sentinel(mvhd.payload);
-    _v3_injectUdta(moov, ENCODER_TAG);
 
     const moovBeforeMdat = moovBox.start < mdatBox.start;
     const oldMoovSize = moovBox.end - moovBox.start;

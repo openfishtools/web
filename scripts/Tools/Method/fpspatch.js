@@ -225,45 +225,6 @@ function _v3_buildStts(entries) {
     }
     return _v3_makeBox('stts', payload);
 }
-function _v3_buildCommentItem(comment) {
-    const text = new TextEncoder().encode(comment);
-    const dataPayload = new Uint8Array(8 + text.byteLength);
-    dataPayload.set(text, 8);
-    return _v3_makeBox('\u00A9cmt', _v3_makeBox('data', dataPayload));
-}
-function _v3_buildCommentMetadata() {
-    const item = _v3_buildCommentItem('Patch by cutefish.my.id');
-    const ilst = _v3_makeBox('ilst', item);
-    return _v3_makeBox('meta', _v3_concatBytes([new Uint8Array(4), ilst]));
-}
-function _v3_addCommentMetadata(moov, replacements) {
-    const udta = _v3_findChild(moov, 'udta');
-    if (!udta) {
-        const moovBytes   = _v3_rebuildBox(moov, replacements);
-        const rebuiltMoov = _v3_makeBox('moov', _v3_concatBytes([
-            moovBytes.subarray(8),
-            _v3_makeBox('udta', _v3_buildCommentMetadata())
-        ]));
-        replacements.set(moov, rebuiltMoov);
-        return;
-    }
-    const meta = _v3_findChild(udta, 'meta');
-    if (!meta) {
-        const udtaPrefix   = new Uint8Array(udta.data.buffer, udta.data.byteOffset + udta.offset + 8, udta.prefixEnd - udta.contentStart);
-        const udtaChildren = udta.children.map(_v3_boxBytes);
-        replacements.set(udta, _v3_makeBox('udta', _v3_concatBytes([udtaPrefix, ...udtaChildren, _v3_buildCommentMetadata()])));
-        return;
-    }
-    const ilst = _v3_findChild(meta, 'ilst');
-    if (ilst) {
-        const items = ilst.children.filter(item => item.type !== '\u00A9cmt').map(_v3_boxBytes);
-        replacements.set(ilst, _v3_makeBox('ilst', _v3_concatBytes([...items, _v3_buildCommentItem('Patch by cutefish.my.id')])));
-        return;
-    }
-    const metaPrefix   = new Uint8Array(meta.data.buffer, meta.data.byteOffset + meta.offset + 8, meta.prefixEnd - meta.contentStart);
-    const metaChildren = meta.children.map(_v3_boxBytes);
-    replacements.set(meta, _v3_makeBox('meta', _v3_concatBytes([metaPrefix, ...metaChildren, _v3_makeBox('ilst', _v3_buildCommentItem('Patch by cutefish.my.id'))])));
-}
 function _v3_rebuildBox(box, replacements) {
     if (replacements.has(box)) return replacements.get(box);
     if (!box.children.length) return _v3_boxBytes(box);
@@ -439,7 +400,6 @@ function _v3_patchMp4FPS(inputData, _logFn) {
             replacements.set(mvhd, mvhdData);
         }
 
-        _v3_addCommentMetadata(moov, replacements);
         const moovFinal = _v3_rebuildBox(moov, replacements);
         moovHeaderLen   = moovFinal.byteLength;
 
