@@ -12,7 +12,7 @@
     let selectedFile = null;
     let currentFileBuffer = null;
     let isProcessing = false;
-    let currentVersion = 'binary';
+    let currentVersion = 'tbt';
     let compressMode = 'off';
     let currentInspectedFile = null;
     let currentVideoSpecs = null;
@@ -675,7 +675,7 @@
             }
         }
 
-        if (currentVersion !== 'v3' && currentVersion !== 'binary') {
+        if (currentVersion !== 'v3' && currentVersion !== 'binary' && currentVersion !== 'tbt' && currentVersion !== 'streamshield') {
             slot.innerHTML = '';
             if (processBtn && !isProcessing && processBtn.dataset.state === 'blocked') {
                 processBtn.disabled = false;
@@ -959,6 +959,107 @@
         });
     }
 
+    function parseDescTags(input) {
+        if (!input || typeof input !== 'string') return null;
+        const str = input.trim();
+        if (str.startsWith('<div class="tiktok-desc-card"')) {
+            return null;
+        }
+        const tagMatch = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]/i;
+        if (!tagMatch.test(str)) {
+            return null;
+        }
+        const isEn = (typeof window !== 'undefined' && window.currentLang === 'en');
+        const items = [];
+        const footers = [];
+        const re = /\[(format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]([\s\S]*?)(?=\[(?:format|codec|mode|resolution|res|method|fps|framerate|info|credit|favorite|warning|warn|item:[^\]]+)\]|$)/gi;
+        let match;
+        while ((match = re.exec(str)) !== null) {
+            const rawTag = match[1].trim().toLowerCase();
+            const content = match[2].trim();
+            if (!content) continue;
+            if (rawTag === 'info') {
+                footers.push({ icon: 'info', text: content });
+            } else if (rawTag === 'credit' || rawTag === 'favorite') {
+                footers.push({ icon: 'favorite', text: content });
+            } else if (rawTag === 'warning' || rawTag === 'warn') {
+                footers.push({ icon: 'warning', text: content });
+            } else if (rawTag.startsWith('item:')) {
+                const parts = match[1].slice(5).split(':');
+                const icon = parts[0] || 'info';
+                const label = parts[1] || 'Info';
+                items.push({ icon, label, value: content });
+            } else {
+                let icon = 'info';
+                let label = rawTag.charAt(0).toUpperCase() + rawTag.slice(1);
+                if (rawTag === 'format') { icon = 'movie'; label = 'Format'; }
+                else if (rawTag === 'codec') { icon = 'memory'; label = 'Codec'; }
+                else if (rawTag === 'mode') { icon = 'tune'; label = 'Mode'; }
+                else if (rawTag === 'resolution' || rawTag === 'res') { icon = 'aspect_ratio'; label = isEn ? 'Resolution' : 'Resolusi'; }
+                else if (rawTag === 'method') { icon = 'verified'; label = isEn ? 'Method' : 'Metode'; }
+                else if (rawTag === 'fps' || rawTag === 'framerate') { icon = 'speed'; label = 'Framerate'; }
+                items.push({ icon, label, value: content });
+            }
+        }
+        return { items, footers };
+    }
+
+    function buildDescCardHtml({ items = [], footers = [] }) {
+        let html = '<div class="tiktok-desc-card">';
+        if (items.length > 0) {
+            html += '<ul class="tiktok-desc-list">';
+            items.forEach(item => {
+                html += `<li><span class="material-symbols-rounded">${item.icon || 'info'}</span><strong>${item.label}:</strong> ${item.value}</li>`;
+            });
+            html += '</ul>';
+        }
+        if (footers.length > 0) {
+            footers.forEach((footer, idx) => {
+                if (items.length > 0 || idx > 0) {
+                    html += '<hr class="tiktok-desc-divider">';
+                }
+                html += `
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">${footer.icon || 'info'}</span>
+                        <span>${footer.text}</span>
+                    </div>
+                `;
+            });
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderModularDescCard(parsedOrHtml) {
+        if (!parsedOrHtml) return '';
+        if (typeof parsedOrHtml === 'string') {
+            const trimmed = parsedOrHtml.trim();
+            if (trimmed.startsWith('<div class="tiktok-desc-card"')) {
+                return trimmed;
+            }
+            const parsed = parseDescTags(trimmed);
+            if (parsed && (parsed.items.length > 0 || parsed.footers.length > 0)) {
+                return buildDescCardHtml(parsed);
+            }
+            return `
+                <div class="tiktok-desc-card">
+                    <div class="tiktok-desc-footer">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>${trimmed}</span>
+                    </div>
+                </div>
+            `;
+        }
+        if (typeof parsedOrHtml === 'object') {
+            return buildDescCardHtml(parsedOrHtml);
+        }
+        return '';
+    }
+
+    if (typeof window !== 'undefined') {
+        window.renderModularDescCard = renderModularDescCard;
+    }
+
     function updateDesc() {
         const descEl = document.getElementById('tiktok-info-desc');
         if (!descEl) return;
@@ -973,20 +1074,39 @@
             if (compressMode === '720p') baseDesc = t('patcher_desc_binary_720p');
             else if (compressMode === '1080p') baseDesc = t('patcher_desc_binary_1080p');
             else baseDesc = t('patcher_desc_binary_off');
-        } else if (currentVersion === 'tbt') {
-            if (compressMode === '720p') baseDesc = t('patcher_desc_tbt_720p') || 'TBT 720p Compress + Patch';
-            else if (compressMode === '1080p') baseDesc = t('patcher_desc_tbt_1080p') || 'TBT 1080p Compress + Patch';
-            else baseDesc = t('patcher_desc_tbt_off') || 'TBT Metadata Patch Only (Direct pass-through)';
+        } else if (currentVersion === 'tbt' || currentVersion === 'streamshield' || currentVersion === 'fish') {
+            if (compressMode === '720p') {
+                baseDesc = t('patcher_desc_fish_720p') || `
+                    [format] .mp4
+                    [resolution] 720p
+                    [info] Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menata ulang metadata MP4.
+                `;
+            } else if (compressMode === '1080p') {
+                baseDesc = t('patcher_desc_fish_1080p') || `
+                    [format] .mp4
+                    [resolution] 1080p
+                    [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menata ulang metadata MP4.
+                `;
+            } else {
+                baseDesc = t('patcher_desc_fish_off') || `
+                    [format] .mp4
+                    [mode] Direct Pass-Through
+                    [info] Menata ulang struktur atom MP4 secara instan tanpa encode ulang, menjaga resolusi serta kualitas video dan audio tetap 100% asli.
+                `;
+            }
         } else {
             if (compressMode === '720p') baseDesc = t('patcher_desc_fry_720p');
             else if (compressMode === '1080p') baseDesc = t('patcher_desc_fry_1080p');
             else baseDesc = t('patcher_desc_fry_off');
         }
 
+        baseDesc = renderModularDescCard(baseDesc);
+
         if (currentVideoSpecs) {
             const badges = [];
             let patchName = currentVersion.toUpperCase();
             if (currentVersion === 'v3') patchName = 'F R Y';
+            else if (currentVersion === 'tbt' || currentVersion === 'fish') patchName = 'FISH';
 
             if (isSpecsOver1080p()) {
                 const resText = (t('patcher_notice_res_limit') || 'Resolusi <strong>{res}</strong> (&gt; 1080p) terdeteksi. Kompresi otomatis diatur ke <strong>1080p</strong>.')
@@ -1025,31 +1145,76 @@
         descEl.innerHTML = baseDesc;
     }
 
+    const METHOD_CATEGORIES = {
+        recommended: {
+            id: 'recommended',
+            labelKey: 'patcher_cat_recommended',
+            defaultLabel: 'Rekomendasi',
+            icon: 'verified',
+            methods: [
+                { id: 'tbt', labelKey: 'patcher_method_tbt', defaultLabel: 'FISH' },
+                { id: 'binary', labelKey: 'patcher_method_binary', defaultLabel: 'BINARY' },
+                { id: 'v3', labelKey: 'patcher_method_fry', defaultLabel: 'F R Y' }
+            ]
+        },
+        backup: {
+            id: 'backup',
+            labelKey: 'patcher_cat_backup',
+            defaultLabel: 'Cadangan',
+            icon: 'history',
+            methods: [
+                { id: 'fps', labelKey: 'patcher_method_fps', defaultLabel: 'FPS' },
+                { id: 'v1', labelKey: 'patcher_method_wmv', defaultLabel: 'WMV' }
+            ]
+        }
+    };
+
+    const lastSelectedPerCat = {
+        recommended: 'tbt',
+        backup: 'fps'
+    };
+
+    function getCategoryForMethod(methodId) {
+        if (methodId === 'v1' || methodId === 'fps') {
+            return 'backup';
+        }
+        return 'recommended';
+    }
+
     function initQualityMethodUI() {
         const optContainer = document.getElementById('tool-dynamic-options');
         if (!optContainer) return;
 
-        const versionList = ['v1', 'v3', 'binary', 'fps', 'tbt'];
-        const vIdx = versionList.indexOf(currentVersion);
-        const selectedIdx = vIdx >= 0 ? vIdx : 2;
-        const showCompress = (currentVersion !== 'v1');
+        let activeCategory = getCategoryForMethod(currentVersion);
+        const catData = METHOD_CATEGORIES[activeCategory] || METHOD_CATEGORIES.recommended;
 
+        if (!catData.methods.some(m => m.id === currentVersion)) {
+            currentVersion = (lastSelectedPerCat[activeCategory] && catData.methods.some(m => m.id === lastSelectedPerCat[activeCategory]))
+                ? lastSelectedPerCat[activeCategory]
+                : catData.methods[0].id;
+        }
+        lastSelectedPerCat[activeCategory] = currentVersion;
+
+        const showCompress = (currentVersion !== 'v1');
         const compressList = ['off', '720p', '1080p'];
         const cIdx = compressList.indexOf(compressMode);
         const selectedCIdx = cIdx >= 0 ? cIdx : 0;
 
         optContainer.innerHTML = `
-            <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
-            <div class="tiktok-switch-scroll">
-                <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="5" data-selected-idx="${selectedIdx}" style="--total: 5; --idx: ${selectedIdx};">
-                    <div class="tiktok-switch-indicator"></div>
-                    <div class="tiktok-switch-option ${currentVersion === 'v1' ? 'active' : ''}" data-version="v1">${t('patcher_method_wmv') || 'WMV'}</div>
-                    <div class="tiktok-switch-option ${currentVersion === 'v3' ? 'active' : ''}" data-version="v3">${t('patcher_method_fry') || 'F R Y'}</div>
-                    <div class="tiktok-switch-option ${currentVersion === 'binary' ? 'active' : ''}" data-version="binary">${t('patcher_method_binary') || 'BINARY'}</div>
-                    <div class="tiktok-switch-option ${currentVersion === 'fps' ? 'active' : ''}" data-version="fps">${t('patcher_method_fps') || 'FPS'}</div>
-                    <div class="tiktok-switch-option ${currentVersion === 'tbt' ? 'active' : ''}" data-version="tbt">${t('patcher_method_tbt') || 'TEMP'}</div>
+            <div class="tiktok-category-header">
+                <div class="tiktok-switcher-label">${t('patcher_ver_title')}</div>
+                <div class="tiktok-category-tabs" role="tablist">
+                    <button type="button" class="tiktok-category-tab ${activeCategory === 'recommended' ? 'active' : ''}" data-category="recommended" role="tab" aria-selected="${activeCategory === 'recommended'}">
+                        <span class="material-symbols-rounded">verified</span>
+                        <span>${t('patcher_cat_recommended') || 'Rekomendasi'}</span>
+                    </button>
+                    <button type="button" class="tiktok-category-tab ${activeCategory === 'backup' ? 'active' : ''}" data-category="backup" role="tab" aria-selected="${activeCategory === 'backup'}">
+                        <span class="material-symbols-rounded">history</span>
+                        <span>${t('patcher_cat_backup') || 'Cadangan'}</span>
+                    </button>
                 </div>
             </div>
+            <div class="tiktok-switch-scroll" id="tiktok-version-scroll"></div>
 
             <div id="tiktok-compress-row" style="display: ${showCompress ? 'block' : 'none'};">
                 <div class="tiktok-switcher-label">${t('patcher_compress_title')}</div>
@@ -1080,33 +1245,83 @@
             </div>
         `;
 
-        updateCompressUIForSpecs();
-        checkExtensionPresence().then(updateExtensionWarning);
+        function renderMethodTrack(catKey) {
+            activeCategory = catKey;
+            const currentCatData = METHOD_CATEGORIES[catKey] || METHOD_CATEGORIES.recommended;
+            const scrollContainer = document.getElementById('tiktok-version-scroll');
+            if (!scrollContainer) return;
 
-        const vSwitch = document.getElementById('tiktok-version-switch');
-        const cRow = document.getElementById('tiktok-compress-row');
-        const cSwitch = document.getElementById('tiktok-compress-mode');
+            if (!currentCatData.methods.some(m => m.id === currentVersion)) {
+                currentVersion = (lastSelectedPerCat[catKey] && currentCatData.methods.some(m => m.id === lastSelectedPerCat[catKey]))
+                    ? lastSelectedPerCat[catKey]
+                    : currentCatData.methods[0].id;
+            }
+            lastSelectedPerCat[catKey] = currentVersion;
 
-        if (vSwitch) {
-            vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
-                opt.addEventListener('click', () => {
-                    const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
-                    allOpts.forEach(o => o.classList.remove('active'));
-                    opt.classList.add('active');
-                    currentVersion = opt.getAttribute('data-version') || 'binary';
-                    const optIdx = allOpts.indexOf(opt);
-                    vSwitch.setAttribute('data-selected', currentVersion);
-                    vSwitch.setAttribute('data-selected-idx', optIdx.toString());
-                    vSwitch.style.setProperty('--idx', optIdx.toString());
-                    if (cRow) {
-                        cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
-                    }
-                    updateCompressUIForSpecs();
-                    updateExtensionWarning();
+            const activeIdx = Math.max(0, currentCatData.methods.findIndex(m => m.id === currentVersion));
+            const count = currentCatData.methods.length;
+
+            scrollContainer.innerHTML = `
+                <div class="tiktok-switch-track" id="tiktok-version-switch" data-selected="${currentVersion}" data-count="${count}" data-selected-idx="${activeIdx}" style="--total: ${count}; --idx: ${activeIdx};">
+                    <div class="tiktok-switch-indicator"></div>
+                    ${currentCatData.methods.map((m, idx) => `
+                        <div class="tiktok-switch-option ${m.id === currentVersion ? 'active' : ''}" data-version="${m.id}" data-idx="${idx}">${t(m.labelKey) || m.defaultLabel}</div>
+                    `).join('')}
+                </div>
+            `;
+
+            const vSwitch = document.getElementById('tiktok-version-switch');
+            const cRow = document.getElementById('tiktok-compress-row');
+
+            if (vSwitch) {
+                vSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
+                    opt.addEventListener('click', () => {
+                        const allOpts = Array.from(vSwitch.querySelectorAll('.tiktok-switch-option'));
+                        allOpts.forEach(o => o.classList.remove('active'));
+                        opt.classList.add('active');
+                        currentVersion = opt.getAttribute('data-version') || currentCatData.methods[0].id;
+                        lastSelectedPerCat[activeCategory] = currentVersion;
+                        const optIdx = opt.getAttribute('data-idx') || '0';
+                        vSwitch.setAttribute('data-selected', currentVersion);
+                        vSwitch.setAttribute('data-selected-idx', optIdx);
+                        vSwitch.style.setProperty('--idx', optIdx);
+                        if (cRow) {
+                            cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
+                        }
+                        updateCompressUIForSpecs();
+                        updateExtensionWarning();
+                        updateDesc();
+                    });
                 });
-            });
+            }
+
+            if (cRow) {
+                cRow.style.display = (currentVersion !== 'v1') ? 'block' : 'none';
+            }
+            updateCompressUIForSpecs();
+            updateExtensionWarning();
+            updateDesc();
         }
 
+        const catTabs = optContainer.querySelectorAll('.tiktok-category-tab');
+        catTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetCat = tab.getAttribute('data-category');
+                if (targetCat === activeCategory) return;
+                catTabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                renderMethodTrack(targetCat);
+            });
+        });
+
+        renderMethodTrack(activeCategory);
+        checkExtensionPresence().then(updateExtensionWarning);
+
+        const cSwitch = document.getElementById('tiktok-compress-mode');
         if (cSwitch) {
             cSwitch.querySelectorAll('.tiktok-switch-option').forEach(opt => {
                 opt.addEventListener('click', () => {
@@ -1183,7 +1398,7 @@
             updateCompressUIForSpecs();
         }
 
-        if ((currentVersion === 'v3' || currentVersion === 'binary') && isHighProfile && (!isExtensionDetected || detectedUserscriptVersion !== TARGET_USERSCRIPT_VERSION)) {
+        if ((currentVersion === 'v3' || currentVersion === 'binary' || currentVersion === 'tbt' || currentVersion === 'streamshield') && isHighProfile && (!isExtensionDetected || detectedUserscriptVersion !== TARGET_USERSCRIPT_VERSION)) {
             updateExtensionWarning();
             if (typeof window.showToast === 'function') {
                 window.showToast(t('patcher_ext_blocked_toast'));
@@ -1220,6 +1435,7 @@
         if (currentVersion === 'v3') methodLogName = 'F R Y';
         else if (currentVersion === 'binary') methodLogName = 'BINARY';
         else if (currentVersion === 'fps') methodLogName = 'FPS';
+        else if (currentVersion === 'tbt' || currentVersion === 'fish') methodLogName = 'FISH';
         log(`  Method : ${methodLogName}`);
 
         // Effective compress mode calculation
@@ -1274,11 +1490,13 @@
                 } else {
                     throw new Error('Binary module is not loaded.');
                 }
-            } else if (currentVersion === 'tbt') {
-                if (typeof window.processVideoTBT === 'function') {
+            } else if (currentVersion === 'tbt' || currentVersion === 'streamshield') {
+                if (typeof window.processVideoStreamShield === 'function') {
+                    await window.processVideoStreamShield(file, effectiveCompressMode);
+                } else if (typeof window.processVideoTBT === 'function') {
                     await window.processVideoTBT(file, effectiveCompressMode);
                 } else {
-                    throw new Error('TBT module is not loaded.');
+                    throw new Error('StreamShield module is not loaded.');
                 }
             } else {
                 if (typeof window.processVideoFRY === 'function') {
@@ -1427,7 +1645,9 @@
             currentInspectedFile = null;
             currentVideoSpecs = null;
             compressMode = 'off';
-            currentVersion = 'binary';
+            currentVersion = 'tbt';
+            lastSelectedPerCat.recommended = 'tbt';
+            lastSelectedPerCat.backup = 'fps';
             removeTikTokStudioUploadPrompt();
             updateCompressUIForSpecs();
             const slot = document.getElementById('tiktok-ext-alert-slot');

@@ -5,3 +5,4 @@ dist-cf
 .vercel
 .wrangler
 *.log
+Experiment/

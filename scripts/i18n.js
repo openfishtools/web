@@ -225,11 +225,30 @@
             "patcher_overlay_title": "Metode Ter-patch",
             "patcher_overlay_desc": "Metode WMV saat ini tidak tersedia. Silakan gunakan metode F R Y atau FPS.",
             "patcher_overlay_ignore": "Abaikan",
+            "patcher_cat_recommended": "Rekomendasi",
+            "patcher_cat_backup": "Cadangan",
             "patcher_method_wmv": "WMV",
             "patcher_method_fry": "F R Y",
             "patcher_method_binary": "BINARY",
             "patcher_method_fps": "FPS",
-            "patcher_method_tbt": "TEMP",
+            "patcher_method_tbt": "FISH",
+            "patcher_method_streamshield": "FISH",
+            "patcher_method_fish": "FISH",
+            "patcher_desc_fish_off": `
+                [format] .mp4
+                [mode] Direct Pass-Through
+                [info] Menata ulang struktur atom MP4 secara instan tanpa encode ulang, menjaga resolusi serta kualitas video dan audio tetap 100% asli.
+            `,
+            "patcher_desc_fish_720p": `
+                [format] .mp4
+                [resolution] 720p
+                [info] Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menata ulang metadata MP4.
+            `,
+            "patcher_desc_fish_1080p": `
+                [format] .mp4
+                [resolution] 1080p
+                [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menata ulang metadata MP4.
+            `,
             "patcher_compress_title": "Compress",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
@@ -873,11 +892,30 @@
             "patcher_overlay_title": "Method Patched",
             "patcher_overlay_desc": "WMV method is currently unavailable. Please use F R Y or FPS method.",
             "patcher_overlay_ignore": "Ignore",
+            "patcher_cat_recommended": "Recommended",
+            "patcher_cat_backup": "Backup",
             "patcher_method_wmv": "WMV",
             "patcher_method_fry": "F R Y",
             "patcher_method_binary": "BINARY",
             "patcher_method_fps": "FPS",
-            "patcher_method_tbt": "TEMP",
+            "patcher_method_tbt": "FISH",
+            "patcher_method_streamshield": "FISH",
+            "patcher_method_fish": "FISH",
+            "patcher_desc_fish_off": `
+                [format] .mp4
+                [mode] Direct Pass-Through
+                [info] Instantly rearranges MP4 atom structure without re-encoding, preserving 100% original video and audio quality.
+            `,
+            "patcher_desc_fish_720p": `
+                [format] .mp4
+                [resolution] 720p
+                [info] Compresses video to 720p for lighter file size, then applies MP4 atom restructuring.
+            `,
+            "patcher_desc_fish_1080p": `
+                [format] .mp4
+                [resolution] 1080p
+                [info] Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 atom restructuring.
+            `,
             "patcher_compress_title": "Compress",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
