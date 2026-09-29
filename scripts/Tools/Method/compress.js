@@ -235,79 +235,12 @@ async function remuxFaststart(file, inputBuffer) {
     }
 }
 
-/**
- * Shared helper to finalize, download, and update UI after patching.
- *
- * @param {File} file - Original file
- * @param {Uint8Array} finalBytes - Patched output bytes
- * @param {string} suffix - Filename suffix ('hd', 'fps', etc.)
- */
-function finalizePatcherDownload(file, finalBytes, suffix) {
-    const s = window._tktk;
-    const blob = new Blob([finalBytes], { type: 'video/mp4' });
-    const cleanSuffix = (!suffix || suffix === 'shield') ? 'hd' : suffix;
-    const filename = `${file.name.replace(/\.[^.]+$/, '')}_${cleanSuffix}.mp4`;
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    const dlBtn = document.getElementById('tool-download-btn');
-    if (dlBtn) {
-        dlBtn.classList.remove('hidden');
-        dlBtn.onclick = () => {
-            const da = document.createElement('a');
-            da.href = url;
-            da.download = filename;
-            document.body.appendChild(da);
-            da.click();
-            document.body.removeChild(da);
-        };
-    }
-
-    if (s && s.log) s.log(`  Process Completed Successfully!`);
-    if (s && s.statusText) {
-        s.statusText.innerHTML = `<span style="color: #4caf50; font-weight: bold;">&#10003; ${window.getTranslation('status_completed')}</span>`;
-    }
-    if (s && s.progressFill) s.progressFill.style.width = '100%';
-    if (s && s.progressPercent) s.progressPercent.textContent = '100%';
-    if (s && s.progressText) s.progressText.textContent = window.getTranslation('status_completed');
-
-    if (window.ToolProgressManager) {
-        window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: false, completed: true, percent: 100, status: window.getTranslation('status_completed'), file });
-    }
-
-    const processBtn = document.getElementById('tool-process-btn');
-    const processLabel = document.getElementById('tool-process-label');
-    const processIcon = document.getElementById('tool-process-icon');
-    if (processBtn) {
-        processBtn.disabled = false;
-        processBtn.dataset.state = 'completed';
-        if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
-        if (processIcon) processIcon.textContent = 'restart_alt';
-    }
-
-    if (s) s.isProcessing = false;
-
-    if (typeof window.showToast === 'function') {
-        window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Processing completed successfully!');
-    }
-    if (s && typeof s.showTikTokStudioUploadPrompt === 'function') {
-        s.showTikTokStudioUploadPrompt();
-    }
-}
-
 window.compressVideo = compressVideo;
 window.remuxFaststart = remuxFaststart;
-window.finalizePatcherDownload = finalizePatcherDownload;
 
 if (window._tktk) {
     window._tktk.compressVideo = compressVideo;
     window._tktk.remuxFaststart = remuxFaststart;
-    window._tktk.finalizePatcherDownload = finalizePatcherDownload;
 }
 
 })();
