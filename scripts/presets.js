@@ -1268,12 +1268,25 @@
     }
 
     let presetCloseTimer = null;
+    let currentOpenPreset = null;
+    let presetModalPushedHistory = false;
+
+    function getPresetIdentifier(p) {
+        if (!p) return null;
+        if (p.presetId != null && p.presetId !== '' && !isNaN(Number(p.presetId))) {
+            return Number(p.presetId);
+        }
+        const idx = allPresetsCache.findIndex(x => x._id === p._id);
+        if (idx !== -1) return idx + 1;
+        return p._id || null;
+    }
 
     function forceFinishPresetModalClose() {
         if (presetCloseTimer) {
             clearTimeout(presetCloseTimer);
             presetCloseTimer = null;
         }
+        currentOpenPreset = null;
         const backdrop = document.getElementById('preset-modal-backdrop');
         const cardEl = document.getElementById('preset-modal-card');
         if (!backdrop || !cardEl) return;
@@ -1293,7 +1306,7 @@
         isPresetModalAnimating = false;
     }
 
-    async function openPresetModal(preset, sourceCard) {
+    async function openPresetModal(preset, sourceCard, fromPopState = false) {
         const backdrop = document.getElementById('preset-modal-backdrop');
         const cardEl = document.getElementById('preset-modal-card');
         const mediaEl = document.getElementById('preset-modal-media');
@@ -1302,14 +1315,31 @@
         forceFinishPresetModalClose();
         if (isPresetModalAnimating) return;
 
+        currentOpenPreset = preset;
+        const pIdent = getPresetIdentifier(preset);
+        if (pIdent != null && !fromPopState) {
+            const targetPath = `/${pIdent}`;
+            if (window.location.pathname === targetPath) {
+                history.replaceState({ presetModalOpen: true, presetId: pIdent }, '', targetPath);
+                presetModalPushedHistory = false;
+            } else {
+                history.pushState({ presetModalOpen: true, presetId: pIdent }, '', targetPath);
+                presetModalPushedHistory = true;
+            }
+        }
+
         fillPresetModal(preset);
         isPresetModalAnimating = true;
 
         presetModalSourceCard = sourceCard;
-        sourceCard.classList.add('preset-source-hidden');
+        if (sourceCard) {
+            sourceCard.classList.add('preset-source-hidden');
+        }
 
-        const sourceRect = sourceCard.getBoundingClientRect();
-        presetModalSourceRect = { left: sourceRect.left, top: sourceRect.top, width: sourceRect.width, height: sourceRect.height };
+        const sourceRect = (sourceCard && sourceCard.getClientRects().length > 0)
+            ? sourceCard.getBoundingClientRect()
+            : null;
+        presetModalSourceRect = sourceRect ? { left: sourceRect.left, top: sourceRect.top, width: sourceRect.width, height: sourceRect.height } : null;
 
         const uiEl = cardEl.querySelector('.preset-modal-overlay-ui');
         const closeBtn = cardEl.querySelector('#preset-modal-close-btn');
@@ -1337,17 +1367,23 @@
             presetModalMediaRatio = ratio;
             const geom = getPresetModalGeometry(ratio);
 
-            // Transform-only FLIP: park card at final geometry, then invert
-            // with translate+scale (GPU composited, no layout/paint per frame).
-            const sx = geom.targetW > 0 ? sourceRect.width / geom.targetW : 1;
-            const sy = geom.targetH > 0 ? sourceRect.height / geom.targetH : 1;
-            const dx = sourceRect.left - geom.targetLeft;
-            const dy = sourceRect.top - geom.targetTop;
+            if (sourceRect && sourceRect.width > 0 && sourceRect.height > 0) {
+                const sx = geom.targetW > 0 ? sourceRect.width / geom.targetW : 1;
+                const sy = geom.targetH > 0 ? sourceRect.height / geom.targetH : 1;
+                const dx = sourceRect.left - geom.targetLeft;
+                const dy = sourceRect.top - geom.targetTop;
 
-            cardEl.style.transition = 'none';
-            cardEl.style.willChange = 'transform';
-            cardEl.style.transformOrigin = '0 0';
-            cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+                cardEl.style.transition = 'none';
+                cardEl.style.willChange = 'transform';
+                cardEl.style.transformOrigin = '0 0';
+                cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+            } else {
+                cardEl.style.transition = 'none';
+                cardEl.style.willChange = 'transform, opacity';
+                cardEl.style.transformOrigin = 'center center';
+                cardEl.style.transform = 'translate(0px, 0px) scale(0.92)';
+            }
+
             cardEl.style.left = `${geom.targetLeft}px`;
             cardEl.style.top = `${geom.targetTop}px`;
             cardEl.style.width = `${geom.targetW}px`;
@@ -1388,11 +1424,27 @@
         }
     }
 
-    function closePresetModal(instant = false) {
+    function closePresetModal(instant = false, fromPopState = false) {
         closeAllPresetPickers();
         const backdrop = document.getElementById('preset-modal-backdrop');
         const cardEl = document.getElementById('preset-modal-card');
-        if (!backdrop || !cardEl || !cardEl.classList.contains('expanded')) return;
+        if (!backdrop || !cardEl || !cardEl.classList.contains('expanded')) {
+            currentOpenPreset = null;
+            return;
+        }
+
+        currentOpenPreset = null;
+
+        if (!fromPopState && !instant) {
+            if (presetModalPushedHistory) {
+                presetModalPushedHistory = false;
+                history.back();
+            } else {
+                history.replaceState(null, '', '/#preset');
+            }
+        } else if (instant) {
+            presetModalPushedHistory = false;
+        }
 
         const restoreCard = () => {
             if (presetModalSourceCard) {
@@ -1429,9 +1481,7 @@
 
         fadePresetChromeOut(cardEl);
 
-        if (rect) {
-            // Transform-only FLIP reverse: current box -> source rect via
-            // translate+scale (GPU composited, no layout/paint per frame).
+        if (rect && rect.width > 0 && rect.height > 0) {
             const cur = cardEl.getBoundingClientRect();
             const sx = cur.width > 0 ? rect.width / cur.width : 1;
             const sy = cur.height > 0 ? rect.height / cur.height : 1;
@@ -1443,6 +1493,11 @@
             cardEl.style.transition = `transform 0.28s ${EASE}, border-radius 0.22s ease`;
             cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
             cardEl.style.borderRadius = '14px';
+        } else {
+            cardEl.style.willChange = 'transform, opacity';
+            cardEl.style.transition = 'transform 0.24s ease, opacity 0.22s ease';
+            cardEl.style.transform = 'scale(0.92)';
+            cardEl.style.opacity = '0';
         }
 
         backdrop.style.transition = 'opacity 0.22s ease';
@@ -1557,6 +1612,36 @@
                 loadPresetsData();
                 const grid = document.getElementById('preset-grid');
                 if (grid) observeTikTokThumbs(grid);
+            }
+        });
+
+        window.addEventListener('popstate', () => {
+            const cardEl = document.getElementById('preset-modal-card');
+            const isExpanded = cardEl && cardEl.classList.contains('expanded');
+
+            const match = window.location.pathname.match(/^\/(?:preset\/)?(\d+)\/?$/);
+            if (match) {
+                const id = parseInt(match[1], 10);
+                if (isExpanded && currentOpenPreset && getPresetIdentifier(currentOpenPreset) === id) {
+                    return;
+                }
+                if (!presetsFetched) {
+                    window.pendingPresetIndex = id;
+                    loadPresetsData();
+                    return;
+                }
+                const item = allPresetsCache.find(p => Number(p.presetId) === id)
+                    || allPresetsCache.find(p => String(p._id) === String(id))
+                    || allPresetsCache[id - 1];
+                if (item) {
+                    const card = document.querySelector(`.preset-card[data-id="${item._id}"]`);
+                    openPresetModal(item, card, true);
+                    return;
+                }
+            }
+
+            if (isExpanded) {
+                closePresetModal(false, true);
             }
         });
 

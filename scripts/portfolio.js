@@ -3095,10 +3095,16 @@ document.addEventListener('DOMContentLoaded', () => {
         let activeViewKey = 'home';
         window.pendingPresetIndex = null;
 
+        const hasExplicitHash = !!window.location.hash;
         const presetPathMatch = window.location.pathname.match(/^\/(?:preset\/)?(\d+)\/?$/);
-        if (presetPathMatch) {
+        const isPresetDeepLink = presetPathMatch && (!hasExplicitHash || rawHash === 'preset' || rawHash === 'presets');
+
+        if (isPresetDeepLink) {
             window.pendingPresetIndex = parseInt(presetPathMatch[1], 10);
             activeViewKey = 'preset';
+            if (window.location.pathname !== `/${presetPathMatch[1]}`) {
+                history.replaceState({ presetModalOpen: true, presetId: window.pendingPresetIndex }, '', `/${presetPathMatch[1]}`);
+            }
         } else if (rawHash === 'social') {
             activeViewKey = 'social';
         } else if (rawHash === 'tools' || rawHash === 'tool') {
@@ -3124,7 +3130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentViewKey = activeViewKey;
         document.body.dataset.view = activeViewKey;
 
-        if (window.location.pathname !== '/') {
+        if (window.location.pathname !== '/' && !isPresetDeepLink) {
             const keepHash = ['privacy', 'tos', 'terms', 'disclaimer', 'dmca'].includes(rawHash);
             const finalHash = keepHash ? `#${rawHash}` : (activeViewKey === 'home' ? '' : `#${activeViewKey}`);
             history.replaceState(null, '', `/${finalHash}`);
@@ -3294,6 +3300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 150);
     });
     window.addEventListener('hashchange', navigateToRoute);
+    window.addEventListener('popstate', navigateToRoute);
     if (typeof window.translateUI === 'function') {
         window.translateUI();
     }
