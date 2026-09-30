@@ -539,7 +539,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             resetCustomBadgeIcon();
         });
         document.getElementById('confirm-custom-badge')?.addEventListener('click', () => {
-            const icon = customBadgeIconUrl || document.getElementById('custom-badge-icon-url')?.value?.trim() || '';
+            let icon = customBadgeIconUrl || document.getElementById('custom-badge-icon-url')?.value?.trim() || '';
+            if (icon.startsWith('assets/')) icon = '/' + icon;
             const label = document.getElementById('custom-badge-label')?.value?.trim();
             const key = document.getElementById('custom-badge-key')?.value?.trim();
             if (!label || !key) { alert('Please fill in the software name and key.'); return; }

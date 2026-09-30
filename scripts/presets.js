@@ -2,16 +2,30 @@
     'use strict';
 
     const BADGE_ICONS = {
-        'FishTools Studio': 'assets/icon/FishTools.png',
-        'FTS': 'assets/icon/FishTools.png',
-        'FishTools': 'assets/icon/FishTools.png',
-        AE: 'assets/icon/Ae.png',
-        AM: 'assets/icon/Am.png',
-        Blurr: 'assets/icon/Blurr.png',
-        CC: 'assets/icon/CC.png',
-        FM: 'assets/icon/Fm.png',
-        Node: 'assets/icon/Node.png'
+        'FishTools Studio': '/assets/icon/FishTools.png',
+        'FTS': '/assets/icon/FishTools.png',
+        'FishTools': '/assets/icon/FishTools.png',
+        'cutefish': '/assets/icon/cutefish_icon_128x128.png',
+        AE: '/assets/icon/Ae.png',
+        AM: '/assets/icon/Am.png',
+        Blurr: '/assets/icon/Blurr.png',
+        CC: '/assets/icon/CC.png',
+        FM: '/assets/icon/Fm.png',
+        Node: '/assets/icon/Node.png'
     };
+
+    function resolveBadgeIcon(sw) {
+        if (!sw) return '';
+        if (BADGE_ICONS[sw]) return BADGE_ICONS[sw];
+        const s = String(sw).trim();
+        if (s.startsWith('assets/') || s.startsWith('/assets/')) {
+            return s.startsWith('/') ? s : '/' + s;
+        }
+        if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:')) {
+            return s;
+        }
+        return '';
+    }
 
     let allPresetsCache = [];
     let activePresetSoftware = 'All';
@@ -309,7 +323,7 @@
         const categories = ['All', ...swSet];
         container.innerHTML = categories.map(cat => {
             const label = cat === 'All' ? t('preset_category_all') : cat;
-            const icon = BADGE_ICONS[cat];
+            const icon = resolveBadgeIcon(cat);
             const iconHtml = icon ? `<img src="${icon}" alt="${escapeHtml(cat)}" class="chip-icon">` : '';
             return `<div class="chip ${activePresetSoftware === cat ? 'active' : ''}" data-software="${escapeHtml(cat)}">${iconHtml}${escapeHtml(label)}</div>`;
         }).join('');
@@ -345,7 +359,10 @@
 
         grid.innerHTML = filtered.map(p => {
             const badges = (Array.isArray(p.software) ? p.software : [])
-                .map(sw => BADGE_ICONS[sw] ? `<span class="preset-badge"><img src="${BADGE_ICONS[sw]}" alt="${escapeHtml(sw)}"></span>` : '')
+                .map(sw => {
+                    const icon = resolveBadgeIcon(sw);
+                    return icon ? `<span class="preset-badge"><img src="${icon}" alt="${escapeHtml(sw)}"></span>` : '';
+                })
                 .join('');
             return `
             <div class="preset-card" data-id="${p._id}">
@@ -1034,6 +1051,7 @@
         const titleText = document.getElementById('sw-detail-title-text');
         const iconEl = document.getElementById('sw-detail-icon');
         const downloadBtn = document.getElementById('sw-detail-download-btn');
+        const visitBtn = document.getElementById('sw-detail-visit-btn');
         const pluginSection = document.getElementById('sw-detail-plugin-section');
         const pluginsContainer = document.getElementById('sw-detail-plugins');
         const backBtn = document.getElementById('back-sw-detail');
@@ -1057,13 +1075,28 @@
         const swLabel = SOFTWARE_FULL_NAMES[entry.sw] || entry.sw;
         titleText.textContent = swLabel;
 
-        const iconSrc = BADGE_ICONS[entry.sw];
+        const iconSrc = resolveBadgeIcon(entry.icon || entry.sw);
         if (iconSrc && iconEl) {
             iconEl.src = iconSrc;
             iconEl.alt = swLabel;
             iconEl.classList.remove('hidden');
         } else if (iconEl) {
             iconEl.classList.add('hidden');
+        }
+
+        const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(entry.sw);
+        if (visitBtn) {
+            if (isFishTools) {
+                visitBtn.classList.remove('hidden');
+                visitBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open('https://studio.cutefish.my.id/', '_blank', 'noopener');
+                };
+            } else {
+                visitBtn.classList.add('hidden');
+                visitBtn.onclick = null;
+            }
         }
 
         downloadBtn.onclick = () => {
@@ -1099,7 +1132,7 @@
         if (!picker || !optionsContainer) return;
 
         optionsContainer.innerHTML = urls.map(entry => {
-            const icon = BADGE_ICONS[entry.sw];
+            const icon = resolveBadgeIcon(entry.icon || entry.sw);
             const label = SOFTWARE_FULL_NAMES[entry.sw] || entry.sw;
             return `
                 <button type="button" class="preset-option-btn" data-sw="${escapeHtml(entry.sw)}" data-url="${escapeHtml(entry.url || '')}">
@@ -1151,8 +1184,10 @@
             }
         } else if (preset.url) {
             const hasAe = softwareArr.includes('AE');
-            if (hasAe || preset.plugin) {
-                openSwDetailPicker({ sw: 'AE', url: preset.url }, preset, false);
+            const hasFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools'].includes(s));
+            if (hasAe || preset.plugin || hasFts) {
+                const sw = hasFts ? 'FishTools Studio' : (hasAe ? 'AE' : softwareArr[0]);
+                openSwDetailPicker({ sw, url: preset.url }, preset, false);
             } else {
                 window.open(ensureProtocol(preset.url), '_blank', 'noopener');
             }
@@ -1238,7 +1273,10 @@
         }
 
         const badges = (Array.isArray(preset.software) ? preset.software : [])
-            .map(sw => BADGE_ICONS[sw] ? `<span class="preset-badge"><img src="${BADGE_ICONS[sw]}" alt="${escapeHtml(sw)}"></span>` : '')
+            .map(sw => {
+                const icon = resolveBadgeIcon(sw);
+                return icon ? `<span class="preset-badge"><img src="${icon}" alt="${escapeHtml(sw)}"></span>` : '';
+            })
             .join('');
         document.getElementById('preset-modal-badges').innerHTML = badges;
 

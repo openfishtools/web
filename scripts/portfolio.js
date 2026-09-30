@@ -437,16 +437,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildIconHtml = (icon) => {
         if (!icon) return '<span class="material-symbols-rounded">public</span>';
-        if (icon.startsWith('http://') || icon.startsWith('https://') || icon.startsWith('/') || icon.startsWith('assets/')) {
-            return `<img src="${icon}" class="social-btn-img" alt="icon" loading="lazy">`;
+        let cleanIcon = String(icon).trim();
+        if (cleanIcon.startsWith('assets/')) {
+            cleanIcon = '/' + cleanIcon;
         }
-        if (icon.startsWith('bi-')) {
-            return `<i class="bi ${icon}"></i>`;
+        if (cleanIcon.startsWith('http://') || cleanIcon.startsWith('https://') || cleanIcon.startsWith('/')) {
+            return `<img src="${cleanIcon}" class="social-btn-img" alt="icon" loading="lazy">`;
         }
-        if (icon.startsWith('ms-')) {
-            return `<span class="material-symbols-rounded">${icon.substring(3)}</span>`;
+        if (cleanIcon.startsWith('bi-')) {
+            return `<i class="bi ${cleanIcon}"></i>`;
         }
-        return `<span class="material-symbols-rounded">${icon}</span>`;
+        if (cleanIcon.startsWith('ms-')) {
+            return `<span class="material-symbols-rounded">${cleanIcon.substring(3)}</span>`;
+        }
+        return `<span class="material-symbols-rounded">${cleanIcon}</span>`;
     };
 
     let socialsLoaded = false;
@@ -1600,8 +1604,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }).join('');
 
                 const isCutefish = cats.includes('Made By Cutefish');
-                const iconHtml = (r.icon && (r.icon.startsWith('http') || r.icon.includes('/')))
-                    ? `<img src="${r.icon}" class="resource-icon-img" alt="${r.title}" loading="lazy">`
+                let rIcon = r.icon ? String(r.icon).trim() : '';
+                if (rIcon.startsWith('assets/')) rIcon = '/' + rIcon;
+                const iconHtml = (rIcon && (rIcon.startsWith('http') || rIcon.includes('/')))
+                    ? `<img src="${rIcon}" class="resource-icon-img" alt="${r.title}" loading="lazy">`
                     : `<span class="material-symbols-rounded resource-icon">${r.icon || 'folder_open'}</span>`;
 
                 return `
@@ -2546,8 +2552,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (filtered.length > 0) {
             container.innerHTML = filtered.map(t => {
-                const iconHtml = (t.icon && (t.icon.startsWith('http') || t.icon.includes('/')))
-                    ? `<img src="${t.icon}" class="tool-icon-img" alt="${t.title}">`
+                let tIcon = t.icon ? String(t.icon).trim() : '';
+                if (tIcon.startsWith('assets/')) tIcon = '/' + tIcon;
+                const iconHtml = (tIcon && (tIcon.startsWith('http') || tIcon.includes('/')))
+                    ? `<img src="${tIcon}" class="tool-icon-img" alt="${t.title}">`
                     : `<span class="material-symbols-rounded tool-icon">${t.icon || 'build'}</span>`;
 
                 const state = (window.ToolProgressManager && window.ToolProgressManager.get(t._id)) || {};

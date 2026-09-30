@@ -6953,6 +6953,25 @@ body.preset-popup-active .preset-modal-card.expanded {
     line-height: 1;
 }
 
+.preset-popup-visit-btn {
+    background: rgba(190, 220, 116, 0.16);
+    color: var(--md-sys-color-primary, #bedc74);
+    border: 1.5px solid rgba(190, 220, 116, 0.45);
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.preset-popup-visit-btn:hover {
+    background: rgba(190, 220, 116, 0.28);
+    border-color: rgba(190, 220, 116, 0.75);
+    filter: brightness(1.1);
+}
+
+.preset-popup-visit-btn:active {
+    transform: scale(0.98);
+}
+
+
 @media (max-width: 600px) {
     .preset-popup-overlay {
         align-items: flex-end;
