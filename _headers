@@ -7,6 +7,14 @@
   Pragma: no-cache
   Expires: 0
 
+/coi-serviceworker.min.js
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache, must-revalidate
+
+/assets/coi-serviceworker.min.js
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache, must-revalidate
+
 /api/version
   Cache-Control: no-cache, no-store, must-revalidate
 

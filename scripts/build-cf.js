@@ -9,6 +9,7 @@ const COPY_TARGETS = [
     'index.html',
     'admin.html',
     'favicon.ico',
+    'coi-serviceworker.min.js',
     'sw.js',
     't_version.json',
     '_headers',
