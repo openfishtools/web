@@ -1051,7 +1051,6 @@
         const titleText = document.getElementById('sw-detail-title-text');
         const iconEl = document.getElementById('sw-detail-icon');
         const downloadBtn = document.getElementById('sw-detail-download-btn');
-        const visitBtn = document.getElementById('sw-detail-visit-btn');
         const pluginSection = document.getElementById('sw-detail-plugin-section');
         const pluginsContainer = document.getElementById('sw-detail-plugins');
         const backBtn = document.getElementById('back-sw-detail');
@@ -1082,21 +1081,6 @@
             iconEl.classList.remove('hidden');
         } else if (iconEl) {
             iconEl.classList.add('hidden');
-        }
-
-        const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(entry.sw);
-        if (visitBtn) {
-            if (isFishTools) {
-                visitBtn.classList.remove('hidden');
-                visitBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.open('https://studio.cutefish.my.id/', '_blank', 'noopener');
-                };
-            } else {
-                visitBtn.classList.add('hidden');
-                visitBtn.onclick = null;
-            }
         }
 
         downloadBtn.onclick = () => {
@@ -1149,7 +1133,13 @@
                 if (sw === 'AM') {
                     openAmVariantPicker(presetData, true, btn);
                 } else {
-                    openSwDetailPicker({ sw, url }, presetData, true, btn);
+                    const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(sw);
+                    if (isFishTools && url) {
+                        window.open(ensureProtocol(url), '_blank', 'noopener');
+                        closeAllPresetPickers();
+                    } else {
+                        openSwDetailPicker({ sw, url }, presetData, true, btn);
+                    }
                 }
             });
         });
@@ -1180,13 +1170,20 @@
             if (urls[0].sw === 'AM') {
                 openAmVariantPicker(preset, false);
             } else {
-                openSwDetailPicker(urls[0], preset, false);
+                const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(urls[0].sw);
+                if (isFishTools && urls[0].url) {
+                    window.open(ensureProtocol(urls[0].url), '_blank', 'noopener');
+                } else {
+                    openSwDetailPicker(urls[0], preset, false);
+                }
             }
         } else if (preset.url) {
             const hasAe = softwareArr.includes('AE');
-            const hasFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools'].includes(s));
-            if (hasAe || preset.plugin || hasFts) {
-                const sw = hasFts ? 'FishTools Studio' : (hasAe ? 'AE' : softwareArr[0]);
+            const hasFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(s));
+            if (hasFts) {
+                window.open(ensureProtocol(preset.url), '_blank', 'noopener');
+            } else if (hasAe || preset.plugin) {
+                const sw = hasAe ? 'AE' : softwareArr[0];
                 openSwDetailPicker({ sw, url: preset.url }, preset, false);
             } else {
                 window.open(ensureProtocol(preset.url), '_blank', 'noopener');

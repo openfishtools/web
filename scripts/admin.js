@@ -320,6 +320,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+        const fieldVer = document.getElementById('field-preset-version');
+        const fieldSize = document.getElementById('field-preset-size');
+        const fieldPlugin = document.getElementById('field-preset-plugin');
+        if (fieldVer) fieldVer.style.display = '';
+        if (fieldSize) fieldSize.style.display = '';
+        if (fieldPlugin) fieldPlugin.style.display = '';
     };
 
     const attachBadgeRemoveBtn = (badge, isSoftware = true) => {
@@ -485,8 +491,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
                 dlContainer.appendChild(row);
+
+                if (sw === 'FishTools Studio') {
+                    const ftsInput = row.querySelector('input');
+                    const fetchFtsMeta = async () => {
+                        const rawVal = ftsInput?.value?.trim() || '';
+                        if (!rawVal) return;
+                        // Extract project ID from URL or raw ID (e.g. https://studio.cutefish.my.id/e4TCAp or studio.cutefish.my.id/e4TCAp or e4TCAp)
+                        let match = rawVal.match(/(?:studio\.cutefish\.my\.id\/|id=)([a-zA-Z0-9_-]+)/);
+                        let projId = match ? match[1] : (rawVal.includes('/') ? rawVal.split('/').filter(Boolean).pop() : rawVal);
+                        if (!projId || projId.length < 3) return;
+                        try {
+                            const res = await fetch(`https://studio.cutefish.my.id/api/project?id=${projId}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data?.success && data?.project) {
+                                    const sizeEl = document.getElementById('modal-preset-size');
+                                    if (sizeEl && data.project.size) {
+                                        sizeEl.value = data.project.size;
+                                    }
+                                    const nameEl = document.getElementById('modal-preset-name');
+                                    if (nameEl && !nameEl.value.trim() && data.project.name) {
+                                        nameEl.value = data.project.name;
+                                    }
+                                    console.log('FishTools Studio project metadata fetched:', data.project);
+                                }
+                            }
+                        } catch (err) {
+                            console.warn('Failed to fetch FishTools Studio project data:', err);
+                        }
+                    };
+                    ftsInput?.addEventListener('blur', fetchFtsMeta);
+                    ftsInput?.addEventListener('change', fetchFtsMeta);
+                }
             }
         });
+
+        const selectedSwKeys = Array.from(selected).map(b => b.dataset.sw);
+        const onlyFts = selectedSwKeys.length === 1 && selectedSwKeys[0] === 'FishTools Studio';
+        const fieldVer = document.getElementById('field-preset-version');
+        const fieldSize = document.getElementById('field-preset-size');
+        const fieldPlugin = document.getElementById('field-preset-plugin');
+
+        if (fieldVer) fieldVer.style.display = onlyFts ? 'none' : '';
+        if (fieldSize) fieldSize.style.display = onlyFts ? 'none' : '';
+        if (fieldPlugin) fieldPlugin.style.display = onlyFts ? 'none' : '';
     };
 
     const getSelectedSoftware = () => {
