@@ -6953,12 +6953,29 @@ body.preset-popup-active .preset-modal-card.expanded {
     line-height: 1;
 }
 
+.preset-popup-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.preset-popup-actions-row .preset-popup-action-btn {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 13px 14px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    gap: 8px;
+}
+
 .preset-popup-visit-btn {
     background: rgba(190, 220, 116, 0.16);
     color: var(--md-sys-color-primary, #bedc74);
     border: 1.5px solid rgba(190, 220, 116, 0.45);
-    margin-top: 4px;
-    margin-bottom: 8px;
 }
 
 .preset-popup-visit-btn:hover {
