@@ -680,16 +680,5 @@
     <script defer src="scripts/Tools/video-interpolation-tool.js?v=2.4.0"></script>
     <script defer src="scripts/Tools/rembg-tool.js?v=2.4.0"></script>
     <script defer src="scripts/portfolio.js?v=2.4.0"></script>
-    <script>
-        // Registers the self-destructing service worker (sw.js): it wipes all
-        // legacy Cache API storage, unregisters itself and reloads the page
-        // once. This is what frees visitors who are still controlled by an
-        // OLD cache-first service worker from a previous deployment.
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
-            });
-        }
-    </script>
 </body>
 </html>

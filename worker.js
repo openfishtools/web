@@ -121,8 +121,7 @@ export default {
                 url.pathname === '/api/presets' ||
                 url.pathname === '/api/socials' ||
                 url.pathname === '/api/contacts' ||
-                url.pathname === '/api/resources' ||
-                url.pathname === '/api/version'
+                url.pathname === '/api/resources'
             );
 
             const cache = caches.default;

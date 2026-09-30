@@ -17,14 +17,5 @@ self.addEventListener('activate', (event) => {
         try {
             await self.registration.unregister();
         } catch (e) {}
-
-        try {
-            const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-            clientList.forEach((client) => {
-                if (typeof client.navigate === 'function') {
-                    client.navigate(client.url).catch(() => {});
-                }
-            });
-        } catch (e) {}
     })());
 });

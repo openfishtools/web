@@ -131,6 +131,8 @@ if (fs.existsSync(distScriptsPath)) {
 }
 app.use(express.static(path.join(__dirname, '..'), staticNoCache));
 
+const SERVER_INIT_TIME = new Date();
+
 function getDynamicBuildInfo() {
     const commitSha = process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.substring(0, 7) : null;
     const deploymentId = process.env.VERCEL_DEPLOYMENT_ID ? process.env.VERCEL_DEPLOYMENT_ID.substring(0, 7) : null;
@@ -147,9 +149,10 @@ function getDynamicBuildInfo() {
             const stat = fs.statSync(indexPath);
             buildDateObj = stat.mtime;
         } catch (e) {
-            buildDateObj = new Date();
+            buildDateObj = SERVER_INIT_TIME;
         }
     }
+    if (!buildDateObj) buildDateObj = SERVER_INIT_TIME;
 
     const version = commitSha || deploymentId || `dev-${Math.floor(buildDateObj.getTime())}`;
 
