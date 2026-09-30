@@ -2,6 +2,9 @@
     'use strict';
 
     const BADGE_ICONS = {
+        'FishTools Studio': 'assets/icon/FishTools.png',
+        'FTS': 'assets/icon/FishTools.png',
+        'FishTools': 'assets/icon/FishTools.png',
         AE: 'assets/icon/Ae.png',
         AM: 'assets/icon/Am.png',
         Blurr: 'assets/icon/Blurr.png',
@@ -488,6 +491,9 @@
     }
 
     const SOFTWARE_FULL_NAMES = {
+        'FishTools Studio': 'FishTools Studio',
+        'FTS': 'FishTools Studio',
+        'FishTools': 'FishTools Studio',
         'AE': 'After Effects',
         'AM': 'Alight Motion',
         'Blurr': 'Blurr',

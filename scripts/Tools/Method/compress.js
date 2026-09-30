@@ -36,15 +36,13 @@ async function compressVideo(file, mode, inputBuffer) {
     }
     const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
 
-    // H.264 Fast Compression Settings (Unified for 1080P & 720P):
-    // veryfast, CRF 20, maxrate 12.5M, bufsize 18M
-    // Natural color pass-through (no forced color parameters)
-    const x264Preset = 'veryfast';
+    // Video Compressor — Normal Preset Settings:
+    // Multi-Thread: HEVC (libx265 hvc1, CRF 20, maxrate 12.5M, bufsize 18M, tuned x265 params)
+    // Single-Thread: H.264 Medium (libx264 medium, CRF 20, maxrate 12.5M, bufsize 18M)
     const crfValue = '20';
     const maxRate = '12.5M';
     const bufSize = '18M';
     const audioBitrate = '128k';
-    const gopSize = Math.max(48, Math.min(240, (vInfoFps || 30) * 2)).toString();
 
     const runCompressionPass = async (useMT) => {
         let ffmpeg = null;
@@ -79,40 +77,59 @@ async function compressVideo(file, mode, inputBuffer) {
             }
         });
 
-        s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread' : 'Single-Thread'})...`);
+        s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread (HEVC)' : 'Single-Thread (H.264 Medium)'})...`);
         await ffmpeg.writeFile('input.mp4', new Uint8Array(buffer));
 
-        const hardwareThreads = navigator.hardwareConcurrency || 4;
-        const safeThreads = (fileMB > 50) ? '2' : Math.min(4, hardwareThreads).toString();
-        const threads = useMT ? safeThreads : '1';
-
-        s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — Threads: ${threads}...`);
-        s.log(`  FFmpeg filters: ${procOpts.vfString}`);
-
-        const command = [
-            '-y', '-i', 'input.mp4',
-            '-threads', threads,
-            '-map', '0:v:0',
-            '-map', '0:a:0?',
-            '-dn',
-            '-map_metadata', '-1',
-            '-map_chapters', '-1',
-            '-vf', procOpts.vfString,
-            '-vsync', 'cfr',
-            '-c:v', 'libx264',
-            '-preset', x264Preset,
-            '-crf', crfValue,
-            '-maxrate', maxRate,
-            '-bufsize', bufSize,
-            '-x264-params', '8x8dct=1:cabac=1:bframes=3:b-adapt=1:scenecut=40:qcomp=0.7:deblock=0,0',
-            '-g', gopSize,
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac',
-            '-b:a', audioBitrate,
-            '-movflags', '+faststart',
-            'output.mp4'
-        ];
-        s.log(`  Encoder: libx264 (H.264 ${x264Preset}) crf=${crfValue} maxrate=${maxRate}`);
+        let command = [];
+        if (useMT) {
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx265 HEVC (Normal Preset)...`);
+            s.log(`  Encoder: libx265 (HEVC Normal Preset) crf=${crfValue} maxrate=${maxRate} tag=hvc1`);
+            command = [
+                '-y', '-i', 'input.mp4',
+                '-threads', '2',
+                '-map', '0:v:0',
+                '-map', '0:a:0?',
+                '-dn',
+                '-map_metadata', '-1',
+                '-map_chapters', '-1',
+                '-vf', procOpts.vfString,
+                '-c:v', 'libx265',
+                '-tag:v', 'hvc1',
+                '-preset', 'ultrafast',
+                '-crf', crfValue,
+                '-maxrate', maxRate,
+                '-bufsize', bufSize,
+                '-pix_fmt', 'yuv420p',
+                '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=36:qcomp=0.7:deblock=-1,-1',
+                '-c:a', 'aac',
+                '-b:a', audioBitrate,
+                '-movflags', '+faststart',
+                'output.mp4'
+            ];
+        } else {
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Medium (Normal Preset)...`);
+            s.log(`  Encoder: libx264 (H.264 Medium Normal Preset) crf=${crfValue} maxrate=${maxRate}`);
+            command = [
+                '-y', '-i', 'input.mp4',
+                '-threads', '1',
+                '-map', '0:v:0',
+                '-map', '0:a:0?',
+                '-dn',
+                '-map_metadata', '-1',
+                '-map_chapters', '-1',
+                '-vf', procOpts.vfString,
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', crfValue,
+                '-maxrate', maxRate,
+                '-bufsize', bufSize,
+                '-pix_fmt', 'yuv420p',
+                '-c:a', 'aac',
+                '-b:a', audioBitrate,
+                '-movflags', '+faststart',
+                'output.mp4'
+            ];
+        }
 
         try {
             await ffmpeg.exec(command);
@@ -121,23 +138,21 @@ async function compressVideo(file, mode, inputBuffer) {
                 try { await ffmpeg.terminate(); } catch (_) {}
                 throw new Error('Memory limit exceeded during video processing (OOM).');
             }
-            s.log(`  [Notice] Encoding retry with standard libx264...`);
+            s.log(`  [Notice] Encoding retry with libx264 Medium...`);
             const fallbackCommand = [
                 '-y', '-i', 'input.mp4',
-                '-threads', threads,
+                '-threads', useMT ? '2' : '1',
                 '-map', '0:v:0',
                 '-map', '0:a:0?',
                 '-dn',
                 '-map_metadata', '-1',
                 '-map_chapters', '-1',
                 '-vf', procOpts.vfString,
-                '-vsync', 'cfr',
                 '-c:v', 'libx264',
-                '-preset', 'ultrafast',
+                '-preset', 'medium',
                 '-crf', crfValue,
                 '-maxrate', maxRate,
                 '-bufsize', bufSize,
-                '-g', gopSize,
                 '-pix_fmt', 'yuv420p',
                 '-c:a', 'aac',
                 '-b:a', audioBitrate,

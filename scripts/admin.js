@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('open-resource-modal').onclick = () => openModal('resource-modal');
     };
 
-    const STATIC_SW_KEYS = ['AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
+    const STATIC_SW_KEYS = ['FishTools Studio', 'FTS', 'AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
     const STATIC_PLUGIN_NAMES = ['After Codecs', 'Animation Composer', 'BCC', 'Element 3D', 'Flow', 'FX Console', 'Red Giant Universe', 'Sapphire', 'Omino', 'Twixtor & RSMB', 'Signal', 'Trapcode', 'Twitch', 'Magic Bullet Suite'];
 
     const resetPresetModal = () => {
