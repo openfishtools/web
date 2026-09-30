@@ -1125,7 +1125,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const OS_META = {
         WIN:     { label: 'Windows', svg: 'assets/svg/windows.svg' },
         MAC:     { label: 'macOS',   svg: 'assets/svg/apple.svg'   },
-        ANDROID: { label: 'Android', svg: 'assets/svg/android.svg' }
+        ANDROID: { label: 'Android', svg: 'assets/svg/android.svg' },
+        WEB:     { label: 'Web App', svg: 'assets/svg/web.svg'     }
     };
 
     const resetResourceModal = () => {

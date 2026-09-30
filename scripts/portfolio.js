@@ -1313,8 +1313,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const OS_SVG = { WIN: 'assets/svg/windows.svg', MAC: 'assets/svg/apple.svg', ANDROID: 'assets/svg/android.svg' };
-    const OS_LABEL = { WIN: 'Windows', MAC: 'macOS', ANDROID: 'Android' };
+    const OS_SVG = { WIN: 'assets/svg/windows.svg', MAC: 'assets/svg/apple.svg', ANDROID: 'assets/svg/android.svg', WEB: 'assets/svg/web.svg' };
+    const OS_LABEL = { WIN: 'Windows', MAC: 'macOS', ANDROID: 'Android', WEB: 'Web App' };
 
     const resolveOsKey = (name) => {
         const n = String(name || '').toLowerCase().trim();
@@ -1322,6 +1322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (n.includes('win')) return 'WIN';
         if (n.includes('mac') || n.includes('apple') || n.includes('ios') || n.includes('osx')) return 'MAC';
         if (n.includes('android')) return 'ANDROID';
+        if (n.includes('web') || n.includes('browser') || n.includes('online')) return 'WEB';
         return Object.keys(OS_SVG).find(k => k.toLowerCase() === n) || null;
     };
     const RESOURCE_PASSWORD = 'EDITINGSTUFF';
