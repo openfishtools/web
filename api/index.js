@@ -1808,8 +1808,19 @@ app.put('/api/presets/reorder', requireAdmin, async (req, res) => {
 });
 app.put('/api/presets/:id', requireAdmin, async (req, res) => res.json(await Preset.findByIdAndUpdate(req.params.id, req.body, { new: true })));
 app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
-    await Preset.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+    try {
+        const pId = req.params.id;
+        let deleted = await Preset.findByIdAndDelete(pId).catch(() => null);
+        if (!deleted && /^\d+$/.test(pId)) {
+            deleted = await Preset.findOneAndDelete({ presetId: Number(pId) }).catch(() => null);
+        }
+        if (deleted) {
+            await Like.deleteMany({ presetId: deleted._id.toString() }).catch(() => null);
+        }
+        res.json({ success: true, deleted: !!deleted });
+    } catch (err) {
+        res.status(500).json({ error: err.message || 'Failed to delete preset' });
+    }
 });
 
 app.get('/api/presets/:id', async (req, res) => {

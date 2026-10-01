@@ -1502,9 +1502,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.deleteItem = async (type, id, callback) => {
         if (confirm('Are you sure you want to delete this item?')) {
-            const delRes = await fetch(`${API_URL}/${type}/${id}`, { method: 'DELETE', headers: adminAuthHeaders() });
-            if (check401(delRes)) return;
-            callback();
+            try {
+                const delRes = await fetch(`${API_URL}/${type}/${id}`, { method: 'DELETE', headers: adminAuthHeaders() });
+                if (check401(delRes)) return;
+                if (!delRes.ok) {
+                    const data = await delRes.json().catch(() => ({}));
+                    alert('Failed to delete item: ' + (data.error || delRes.statusText || delRes.status));
+                    return;
+                }
+                callback();
+            } catch (err) {
+                alert('Connection error while deleting: ' + err.message);
+            }
         }
     };
 

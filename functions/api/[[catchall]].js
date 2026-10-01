@@ -81,8 +81,12 @@ export async function onRequest(context) {
         redirect: 'follow'
     };
 
-    if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
-        init.body = context.request.body;
+    if (context.request.method !== 'GET' && context.request.method !== 'HEAD' && context.request.method !== 'DELETE') {
+        const contentLength = context.request.headers.get('content-length');
+        const contentType = context.request.headers.get('content-type');
+        if ((contentLength && contentLength !== '0') || contentType) {
+            init.body = context.request.body;
+        }
     }
 
     try {
