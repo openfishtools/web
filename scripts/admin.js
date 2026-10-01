@@ -199,6 +199,146 @@ document.addEventListener('DOMContentLoaded', async () => {
                 contactCustomContainer.classList.remove('d-none');
             };
         }
+
+        initPresetVideoSourceToggles();
+    };
+
+    let cachedTikTokPosts = null;
+    let isFetchingTikTokPosts = false;
+
+    window.selectPresetVideoMedia = (videoUrl, videoTitle = '', coverUrl = '') => {
+        const videoInput = document.getElementById('modal-preset-video');
+        if (videoInput) videoInput.value = videoUrl;
+
+        // Highlight active card in grid
+        document.querySelectorAll('#preset-tiktok-media-grid .tiktok-media-card').forEach(card => {
+            card.classList.toggle('selected', card.dataset.url === videoUrl);
+        });
+
+        // Show selected preview bar
+        const selBar = document.getElementById('preset-video-selected-info');
+        const selThumb = document.getElementById('preset-video-selected-thumb');
+        const selTitle = document.getElementById('preset-video-selected-title');
+        const selUrl = document.getElementById('preset-video-selected-url');
+        if (selBar && videoUrl) {
+            if (selThumb) {
+                selThumb.src = coverUrl || 'assets/icon/tiktok.png';
+                selThumb.style.display = 'block';
+            }
+            if (selTitle) selTitle.textContent = videoTitle || 'TikTok Video';
+            if (selUrl) selUrl.textContent = videoUrl;
+            selBar.classList.remove('d-none');
+        }
+    };
+
+    window.clearPresetVideoSelection = () => {
+        const videoInput = document.getElementById('modal-preset-video');
+        if (videoInput) videoInput.value = '';
+        document.querySelectorAll('#preset-tiktok-media-grid .tiktok-media-card').forEach(c => c.classList.remove('selected'));
+        const selBar = document.getElementById('preset-video-selected-info');
+        if (selBar) selBar.classList.add('d-none');
+    };
+
+    const renderTikTokMediaGrid = (posts) => {
+        const grid = document.getElementById('preset-tiktok-media-grid');
+        if (!grid) return;
+        const currentUrl = document.getElementById('modal-preset-video')?.value?.trim() || '';
+
+        if (!posts || posts.length === 0) {
+            grid.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; grid-column: 1 / -1;">No videos found from @cutefishaep.</div>';
+            return;
+        }
+
+        grid.innerHTML = posts.map(post => {
+            const isSel = post.url === currentUrl;
+            const thumb = post.cover || '';
+            const plays = post.play_count ? post.play_count.toLocaleString() : '';
+            const duration = post.duration ? `${post.duration}s` : '';
+            const title = (post.title || 'TikTok Video').replace(/"/g, '&quot;');
+            return `
+                <div class="tiktok-media-card ${isSel ? 'selected' : ''}" data-url="${post.url}" data-cover="${thumb}" data-title="${title}" onclick="selectPresetVideoMedia('${post.url}', '${title}', '${thumb}')">
+                    <div class="tiktok-media-card-thumb-wrap">
+                        <img src="${thumb || 'assets/icon/tiktok.png'}" alt="cover" loading="lazy" onerror="this.src='assets/icon/tiktok.png'">
+                        ${duration ? `<span class="tiktok-media-card-duration">${duration}</span>` : ''}
+                        <div class="tiktok-media-card-check">
+                            <span class="material-symbols-rounded" style="font-size: 14px;">check</span>
+                        </div>
+                    </div>
+                    <div class="tiktok-media-card-info">
+                        <div class="tiktok-media-card-title">${post.title || 'TikTok Video'}</div>
+                        ${plays ? `
+                        <div class="tiktok-media-card-stats">
+                            <span><span class="material-symbols-rounded" style="font-size: 11px;">play_arrow</span> ${plays}</span>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const fetchTikTokMediaPosts = async (forceRefresh = false) => {
+        const grid = document.getElementById('preset-tiktok-media-grid');
+        if (!grid) return;
+        if (cachedTikTokPosts && !forceRefresh) {
+            renderTikTokMediaGrid(cachedTikTokPosts);
+            return;
+        }
+        if (isFetchingTikTokPosts) return;
+
+        isFetchingTikTokPosts = true;
+        grid.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--md-sys-color-primary); font-size: 13px; grid-column: 1 / -1;"><span class="material-symbols-rounded" style="animation: admin-spin 1s linear infinite; vertical-align: middle; margin-right: 6px;">progress_activity</span> Loading videos from @cutefishaep...</div>';
+
+        try {
+            const res = await fetch(`${API_URL}/tiktok-posts`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    cachedTikTokPosts = data;
+                    renderTikTokMediaGrid(cachedTikTokPosts);
+                } else {
+                    grid.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--md-sys-color-error); font-size: 12px; grid-column: 1 / -1;">Failed to load media list format.</div>';
+                }
+            } else {
+                grid.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--md-sys-color-error); font-size: 12px; grid-column: 1 / -1;">Failed to load videos (${res.status}).</div>`;
+            }
+        } catch (err) {
+            grid.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--md-sys-color-error); font-size: 12px; grid-column: 1 / -1;">Error: ${err.message}</div>`;
+        } finally {
+            isFetchingTikTokPosts = false;
+        }
+    };
+
+    const initPresetVideoSourceToggles = () => {
+        const btnLink = document.getElementById('btn-preset-video-link');
+        const btnMedia = document.getElementById('btn-preset-video-media');
+        const linkContainer = document.getElementById('preset-video-link-container');
+        const mediaContainer = document.getElementById('preset-video-media-container');
+        const btnClear = document.getElementById('btn-clear-preset-video');
+        const btnReload = document.getElementById('btn-reload-tiktok-media');
+
+        if (btnLink && btnMedia) {
+            btnLink.onclick = () => {
+                btnLink.classList.add('active');
+                btnMedia.classList.remove('active');
+                linkContainer?.classList.remove('d-none');
+                mediaContainer?.classList.add('d-none');
+            };
+            btnMedia.onclick = () => {
+                btnMedia.classList.add('active');
+                btnLink.classList.remove('active');
+                linkContainer?.classList.add('d-none');
+                mediaContainer?.classList.remove('d-none');
+                fetchTikTokMediaPosts();
+            };
+        }
+
+        if (btnClear) {
+            btnClear.onclick = () => clearPresetVideoSelection();
+        }
+
+        if (btnReload) {
+            btnReload.onclick = () => fetchTikTokMediaPosts(true);
+        }
     };
 
     let heartbeatInterval = null;
@@ -320,6 +460,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+        document.getElementById('btn-preset-video-link')?.click();
+        clearPresetVideoSelection();
         const fieldVer = document.getElementById('field-preset-version');
         const fieldSize = document.getElementById('field-preset-size');
         const fieldPlugin = document.getElementById('field-preset-plugin');
@@ -746,7 +888,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 if (document.getElementById('modal-preset-version')) document.getElementById('modal-preset-version').value = editData.version || '';
-                if (document.getElementById('modal-preset-video')) document.getElementById('modal-preset-video').value = editData.media || '';
+                const videoVal = editData.media || '';
+                if (document.getElementById('modal-preset-video')) document.getElementById('modal-preset-video').value = videoVal;
+                if (videoVal) {
+                    selectPresetVideoMedia(videoVal, editData.name || 'TikTok Video', '');
+                } else {
+                    clearPresetVideoSelection();
+                }
+                document.getElementById('btn-preset-video-link')?.click();
                 if (document.getElementById('modal-preset-size')) document.getElementById('modal-preset-size').value = editData.size || '';
             } else if (id === 'resource-modal') {
                 document.getElementById('modal-resource-title').value = editData.title;

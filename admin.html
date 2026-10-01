@@ -332,8 +332,42 @@
                     <input type="text" id="modal-preset-version" placeholder="e.g. v4.0+">
                 </div>
                 <div class="input-field">
-                    <label>Video Link (TikTok Embed)</label>
-                    <input type="text" id="modal-preset-video" placeholder="TikTok video URL">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <label style="margin-bottom: 0;">Video Preview (TikTok Embed)</label>
+                        <div class="icon-source-toggle" style="gap: 4px; max-width: 200px;">
+                            <button type="button" class="btn-source active" id="btn-preset-video-link" style="padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; justify-content: center;">
+                                <span class="material-symbols-rounded" style="font-size: 15px;">link</span> Link
+                            </button>
+                            <button type="button" class="btn-source" id="btn-preset-video-media" style="padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; justify-content: center;">
+                                <span class="material-symbols-rounded" style="font-size: 15px;">video_library</span> Media
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Mode Link: Input Text URL Manual -->
+                    <div id="preset-video-link-container">
+                        <input type="text" id="modal-preset-video" placeholder="https://www.tiktok.com/@cutefishaep/video/..." style="width: 100%;">
+                    </div>
+                    <!-- Mode Media: Grid Thumbnail Picker dari @cutefishaep -->
+                    <div id="preset-video-media-container" class="d-none">
+                        <div id="preset-tiktok-media-status" style="font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>Pilih video dari <strong>@cutefishaep</strong>:</span>
+                            <button type="button" class="btn-text" id="btn-reload-tiktok-media" style="padding: 2px 6px; font-size: 11px;">
+                                <span class="material-symbols-rounded" style="font-size: 13px; vertical-align: middle;">sync</span> Refresh
+                            </button>
+                        </div>
+                        <div id="preset-tiktok-media-grid" class="tiktok-media-grid"></div>
+                    </div>
+                    <!-- Selected Video Info Bar -->
+                    <div id="preset-video-selected-info" class="preset-video-selected-bar d-none">
+                        <img id="preset-video-selected-thumb" src="" alt="Thumbnail">
+                        <div class="preset-video-selected-meta">
+                            <span id="preset-video-selected-title" class="preset-video-selected-title">Video title</span>
+                            <span id="preset-video-selected-url" class="preset-video-selected-url">url</span>
+                        </div>
+                        <button type="button" id="btn-clear-preset-video" class="btn-clear-media" title="Clear selection">
+                            <span class="material-symbols-rounded" style="font-size: 16px;">close</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="input-field" id="field-preset-size">
                     <label>File Size</label>
