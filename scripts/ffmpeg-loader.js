@@ -141,10 +141,42 @@ function loadFFmpegLibraries() {
                 }
             }
             if (!window.FFmpegWASM) {
-                try {
-                    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-                } catch (e) {
-                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                // Browsers block cross-origin Web Workers (new Worker('https://cdn.../814.ffmpeg.js')).
+                // Fetch both ffmpeg.js and its internal worker 814.ffmpeg.js, convert to Blob URLs to bypass CORS restriction.
+                let loaded = false;
+                const cdnBases = [
+                    'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd',
+                    'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd'
+                ];
+
+                for (const base of cdnBases) {
+                    try {
+                        const [ffmpegRes, workerRes] = await Promise.all([
+                            fetch(`${base}/ffmpeg.js`, { mode: 'cors' }),
+                            fetch(`${base}/814.ffmpeg.js`, { mode: 'cors' })
+                        ]);
+                        if (ffmpegRes.ok && workerRes.ok) {
+                            const ffmpegCode = await ffmpegRes.text();
+                            const workerCode = await workerRes.text();
+                            const workerBlobUrl = URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' }));
+                            const patchedCode = ffmpegCode
+                                .replace(/new Worker\(new URL\(e\.p\+e\.u\(814\),e\.b\),\{type:void 0\}\)/g, `new Worker("${workerBlobUrl}")`)
+                                .replace(/u:e=>e\+"\.\x66\x66\x6d\x70\x65\x67\.\x6a\x73"/g, `u:()=>"${workerBlobUrl}"`)
+                                .replace(/u:e=>e\+"\x2effmpeg\x2ejs"/g, `u:()=>"${workerBlobUrl}"`);
+                            const ffmpegBlobUrl = URL.createObjectURL(new Blob([patchedCode], { type: 'text/javascript' }));
+                            await loadScript(ffmpegBlobUrl);
+                            loaded = true;
+                            break;
+                        }
+                    } catch (_) {}
+                }
+
+                if (!loaded) {
+                    try {
+                        await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                    } catch (e) {
+                        await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                    }
                 }
             }
         } catch (err) {
