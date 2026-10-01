@@ -339,19 +339,23 @@
             document.head.appendChild(s);
         });
 
+        if (window.CutefishFFmpegLoader && window.CutefishFFmpegLoader.loadFFmpegLibraries) {
+            return await window.CutefishFFmpegLoader.loadFFmpegLibraries();
+        }
+
         try {
             if (!window.FFmpegUtil) {
                 try {
-                    await loadScript('assets/ffmpeg/index.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
                 }
             }
             if (!window.FFmpegWASM) {
                 try {
-                    await loadScript('assets/ffmpeg/ffmpeg.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
                 }
             }
         } catch (err) {
@@ -370,54 +374,10 @@
                            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isMultiThread = !isMobileDevice && typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated === true;
 
-        const logFn = (msg) => console.log(msg);
-
-        if (window.CutefishFFmpegLoader) {
-            return await window.CutefishFFmpegLoader.buildFFmpegInstance({ isMultiThread, log: logFn });
-        }
-
-        // Fallback if loader not available: CDN-first with no hard download timeout
-        const { FFmpeg } = window.FFmpegWASM;
-        const { toBlobURL } = window.FFmpegUtil;
-        const errMsg = (e) => {
-            if (!e) return 'unknown error';
-            if (e instanceof Error && e.message) return e.message;
-            if (typeof e === 'string') return e;
-            try { return JSON.stringify(e); } catch (_) { return String(e); }
-        };
-        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-        const withInitTimeout = (p, lbl) => new Promise((res, rej) => {
-            const t = setTimeout(() => rej(new Error(`${lbl} engine init timed out after 30s`)), 30000);
-            p.then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+        return await window.CutefishFFmpegLoader.getFFmpegInstance({
+            isMultiThread,
+            log: (msg) => console.log(msg)
         });
-        const attempts = [];
-        if (isMultiThread) {
-            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
-            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
-        }
-        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
-        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
-        for (const attempt of attempts) {
-            let inst = null;
-            try {
-                const config = {
-                    coreURL: await toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm')
-                };
-                if (attempt.mt) {
-                    config.workerURL = await toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript');
-                }
-                inst = new FFmpeg();
-                await withInitTimeout(inst.load(config), attempt.label);
-                return inst;
-            } catch (err) {
-                if (inst) { try { inst.terminate(); } catch (_) {} }
-                console.warn(`[Qualitelio Enhancer] ${attempt.label} failed:`, errMsg(err));
-            }
-        }
-        throw new Error('Failed to load FFmpeg WASM engine.');
     }
 
     function triggerDownload(blob, filename) {

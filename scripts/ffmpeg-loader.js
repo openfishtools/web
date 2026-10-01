@@ -1,13 +1,14 @@
 /**
- * cutefish-ffmpeg-loader.js
- * Shared helper for loading FFmpeg WASM across all tools.
+ * scripts/ffmpeg-loader.js
+ * Centralized Single-Source Loader for FFmpeg WASM across all tools.
  *
  * Features:
- *  • CacheStorage — first run downloads once; every run after is instant (0 MB download)
- *  • Streaming progress — logs live "45% — 14.5 MB / 32.1 MB" so UI never looks frozen
- *  • CDN-first ordering — jsDelivr has direct CORS *, no redirect chains → Safari-friendly
- *  • Stall detector — no arbitrary timeout; resets every chunk so slow connections succeed
- *  • WASM JIT timeout — 30s hard limit only on engine *init* after download finishes
+ *  • Single Source of Truth: All tools request FFmpeg through CutefishFFmpegLoader.
+ *  • Shared CacheStorage: First run downloads once; every run after is instant (0 MB download).
+ *  • Deduplication: Concurrent requests share the same initialization promise.
+ *  • Streaming Progress: Live download progress reported to UI callbacks.
+ *  • 100% Cloud CDN Fallbacks: jsDelivr -> unpkg -> HuggingFace. No local assets required.
+ *  • Browser Compatibility: Safari CORS safe, stall detector (60s chunk reset), 30s JIT timeout.
  */
 
 (function () {
@@ -15,15 +16,13 @@
 
 const CACHE_NAME = 'cutefish-ffmpeg-wasm-v1';
 
+let libLoadPromise = null;
+let instancePromiseMT = null;
+let instancePromiseST = null;
+
 /**
  * Fetch a URL via streaming, log MB progress, cache result in CacheStorage.
  * Safe to call for both .js and .wasm files.
- *
- * @param {string} url - Full URL to fetch
- * @param {string} mimeType - MIME type for the Blob ('text/javascript' | 'application/wasm')
- * @param {string} label - Human-readable label for log messages
- * @param {function(string):void} [logFn] - Optional log callback (defaults to console.log)
- * @returns {Promise<string>} Object URL pointing to the downloaded file bytes
  */
 async function fetchWasmWithCache(url, mimeType, label, logFn) {
     const log = (typeof logFn === 'function') ? logFn : (msg) => console.log(msg);
@@ -51,7 +50,6 @@ async function fetchWasmWithCache(url, mimeType, label, logFn) {
     }
 
     if (!resp.body) {
-        // Fallback: browsers without ReadableStream (shouldn't happen in modern browsers)
         const buf = await resp.arrayBuffer();
         try {
             const cache = await caches.open(CACHE_NAME);
@@ -68,8 +66,6 @@ async function fetchWasmWithCache(url, mimeType, label, logFn) {
     let received = 0;
     let lastLogTime = 0;
 
-    // Stall detector: 60s without ANY incoming bytes → throw
-    // This replaces the old "35s flat timeout" — a slow but active download never dies.
     let stallTimer = null;
     const STALL_MS = 60000;
     const resetStall = (reject) => {
@@ -87,7 +83,7 @@ async function fetchWasmWithCache(url, mimeType, label, logFn) {
                 for (;;) {
                     const { done, value } = await reader.read();
                     if (done) { clearTimeout(stallTimer); break; }
-                    resetStall(reject); // Got a chunk — reset the stall timer
+                    resetStall(reject);
                     chunks.push(value);
                     received += value.length;
                     const now = Date.now();
@@ -104,12 +100,10 @@ async function fetchWasmWithCache(url, mimeType, label, logFn) {
         })();
     });
 
-    // Merge all chunks into a single Uint8Array
     const merged = new Uint8Array(received);
     let off = 0;
     for (const c of chunks) { merged.set(c, off); off += c.length; }
 
-    // 3. Save to CacheStorage — next load is instant (0 bytes downloaded)
     try {
         const cache = await caches.open(CACHE_NAME);
         await cache.put(url, new Response(merged.buffer, {
@@ -122,36 +116,75 @@ async function fetchWasmWithCache(url, mimeType, label, logFn) {
 }
 
 /**
- * Build and load an FFmpeg WASM instance.
- * CDN (jsDelivr) is tried first — it has direct CORS * with no redirect chains,
- * making it reliable on Safari. HuggingFace is kept as a fallback.
- *
- * @param {object} opts
- * @param {boolean} opts.isMultiThread - Whether to attempt MT core first
- * @param {function(string):void} opts.log - Log callback
- * @param {string} [opts.hfBase] - HuggingFace base URL override
- * @returns {Promise<object>} Loaded FFmpeg instance
+ * Dynamically load FFmpeg WASM library scripts from CDN if not present.
+ * Uses promise memoization so concurrent callers only load scripts once.
+ */
+function loadFFmpegLibraries() {
+    if (window.FFmpegWASM && window.FFmpegUtil) return Promise.resolve(true);
+    if (libLoadPromise) return libLoadPromise;
+
+    libLoadPromise = (async () => {
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve(true);
+            s.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(s);
+        });
+
+        try {
+            if (!window.FFmpegUtil) {
+                try {
+                    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                }
+            }
+            if (!window.FFmpegWASM) {
+                try {
+                    await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                }
+            }
+        } catch (err) {
+            console.error('Error loading FFmpeg libraries:', err);
+        }
+        return !!(window.FFmpegWASM && window.FFmpegUtil);
+    })();
+
+    return libLoadPromise;
+}
+
+/**
+ * Build and load a fresh FFmpeg WASM instance.
  */
 async function buildFFmpegInstance({ isMultiThread, log, hfBase }) {
-    if (!window.FFmpegWASM) throw new Error('FFmpegWASM is not loaded.');
+    const logger = (typeof log === 'function') ? log : (msg) => console.log(msg);
+
+    if (!window.FFmpegWASM || !window.FFmpegUtil) {
+        await loadFFmpegLibraries();
+    }
+    if (!window.FFmpegWASM) throw new Error('FFmpegWASM library failed to load from CDNs.');
     const { FFmpeg } = window.FFmpegWASM;
 
     const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
     const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+    const unpkgBaseMT = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd';
+    const unpkgBaseST = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
     const hfFfmpegBase = (hfBase || window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
 
-    // CDN first → no 302 redirect chains (Safari CORS-safe)
-    // HuggingFace second → fallback
     const attempts = [];
     if (isMultiThread) {
-        attempts.push({ label: 'CDN (MT)',          base: cdnBaseMT,    core: 'ffmpeg-core',    mt: true  });
+        attempts.push({ label: 'CDN jsDelivr (MT)', base: cdnBaseMT,    core: 'ffmpeg-core',    mt: true  });
+        attempts.push({ label: 'CDN unpkg (MT)',    base: unpkgBaseMT,  core: 'ffmpeg-core',    mt: true  });
         attempts.push({ label: 'HuggingFace (MT)',  base: hfFfmpegBase, core: 'ffmpeg-core',    mt: true  });
     }
-    attempts.push(    { label: 'CDN (ST)',          base: cdnBaseST,    core: 'ffmpeg-core',    mt: false });
+    attempts.push(    { label: 'CDN jsDelivr (ST)', base: cdnBaseST,    core: 'ffmpeg-core',    mt: false });
+    attempts.push(    { label: 'CDN unpkg (ST)',    base: unpkgBaseST,  core: 'ffmpeg-core',    mt: false });
     attempts.push(    { label: 'HuggingFace (ST)',  base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
 
     const withInitTimeout = (promise, label) => new Promise((resolve, reject) => {
-        // 30s only for the WASM JIT compilation step — download is already done by this point
         const t = setTimeout(() => reject(new Error(`${label} engine init timed out after 30s`)), 30000);
         promise.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
     });
@@ -159,31 +192,45 @@ async function buildFFmpegInstance({ isMultiThread, log, hfBase }) {
     for (const attempt of attempts) {
         let instance = null;
         try {
-            log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
+            logger(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
             const config = {
-                coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`,   'text/javascript',   `${attempt.label} core.js`,   log),
-                wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm',  `${attempt.label} core.wasm`, log)
+                coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`,   'text/javascript',   `${attempt.label} core.js`,   logger),
+                wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm',  `${attempt.label} core.wasm`, logger)
             };
             if (attempt.mt) {
-                config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`, log);
+                config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`, logger);
             }
             instance = new FFmpeg();
             await withInitTimeout(instance.load(config), attempt.label);
-            log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
+            logger(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
             return instance;
         } catch (err) {
             if (instance) { try { instance.terminate(); } catch (_) {} }
             const msg = (err instanceof Error && err.message) ? err.message : String(err);
-            log(`  ${attempt.label} failed: ${msg}`);
+            logger(`  ${attempt.label} failed: ${msg}`);
         }
     }
     throw new Error('Failed to load FFmpeg WASM from all sources.');
+}
+
+/**
+ * High-level helper: get ready FFmpeg instance.
+ */
+async function getFFmpegInstance(options = {}) {
+    const isMultiThread = !!options.isMultiThread;
+    return await buildFFmpegInstance({
+        isMultiThread,
+        log: options.log || console.log,
+        hfBase: options.hfBase
+    });
 }
 
 // Expose on window for use by all tools
 window.CutefishFFmpegLoader = {
     fetchWasmWithCache,
     buildFFmpegInstance,
+    getFFmpegInstance,
+    loadFFmpegLibraries,
     CACHE_NAME
 };
 

@@ -196,6 +196,9 @@
 
     async function loadFFmpegLibraries() {
         if (window.FFmpegWASM && window.FFmpegUtil) return true;
+        if (window.CutefishFFmpegLoader && window.CutefishFFmpegLoader.loadFFmpegLibraries) {
+            return await window.CutefishFFmpegLoader.loadFFmpegLibraries();
+        }
         const loadScript = (src) => new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = src;
@@ -207,16 +210,16 @@
         try {
             if (!window.FFmpegUtil) {
                 try {
-                    await loadScript('assets/ffmpeg/index.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
                 }
             }
             if (!window.FFmpegWASM) {
                 try {
-                    await loadScript('assets/ffmpeg/ffmpeg.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
                 }
             }
         } catch (err) {
@@ -298,6 +301,8 @@
 
             const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
             const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+            const unpkgBaseMT = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd';
+            const unpkgBaseST = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -348,71 +353,6 @@
                 );
             });
 
-            // Cache-aware WASM fetcher: CacheStorage first, then streaming download with live progress
-            const CACHE_NAME = 'cutefish-ffmpeg-wasm-v1';
-            const fetchWasmWithCache = async (url, mimeType, label) => {
-                try {
-                    const cache = await caches.open(CACHE_NAME);
-                    const hit = await cache.match(url);
-                    if (hit) {
-                        log(`  [Cache] ${label}: Loaded from local cache (instant).`);
-                        const buf = await hit.arrayBuffer();
-                        return URL.createObjectURL(new Blob([buf], { type: mimeType }));
-                    }
-                } catch (_) {}
-                const resp = await fetch(url, { mode: 'cors' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${label}`);
-                const contentLength = parseInt(resp.headers.get('Content-Length') || '0');
-                log(`  Downloading ${label}${contentLength > 0 ? ` (${(contentLength / 1048576).toFixed(1)} MB)` : ''}...`);
-                if (!resp.body) {
-                    const buf = await resp.arrayBuffer();
-                    try {
-                        const cache = await caches.open(CACHE_NAME);
-                        await cache.put(url, new Response(buf.slice(0), { headers: { 'Content-Type': mimeType, 'Content-Length': String(buf.byteLength) } }));
-                        log(`  [Cache] ${label}: Saved to local cache for future use.`);
-                    } catch (_) {}
-                    return URL.createObjectURL(new Blob([buf], { type: mimeType }));
-                }
-                const reader = resp.body.getReader();
-                const chunks = [];
-                let received = 0, lastLogTime = 0, stallTimer = null;
-                const STALL_MS = 60000;
-                const resetStall = (reject) => {
-                    clearTimeout(stallTimer);
-                    stallTimer = setTimeout(() => reject(new Error(`${label} download stalled (no data for 60s)`)), STALL_MS);
-                };
-                await new Promise((resolve, reject) => {
-                    resetStall(reject);
-                    (async () => {
-                        try {
-                            for (;;) {
-                                const { done, value } = await reader.read();
-                                if (done) { clearTimeout(stallTimer); break; }
-                                resetStall(reject);
-                                chunks.push(value);
-                                received += value.length;
-                                const now = Date.now();
-                                if (contentLength > 0 && now - lastLogTime > 2000) {
-                                    lastLogTime = now;
-                                    const pct = Math.round(received / contentLength * 100);
-                                    log(`    ${pct}% — ${(received / 1048576).toFixed(1)} MB / ${(contentLength / 1048576).toFixed(1)} MB`);
-                                }
-                            }
-                            resolve();
-                        } catch (e) { clearTimeout(stallTimer); reject(e); }
-                    })();
-                });
-                const merged = new Uint8Array(received);
-                let off = 0;
-                for (const c of chunks) { merged.set(c, off); off += c.length; }
-                try {
-                    const cache = await caches.open(CACHE_NAME);
-                    await cache.put(url, new Response(merged.buffer, { headers: { 'Content-Type': mimeType, 'Content-Length': String(merged.length) } }));
-                    log(`  [Cache] ${label}: Saved to local cache for future use.`);
-                } catch (_) {}
-                return URL.createObjectURL(new Blob([merged], { type: mimeType }));
-            };
-
             const runCompressionPass = async (useMT) => {
                 let ffmpeg = null;
                 let oomDetected = false;
@@ -420,51 +360,10 @@
                 logSection(`FFmpeg Core Initialization (${useMT ? 'Multi-Thread' : 'Single-Thread'})`);
                 log(`  Multi-threading: ${useMT ? 'Enabled' : 'Disabled'}`);
 
-                let loadedInstance = null;
-                if (window.CutefishFFmpegLoader) {
-                    loadedInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({
-                        isMultiThread: useMT,
-                        log,
-                        hfBase: (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg'
-                    });
-                } else {
-                    const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-                    const attempts = [];
-                    if (useMT) {
-                        attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
-                        attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
-                    }
-                    attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
-                    attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
-
-                    for (const attempt of attempts) {
-                        let inst = null;
-                        try {
-                            log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
-                            const config = {
-                                coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`, 'text/javascript', `${attempt.label} core.js`),
-                                wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm', `${attempt.label} core.wasm`)
-                            };
-                            if (attempt.mt) {
-                                config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`);
-                            }
-                            inst = new FFmpeg();
-                            await withTimeout(inst.load(config), 30000, `${attempt.label} engine init`);
-                            log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
-                            loadedInstance = inst;
-                            break;
-                        } catch (err) {
-                            if (inst) {
-                                try { inst.terminate(); } catch (_) {}
-                            }
-                            log(`  ${attempt.label} failed: ${errMsg(err)}`);
-                        }
-                    }
-                }
-
-                if (!loadedInstance) {
-                    throw new Error('Failed to load FFmpeg WASM from all sources.');
-                }
+                const loadedInstance = await window.CutefishFFmpegLoader.getFFmpegInstance({
+                    isMultiThread: useMT,
+                    log
+                });
                 ffmpeg = loadedInstance;
                 logEnd();
 

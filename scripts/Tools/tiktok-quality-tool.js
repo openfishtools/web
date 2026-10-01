@@ -66,13 +66,7 @@
         try { return JSON.stringify(e); } catch (_) { return String(e); }
     }
 
-    function getLocalFFmpegBaseURL() {
-        try {
-            return new URL('assets/ffmpeg', window.location.href).href.replace(/\/$/, '');
-        } catch (_) {
-            return window.location.origin + '/assets/ffmpeg';
-        }
-    }
+
 
     // SharedArrayBuffer exists on Android Chrome even WITHOUT cross-origin
     // isolation, but it cannot be shared with workers there -> the MT core
@@ -141,6 +135,9 @@
 
     async function loadFFmpegLibraries() {
         if (window.FFmpegWASM && window.FFmpegUtil) return true;
+        if (window.CutefishFFmpegLoader && window.CutefishFFmpegLoader.loadFFmpegLibraries) {
+            return await window.CutefishFFmpegLoader.loadFFmpegLibraries();
+        }
         const loadScript = (src) => new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = src;
@@ -152,16 +149,16 @@
         try {
             if (!window.FFmpegUtil) {
                 try {
-                    await loadScript('assets/ffmpeg/index.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
                 }
             }
             if (!window.FFmpegWASM) {
                 try {
-                    await loadScript('assets/ffmpeg/ffmpeg.js');
-                } catch (e) {
                     await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
                 }
             }
         } catch (err) {
@@ -170,154 +167,15 @@
         return !!(window.FFmpegWASM && window.FFmpegUtil);
     }
 
-    // ---------------------------------------------------------------------------
-    // Cache-aware WASM fetcher
-    // Checks CacheStorage first (instant on repeat visits), then streams the
-    // download with live MB progress so the UI never looks frozen, then saves
-    // the result to cache for future use.
-    // No hard download timeout — the timer resets each time a chunk arrives,
-    // so a slow connection keeps going while a truly stalled one still fails.
-    // ---------------------------------------------------------------------------
-    async function fetchWasmWithCache(url, mimeType, label) {
-        const CACHE_NAME = 'cutefish-ffmpeg-wasm-v1';
-        // 1. Cache hit — instant load, no network needed
-        try {
-            const cache = await caches.open(CACHE_NAME);
-            const hit = await cache.match(url);
-            if (hit) {
-                log(`  [Cache] ${label}: Loaded from local cache (instant).`);
-                const buf = await hit.arrayBuffer();
-                return URL.createObjectURL(new Blob([buf], { type: mimeType }));
-            }
-        } catch (_) {}
-
-        // 2. Stream download with progress
-        const resp = await fetch(url, { mode: 'cors' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${label}`);
-        const contentLength = parseInt(resp.headers.get('Content-Length') || '0');
-        if (contentLength > 0) {
-            log(`  Downloading ${label} (${(contentLength / 1048576).toFixed(1)} MB)...`);
-        } else {
-            log(`  Downloading ${label}...`);
-        }
-
-        if (!resp.body) {
-            // Fallback: browsers without ReadableStream support
-            const buf = await resp.arrayBuffer();
-            try {
-                const cache = await caches.open(CACHE_NAME);
-                await cache.put(url, new Response(buf.slice(0), { headers: { 'Content-Type': mimeType, 'Content-Length': String(buf.byteLength) } }));
-                log(`  [Cache] ${label}: Saved to local cache for future use.`);
-            } catch (_) {}
-            return URL.createObjectURL(new Blob([buf], { type: mimeType }));
-        }
-
-        const reader = resp.body.getReader();
-        const chunks = [];
-        let received = 0;
-        let lastLog = 0;
-        // Stall detector: if no bytes arrive for 60s, abort
-        let stallTimer = null;
-        const STALL_MS = 60000;
-        const resetStall = (reject) => {
-            clearTimeout(stallTimer);
-            stallTimer = setTimeout(() => reject(new Error(`${label} download stalled (no data for 60s)`)), STALL_MS);
-        };
-
-        await new Promise((resolve, reject) => {
-            resetStall(reject);
-            (async () => {
-                try {
-                    for (;;) {
-                        const { done, value } = await reader.read();
-                        if (done) { clearTimeout(stallTimer); break; }
-                        resetStall(reject);
-                        chunks.push(value);
-                        received += value.length;
-                        const now = Date.now();
-                        if (contentLength > 0 && now - lastLog > 2000) {
-                            lastLog = now;
-                            const pct = Math.round(received / contentLength * 100);
-                            const mb  = (received / 1048576).toFixed(1);
-                            const tot = (contentLength / 1048576).toFixed(1);
-                            log(`    ${pct}% — ${mb} MB / ${tot} MB`);
-                        }
-                    }
-                    resolve();
-                } catch (e) { clearTimeout(stallTimer); reject(e); }
-            })();
-        });
-
-        const merged = new Uint8Array(received);
-        let off = 0;
-        for (const c of chunks) { merged.set(c, off); off += c.length; }
-
-        // 3. Save to CacheStorage for instant load next time
-        try {
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(url, new Response(merged.buffer, {
-                headers: { 'Content-Type': mimeType, 'Content-Length': String(merged.length) }
-            }));
-            log(`  [Cache] ${label}: Saved to local cache for future use.`);
-        } catch (_) {}
-
-        return URL.createObjectURL(new Blob([merged], { type: mimeType }));
-    }
-
     async function loadFFmpegHelper(ffmpeg, toBlobURL, forceSingleThread = false) {
-        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
         const isMultiThread = forceSingleThread ? false : await supportsMultiThread();
-        const { FFmpeg } = window.FFmpegWASM;
-
         logSection('FFmpeg Initialization');
         log(`  Multi-threading: ${isMultiThread ? 'Enabled' : 'Disabled'}`);
 
-        if (window.CutefishFFmpegLoader) {
-            return await window.CutefishFFmpegLoader.buildFFmpegInstance({
-                isMultiThread,
-                log,
-                hfBase: hfFfmpegBase
-            });
-        }
-
-        // CDN first: direct CORS *, no 302 redirect chains — Safari-friendly.
-        // HuggingFace as fallback (redirect chain triggers Safari CORS strictness).
-        const attempts = [];
-        if (isMultiThread) {
-            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
-            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
-        }
-        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
-        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
-
-        for (const attempt of attempts) {
-            let instance = null;
-            try {
-                log(`  Loading FFmpeg Core WASM (${attempt.mt ? 'Multi-Thread' : 'Single-Thread'}, ${attempt.label})...`);
-                const config = {
-                    coreURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.js`, 'text/javascript', `${attempt.label} core.js`),
-                    wasmURL: await fetchWasmWithCache(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm', `${attempt.label} core.wasm`)
-                };
-                if (attempt.mt) {
-                    config.workerURL = await fetchWasmWithCache(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript', `${attempt.label} worker.js`);
-                }
-                // A failed FFmpeg instance cannot be reused in 0.12.x —
-                // always load into a fresh instance, otherwise it hangs.
-                instance = new FFmpeg();
-                // 30s for WASM JIT compilation (download already done above)
-                await withTimeout(instance.load(config), 30000, `${attempt.label} engine init`);
-                log(`  FFmpeg Core WASM loaded from ${attempt.label}.`);
-                return instance;
-            } catch (err) {
-                if (instance) {
-                    try { instance.terminate(); } catch (_) {}
-                }
-                log(`  ${attempt.label} failed: ${errMsg(err)}`);
-            }
-        }
-        throw new Error('Failed to load FFmpeg WASM from all sources.');
+        return await window.CutefishFFmpegLoader.getFFmpegInstance({
+            isMultiThread,
+            log
+        });
     }
 
     function parseFpsFromMp4(buffer) {

@@ -83,12 +83,19 @@
             s.onerror = () => reject(new Error(`Failed to load ${src}`));
             document.head.appendChild(s);
         });
+        if (window.CutefishFFmpegLoader && window.CutefishFFmpegLoader.loadFFmpegLibraries) {
+            return await window.CutefishFFmpegLoader.loadFFmpegLibraries();
+        }
         try {
             if (!window.FFmpegUtil) {
-                try { await loadScript('assets/ffmpeg/index.js'); } catch (e) { await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js'); }
+                try { await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js'); } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+                }
             }
             if (!window.FFmpegWASM) {
-                try { await loadScript('assets/ffmpeg/ffmpeg.js'); } catch (e) { await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'); }
+                try { await loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'); } catch (e) {
+                    await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
+                }
             }
         } catch (err) {
             console.error('[Video Interpolation] Error loading FFmpeg libraries:', err);
@@ -220,50 +227,14 @@
                            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isMultiThread = !isMobileDevice && typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated === true;
 
-        const logFn = (msg) => console.log(msg);
-
-        if (window.CutefishFFmpegLoader) {
-            ffmpegInstance = await window.CutefishFFmpegLoader.buildFFmpegInstance({ isMultiThread, log: logFn });
-            ffmpegInstance.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
-            return ffmpegInstance;
-        }
-
-        // Fallback: CDN-first with no hard download timeout
-        const cdnBaseMT = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.6/dist/umd';
-        const cdnBaseST = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        const hfFfmpegBase = (window.HF_RESOURCE_BASE || 'https://huggingface.co/cutefishae/resource-cutefish/resolve/main') + '/ffmpeg';
-        const withInitTimeout = (p, lbl) => new Promise((res, rej) => {
-            const t = setTimeout(() => rej(new Error(`${lbl} engine init timed out after 30s`)), 30000);
-            p.then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+        ffmpegInstance = await window.CutefishFFmpegLoader.getFFmpegInstance({
+            isMultiThread,
+            log: (msg) => console.log(msg)
         });
-        const attempts = [];
-        if (isMultiThread) {
-            attempts.push({ label: 'CDN (MT)', base: cdnBaseMT, core: 'ffmpeg-core', mt: true });
-            attempts.push({ label: 'HuggingFace (MT)', base: hfFfmpegBase, core: 'ffmpeg-core', mt: true });
-        }
-        attempts.push({ label: 'CDN (ST)', base: cdnBaseST, core: 'ffmpeg-core', mt: false });
-        attempts.push({ label: 'HuggingFace (ST)', base: hfFfmpegBase, core: 'ffmpeg-core-st', mt: false });
-        for (const attempt of attempts) {
-            let inst = null;
-            try {
-                const config = {
-                    coreURL: await toBlobURL(`${attempt.base}/${attempt.core}.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${attempt.base}/${attempt.core}.wasm`, 'application/wasm')
-                };
-                if (attempt.mt) {
-                    config.workerURL = await toBlobURL(`${attempt.base}/ffmpeg-core.worker.js`, 'text/javascript');
-                }
-                inst = new FFmpeg();
-                inst.on('log',({message})=>{ if(message&&!message.includes('frame=')&&!message.includes('fps=')) console.log('[FFmpeg]',message); });
-                await withInitTimeout(inst.load(config), attempt.label);
-                ffmpegInstance = inst;
-                return ffmpegInstance;
-            } catch (err) {
-                if (inst) { try { inst.terminate(); } catch (_) {} }
-                console.warn(`[Video Interp] ${attempt.label} failed:`, errMsg(err));
-            }
-        }
-        throw new Error('FFmpeg core failed to load');
+        ffmpegInstance.on('log', ({ message }) => {
+            if (message && !message.includes('frame=') && !message.includes('fps=')) console.log('[FFmpeg]', message);
+        });
+        return ffmpegInstance;
     }
 
     async function seekVideoForward(vid,time){
