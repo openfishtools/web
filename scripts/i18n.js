@@ -333,7 +333,7 @@
             "patcher_desc_tbt_1080p": `
                 [format] .mp4 (Faststart)
                 [resolution] 1080p
-                [info] Menyelaraskan resolusi ke standar 1080p dengan batas bitrate 9.5 Mbps untuk hasil upload paling jernih.
+                [info] Menyelaraskan resolusi ke standar 1080p dengan alokasi bitrate tinggi untuk menjaga ketajaman gerak 60 FPS.
             `,
             "patcher_desc_fps": `
                 [format] .mp4
@@ -874,7 +874,7 @@
             "patcher_desc_tbt_1080p": `
                 [format] .mp4 (Faststart)
                 [resolution] 1080p
-                [info] Aligns video to 1080p Full HD standard with capped bitrate for ultra-crisp playback.
+                [info] Aligns video to 1080p Full HD standard with high bitrate allocation to preserve 60 FPS motion clarity.
             `,
             "patcher_desc_fps": `
                 [format] .mp4

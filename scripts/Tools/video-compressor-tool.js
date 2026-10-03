@@ -38,25 +38,28 @@
         const isSingleThread = (selectedThreadMode === 'single');
         let codecLabel = isSingleThread ? 'H.264 (libx264)' : 'H.265 / HEVC';
         let presetLabel = isSingleThread ? 'Medium' : 'Ultrafast';
-        let crfLabel = '20';
+        let crfLabel = '19';
+        let bitrateLabel = isSingleThread ? 'H.264 up to 19 Mbps' : 'HEVC up to 16 Mbps';
         let infoText = isEn 
-            ? 'Optimal balance between compression speed, visual quality, and file size.' 
-            : 'Keseimbangan optimal antara kecepatan kompresi, kualitas visual, dan ukuran file.';
+            ? 'Optimal balance between compression speed, visual quality, and 60fps motion sharpness.' 
+            : 'Keseimbangan optimal antara kecepatan kompresi, kualitas visual, dan ketajaman gerakan 60 FPS.';
 
         if (selectedPreset === 'slow') {
             codecLabel = isSingleThread ? 'H.264 (libx264)' : 'H.265 / HEVC';
             presetLabel = isSingleThread ? 'Slow' : 'Superfast';
-            crfLabel = '19';
+            crfLabel = '18';
+            bitrateLabel = isSingleThread ? 'H.264 up to 24 Mbps' : 'HEVC up to 20 Mbps';
             infoText = isEn
-                ? 'Higher compression with deep motion analysis. Smaller file size, longer encoding time.'
-                : 'Kompresi lebih padat dengan analisis gerakan mendalam. Ukuran file lebih kecil, waktu encoding lebih lama.';
+                ? 'Maximum visual fidelity with deep motion analysis and high bitrate headroom to eliminate macroblocking.'
+                : 'Kualitas visual maksimal dengan analisis gerakan mendalam dan batas bitrate tinggi untuk mencegah video pecah.';
         } else if (selectedPreset === 'fast') {
             codecLabel = 'H.264 (libx264)';
             presetLabel = 'Veryfast';
-            crfLabel = '23';
+            crfLabel = '21';
+            bitrateLabel = 'H.264 up to 14 Mbps';
             infoText = isEn
-                ? 'Fastest encoding with universal compatibility and compact file size.'
-                : 'Proses encoding paling cepat dengan kompatibilitas universal dan ukuran file hemat.';
+                ? 'Fastest encoding with universal compatibility and 60fps high-motion safety headroom.'
+                : 'Proses encoding paling cepat dengan kompatibilitas universal dan alokasi bitrate aman untuk gerakan 60 FPS.';
         }
 
         const threadingLabel = isSingleThread
@@ -69,6 +72,7 @@
                     <li><span class="material-symbols-rounded">memory</span><strong>Codec:</strong> ${codecLabel}</li>
                     <li><span class="material-symbols-rounded">speed</span><strong>Preset:</strong> ${presetLabel}</li>
                     <li><span class="material-symbols-rounded">tune</span><strong>CRF:</strong> ${crfLabel}</li>
+                    <li><span class="material-symbols-rounded">equalizer</span><strong>Bitrate:</strong> ${bitrateLabel}</li>
                     <li><span class="material-symbols-rounded">bolt</span><strong>Threading:</strong> ${threadingLabel}</li>
                 </ul>
                 <hr class="tiktok-desc-divider">
@@ -176,22 +180,89 @@
         }
     }
 
+    async function getVideoMeta(file) {
+        let width = 0;
+        let height = 0;
+        let fps = 0;
+
+        // Try getting fps & dimensions from MP4 atoms first
+        try {
+            if (window._tktk && typeof window._tktk.inspectMp4Meta === 'function') {
+                const specs = await window._tktk.inspectMp4Meta(file);
+                if (specs) {
+                    if (specs.fps) fps = specs.fps;
+                    if (specs.res) {
+                        width = specs.res.width;
+                        height = specs.res.height;
+                    }
+                }
+            }
+        } catch (_) {}
+
+        if (!fps) {
+            try {
+                const sliceBlob = file.slice(0, Math.min(file.size, 2 * 1024 * 1024));
+                const buf = await sliceBlob.arrayBuffer();
+                if (window._tktk && typeof window._tktk.parseFpsFromMp4 === 'function') {
+                    fps = window._tktk.parseFpsFromMp4(buf);
+                } else {
+                    const data = new Uint8Array(buf);
+                    const view = new DataView(buf);
+                    for (let i = 0; i < data.length - 8; i++) {
+                        if (data[i] === 0x76 && data[i+1] === 0x69 && data[i+2] === 0x64 && data[i+3] === 0x65) {
+                            const sStart = Math.max(0, i - 300);
+                            const sEnd = Math.min(data.length, i + 8000);
+                            let ts = 0, sd = 0;
+                            for (let j = sStart; j < sEnd - 8; j++) {
+                                if (data[j] === 0x6D && data[j+1] === 0x64 && data[j+2] === 0x68 && data[j+3] === 0x64) {
+                                    const ver = view.getUint8(j + 4);
+                                    ts = ver === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
+                                }
+                                if (data[j] === 0x73 && data[j+1] === 0x74 && data[j+2] === 0x74 && data[j+3] === 0x73) {
+                                    const ec = view.getUint32(j + 8);
+                                    if (ec > 0) sd = view.getUint32(j + 16);
+                                }
+                                if (ts && sd) {
+                                    const f = Math.round(ts / sd);
+                                    if (f > 0 && f < 300) { fps = f; break; }
+                                }
+                            }
+                        }
+                        if (fps) break;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        // Fallback / complement dimensions via HTML5 video element
+        if (!width || !height) {
+            try {
+                const dims = await new Promise((resolve) => {
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    const url = URL.createObjectURL(file);
+                    video.onloadedmetadata = () => {
+                        URL.revokeObjectURL(url);
+                        resolve({ width: video.videoWidth || 0, height: video.videoHeight || 0 });
+                    };
+                    video.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        resolve({ width: 0, height: 0 });
+                    };
+                    video.src = url;
+                    setTimeout(() => resolve({ width: 0, height: 0 }), 3000);
+                });
+                if (!width && dims.width) width = dims.width;
+                if (!height && dims.height) height = dims.height;
+            } catch (_) {}
+        }
+
+        return { width, height, fps: fps || 60 };
+    }
+
     async function getVideoDimensions(file) {
-        return new Promise((resolve) => {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            const url = URL.createObjectURL(file);
-            video.onloadedmetadata = () => {
-                URL.revokeObjectURL(url);
-                resolve({ width: video.videoWidth, height: video.videoHeight });
-            };
-            video.onerror = () => {
-                URL.revokeObjectURL(url);
-                resolve({ width: 0, height: 0 });
-            };
-            video.src = url;
-            setTimeout(() => resolve({ width: 0, height: 0 }), 3000);
-        });
+        const meta = await getVideoMeta(file);
+        return { width: meta.width, height: meta.height };
     }
 
     async function loadFFmpegLibraries() {
@@ -256,6 +327,7 @@
         logSection('Video Compressor — Initializing');
         log(`  File : ${file.name} (${fileMB.toFixed(2)} MB)`);
         log(`  Preset : ${selectedPreset.toUpperCase()}`);
+        log(`  Threading : ${selectedThreadMode === 'single' ? 'Single-Thread' : 'Multi-Thread'}`);
         logEnd();
 
         if (fileMB > MAX_FILE_MB_HARD) {
@@ -274,11 +346,15 @@
             if (window.ToolProgressManager) {
                 window.ToolProgressManager.set('tool-video-compressor', { isProcessing: true, percent: 5, status: t('status_reading_file'), file });
             }
-            const { width, height } = await getVideoDimensions(file);
+            const { width, height, fps } = await getVideoMeta(file);
             const needsScale = width > MAX_DIMENSION || height > MAX_DIMENSION;
             if (needsScale) {
                 log(`  Auto-scaling: ${width}x${height} -> max ${MAX_DIMENSION}px`);
             }
+            logSection('Video Source Profile');
+            log(`  Resolution: ${width || 'auto'}x${height || 'auto'}`);
+            log(`  Framerate: ${fps} FPS ${fps >= 45 ? '(High-Motion 60fps Optimization Active)' : '(Standard Framerate)'}`);
+            logEnd();
 
             const isReady = await loadFFmpegLibraries();
             if (!isReady) {
@@ -395,8 +471,93 @@
                 const scaleFilter = `scale='if(gt(iw,ih),min(iw,${MAX_DIMENSION}),-2)':'if(gt(iw,ih),-2,min(ih,${MAX_DIMENSION}))'`;
 
                 let command = [];
+                const isHighFps = (!fps || fps >= 45);
+                const maxDim = Math.max(width, height);
+                const is720pOrLess = (maxDim > 0 && maxDim <= 1280);
+
+                let crfVal = '19';
+                let maxRate = '16M';
+                let bufSize = '28M';
+                let audioBitrate = '192k';
+                let x265Params = '';
+
+                if (selectedPreset === 'slow') {
+                    // SLOW Preset: Deep motion analysis, highest visual clarity, zero macroblocking
+                    audioBitrate = '192k';
+                    if (useMT) {
+                        x265Params = 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=20:qpmax=30:qcomp=0.75:deblock=-1,-1';
+                        if (is720pOrLess) {
+                            crfVal = isHighFps ? '18' : '18.5';
+                            maxRate = isHighFps ? '14M' : '10M';
+                            bufSize = isHighFps ? '24M' : '18M';
+                        } else {
+                            crfVal = isHighFps ? '18' : '18.5';
+                            maxRate = isHighFps ? '20M' : '15M';
+                            bufSize = isHighFps ? '32M' : '26M';
+                        }
+                    } else {
+                        // Single-Thread H.264 Slow
+                        if (is720pOrLess) {
+                            crfVal = isHighFps ? '18' : '18.5';
+                            maxRate = isHighFps ? '16M' : '12M';
+                            bufSize = isHighFps ? '26M' : '20M';
+                        } else {
+                            crfVal = isHighFps ? '18' : '18.5';
+                            maxRate = isHighFps ? '24M' : '18M';
+                            bufSize = isHighFps ? '38M' : '30M';
+                        }
+                    }
+                } else if (selectedPreset === 'fast') {
+                    // FAST Preset: H.264 Veryfast, optimized headroom for 60fps fast motion
+                    audioBitrate = '160k';
+                    if (is720pOrLess) {
+                        crfVal = isHighFps ? '21' : '22';
+                        maxRate = isHighFps ? '9.5M' : '7.5M';
+                        bufSize = isHighFps ? '16M' : '13M';
+                    } else {
+                        crfVal = isHighFps ? '21' : '22';
+                        maxRate = isHighFps ? '14M' : '11M';
+                        bufSize = isHighFps ? '24M' : '18M';
+                    }
+                } else {
+                    // MEDIUM Preset (Normal): Optimal balance with robust anti-pixelation margin
+                    audioBitrate = '192k';
+                    if (useMT) {
+                        x265Params = 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=15:qpmax=32:qcomp=0.72:deblock=-1,-1';
+                        if (is720pOrLess) {
+                            crfVal = isHighFps ? '19' : '20';
+                            maxRate = isHighFps ? '11M' : '8.5M';
+                            bufSize = isHighFps ? '18M' : '15M';
+                        } else {
+                            crfVal = isHighFps ? '19' : '19.5';
+                            maxRate = isHighFps ? '16M' : '13M';
+                            bufSize = isHighFps ? '28M' : '22M';
+                        }
+                    } else {
+                        // Single-Thread H.264 Medium
+                        if (is720pOrLess) {
+                            crfVal = isHighFps ? '19' : '20';
+                            maxRate = isHighFps ? '13M' : '10M';
+                            bufSize = isHighFps ? '22M' : '17M';
+                        } else {
+                            crfVal = isHighFps ? '19' : '19.5';
+                            maxRate = isHighFps ? '19M' : '15M';
+                            bufSize = isHighFps ? '32M' : '26M';
+                        }
+                    }
+                }
+
+                logSection('Compression Configuration');
+                log(`  Preset : ${selectedPreset.toUpperCase()}`);
+                log(`  Codec : ${useMT && selectedPreset !== 'fast' ? 'libx265 (HEVC hvc1)' : 'libx264 (H.264)'}`);
+                log(`  CRF : ${crfVal}`);
+                log(`  Bitrate Ceiling (Maxrate) : ${maxRate}`);
+                log(`  Buffer Size (Bufsize) : ${bufSize}`);
+                log(`  Audio Bitrate : ${audioBitrate}`);
+                logEnd();
+
                 if (selectedPreset === 'fast') {
-                    // FAST: H.264 Veryfast, smallest size while maintaining HD
+                    // FAST: H.264 Veryfast, smallest size while maintaining HD & 60fps stability
                     command = [
                         '-y', '-i', 'input.mp4',
                         '-threads', useMT ? threads : '1',
@@ -405,12 +566,12 @@
                         ...(needsScale ? ['-vf', scaleFilter] : []),
                         '-c:v', 'libx264',
                         '-preset', 'veryfast',
-                        '-crf', '23',
-                        '-maxrate', '8M',
-                        '-bufsize', '12M',
+                        '-crf', crfVal,
+                        '-maxrate', maxRate,
+                        '-bufsize', bufSize,
                         '-pix_fmt', 'yuv420p',
                         '-c:a', 'aac',
-                        '-b:a', '128k',
+                        '-b:a', audioBitrate,
                         '-movflags', '+faststart',
                         'output.mp4'
                     ];
@@ -426,18 +587,18 @@
                             '-c:v', 'libx265',
                             '-tag:v', 'hvc1',
                             '-preset', 'superfast',
-                            '-crf', '19',
-                            '-maxrate', '10M',
-                            '-bufsize', '15M',
+                            '-crf', crfVal,
+                            '-maxrate', maxRate,
+                            '-bufsize', bufSize,
                             '-pix_fmt', 'yuv420p',
-                            '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=34:qcomp=0.75:deblock=-1,-1',
+                            '-x265-params', x265Params,
                             '-c:a', 'aac',
-                            '-b:a', '128k',
+                            '-b:a', audioBitrate,
                             '-movflags', '+faststart',
                             'output.mp4'
                         ];
                     } else {
-                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Slow, CRF 19) untuk mencegah deadlock WebAssembly.`);
+                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Slow, CRF ${crfVal}, Maxrate ${maxRate}) untuk mencegah deadlock WebAssembly.`);
                         command = [
                             '-y', '-i', 'input.mp4',
                             '-threads', '1',
@@ -446,12 +607,12 @@
                             ...(needsScale ? ['-vf', scaleFilter] : []),
                             '-c:v', 'libx264',
                             '-preset', 'slow',
-                            '-crf', '19',
-                            '-maxrate', '10M',
-                            '-bufsize', '15M',
+                            '-crf', crfVal,
+                            '-maxrate', maxRate,
+                            '-bufsize', bufSize,
                             '-pix_fmt', 'yuv420p',
                             '-c:a', 'aac',
-                            '-b:a', '128k',
+                            '-b:a', audioBitrate,
                             '-movflags', '+faststart',
                             'output.mp4'
                         ];
@@ -468,18 +629,18 @@
                             '-c:v', 'libx265',
                             '-tag:v', 'hvc1',
                             '-preset', 'ultrafast',
-                            '-crf', '20',
-                            '-maxrate', '12.5M',
-                            '-bufsize', '18M',
+                            '-crf', crfVal,
+                            '-maxrate', maxRate,
+                            '-bufsize', bufSize,
                             '-pix_fmt', 'yuv420p',
-                            '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=36:qcomp=0.7:deblock=-1,-1',
+                            '-x265-params', x265Params,
                             '-c:a', 'aac',
-                            '-b:a', '128k',
+                            '-b:a', audioBitrate,
                             '-movflags', '+faststart',
                             'output.mp4'
                         ];
                     } else {
-                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Medium, CRF 20) untuk mencegah deadlock WebAssembly.`);
+                        log(`  [Notice] Single-Thread mode: Menggunakan libx264 (H.264 Medium, CRF ${crfVal}, Maxrate ${maxRate}) untuk mencegah deadlock WebAssembly.`);
                         command = [
                             '-y', '-i', 'input.mp4',
                             '-threads', '1',
@@ -488,12 +649,12 @@
                             ...(needsScale ? ['-vf', scaleFilter] : []),
                             '-c:v', 'libx264',
                             '-preset', 'medium',
-                            '-crf', '20',
-                            '-maxrate', '12.5M',
-                            '-bufsize', '18M',
+                            '-crf', crfVal,
+                            '-maxrate', maxRate,
+                            '-bufsize', bufSize,
                             '-pix_fmt', 'yuv420p',
                             '-c:a', 'aac',
-                            '-b:a', '128k',
+                            '-b:a', audioBitrate,
                             '-movflags', '+faststart',
                             'output.mp4'
                         ];

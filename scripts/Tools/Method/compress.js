@@ -36,13 +36,55 @@ async function compressVideo(file, mode, inputBuffer) {
     }
     const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
 
-    // Video Compressor — Normal Preset Settings:
-    // Multi-Thread: HEVC (libx265 hvc1, CRF 20, maxrate 12.5M, bufsize 18M, tuned x265 params)
-    // Single-Thread: H.264 Medium (libx264 medium, CRF 20, maxrate 12.5M, bufsize 18M)
-    const crfValue = '20';
-    const maxRate = '12.5M';
-    const bufSize = '18M';
-    const audioBitrate = '128k';
+    // Video Compressor / Patcher Encoding Settings:
+    // Research-backed bitrates optimized for 60fps full-motion video (eliminates macroblocking/pixelation).
+    const is720p = (mode === '720p');
+    const isHighFps = (!vInfoFps || vInfoFps >= 45); // Treat >= 45fps or unknown as high-fps for motion safety
+
+    // Target Bitrate & Buffer calculation:
+    // 1080p 60fps high motion: H.264 maxrate 20M / bufsize 34M, HEVC maxrate 17M / bufsize 28M, CRF 18.5
+    // 720p 60fps high motion: H.264 maxrate 13M / bufsize 22M, HEVC maxrate 11M / bufsize 18M, CRF 19.0
+    let crfValueMT = '18.5';
+    let maxRateMT = '17M';
+    let bufSizeMT = '28M';
+
+    let crfValueST = '18.5';
+    let maxRateST = '20M';
+    let bufSizeST = '34M';
+
+    if (is720p) {
+        if (isHighFps) {
+            crfValueMT = '19';
+            maxRateMT = '11M';
+            bufSizeMT = '18M';
+
+            crfValueST = '19';
+            maxRateST = '13M';
+            bufSizeST = '22M';
+        } else {
+            crfValueMT = '20';
+            maxRateMT = '8M';
+            bufSizeMT = '14M';
+
+            crfValueST = '20';
+            maxRateST = '10M';
+            bufSizeST = '16M';
+        }
+    } else {
+        // 1080p
+        if (!isHighFps) {
+            crfValueMT = '19';
+            maxRateMT = '14M';
+            bufSizeMT = '24M';
+
+            crfValueST = '19';
+            maxRateST = '16M';
+            bufSizeST = '26M';
+        }
+    }
+
+    const audioBitrate = '192k';
+    const x265Params = 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=15:qpmax=32:qcomp=0.75:deblock=-1,-1';
 
     const runCompressionPass = async (useMT) => {
         let ffmpeg = null;
@@ -77,13 +119,17 @@ async function compressVideo(file, mode, inputBuffer) {
             }
         });
 
+        const activeCrf = useMT ? crfValueMT : crfValueST;
+        const activeMaxrate = useMT ? maxRateMT : maxRateST;
+        const activeBufsize = useMT ? bufSizeMT : bufSizeST;
+
         s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread (HEVC)' : 'Single-Thread (H.264 Medium)'})...`);
+        s.log(`  [Config] Target: ${mode.toUpperCase()} | FPS: ${vInfoFps ? vInfoFps + ' FPS' : '60 FPS (Motion-Safety)'} | Bitrate Ceiling: ${activeMaxrate} (Buffer: ${activeBufsize})`);
         await ffmpeg.writeFile('input.mp4', new Uint8Array(buffer));
 
         let command = [];
         if (useMT) {
-            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx265 HEVC (Normal Preset)...`);
-            s.log(`  Encoder: libx265 (HEVC Normal Preset) crf=${crfValue} maxrate=${maxRate} tag=hvc1`);
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx265 HEVC (crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
             command = [
                 '-y', '-i', 'input.mp4',
                 '-threads', '2',
@@ -96,19 +142,18 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-c:v', 'libx265',
                 '-tag:v', 'hvc1',
                 '-preset', 'ultrafast',
-                '-crf', crfValue,
-                '-maxrate', maxRate,
-                '-bufsize', bufSize,
+                '-crf', activeCrf,
+                '-maxrate', activeMaxrate,
+                '-bufsize', activeBufsize,
                 '-pix_fmt', 'yuv420p',
-                '-x265-params', 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=5:qpmax=36:qcomp=0.7:deblock=-1,-1',
+                '-x265-params', x265Params,
                 '-c:a', 'aac',
                 '-b:a', audioBitrate,
                 '-movflags', '+faststart',
                 'output.mp4'
             ];
         } else {
-            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Medium (Normal Preset)...`);
-            s.log(`  Encoder: libx264 (H.264 Medium Normal Preset) crf=${crfValue} maxrate=${maxRate}`);
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Medium (crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
             command = [
                 '-y', '-i', 'input.mp4',
                 '-threads', '1',
@@ -120,9 +165,9 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-vf', procOpts.vfString,
                 '-c:v', 'libx264',
                 '-preset', 'medium',
-                '-crf', crfValue,
-                '-maxrate', maxRate,
-                '-bufsize', bufSize,
+                '-crf', activeCrf,
+                '-maxrate', activeMaxrate,
+                '-bufsize', activeBufsize,
                 '-pix_fmt', 'yuv420p',
                 '-c:a', 'aac',
                 '-b:a', audioBitrate,
@@ -138,7 +183,7 @@ async function compressVideo(file, mode, inputBuffer) {
                 try { await ffmpeg.terminate(); } catch (_) {}
                 throw new Error('Memory limit exceeded during video processing (OOM).');
             }
-            s.log(`  [Notice] Encoding retry with libx264 Medium...`);
+            s.log(`  [Notice] Encoding retry with libx264 Medium (crf=${crfValueST}, maxrate=${maxRateST})...`);
             const fallbackCommand = [
                 '-y', '-i', 'input.mp4',
                 '-threads', useMT ? '2' : '1',
@@ -150,9 +195,9 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-vf', procOpts.vfString,
                 '-c:v', 'libx264',
                 '-preset', 'medium',
-                '-crf', crfValue,
-                '-maxrate', maxRate,
-                '-bufsize', bufSize,
+                '-crf', crfValueST,
+                '-maxrate', maxRateST,
+                '-bufsize', bufSizeST,
                 '-pix_fmt', 'yuv420p',
                 '-c:a', 'aac',
                 '-b:a', audioBitrate,
