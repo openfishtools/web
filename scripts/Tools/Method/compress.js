@@ -153,10 +153,10 @@ async function compressVideo(file, mode, inputBuffer) {
                 'output.mp4'
             ];
         } else {
-            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Medium (crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Ultrafast (crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
             command = [
                 '-y', '-i', 'input.mp4',
-                '-threads', '1',
+                '-threads', '0',
                 '-map', '0:v:0',
                 '-map', '0:a:0?',
                 '-dn',
@@ -164,7 +164,7 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-map_chapters', '-1',
                 '-vf', procOpts.vfString,
                 '-c:v', 'libx264',
-                '-preset', 'medium',
+                '-preset', 'ultrafast',
                 '-crf', activeCrf,
                 '-maxrate', activeMaxrate,
                 '-bufsize', activeBufsize,
@@ -183,10 +183,10 @@ async function compressVideo(file, mode, inputBuffer) {
                 try { await ffmpeg.terminate(); } catch (_) {}
                 throw new Error('Memory limit exceeded during video processing (OOM).');
             }
-            s.log(`  [Notice] Encoding retry with libx264 Medium (crf=${crfValueST}, maxrate=${maxRateST})...`);
+            s.log(`  [Notice] Encoding retry with libx264 Ultrafast (crf=${crfValueST}, maxrate=${maxRateST})...`);
             const fallbackCommand = [
                 '-y', '-i', 'input.mp4',
-                '-threads', useMT ? '2' : '1',
+                '-threads', useMT ? '2' : '0',
                 '-map', '0:v:0',
                 '-map', '0:a:0?',
                 '-dn',
@@ -194,7 +194,7 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-map_chapters', '-1',
                 '-vf', procOpts.vfString,
                 '-c:v', 'libx264',
-                '-preset', 'medium',
+                '-preset', 'ultrafast',
                 '-crf', crfValueST,
                 '-maxrate', maxRateST,
                 '-bufsize', bufSizeST,
