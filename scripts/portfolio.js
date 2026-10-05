@@ -2798,7 +2798,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (launchUrl) {
                 downloadBtn.disabled = false;
                 downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
-                if (downloadMainText) downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                if (downloadMainText) {
+                    downloadMainText.dataset.i18n = 'res_launch_apps';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                }
                 downloadLabel.textContent = 'Open in new tab';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 downloadSection.classList.remove('hidden');
@@ -2806,14 +2809,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (resource.instruction) instrSection.classList.remove('hidden');
             } else {
                 downloadBtn.disabled = true;
-                if (downloadMainText) downloadMainText.textContent = 'Launch App';
+                if (downloadMainText) {
+                    downloadMainText.dataset.i18n = 'res_launch_apps';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                }
                 downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 downloadSection.classList.remove('hidden');
             }
             adjustModalLayout();
         } else {
-            if (downloadMainText) downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_get')) || 'Get Resource';
+            if (downloadMainText) {
+                downloadMainText.dataset.i18n = 'res_modal_get';
+                downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_get')) || 'Get Resource';
+            }
             if (downloadIcon) downloadIcon.textContent = 'download';
             
             if (osSection) osSection.classList.remove('hidden');
