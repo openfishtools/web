@@ -1562,6 +1562,62 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             resourcesLoaded = true;
             resourcesLoading = false;
+            
+            const renderHomeNews = () => {
+                const newsSection = document.getElementById('home-news-section');
+                const newsGrid = document.getElementById('home-news-grid');
+                if (!newsSection || !newsGrid) return;
+                
+                const newsItems = allResources.filter(r => r.newsRank && r.newsRank > 0)
+                                              .sort((a, b) => a.newsRank - b.newsRank);
+                if (newsItems.length === 0) {
+                    newsSection.style.display = 'none';
+                    return;
+                }
+                newsSection.style.display = 'block';
+                
+                newsGrid.innerHTML = newsItems.map(r => {
+                    const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+                    const osArr = Array.isArray(r.os) ? r.os : [];
+                    const osIconsHtml = osArr.map(o => {
+                        const rawName = typeof o === 'string' ? o : (o.name || '');
+                        const key = resolveOsKey(rawName) || String(rawName).toUpperCase();
+                        return OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-sm" alt="${key}" title="${OS_LABEL[key] || key}">` : '';
+                    }).join('');
+    
+                    const isCutefish = cats.includes('Made By Cutefish');
+                    
+                    return `<div class="resource-card ${isCutefish ? 'resource-card-cutefish' : ''}" data-id="${r._id}" tabindex="0" role="button" aria-label="Open ${r.title}">
+                        <div class="resource-icon-wrapper">
+                            <img src="${r.icon || 'assets/icon/Ae.png'}" alt="${r.title}" class="resource-icon" loading="lazy">
+                            ${isCutefish ? `<div class="cutefish-badge" title="Made by Cutefish"></div>` : ''}
+                        </div>
+                        <div class="resource-info">
+                            <h3 class="resource-title-compact">${r.title}</h3>
+                            <p class="resource-dev-compact">${r.dev || 'cutefishaep Team'}</p>
+                            <div class="resource-meta-compact">
+                                ${osIconsHtml ? `<span class="os-chip">${osIconsHtml}</span>` : ''}
+                                <span class="resource-info-text">${r.info || ''}</span>
+                            </div>
+                            <div class="resource-cats-row">
+                                ${cats.map(c => `<span class="resource-cat-chip">${c}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="resource-card-arrow">
+                            <span class="material-symbols-rounded">chevron_right</span>
+                        </div>
+                    </div>`;
+                }).join('');
+                
+                newsGrid.querySelectorAll('.resource-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const id = card.dataset.id;
+                        const item = allResources.find(r => r._id === id);
+                        if (item) openResourceModal(item, card);
+                    });
+                });
+            };
+            renderHomeNews();
         }
 
         renderResourceCategories(allResources);
@@ -2720,30 +2776,62 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        const osKeys = Object.keys(osVersionMap);
-        if (osKeys.length > 0) {
-            osChipsEl.innerHTML = osKeys.map(key =>
-                `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
-                    ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
-                </button>`
-            ).join('');
-            osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    selectedOs = btn.dataset.os;
-                    selectedVer = null;
-                    osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+        const osSection = document.getElementById('res-modal-os-section');
+        const isWebApp = Array.isArray(resource.category) ? resource.category.some(c => String(c).toLowerCase().includes('web app')) : String(resource.category || '').toLowerCase().includes('web app');
+        
+        if (isWebApp) {
+            if (osSection) osSection.classList.add('hidden');
+            verSection.classList.add('hidden');
+            
+            let launchUrl = '';
+            const osKeys = Object.keys(osVersionMap);
+            for (const key of osKeys) {
+                if (osVersionMap[key].length > 0 && osVersionMap[key][0].url) {
+                    launchUrl = osVersionMap[key][0].url;
+                    break;
+                }
+            }
 
-                    downloadSection.classList.add('hidden');
-                    passwordSection.classList.add('hidden');
-                    instrSection.classList.add('hidden');
-
-                    renderVerChips();
-                });
-            });
+            if (launchUrl) {
+                downloadBtn.disabled = false;
+                downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
+                downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Apps';
+                downloadSection.classList.remove('hidden');
+                passwordSection.classList.add('hidden');
+                if (resource.instruction) instrSection.classList.remove('hidden');
+            } else {
+                downloadBtn.disabled = true;
+                downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
+                downloadSection.classList.remove('hidden');
+            }
+            adjustModalLayout();
         } else {
-            const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
-            osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
+            if (osSection) osSection.classList.remove('hidden');
+            const osKeys = Object.keys(osVersionMap);
+            if (osKeys.length > 0) {
+                osChipsEl.innerHTML = osKeys.map(key =>
+                    `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
+                        ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
+                    </button>`
+                ).join('');
+                osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selectedOs = btn.dataset.os;
+                        selectedVer = null;
+                        osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+
+                        downloadSection.classList.add('hidden');
+                        passwordSection.classList.add('hidden');
+                        instrSection.classList.add('hidden');
+
+                        renderVerChips();
+                    });
+                });
+            } else {
+                const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
+                osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
+            }
         }
 
         document.getElementById('res-modal-password').textContent = RESOURCE_PASSWORD;
@@ -2979,6 +3067,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     renderTools();
+    renderResources();
 
     const views = {
         home: document.getElementById('view-home'),

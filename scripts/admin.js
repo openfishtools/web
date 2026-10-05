@@ -1448,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             else b.classList.remove('selected');
         });
         document.getElementById('resource-os-links-container').innerHTML = '<p class="no-sw-selected-hint">Select OS above to add download links.</p>';
-        ['modal-resource-title','modal-resource-dev','modal-resource-info','modal-resource-instruction'].forEach(id => {
+        ['modal-resource-title','modal-resource-dev','modal-resource-info','modal-resource-instruction','modal-resource-news-rank'].forEach(id => {
             const el = document.getElementById(id); if (el) el.value = '';
         });
         const drop = document.getElementById('resource-icon-drop');
@@ -1646,6 +1646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modal-resource-title').value = item.title || '';
         document.getElementById('modal-resource-dev').value = item.dev || '';
         document.getElementById('modal-resource-info').value = item.info || '';
+        document.getElementById('modal-resource-news-rank').value = item.newsRank || 0;
         document.getElementById('modal-resource-instruction').value = item.instruction || '';
 
         const iconInput = document.getElementById('modal-resource-icon');
@@ -1721,6 +1722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const category = [...document.querySelectorAll('#resource-category-picker .res-cat-badge.selected')].map(b => b.dataset.cat);
         const dev = document.getElementById('modal-resource-dev').value.trim();
         const info = document.getElementById('modal-resource-info').value.trim();
+        const newsRank = parseInt(document.getElementById('modal-resource-news-rank').value.trim()) || 0;
         const instruction = document.getElementById('modal-resource-instruction').value.trim();
         const iconHiddenVal = document.getElementById('modal-resource-icon').value || '';
         const iconDropFallback = document.getElementById('resource-icon-drop')?.dataset.uploadedUrl || '';
@@ -1739,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const modal = document.getElementById('resource-modal');
         const editId = modal.dataset.editIndex;
-        const data = { title, category, dev, info, instruction, icon, os: osData };
+        const data = { title, category, dev, info, newsRank, instruction, icon, os: osData };
 
         try {
             const res = editId

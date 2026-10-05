@@ -618,6 +618,7 @@ const ResourceSchema = new mongoose.Schema({
     version: String,
     url: String,
     order: { type: Number, default: 0 },
+    newsRank: { type: Number, default: 0 },
     hidden: { type: Boolean, default: false }
 });
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
