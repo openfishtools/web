@@ -434,6 +434,66 @@ document.addEventListener('DOMContentLoaded', async () => {
     const STATIC_SW_KEYS = ['FishTools Studio', 'FTS', 'AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
     const STATIC_PLUGIN_NAMES = ['After Codecs', 'Animation Composer', 'BCC', 'Element 3D', 'Flow', 'FX Console', 'Red Giant Universe', 'Sapphire', 'Omino', 'Twixtor & RSMB', 'Signal', 'Trapcode', 'Twitch', 'Magic Bullet Suite'];
 
+    const isFishToolsSoftware = (sw) => {
+        if (!sw) return false;
+        const s = String(sw).toLowerCase();
+        return s.includes('fishtools') || s === 'fts';
+    };
+
+    const extractStudioProjectId = (val) => {
+        if (!val || typeof val !== 'string') return null;
+        val = val.trim();
+        const m = val.match(/(?:studio\.cutefish\.my\.id\/(?:project\/|p\/)?|id=)([a-zA-Z0-9_-]+)/i);
+        if (m && m[1]) return m[1];
+        if (val.includes('/')) {
+            const clean = val.split('?')[0].replace(/\/+$/, '');
+            const seg = clean.split('/').pop();
+            if (seg && seg.length >= 3 && !seg.includes('.')) return seg;
+        } else if (val.length >= 3 && !val.includes(' ') && !val.includes('.')) {
+            return val;
+        }
+        return null;
+    };
+
+    const fetchStudioMetadata = async (urlOrId) => {
+        const projId = extractStudioProjectId(urlOrId);
+        if (!projId) return null;
+        try {
+            const res = await fetch(`https://studio.cutefish.my.id/api/project?id=${encodeURIComponent(projId)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.success && data?.project) {
+                    return data.project;
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch FishTools Studio project data:', err);
+        }
+        return null;
+    };
+
+    const applyStudioMetadataToForm = async (rawVal) => {
+        if (!rawVal) return null;
+        const project = await fetchStudioMetadata(rawVal);
+        if (project) {
+            const sizeEl = document.getElementById('modal-preset-size');
+            if (sizeEl && project.size) {
+                sizeEl.value = project.size;
+            }
+            const nameEl = document.getElementById('modal-preset-name');
+            if (nameEl && !nameEl.value.trim() && project.name) {
+                nameEl.value = project.name;
+            }
+            const verEl = document.getElementById('modal-preset-version');
+            if (verEl && (!verEl.value.trim() || verEl.value.trim() === '1.0')) {
+                verEl.value = 'Latest';
+            }
+            console.log('FishTools Studio project metadata fetched:', project);
+            return project;
+        }
+        return null;
+    };
+
     const resetPresetModal = () => {
         const swPicker = document.getElementById('sw-badge-picker');
         const pluginPicker = document.getElementById('plugin-badge-picker');
@@ -634,49 +694,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 dlContainer.appendChild(row);
 
-                if (sw === 'FishTools Studio') {
-                    const ftsInput = row.querySelector('input');
-                    const fetchFtsMeta = async () => {
-                        const rawVal = ftsInput?.value?.trim() || '';
-                        if (!rawVal) return;
-                        // Extract project ID from URL or raw ID (e.g. https://studio.cutefish.my.id/e4TCAp or studio.cutefish.my.id/e4TCAp or e4TCAp)
-                        let match = rawVal.match(/(?:studio\.cutefish\.my\.id\/|id=)([a-zA-Z0-9_-]+)/);
-                        let projId = match ? match[1] : (rawVal.includes('/') ? rawVal.split('/').filter(Boolean).pop() : rawVal);
-                        if (!projId || projId.length < 3) return;
-                        try {
-                            const res = await fetch(`https://studio.cutefish.my.id/api/project?id=${projId}`);
-                            if (res.ok) {
-                                const data = await res.json();
-                                if (data?.success && data?.project) {
-                                    const sizeEl = document.getElementById('modal-preset-size');
-                                    if (sizeEl && data.project.size) {
-                                        sizeEl.value = data.project.size;
-                                    }
-                                    const nameEl = document.getElementById('modal-preset-name');
-                                    if (nameEl && !nameEl.value.trim() && data.project.name) {
-                                        nameEl.value = data.project.name;
-                                    }
-                                    console.log('FishTools Studio project metadata fetched:', data.project);
-                                }
-                            }
-                        } catch (err) {
-                            console.warn('Failed to fetch FishTools Studio project data:', err);
-                        }
-                    };
-                    ftsInput?.addEventListener('blur', fetchFtsMeta);
-                    ftsInput?.addEventListener('change', fetchFtsMeta);
+                const linkInput = row.querySelector('input');
+                let debounceTimer = null;
+                const checkAndFetchMeta = () => {
+                    const rawVal = linkInput?.value?.trim() || '';
+                    if (!rawVal) return;
+                    if (isFishToolsSoftware(sw) || rawVal.includes('studio.cutefish.my.id')) {
+                        applyStudioMetadataToForm(rawVal);
+                    }
+                };
+
+                linkInput?.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(checkAndFetchMeta, 300);
+                });
+                linkInput?.addEventListener('paste', () => {
+                    setTimeout(checkAndFetchMeta, 50);
+                });
+                linkInput?.addEventListener('blur', checkAndFetchMeta);
+                linkInput?.addEventListener('change', checkAndFetchMeta);
+
+                if (existingUrls[sw] && (isFishToolsSoftware(sw) || existingUrls[sw].includes('studio.cutefish.my.id'))) {
+                    checkAndFetchMeta();
                 }
             }
         });
 
         const selectedSwKeys = Array.from(selected).map(b => b.dataset.sw);
-        const onlyFts = selectedSwKeys.length === 1 && selectedSwKeys[0] === 'FishTools Studio';
+        const hasFishTools = selectedSwKeys.some(isFishToolsSoftware);
+        const onlyFts = selectedSwKeys.length === 1 && hasFishTools;
         const fieldVer = document.getElementById('field-preset-version');
         const fieldSize = document.getElementById('field-preset-size');
         const fieldPlugin = document.getElementById('field-preset-plugin');
 
-        if (fieldVer) fieldVer.style.display = onlyFts ? 'none' : '';
-        if (fieldSize) fieldSize.style.display = onlyFts ? 'none' : '';
+        if (hasFishTools) {
+            const verEl = document.getElementById('modal-preset-version');
+            if (verEl && (!verEl.value.trim() || verEl.value.trim() === '1.0')) {
+                verEl.value = 'Latest';
+            }
+        }
+
+        if (fieldVer) fieldVer.style.display = '';
+        if (fieldSize) fieldSize.style.display = '';
         if (fieldPlugin) fieldPlugin.style.display = onlyFts ? 'none' : '';
     };
 
@@ -887,7 +946,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (firstRow) firstRow.value = editData.url;
                 }
 
-                if (document.getElementById('modal-preset-version')) document.getElementById('modal-preset-version').value = editData.version || '';
+                const hasFishTools = softwareArr.some(isFishToolsSoftware);
+                let currentVer = editData.version || '';
+                if (hasFishTools && (!currentVer || currentVer === '1.0')) {
+                    currentVer = 'Latest';
+                }
+                if (document.getElementById('modal-preset-version')) document.getElementById('modal-preset-version').value = currentVer;
                 const videoVal = editData.media || '';
                 if (document.getElementById('modal-preset-video')) document.getElementById('modal-preset-video').value = videoVal;
                 if (videoVal) {
@@ -1258,50 +1322,90 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('save-preset-btn').onclick = async () => {
         const btn = document.getElementById('save-preset-btn');
-        const name = document.getElementById('modal-preset-name').value.trim();
+        let name = document.getElementById('modal-preset-name').value.trim();
         const softwareArr = getSelectedSoftware();
         const dlLinks = getDownloadLinks();
         const firstUrl = dlLinks.length > 0 ? (dlLinks[0].url || '') : '';
         
-        if (!name) { alert('Please provide a preset name'); return; }
         if (softwareArr.length === 0) { alert('Please select at least one software'); return; }
 
-        let amPremiumUrl = '';
-        let am5MbUrl = '';
-        let amXmlUrl = '';
-        const amXmlExtras = [];
-
-        if (softwareArr.includes('AM')) {
-            amPremiumUrl = document.getElementById('am-premium-url')?.value?.trim() || '';
-            am5MbUrl = document.getElementById('am-5mb-url')?.value?.trim() || '';
-            amXmlUrl = document.getElementById('am-xml-url')?.value?.trim() || '';
-            document.querySelectorAll('#am-xml-extras-list .am-xml-extra-row').forEach(row => {
-                const label = row.querySelector('.am-xml-extra-label')?.value?.trim() || '';
-                const url = row.querySelector('.am-xml-extra-url')?.value?.trim() || '';
-                if (label && url) {
-                    amXmlExtras.push({ label, url });
-                }
-            });
-        }
+        const hasFishTools = softwareArr.some(isFishToolsSoftware);
+        const studioLinkObj = dlLinks.find(l => l.url && (l.url.includes('studio.cutefish.my.id') || isFishToolsSoftware(l.sw)));
+        const studioUrl = studioLinkObj ? studioLinkObj.url : (hasFishTools ? firstUrl : '');
 
         btn.disabled = true;
-        const modal = document.getElementById('preset-modal');
-        const data = { 
-            name,
-            software: softwareArr,
-            urls: dlLinks,
-            url: firstUrl,
-            version: document.getElementById('modal-preset-version')?.value || '1.0',
-            media: document.getElementById('modal-preset-video')?.value || '',
-            plugin: getSelectedPlugins(),
-            size: document.getElementById('modal-preset-size')?.value || 'N/A',
-            amPremiumUrl,
-            am5MbUrl,
-            amXmlUrl,
-            amXmlExtras
-        };
-        const editId = modal.dataset.editIndex;
+
         try {
+            let sizeVal = document.getElementById('modal-preset-size')?.value?.trim() || '';
+            let verVal = document.getElementById('modal-preset-version')?.value?.trim() || '';
+
+            // Auto-fetch studio metadata if size or name is missing
+            if ((!sizeVal || sizeVal === 'N/A' || !name) && studioUrl) {
+                const meta = await fetchStudioMetadata(studioUrl);
+                if (meta) {
+                    if (meta.size && (!sizeVal || sizeVal === 'N/A')) {
+                        sizeVal = meta.size;
+                        const sizeEl = document.getElementById('modal-preset-size');
+                        if (sizeEl) sizeEl.value = meta.size;
+                    }
+                    if (!name && meta.name) {
+                        name = meta.name;
+                        const nameEl = document.getElementById('modal-preset-name');
+                        if (nameEl) nameEl.value = meta.name;
+                    }
+                }
+            }
+
+            if (!name) { 
+                alert('Please provide a preset name'); 
+                btn.disabled = false;
+                return; 
+            }
+
+            if (hasFishTools && (!verVal || verVal === '1.0')) {
+                verVal = 'Latest';
+                const verEl = document.getElementById('modal-preset-version');
+                if (verEl) verEl.value = 'Latest';
+            } else if (!verVal) {
+                verVal = '1.0';
+            }
+
+            if (!sizeVal) sizeVal = 'N/A';
+
+            let amPremiumUrl = '';
+            let am5MbUrl = '';
+            let amXmlUrl = '';
+            const amXmlExtras = [];
+
+            if (softwareArr.includes('AM')) {
+                amPremiumUrl = document.getElementById('am-premium-url')?.value?.trim() || '';
+                am5MbUrl = document.getElementById('am-5mb-url')?.value?.trim() || '';
+                amXmlUrl = document.getElementById('am-xml-url')?.value?.trim() || '';
+                document.querySelectorAll('#am-xml-extras-list .am-xml-extra-row').forEach(row => {
+                    const label = row.querySelector('.am-xml-extra-label')?.value?.trim() || '';
+                    const url = row.querySelector('.am-xml-extra-url')?.value?.trim() || '';
+                    if (label && url) {
+                        amXmlExtras.push({ label, url });
+                    }
+                });
+            }
+
+            const modal = document.getElementById('preset-modal');
+            const data = { 
+                name,
+                software: softwareArr,
+                urls: dlLinks,
+                url: firstUrl,
+                version: verVal,
+                media: document.getElementById('modal-preset-video')?.value || '',
+                plugin: getSelectedPlugins(),
+                size: sizeVal,
+                amPremiumUrl,
+                am5MbUrl,
+                amXmlUrl,
+                amXmlExtras
+            };
+            const editId = modal.dataset.editIndex;
             const res = editId
                 ? await fetch(`${API_URL}/presets/${editId}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
                 : await fetch(`${API_URL}/presets`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
@@ -1313,6 +1417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Error: ' + (err.error || 'Failed to save preset'));
             }
         } catch (err) {
+            console.error('Error saving preset:', err);
             alert('Connection error');
         } finally {
             btn.disabled = false;

@@ -1279,15 +1279,17 @@
 
         document.getElementById('preset-modal-name').textContent = preset.name || '';
 
+        const softwareArr = Array.isArray(preset.software) ? preset.software : (preset.software ? [preset.software] : []);
+        const isFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(s) || (typeof s === 'string' && s.toLowerCase().includes('fishtools')));
+        const versionStr = isFts && (!preset.version || preset.version === '1.0') ? 'Latest' : preset.version;
+
         const metaParts = [];
         if (preset.type) metaParts.push(escapeHtml(preset.type));
-        if (preset.version) metaParts.push(escapeHtml(String(preset.version).replace(/^v/i, '')));
-        if (preset.size) metaParts.push(escapeHtml(preset.size));
+        if (versionStr) metaParts.push(escapeHtml(String(versionStr).replace(/^v/i, '')));
+        if (preset.size && preset.size !== 'N/A') metaParts.push(escapeHtml(preset.size));
         document.getElementById('preset-modal-meta').innerHTML = metaParts
             .map(x => `<span>${x}</span>`)
             .join('<span class="meta-dot">&#8226;</span>');
-
-        const softwareArr = Array.isArray(preset.software) ? preset.software : (preset.software ? [preset.software] : []);
         const hasUrls = Array.isArray(preset.urls) && preset.urls.length > 0;
         const hasAm = !!(preset.amPremiumUrl || preset.am5MbUrl || preset.amXmlUrl);
         const canDownload = hasUrls || hasAm || !!preset.url;
