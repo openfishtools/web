@@ -2777,8 +2777,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const osSection = document.getElementById('res-modal-os-section');
-        const isWebApp = Array.isArray(resource.category) ? resource.category.some(c => String(c).toLowerCase().includes('web app')) : String(resource.category || '').toLowerCase().includes('web app');
+        const isWebApp = (Object.keys(osVersionMap).length === 1 && Object.keys(osVersionMap)[0] === 'WEB') || (Array.isArray(resource.category) ? resource.category.some(c => String(c).toLowerCase().includes('web app')) : String(resource.category || '').toLowerCase().includes('web app'));
         
+        const downloadMainText = document.querySelector('#res-modal-download-btn .res-download-main-text');
+        const downloadIcon = document.querySelector('#res-modal-download-btn .material-symbols-rounded');
+
         if (isWebApp) {
             if (osSection) osSection.classList.add('hidden');
             verSection.classList.add('hidden');
@@ -2795,17 +2798,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (launchUrl) {
                 downloadBtn.disabled = false;
                 downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
-                downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Apps';
+                if (downloadMainText) downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                downloadLabel.textContent = 'Open in new tab';
+                if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 downloadSection.classList.remove('hidden');
                 passwordSection.classList.add('hidden');
                 if (resource.instruction) instrSection.classList.remove('hidden');
             } else {
                 downloadBtn.disabled = true;
+                if (downloadMainText) downloadMainText.textContent = 'Launch App';
                 downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
+                if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 downloadSection.classList.remove('hidden');
             }
             adjustModalLayout();
         } else {
+            if (downloadMainText) downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_get')) || 'Get Resource';
+            if (downloadIcon) downloadIcon.textContent = 'download';
+            
             if (osSection) osSection.classList.remove('hidden');
             const osKeys = Object.keys(osVersionMap);
             if (osKeys.length > 0) {
