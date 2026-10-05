@@ -2,7 +2,7 @@
     'use strict';
 
     const BADGE_ICONS = {
-        'FishTools Studio': '/assets/icon/FishTools.png',
+        'OFTS': '/assets/icon/FishTools.png',
         'FTS': '/assets/icon/FishTools.png',
         'FishTools': '/assets/icon/FishTools.png',
         'cutefish': '/assets/icon/cutefish_icon_128x128.png',
@@ -508,9 +508,9 @@
     }
 
     const SOFTWARE_FULL_NAMES = {
-        'FishTools Studio': 'FishTools Studio',
-        'FTS': 'FishTools Studio',
-        'FishTools': 'FishTools Studio',
+        'OFTS': 'OFTS',
+        'FTS': 'OFTS',
+        'FishTools': 'OFTS',
         'AE': 'After Effects',
         'AM': 'Alight Motion',
         'Blurr': 'Blurr',
@@ -1133,7 +1133,7 @@
                 if (sw === 'AM') {
                     openAmVariantPicker(presetData, true, btn);
                 } else {
-                    const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(sw);
+                    const isFishTools = ['OFTS', 'FTS', 'FishTools', 'OpenFishTools'].includes(sw);
                     if (isFishTools && url) {
                         window.open(ensureProtocol(url), '_blank', 'noopener');
                         closeAllPresetPickers();
@@ -1170,7 +1170,7 @@
             if (urls[0].sw === 'AM') {
                 openAmVariantPicker(preset, false);
             } else {
-                const isFishTools = ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(urls[0].sw);
+                const isFishTools = ['OFTS', 'FTS', 'FishTools', 'OpenFishTools'].includes(urls[0].sw);
                 if (isFishTools && urls[0].url) {
                     window.open(ensureProtocol(urls[0].url), '_blank', 'noopener');
                 } else {
@@ -1179,7 +1179,7 @@
             }
         } else if (preset.url) {
             const hasAe = softwareArr.includes('AE');
-            const hasFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(s));
+            const hasFts = softwareArr.some(s => ['OFTS', 'FTS', 'FishTools', 'OpenFishTools'].includes(s));
             if (hasFts) {
                 window.open(ensureProtocol(preset.url), '_blank', 'noopener');
             } else if (hasAe || preset.plugin) {
@@ -1280,7 +1280,7 @@
         document.getElementById('preset-modal-name').textContent = preset.name || '';
 
         const softwareArr = Array.isArray(preset.software) ? preset.software : (preset.software ? [preset.software] : []);
-        const isFts = softwareArr.some(s => ['FishTools Studio', 'FTS', 'FishTools', 'OpenFishTools'].includes(s) || (typeof s === 'string' && s.toLowerCase().includes('fishtools')));
+        const isFts = softwareArr.some(s => ['OFTS', 'FTS', 'FishTools', 'OpenFishTools'].includes(s) || (typeof s === 'string' && s.toLowerCase().includes('fishtools')));
         const versionStr = isFts && (!preset.version || preset.version === '1.0') ? 'Latest' : preset.version;
 
         const metaParts = [];

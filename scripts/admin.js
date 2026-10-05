@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('open-resource-modal').onclick = () => openModal('resource-modal');
     };
 
-    const STATIC_SW_KEYS = ['FishTools Studio', 'FTS', 'AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
+    const STATIC_SW_KEYS = ['OFTS', 'FTS', 'AE', 'AM', 'Blurr', 'CC', 'FM', 'Node'];
     const STATIC_PLUGIN_NAMES = ['After Codecs', 'Animation Composer', 'BCC', 'Element 3D', 'Flow', 'FX Console', 'Red Giant Universe', 'Sapphire', 'Omino', 'Twixtor & RSMB', 'Signal', 'Trapcode', 'Twitch', 'Magic Bullet Suite'];
 
     const isFishToolsSoftware = (sw) => {
@@ -467,7 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (err) {
-            console.warn('Failed to fetch FishTools Studio project data:', err);
+            console.warn('Failed to fetch OFTS project data:', err);
         }
         return null;
     };
@@ -477,8 +477,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const project = await fetchStudioMetadata(rawVal);
         if (project) {
             const sizeEl = document.getElementById('modal-preset-size');
-            if (sizeEl && project.size) {
-                sizeEl.value = project.size;
+            const resolvedSize = project.sizeText || project.fileSizeText || project.fileSize || project.projectSize || project.size;
+            if (sizeEl && resolvedSize) {
+                sizeEl.value = resolvedSize;
             }
             const nameEl = document.getElementById('modal-preset-name');
             if (nameEl && !nameEl.value.trim() && project.name) {
@@ -488,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (verEl && (!verEl.value.trim() || verEl.value.trim() === '1.0')) {
                 verEl.value = 'Latest';
             }
-            console.log('FishTools Studio project metadata fetched:', project);
+            console.log('OFTS project metadata fetched:', project);
             return project;
         }
         return null;
@@ -1339,14 +1340,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             let sizeVal = document.getElementById('modal-preset-size')?.value?.trim() || '';
             let verVal = document.getElementById('modal-preset-version')?.value?.trim() || '';
 
-            // Auto-fetch studio metadata if size or name is missing
-            if ((!sizeVal || sizeVal === 'N/A' || !name) && studioUrl) {
+            const editId = document.getElementById('preset-modal')?.dataset.editIndex;
+            
+            // Auto-fetch studio metadata if size or name is missing, OR if editing to force size update
+            if ((!sizeVal || sizeVal === 'N/A' || !name || editId) && studioUrl) {
                 const meta = await fetchStudioMetadata(studioUrl);
                 if (meta) {
-                    if (meta.size && (!sizeVal || sizeVal === 'N/A')) {
-                        sizeVal = meta.size;
+                    const resolvedSize = meta.sizeText || meta.fileSizeText || meta.fileSize || meta.projectSize || meta.size;
+                    if (resolvedSize && (!sizeVal || sizeVal === 'N/A' || editId)) {
+                        sizeVal = resolvedSize;
                         const sizeEl = document.getElementById('modal-preset-size');
-                        if (sizeEl) sizeEl.value = meta.size;
+                        if (sizeEl) sizeEl.value = resolvedSize;
                     }
                     if (!name && meta.name) {
                         name = meta.name;
