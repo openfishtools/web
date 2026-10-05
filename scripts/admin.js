@@ -1409,9 +1409,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 amXmlUrl,
                 amXmlExtras
             };
-            const editId = modal.dataset.editIndex;
-            const res = editId
-                ? await fetch(`${API_URL}/presets/${editId}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
+            const saveEditId = modal.dataset.editIndex;
+            const res = saveEditId
+                ? await fetch(`${API_URL}/presets/${saveEditId}`, { method: 'PUT', headers: jsonHeaders(), body: JSON.stringify(data) })
                 : await fetch(`${API_URL}/presets`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(data) });
             if (res.ok) {
                 loadPresets();
