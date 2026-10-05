@@ -1870,10 +1870,11 @@ app.put('/api/resources/reorder', requireAdmin, async (req, res) => {
     try {
         const { items } = req.body;
         if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
-        const ops = items.map(item => ({
-            updateOne: { filter: { _id: item.id }, update: { $set: { order: item.order } } }
-        }));
-        await Resource.bulkWrite(ops);
+        const ops = items.map(item => {
+            const filterId = mongoose.Types.ObjectId.isValid(item.id) ? new mongoose.Types.ObjectId(item.id) : item.id;
+            return { updateOne: { filter: { _id: filterId }, update: { $set: { order: item.order } } } };
+        });
+        await Resource.collection.bulkWrite(ops);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1882,8 +1883,17 @@ app.put('/api/resources/reorder', requireAdmin, async (req, res) => {
 app.put('/api/resources/:id', requireAdmin, async (req, res) => {
     try {
 
-        let result = await Resource.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
-        if (!result) result = await Resource.findOneAndUpdate({ _id: req.params.id }, { $set: req.body }, { new: true });
+        let result;
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            let updateRes = await Resource.collection.findOneAndUpdate(
+                { _id: req.params.id }, 
+                { $set: req.body }, 
+                { returnDocument: 'after' }
+            );
+            result = updateRes ? updateRes.value || updateRes : null;
+        } else {
+            result = await Resource.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true }).catch(() => null);
+        }
         if (!result) return res.status(404).json({ error: 'Resource not found' });
         res.json(result);
     } catch (err) {
@@ -1893,10 +1903,13 @@ app.put('/api/resources/:id', requireAdmin, async (req, res) => {
 app.delete('/api/resources/:id', requireAdmin, async (req, res) => {
     try {
 
-        let r = await Resource.findById(req.params.id).catch(() => null);
-        if (!r) r = await Resource.findOne({ _id: req.params.id });
-        if (r) {
-            await r.deleteOne();
+        let r;
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            r = await Resource.collection.findOne({ _id: req.params.id });
+            if (r) await Resource.collection.deleteOne({ _id: req.params.id });
+        } else {
+            r = await Resource.findById(req.params.id).catch(() => null);
+            if (r) await r.deleteOne();
         }
         res.json({ success: true });
     } catch (err) {
