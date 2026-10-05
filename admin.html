@@ -459,6 +459,18 @@
                 Manage Resource
             </h2>
             <div class="admin-form">
+                <div class="input-field checkbox-field" style="margin-bottom:1rem">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                        <input type="checkbox" id="modal-resource-is-webapp" style="width:16px;height:16px">
+                        <strong>Web App Mode (Simplify Form)</strong>
+                    </label>
+                </div>
+
+                <div class="input-field res-show-in-web" style="display: none;">
+                    <label>Web App Link</label>
+                    <input type="text" id="modal-resource-web-link" placeholder="https://...">
+                </div>
+
                 <div class="input-field">
                     <label>Icon Image URL or Local Path</label>
                     <input type="text" id="modal-resource-icon" placeholder="https://... or assets/icon/cutefish_icon_128x128.png">
@@ -494,12 +506,12 @@
                     </div>
                 </div>
 
-                <div class="input-field">
+                <div class="input-field res-hide-in-web">
                     <label>Developer</label>
                     <input type="text" id="modal-resource-dev" placeholder="e.g. cutefishaep Team">
                 </div>
 
-                <div class="input-field">
+                <div class="input-field res-hide-in-web">
                     <label>Size / Info</label>
                     <input type="text" id="modal-resource-info" placeholder="e.g. 150MB • APK">
                 </div>
@@ -509,7 +521,7 @@
                     <input type="number" id="modal-resource-news-rank" placeholder="0" min="0">
                 </div>
 
-                <div class="input-field">
+                <div class="input-field res-hide-in-web">
                     <label>OS Support</label>
                     <div class="sw-badge-picker" id="resource-os-picker">
                         <div class="sw-badge-preset res-os-badge" data-os="WIN" title="Windows">
@@ -531,14 +543,14 @@
                     </div>
                 </div>
 
-                <div class="input-field" id="resource-os-links-container-wrap">
+                <div class="input-field res-hide-in-web" id="resource-os-links-container-wrap">
                     <label>Download Links by OS & Version</label>
                     <div id="resource-os-links-container">
                         <p class="no-sw-selected-hint">Select OS above to add download links.</p>
                     </div>
                 </div>
 
-                <div class="input-field">
+                <div class="input-field res-hide-in-web">
                     <label>Available Versions (badges)</label>
                     <div class="sw-badge-picker" id="resource-version-picker">
                         <div class="sw-badge-preset res-ver-badge" data-ver="Latest">
@@ -559,7 +571,7 @@
                     </div>
                 </div>
 
-                <div class="input-field">
+                <div class="input-field res-hide-in-web">
                     <label>Instruction (optional)</label>
                     <textarea class="modal-textarea" id="modal-resource-instruction" placeholder="Installation steps or notes..."></textarea>
                 </div>

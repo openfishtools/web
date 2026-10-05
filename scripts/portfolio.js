@@ -1613,7 +1613,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.addEventListener('click', () => {
                         const id = card.dataset.id;
                         const item = allResources.find(r => r._id === id);
-                        if (item) openResourceModal(item, card);
+                        if (item) {
+                            const isWeb = (Array.isArray(item.os) && item.os.length === 1 && (item.os[0].name || '').toUpperCase() === 'WEB') || (Array.isArray(item.category) ? item.category.some(c => String(c).toLowerCase().includes('web app')) : String(item.category || '').toLowerCase().includes('web app'));
+                            if (isWeb && item.os?.[0]?.versions?.[0]?.url) {
+                                window.open(item.os[0].versions[0].url, '_blank');
+                            } else {
+                                openResourceModal(item, card);
+                            }
+                        }
                     });
                 });
             };
@@ -1692,7 +1699,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.addEventListener('click', () => {
                     const id = card.dataset.id;
                     const item = allResources.find(r => r._id === id);
-                    if (item) openResourceModal(item, card);
+                    if (item) {
+                        const isWeb = (Array.isArray(item.os) && item.os.length === 1 && (item.os[0].name || '').toUpperCase() === 'WEB') || (Array.isArray(item.category) ? item.category.some(c => String(c).toLowerCase().includes('web app')) : String(item.category || '').toLowerCase().includes('web app'));
+                        if (isWeb && item.os?.[0]?.versions?.[0]?.url) {
+                            window.open(item.os[0].versions[0].url, '_blank');
+                        } else {
+                            openResourceModal(item, card);
+                        }
+                    }
                 });
             });
 

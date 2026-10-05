@@ -1448,9 +1448,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             else b.classList.remove('selected');
         });
         document.getElementById('resource-os-links-container').innerHTML = '<p class="no-sw-selected-hint">Select OS above to add download links.</p>';
-        ['modal-resource-title','modal-resource-dev','modal-resource-info','modal-resource-instruction','modal-resource-news-rank'].forEach(id => {
+        ['modal-resource-title','modal-resource-dev','modal-resource-info','modal-resource-instruction','modal-resource-news-rank','modal-resource-web-link'].forEach(id => {
             const el = document.getElementById(id); if (el) el.value = '';
         });
+        const webToggle = document.getElementById('modal-resource-is-webapp');
+        if (webToggle) { webToggle.checked = false; webToggle.dispatchEvent(new Event('change')); }
         const drop = document.getElementById('resource-icon-drop');
         const img = document.getElementById('resource-icon-img-preview');
         if (drop) { drop.classList.remove('has-file'); delete drop.dataset.uploadedUrl; }
@@ -1459,6 +1461,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const initResourceBadgePickers = () => {
+        document.getElementById('modal-resource-is-webapp')?.addEventListener('change', (e) => {
+            const isWeb = e.target.checked;
+            document.querySelectorAll('.res-hide-in-web').forEach(el => el.style.display = isWeb ? 'none' : '');
+            document.querySelectorAll('.res-show-in-web').forEach(el => el.style.display = isWeb ? '' : 'none');
+        });
         document.querySelectorAll('#resource-category-picker .res-cat-badge').forEach(b => {
             b.addEventListener('click', () => b.classList.toggle('selected'));
         });
@@ -1649,6 +1656,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modal-resource-news-rank').value = item.newsRank || 0;
         document.getElementById('modal-resource-instruction').value = item.instruction || '';
 
+        const osArr = Array.isArray(item.os) ? item.os : [];
+        const cats = Array.isArray(item.category) ? item.category : (item.category ? [item.category] : []);
+        
+        const isWeb = (osArr.length === 1 && (osArr[0].name || '').toUpperCase() === 'WEB') || cats.some(c => String(c).toLowerCase().includes('web app'));
+        const webToggle = document.getElementById('modal-resource-is-webapp');
+        if (webToggle) {
+            webToggle.checked = isWeb;
+            webToggle.dispatchEvent(new Event('change'));
+        }
+        if (isWeb) {
+            const firstOs = osArr[0];
+            const link = firstOs?.versions?.[0]?.url || '';
+            document.getElementById('modal-resource-web-link').value = link;
+        }
+
         const iconInput = document.getElementById('modal-resource-icon');
         iconInput.value = item.icon || '';
         if (item.icon && (item.icon.startsWith('http') || item.icon.includes('/'))) {
@@ -1658,7 +1680,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (img) img.src = item.icon;
         }
 
-        const cats = Array.isArray(item.category) ? item.category : (item.category ? [item.category] : []);
         cats.forEach(cat => {
             let badge = document.querySelector(`#resource-category-picker .res-cat-badge[data-cat="${cat}"]`);
             if (!badge) {
@@ -1674,7 +1695,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             badge.classList.add('selected');
         });
 
-        const osArr = Array.isArray(item.os) ? item.os : [];
         osArr.forEach(entry => {
             const osKey = typeof entry === 'string' ? entry.toUpperCase() : (entry.name || '').toUpperCase();
             const badge = document.querySelector(`#resource-os-picker .res-os-badge[data-os="${osKey}"]`);
@@ -1716,8 +1736,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     document.getElementById('save-resource-btn').onclick = async () => {
+        const isWeb = document.getElementById('modal-resource-is-webapp')?.checked;
         const title = document.getElementById('modal-resource-title').value.trim();
         if (!title) { alert('Please provide a resource title'); return; }
+
+        if (isWeb) {
+            const webLink = document.getElementById('modal-resource-web-link').value.trim();
+            if (!webLink) { alert('Please provide a Web App Link'); return; }
+        }
 
         const category = [...document.querySelectorAll('#resource-category-picker .res-cat-badge.selected')].map(b => b.dataset.cat);
         const dev = document.getElementById('modal-resource-dev').value.trim();
@@ -1728,16 +1754,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const iconDropFallback = document.getElementById('resource-icon-drop')?.dataset.uploadedUrl || '';
         const icon = iconDropFallback || iconHiddenVal;
 
-        const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
-        const selectedVers = [...document.querySelectorAll('#resource-version-picker .res-ver-badge.selected')].map(b => b.dataset.ver);
-        const osData = selectedOs.map(osKey => {
-            const versions = selectedVers.map(ver => {
-                const row = document.querySelector(`.res-os-ver-row[data-os="${osKey}"][data-ver="${ver}"]`);
-                const url = row?.querySelector('input[type="text"]')?.value?.trim() || '';
-                return { label: ver, url };
-            }).filter(v => v.url);
-            return { name: osKey, versions };
-        });
+        let osData = [];
+        if (isWeb) {
+            const webLink = document.getElementById('modal-resource-web-link').value.trim();
+            osData = [{
+                name: 'WEB',
+                versions: [{ label: 'Latest', url: webLink }]
+            }];
+        } else {
+            const selectedOs = [...document.querySelectorAll('#resource-os-picker .res-os-badge.selected')].map(b => b.dataset.os);
+            const selectedVers = [...document.querySelectorAll('#resource-version-picker .res-ver-badge.selected')].map(b => b.dataset.ver);
+            osData = selectedOs.map(osKey => {
+                const versions = [];
+                selectedVers.forEach(verKey => {
+                    const row = document.querySelector(`.res-os-ver-row[data-os="${osKey}"][data-ver="${verKey}"]`);
+                    const url = row ? row.querySelector('input[type="text"]')?.value?.trim() : '';
+                    if (url) versions.push({ label: verKey, url });
+                });
+                return { name: osKey, versions };
+            }).filter(os => os.versions.length > 0);
+        }
 
         const modal = document.getElementById('resource-modal');
         const editId = modal.dataset.editIndex;
