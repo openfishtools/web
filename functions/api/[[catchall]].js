@@ -127,11 +127,11 @@ export async function onRequest(context) {
         if (searchParams.get('nocache') === '1') return 0;
         if (pathname.startsWith('/api/admin')) return 0;
 
-        if (pathname === '/api/version') return 300; // 5 minutes
-        if (pathname === '/api/tiktok-posts') return 900; // 15 minutes
-        if (pathname === '/api/tiktok-resolve' || pathname === '/api/tiktok-fps') return 7200; // 2 hours
+        if (pathname === '/api/version') return 86400; // 24 hours
+        if (pathname === '/api/tiktok-posts') return 21600; // 6 hours
+        if (pathname === '/api/tiktok-resolve' || pathname === '/api/tiktok-fps') return 86400; // 24 hours
         if (pathname === '/api/tiktok-thumb') return 86400; // 24 hours
-        if (['/api/presets', '/api/socials', '/api/contacts', '/api/resources'].includes(pathname)) return 600; // 10 minutes
+        if (['/api/presets', '/api/socials', '/api/contacts', '/api/resources'].includes(pathname)) return 86400; // 24 hours
 
         return 0;
     }
@@ -147,9 +147,11 @@ export async function onRequest(context) {
             if (cachedResponse) {
                 const newHeaders = new Headers(cachedResponse.headers);
                 newHeaders.set('CF-Cache-Status', 'HIT');
+                newHeaders.set('X-Edge-Cache', 'HIT');
                 newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
                 newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
                 newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
                 return new Response(cachedResponse.body, {
                     status: cachedResponse.status,
                     statusText: cachedResponse.statusText,
@@ -188,7 +190,9 @@ export async function onRequest(context) {
         newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
         newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
         newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+        newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
         newHeaders.set('CF-Cache-Status', 'MISS');
+        newHeaders.set('X-Edge-Cache', 'MISS');
 
         // If response is successful and eligible for edge caching, save to Cloudflare Cache
         if (cache && cacheTtl > 0 && response.status === 200) {

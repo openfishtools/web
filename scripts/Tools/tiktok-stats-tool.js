@@ -395,12 +395,37 @@
         }
     }
 
+    function updateCacheBadge(show) {
+        const titleEl = document.querySelector('#tool-modal-hero-slot .tool-title');
+        if (titleEl) {
+            let badge = titleEl.querySelector('.stats-cache-badge');
+            if (show) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'stats-cache-badge';
+                    badge.textContent = '(Cache)';
+                    badge.title = 'Served from 24h Edge Cache';
+                    titleEl.appendChild(badge);
+                } else {
+                    badge.style.display = 'inline-flex';
+                }
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+        const resultBadge = document.getElementById('stats-result-cache-badge');
+        if (resultBadge) {
+            resultBadge.style.display = show ? 'inline-flex' : 'none';
+        }
+    }
+
     async function analyseTikTokVideo(pageUrl) {
         if (isRunning) return;
         isRunning = true;
 
         hideErrorCard();
         hideStreamProgress();
+        updateCacheBadge(false);
         setButtonState('processing', t('status_processing') || 'Fetching details...');
 
         setInitialSkeletons();
@@ -413,12 +438,19 @@
         }
 
         try {
+            let isFromCache = false;
             let metadata = cacheMap.get(pageUrl);
-            if (!metadata) {
+            if (metadata) {
+                isFromCache = true;
+            } else {
                 const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);
+                }
+                const cacheHeader = response.headers.get('CF-Cache-Status') || response.headers.get('X-Edge-Cache');
+                if (cacheHeader && cacheHeader.toUpperCase() === 'HIT') {
+                    isFromCache = true;
                 }
                 metadata = await response.json();
                 if (metadata && (metadata.play || metadata.hdplay)) {
@@ -430,6 +462,8 @@
             if (!metadata || !streamUrl) {
                 throw new Error("Could not extract stream URL for this video.");
             }
+
+            updateCacheBadge(isFromCache);
 
             lastAnalysedUrl = pageUrl;
             lastAnalysedTime = Date.now();
@@ -577,6 +611,8 @@
             const { optContainer, processBtn, processLabel } = ctx;
             if (!optContainer) return;
 
+            updateCacheBadge(false);
+
             if (processLabel) processLabel.textContent = t('tool_stats_btn') || 'Analyse';
 
             optContainer.innerHTML = `
@@ -597,7 +633,10 @@
                         </div>
                         <div class="stats-preview-info">
                             <div id="stats-creator-name" class="stats-creator-name">Creator</div>
-                            <div id="stats-creator-handle" class="stats-creator-handle">@username</div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <div id="stats-creator-handle" class="stats-creator-handle">@username</div>
+                                <span id="stats-result-cache-badge" class="stats-cache-badge" style="display:none;" title="Served from 24h Edge Cache">(Cache)</span>
+                            </div>
                             <div id="stats-caption" class="stats-caption">Caption goes here...</div>
                         </div>
                     </div>
@@ -715,6 +754,7 @@
                     inputUrl.value = '';
                     clearBtn.classList.add('hidden');
                     hideErrorCard();
+                    updateCacheBadge(false);
                     inputUrl.focus();
                 });
 
