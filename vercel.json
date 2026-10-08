@@ -20,6 +20,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/(.*\\.env.*)",
+      "dest": "/api/index.js"
+    },
+    {
       "handle": "filesystem"
     },
     {

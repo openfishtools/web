@@ -21,6 +21,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
+const { getEnvTrollHtml } = require('../scripts/env-troll');
 
 const app = express();
 const fs = require('fs');
@@ -55,6 +56,21 @@ app.use((req, res, next) => {
     const rawPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;
     if (rawPath && req.url.startsWith('/api/index.js')) {
         req.url = rawPath.split('?')[0];
+    }
+    next();
+});
+
+// 🐟 Cutefish Shield Easter Egg: Catch anyone probing .env files
+app.use((req, res, next) => {
+    const checkPath = (req.originalUrl || req.path || '').toLowerCase();
+    if (checkPath.includes('.env')) {
+        const clientIp = getClientIp(req);
+        const userAgent = req.headers['user-agent'] || 'Unknown Device';
+        res.status(200);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        return res.send(getEnvTrollHtml(clientIp, userAgent, req.originalUrl || req.path));
     }
     next();
 });
