@@ -415,7 +415,7 @@
         try {
             let metadata = cacheMap.get(pageUrl);
             if (!metadata) {
-                const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}&nocache=1`);
+                const response = await fetch(`${API_URL}/tiktok-resolve?url=${encodeURIComponent(pageUrl)}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.error || errorData.details || `Unable to resolve TikTok video URL (${response.status}).`);

@@ -107,10 +107,15 @@
 
             if (lastPurgeAt && (Date.now() - lastPurgeAt < PURGE_COOLDOWN_MS)) return;
 
-            const res = await fetch('/api/version', { cache: 'no-store' });
-            if (!res.ok) return;
-            const data = await res.json();
-            const deployedVer = data && data.version ? String(data.version) : null;
+            window.__cutefishVersionPromise = window.__cutefishVersionPromise || fetch('/api/version')
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null);
+
+            const data = await window.__cutefishVersionPromise;
+            if (!data) return;
+            window.__cutefishVersionData = data;
+
+            const deployedVer = data.version ? String(data.version) : null;
             if (!deployedVer) return;
 
             sessionStorage.setItem(KEY_CHECKED, '1');

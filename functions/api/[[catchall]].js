@@ -66,6 +66,99 @@ export async function onRequest(context) {
         });
     }
 
+    // --- DIRECT CLOUDFLARE EDGE PROXY ---
+    // Completely offload video & asset downloads from Vercel to save bandwidth and compute
+    if (url.pathname === '/api/proxy') {
+        const rawTarget = url.searchParams.get('url');
+        if (!rawTarget) {
+            return new Response(JSON.stringify({ error: 'Missing url query parameter' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': corsOrigin }
+            });
+        }
+        let resolvedUrl = rawTarget;
+        try {
+            const u = new URL(rawTarget);
+            if (u.hostname === 'github.com') {
+                const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+                if (m) resolvedUrl = `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
+            } else if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
+                const m = u.pathname.match(/^\/([^/]+)$/);
+                if (m) resolvedUrl = `https://pastebin.com/raw${u.pathname}`;
+            }
+        } catch (_) {}
+
+        try {
+            const proxyHeaders = new Headers();
+            proxyHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            proxyHeaders.set('Accept', '*/*');
+            const range = context.request.headers.get('range');
+            if (range) proxyHeaders.set('range', range);
+
+            const upstream = await fetch(resolvedUrl, {
+                headers: proxyHeaders,
+                redirect: 'follow'
+            });
+
+            const respHeaders = new Headers(upstream.headers);
+            respHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+            respHeaders.set('Access-Control-Allow-Methods', 'GET,OPTIONS');
+            respHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with, Range');
+            respHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
+            respHeaders.set('CF-Edge-Proxy', 'true');
+
+            return new Response(upstream.body, {
+                status: upstream.status,
+                statusText: upstream.statusText,
+                headers: respHeaders
+            });
+        } catch (err) {
+            return new Response(JSON.stringify({ error: 'Proxy request failed', details: err.message }), {
+                status: 502,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': corsOrigin }
+            });
+        }
+    }
+
+    // --- CLOUDFLARE EDGE CACHE SHIELD ---
+    // Protect Vercel from usage quota limits by caching repetitive GET requests at the edge
+    function getCacheTtl(pathname, searchParams) {
+        if (context.request.method !== 'GET') return 0;
+        if (searchParams.get('nocache') === '1') return 0;
+        if (pathname.startsWith('/api/admin')) return 0;
+
+        if (pathname === '/api/version') return 300; // 5 minutes
+        if (pathname === '/api/tiktok-posts') return 900; // 15 minutes
+        if (pathname === '/api/tiktok-resolve' || pathname === '/api/tiktok-fps') return 7200; // 2 hours
+        if (pathname === '/api/tiktok-thumb') return 86400; // 24 hours
+        if (['/api/presets', '/api/socials', '/api/contacts', '/api/resources'].includes(pathname)) return 600; // 10 minutes
+
+        return 0;
+    }
+
+    const cacheTtl = getCacheTtl(url.pathname, url.searchParams);
+    const cache = typeof caches !== 'undefined' ? caches.default : null;
+    const cacheKey = new Request(url.toString(), { method: 'GET' });
+
+    // Check Cloudflare Edge Cache first
+    if (cache && cacheTtl > 0) {
+        try {
+            const cachedResponse = await cache.match(cacheKey);
+            if (cachedResponse) {
+                const newHeaders = new Headers(cachedResponse.headers);
+                newHeaders.set('CF-Cache-Status', 'HIT');
+                newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+                newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                return new Response(cachedResponse.body, {
+                    status: cachedResponse.status,
+                    statusText: cachedResponse.statusText,
+                    headers: newHeaders
+                });
+            }
+        } catch (_) {}
+    }
+
     const backendOrigin = context.env.BACKEND_API_URL || 'https://editorstuff.vercel.app';
     const targetUrl = new URL(url.pathname + url.search, backendOrigin);
 
@@ -95,6 +188,22 @@ export async function onRequest(context) {
         newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
         newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
         newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+        newHeaders.set('CF-Cache-Status', 'MISS');
+
+        // If response is successful and eligible for edge caching, save to Cloudflare Cache
+        if (cache && cacheTtl > 0 && response.status === 200) {
+            try {
+                const cacheHeaders = new Headers(response.headers);
+                cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
+                cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                const responseToCache = new Response(response.clone().body, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: cacheHeaders
+                });
+                context.waitUntil(cache.put(cacheKey, responseToCache));
+            } catch (_) {}
+        }
 
         return new Response(response.body, {
             status: response.status,

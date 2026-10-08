@@ -1471,11 +1471,6 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         let result = null;
         let lastError = null;
 
-        const paceNow = Date.now();
-        const paceWait = Math.max(0, tiktokResolveLastAt + 1100 - paceNow);
-        tiktokResolveLastAt = paceNow + paceWait;
-        if (paceWait > 0) await new Promise(resolve => setTimeout(resolve, paceWait));
-
         const mirrors = [
             `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
             `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`

@@ -42,8 +42,9 @@ Ketika user mengetik atau memerintahkan `/newmethod`, agent harus menjalankan al
 
 ## 🛠️ General Guidelines
 
+- **Isolasi Mutlak Direktori Eksperimen**: Folder `Experiment/` mutlak bersifat lokal-only (berisi API token, video mentah, dan file pengujian). Dilarang keras menyalin, men-stage, atau men-deploy file dari `Experiment/` ke `dist-cf/` atau git commit.
 - **UI & Code Consistency**: Setiap perubahan pada file di `scripts/`, `styles/`, atau `index.html` harus disinkronkan ke direktori build `dist-cf/`.
-- **Branding**: Metode baru yang telah terbukti berhasil diimplementasikan di UI menggunakan nama **FISH** (bukan StreamShield di UI user-facing).
+- **Branding Mutlak**: Dilarang keras membawa atau memunculkan nama selain **cutefish.my.id** / **cutefish** (dan **FISH** khusus untuk nama metode di UI user-facing). Dilarang menyertakan nama pihak ketiga, kredit eksternal, atau watermark lain di UI, output patch, maupun kode publik.
 - **Format Deskripsi UI**: Gunakan format deskripsi modular (`[format]`, `[mode]`, `[resolution]`, `[info]`) tanpa menambahkan baris metode berulang atau kata-kata teknis internal yang tidak relevan bagi user.
 
 ---

@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const attemptLoad = async () => {
             attempts++;
             try {
-                const res = await fetch('/api/tiktok-posts?username=cutefishaep', { cache: 'no-store' });
+                const res = await fetch('/api/tiktok-posts?username=cutefishaep');
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) {
@@ -924,16 +924,9 @@ document.addEventListener('DOMContentLoaded', () => {
             hasLoaded = true;
 
             const ok = await attemptLoad();
-            if (ok) return;
-
-            if (attempts < 2) {
-                setTimeout(async () => {
-                    const retried = await attemptLoad();
-                    if (!retried) section.classList.add('hidden');
-                }, 1500);
-                return;
+            if (!ok) {
+                section.classList.add('hidden');
             }
-            section.classList.add('hidden');
         };
 
         if ('IntersectionObserver' in window) {
@@ -1562,69 +1555,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             resourcesLoaded = true;
             resourcesLoading = false;
-            
-            const renderHomeNews = () => {
-                const newsSection = document.getElementById('home-news-section');
-                const newsGrid = document.getElementById('home-news-grid');
-                if (!newsSection || !newsGrid) return;
-                
-                const newsItems = allResources.filter(r => r.newsRank && r.newsRank > 0)
-                                              .sort((a, b) => a.newsRank - b.newsRank);
-                if (newsItems.length === 0) {
-                    newsSection.style.display = 'none';
-                    return;
-                }
-                newsSection.style.display = 'block';
-                
-                newsGrid.innerHTML = newsItems.map(r => {
-                    const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
-                    const osArr = Array.isArray(r.os) ? r.os : [];
-                    const osIconsHtml = osArr.map(o => {
-                        const rawName = typeof o === 'string' ? o : (o.name || '');
-                        const key = resolveOsKey(rawName) || String(rawName).toUpperCase();
-                        return OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-sm" alt="${key}" title="${OS_LABEL[key] || key}">` : '';
-                    }).join('');
-    
-                    const isCutefish = cats.includes('Made By Cutefish');
-                    
-                    return `<div class="resource-card ${isCutefish ? 'resource-card-cutefish' : ''}" data-id="${r._id}" tabindex="0" role="button" aria-label="Open ${r.title}">
-                        <div class="resource-icon-wrapper">
-                            <img src="${r.icon || 'assets/icon/Ae.png'}" alt="${r.title}" class="resource-icon" loading="lazy">
-                            ${isCutefish ? `<div class="cutefish-badge" title="Made by Cutefish"></div>` : ''}
-                        </div>
-                        <div class="resource-info">
-                            <h3 class="resource-title-compact">${r.title}</h3>
-                            <p class="resource-dev-compact">${r.dev || 'cutefishaep Team'}</p>
-                            <div class="resource-meta-compact">
-                                ${osIconsHtml ? `<span class="os-chip">${osIconsHtml}</span>` : ''}
-                                <span class="resource-info-text">${r.info || ''}</span>
-                            </div>
-                            <div class="resource-cats-row">
-                                ${cats.map(c => `<span class="resource-cat-chip">${c}</span>`).join('')}
-                            </div>
-                        </div>
-                        <div class="resource-card-arrow">
-                            <span class="material-symbols-rounded">chevron_right</span>
-                        </div>
-                    </div>`;
-                }).join('');
-                
-                newsGrid.querySelectorAll('.resource-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const id = card.dataset.id;
-                        const item = allResources.find(r => r._id === id);
-                        if (item) {
-                            const isWeb = (Array.isArray(item.os) && item.os.length === 1 && (item.os[0].name || '').toUpperCase() === 'WEB') || (Array.isArray(item.category) ? item.category.some(c => String(c).toLowerCase().includes('web app')) : String(item.category || '').toLowerCase().includes('web app'));
-                            if (isWeb && item.os?.[0]?.versions?.[0]?.url) {
-                                window.open(item.os[0].versions[0].url, '_blank');
-                            } else {
-                                openResourceModal(item, card);
-                            }
-                        }
-                    });
-                });
-            };
-            renderHomeNews();
         }
 
         renderResourceCategories(allResources);
@@ -3100,7 +3030,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     renderTools();
-    renderResources();
 
     const views = {
         home: document.getElementById('view-home'),
@@ -3439,17 +3368,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const badgeEl = document.getElementById('vercel-release-badge');
         const verEl = document.getElementById('vercel-release-version');
         if (!badgeEl || !verEl) return;
-        fetch('/api/version', { cache: 'no-store' })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                if (!data || !data.version || String(data.version).startsWith('dev-')) {
-                    badgeEl.classList.add('hidden');
-                    return;
-                }
-                verEl.textContent = data.version;
-                if (data.buildDateId) badgeEl.title = `Build ${data.buildDateId}`;
-            })
-            .catch(() => badgeEl.classList.add('hidden'));
+        const applyVersion = (data) => {
+            if (!data || !data.version || String(data.version).startsWith('dev-')) {
+                badgeEl.classList.add('hidden');
+                return;
+            }
+            verEl.textContent = data.version;
+            if (data.buildDateId) badgeEl.title = `Build ${data.buildDateId}`;
+        };
+        if (window.__cutefishVersionData) {
+            applyVersion(window.__cutefishVersionData);
+            return;
+        }
+        const promise = window.__cutefishVersionPromise || fetch('/api/version').then(r => r.ok ? r.json() : null).catch(() => null);
+        window.__cutefishVersionPromise = promise;
+        promise.then(applyVersion);
     }
     initVercelReleaseBadge();
 
