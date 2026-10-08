@@ -106,6 +106,59 @@ export default {
             }
         }
 
+        // Direct Cloudflare Edge Proxy - Completely offload video/asset downloads from Vercel
+        if (url.pathname === '/api/proxy') {
+            const rawTarget = url.searchParams.get('url');
+            if (!rawTarget) {
+                return new Response(JSON.stringify({ error: 'Missing url query parameter' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': corsOrigin }
+                });
+            }
+            let resolvedUrl = rawTarget;
+            try {
+                const u = new URL(rawTarget);
+                if (u.hostname === 'github.com') {
+                    const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+                    if (m) resolvedUrl = `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}`;
+                } else if (u.hostname === 'pastebin.com' && !u.pathname.startsWith('/raw/')) {
+                    const m = u.pathname.match(/^\/([^/]+)$/);
+                    if (m) resolvedUrl = `https://pastebin.com/raw${u.pathname}`;
+                }
+            } catch (_) {}
+
+            try {
+                const proxyHeaders = new Headers();
+                proxyHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                proxyHeaders.set('Accept', '*/*');
+                const range = request.headers.get('range');
+                if (range) proxyHeaders.set('range', range);
+
+                const upstream = await fetch(resolvedUrl, {
+                    headers: proxyHeaders,
+                    redirect: 'follow'
+                });
+
+                const respHeaders = new Headers(upstream.headers);
+                respHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                respHeaders.set('Access-Control-Allow-Methods', 'GET,OPTIONS');
+                respHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with, Range');
+                respHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type');
+                respHeaders.set('CF-Edge-Proxy', 'true');
+
+                return new Response(upstream.body, {
+                    status: upstream.status,
+                    statusText: upstream.statusText,
+                    headers: respHeaders
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Proxy request failed', details: err.message }), {
+                    status: 502,
+                    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': corsOrigin }
+                });
+            }
+        }
+
         // Proxy API requests to Vercel Backend with Security Shield & Edge Caching
         if (url.pathname.startsWith('/api')) {
             // 3. Browser direct address bar visit protection: redirect to home
@@ -117,22 +170,34 @@ export default {
             const targetUrl = new URL(url.pathname + url.search, backendOrigin);
 
             // Cloudflare Edge Cache for public read-only GET endpoints (Saves Vercel Limits)
-            const isCacheableGet = request.method === 'GET' && (
-                url.pathname === '/api/presets' ||
-                url.pathname === '/api/socials' ||
-                url.pathname === '/api/contacts' ||
-                url.pathname === '/api/resources'
-            );
+            function getCacheTtl(pathname, searchParams) {
+                if (request.method !== 'GET') return 0;
+                if (searchParams.get('nocache') === '1') return 0;
+                if (pathname.startsWith('/api/admin')) return 0;
 
+                if (pathname === '/api/version') return 86400; // 24 hours
+                if (pathname === '/api/tiktok-posts') return 21600; // 6 hours
+                if (pathname === '/api/tiktok-resolve' || pathname === '/api/tiktok-fps') return 86400; // 24 hours
+                if (pathname === '/api/tiktok-thumb') return 86400; // 24 hours
+                if (['/api/presets', '/api/socials', '/api/contacts', '/api/resources'].includes(pathname)) return 86400; // 24 hours
+
+                return 0;
+            }
+
+            const cacheTtl = getCacheTtl(url.pathname, url.searchParams);
             const cache = caches.default;
-            const cacheKey = new Request(url.origin + url.pathname, { method: 'GET' });
+            const cacheKey = new Request(url.toString(), { method: 'GET' });
 
-            if (isCacheableGet) {
+            if (cacheTtl > 0) {
                 const cachedResponse = await cache.match(cacheKey);
                 if (cachedResponse) {
                     const hitHeaders = new Headers(cachedResponse.headers);
-                    hitHeaders.set('x-cf-cache-status', 'HIT');
+                    hitHeaders.set('CF-Cache-Status', 'HIT');
+                    hitHeaders.set('X-Edge-Cache', 'HIT');
                     hitHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                    hitHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+                    hitHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                    hitHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
                     return new Response(cachedResponse.body, {
                         status: cachedResponse.status,
                         statusText: cachedResponse.statusText,
@@ -166,14 +231,24 @@ export default {
                 newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
                 newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
                 newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
+                newHeaders.set('CF-Cache-Status', 'MISS');
+                newHeaders.set('X-Edge-Cache', 'MISS');
 
-                // Cache successful GET responses in Cloudflare's Edge CDN for 5 minutes (300 seconds)
-                if (isCacheableGet && response.ok) {
-                    newHeaders.set('Cache-Control', 'public, max-age=300, s-maxage=300');
+                // Cache successful GET responses in Cloudflare's Edge CDN
+                if (cacheTtl > 0 && response.ok) {
+                    const cacheHeaders = new Headers(response.headers);
+                    cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
+                    cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                    cacheHeaders.set('CF-Cache-Status', 'HIT');
+                    cacheHeaders.set('X-Edge-Cache', 'HIT');
+                    cacheHeaders.delete('set-cookie');
+                    cacheHeaders.delete('pragma');
+                    cacheHeaders.delete('expires');
                     const cacheResponse = new Response(response.clone().body, {
                         status: response.status,
                         statusText: response.statusText,
-                        headers: newHeaders
+                        headers: cacheHeaders
                     });
                     if (ctx && ctx.waitUntil) {
                         ctx.waitUntil(cache.put(cacheKey, cacheResponse));

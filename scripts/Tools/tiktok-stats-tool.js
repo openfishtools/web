@@ -403,7 +403,7 @@
                 if (!badge) {
                     badge = document.createElement('span');
                     badge.className = 'stats-cache-badge';
-                    badge.textContent = '(Cache)';
+                    badge.textContent = 'Cache';
                     badge.title = 'Served from 24h Edge Cache';
                     titleEl.appendChild(badge);
                 } else {
