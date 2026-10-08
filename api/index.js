@@ -21,7 +21,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Admin = require('./models/Admin');
 const Session = require('./models/Session');
-const { getEnvTrollHtml } = require('../scripts/env-troll');
+const { getEnvTrollHtml } = require('./env-troll');
 
 const app = express();
 const fs = require('fs');
