@@ -1,5 +1,4 @@
-import trollPkg from '../../scripts/env-troll.js';
-const getEnvTrollHtml = trollPkg.getEnvTrollHtml || trollPkg;
+import { getEnvTrollHtml } from '../_utils/env-troll.js';
 
 export async function onRequest(context) {
     const url = new URL(context.request.url);
