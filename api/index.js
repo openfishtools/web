@@ -1098,17 +1098,8 @@ app.get('/api/tiktok-fps', async (req, res) => {
 
 function isAllowedTikTokResolveHost(hostname) {
     const h = String(hostname).toLowerCase();
-    return (
-        h === 'tiktok.com' ||
-        h === 'www.tiktok.com' ||
-        h === 'm.tiktok.com' ||
-        h === 'vm.tiktok.com' ||
-        h === 'vt.tiktok.com' ||
-        h === 'www.tikwm.com' ||
-        h === 'tikwm.com' ||
-        h === 'ssstik.io' ||
-        h === 'www.ssstik.io'
-    );
+    const allowed = ['tiktok.com', 'tt.site', 'tikwm.com', 'ssstik.io'];
+    return allowed.some(domain => h === domain || h.endsWith('.' + domain));
 }
 
 function isAllowedTikTokMediaUrl(rawUrl) {
@@ -1304,14 +1295,44 @@ function setCachedTikTokResolve(url, result, failTtl) {
 async function expandTikTokShortLink(pageUrl) {
     try {
         const u = new URL(pageUrl);
-        if (!/^(vt|vm)\./i.test(u.hostname)) return pageUrl;
-        const r = await fetch(pageUrl, {
+        const isShort = /^(vt|vm)\./i.test(u.hostname) || /(^|\.)tt\.site$/i.test(u.hostname);
+        if (!isShort) return pageUrl;
+
+        let r = await fetch(pageUrl, {
             method: 'HEAD',
             redirect: 'follow',
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
             signal: AbortSignal.timeout(6000)
         });
         if (r.url && /\/video\/\d+/.test(r.url)) return r.url;
+
+        // Fallback to GET
+        r = await fetch(pageUrl, {
+            method: 'GET',
+            redirect: 'follow',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            },
+            signal: AbortSignal.timeout(6000)
+        });
+        if (r.url && /\/video\/\d+/.test(r.url)) return r.url;
+        if (r.url) {
+            try {
+                const finalHost = new URL(r.url).hostname.toLowerCase();
+                if (finalHost === 'tiktok.com' || finalHost.endsWith('.tiktok.com')) return r.url;
+            } catch (_) {}
+        }
+
+        const html = await r.text().catch(() => '');
+        const canonMatch = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
+        if (canonMatch && canonMatch[1] && /\/video\/\d+/.test(canonMatch[1])) {
+            return canonMatch[1];
+        }
+        const ogMatch = html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
+        if (ogMatch && ogMatch[1] && /\/video\/\d+/.test(ogMatch[1])) {
+            return ogMatch[1];
+        }
     } catch (e) {}
     return pageUrl;
 }
@@ -1468,12 +1489,28 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             }
         }
 
+        // Expand shortlinks (e.g. tt.site, vt.tiktok.com, vm.tiktok.com) to canonical URL so upstream APIs can resolve cleanly
+        let targetUrl = pageUrl;
+        if (!/\/video\/\d+/.test(pageUrl)) {
+            const expanded = await expandTikTokShortLink(pageUrl);
+            if (expanded && expanded !== pageUrl) {
+                targetUrl = expanded;
+                if (req.query.nocache !== '1') {
+                    const cachedExpanded = getCachedTikTokResolve(targetUrl);
+                    if (cachedExpanded !== undefined && cachedExpanded !== null) {
+                        setCachedTikTokResolve(pageUrl, cachedExpanded);
+                        return res.json(cachedExpanded);
+                    }
+                }
+            }
+        }
+
         let result = null;
         let lastError = null;
 
         const mirrors = [
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`,
-            `https://tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`
+            `https://www.tikwm.com/api/?url=${encodeURIComponent(targetUrl)}`,
+            `https://tikwm.com/api/?url=${encodeURIComponent(targetUrl)}`
         ];
 
         for (let idx = 0; idx < mirrors.length; idx++) {
@@ -1535,7 +1572,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 8000);
-                const r = await fetch(`https://tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com/index?url=${encodeURIComponent(pageUrl)}`, {
+                const r = await fetch(`https://tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com/index?url=${encodeURIComponent(targetUrl)}`, {
                     headers: {
                         'x-rapidapi-key': rapidApiKey,
                         'x-rapidapi-host': 'tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com',
@@ -1580,7 +1617,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
 
         if (!result) {
             try {
-                result = await extractTikTokFromSSSTik(pageUrl);
+                result = await extractTikTokFromSSSTik(targetUrl);
             } catch (e) {
                 lastError = `SSSTik: ${e.message}`;
             }
@@ -1588,7 +1625,7 @@ app.get('/api/tiktok-resolve', async (req, res) => {
 
         if (!result) {
             try {
-                result = await extractTikTokFromPage(pageUrl);
+                result = await extractTikTokFromPage(targetUrl);
                 if (result) {
                     result.is_fallback = false;
                     result.method = 'direct_extract';
@@ -1600,10 +1637,16 @@ app.get('/api/tiktok-resolve', async (req, res) => {
 
         if (result) {
             setCachedTikTokResolve(pageUrl, result);
+            if (targetUrl !== pageUrl) {
+                setCachedTikTokResolve(targetUrl, result);
+            }
             return res.json(result);
         }
 
         setCachedTikTokResolve(pageUrl, null);
+        if (targetUrl !== pageUrl) {
+            setCachedTikTokResolve(targetUrl, null);
+        }
         console.error(`[TikTok Resolve] All methods failed for ${pageUrl}: ${lastError}`);
         res.status(404).json({
             error: 'Video unavailable',

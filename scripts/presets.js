@@ -54,7 +54,7 @@
     const ensureProtocol = (url) => /^https?:\/\//i.test(String(url || '')) ? url : `https://${url}`;
 
     const isDirectVideoUrl = (url) => /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(String(url || '').trim());
-    const isTikTokLikeUrl = (url) => /tiktok\.com/i.test(String(url || ''));
+    const isTikTokLikeUrl = (url) => /(tiktok\.com|tt\.site)/i.test(String(url || ''));
 
     const TIKTOK_RETRY_MS = 45000;
     const TIKTOK_MAX_ATTEMPTS = 3;

@@ -19,7 +19,7 @@
         try {
             const parsed = new URL(u);
             const host = parsed.hostname.toLowerCase();
-            const validHosts = ['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'tikwm.com'];
+            const validHosts = ['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'tt.site', 'tikwm.com'];
             return validHosts.some(h => host === h || host.endsWith('.' + h));
         } catch {
             return false;
@@ -232,7 +232,7 @@
                     <label class="tool-input-label" for="tool-tiktok-dl-input">${t('tool_downloader_url')}</label>
                     <div class="tool-input-wrapper">
                         <span class="material-symbols-rounded tool-input-icon">link</span>
-                        <input type="text" id="tool-tiktok-dl-input" class="tool-input-text" placeholder="https://www.tiktok.com/@username/video/..." autocomplete="off">
+                        <input type="text" id="tool-tiktok-dl-input" class="tool-input-text" placeholder="https://www.tiktok.com/... or https://tt.site/..." autocomplete="off">
                         <button type="button" class="tool-input-clear-btn hidden" id="tool-tiktok-dl-clear" title="Clear">
                             <span class="material-symbols-rounded">close</span>
                         </button>
