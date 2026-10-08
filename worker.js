@@ -1,25 +1,6 @@
-import trollPkg from './scripts/env-troll.js';
-const getEnvTrollHtml = trollPkg.getEnvTrollHtml || trollPkg;
-
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
-
-        // 🐟 Cutefish Shield Easter Egg: Catch anyone probing .env files
-        if (url.pathname.toLowerCase().includes('.env')) {
-            const clientIp = request.headers.get('cf-connecting-ip') || 
-                             request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                             '127.0.0.1';
-            const userAgent = request.headers.get('user-agent') || 'Unknown Device';
-            return new Response(getEnvTrollHtml(clientIp, userAgent, url.pathname), {
-                status: 200,
-                headers: {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'X-Robots-Tag': 'noindex, nofollow'
-                }
-            });
-        }
 
         const origin = request.headers.get('origin');
         const referer = request.headers.get('referer');
