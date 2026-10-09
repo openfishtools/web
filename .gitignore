@@ -6,3 +6,4 @@ dist-cf
 .wrangler
 *.log
 Experiment/
+.DS_Store
