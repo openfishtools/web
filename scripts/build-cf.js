@@ -9,6 +9,8 @@ const COPY_TARGETS = [
     'index.html',
     'admin.html',
     'favicon.ico',
+    'favicon.svg',
+    'cutefish web.svg',
     'coi-serviceworker.min.js',
     'sw.js',
     't_version.json',
