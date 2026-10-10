@@ -11,7 +11,7 @@
   "use strict";
 
 
-/* === Start: tools/Method/finalize.js === */
+/* === Start: tools/method/finalize.js === */
 (function() {
     'use strict';
 
@@ -305,9 +305,9 @@
 
 })();
 
-/* === End: tools/Method/finalize.js === */
+/* === End: tools/method/finalize.js === */
 
-/* === Start: tools/Method/compress.js === */
+/* === Start: tools/method/compress.js === */
 (function () {
 'use strict';
 
@@ -638,9 +638,9 @@ if (window._tktk) {
 
 })();
 
-/* === End: tools/Method/compress.js === */
+/* === End: tools/method/compress.js === */
 
-/* === Start: tools/Method/item/streamshield.js === */
+/* === Start: tools/method/item/streamshield.js === */
 /* =========================================================================
  * Cutefish StreamShield MP4 Architecture Engine
  * 
@@ -1049,9 +1049,9 @@ window.processVideoTBT = window.processVideoStreamShield;
 
 })();
 
-/* === End: tools/Method/item/streamshield.js === */
+/* === End: tools/method/item/streamshield.js === */
 
-/* === Start: tools/Method/item/binarypatch.js === */
+/* === Start: tools/method/item/binarypatch.js === */
 /* =========================================================================
  * Cutefish MP4 Binary Patcher
  * 100% Working TikTok Bypass: Dual Audio Track + V1 64-bit Infinite Duration
@@ -1716,9 +1716,9 @@ window.processVideoBinary = async function processVideoBinary(file, mode) {
 
 })();
 
-/* === End: tools/Method/item/binarypatch.js === */
+/* === End: tools/method/item/binarypatch.js === */
 
-/* === Start: tools/Method/item/FRYMethod.js === */
+/* === Start: tools/method/item/FRYMethod.js === */
 /* =========================================================================
  * ADJN MP4 Core v5.0 — 64-Bit Unknown Duration Sentinel Engine
  * Developed by F R Y 60fps (@itsmefachry) & Adekjamannow (@adek.jamannow)
@@ -2383,9 +2383,9 @@ window.processVideoFRY = async function processVideoFRY(file, mode) {
 };
 window.processVideoV3 = window.processVideoFRY;
 
-/* === End: tools/Method/item/FRYMethod.js === */
+/* === End: tools/method/item/FRYMethod.js === */
 
-/* === Start: tools/Method/item/fpspatch.js === */
+/* === Start: tools/method/item/fpspatch.js === */
 (function () {
 'use strict';
 
@@ -2917,9 +2917,9 @@ window.processVideoFPS = async function processVideoFPS(file, mode) {
 
 })();
 
-/* === End: tools/Method/item/fpspatch.js === */
+/* === End: tools/method/item/fpspatch.js === */
 
-/* === Start: tools/Method/item/wmvpatch.js === */
+/* === Start: tools/method/item/wmvpatch.js === */
 window.processVideoV1 = async function processVideoV1(file, mode) {
     if (mode === undefined) mode = 'off';
     const s = window._tktk;
@@ -3062,9 +3062,9 @@ window.processVideoV1 = async function processVideoV1(file, mode) {
     }
 };
 
-/* === End: tools/Method/item/wmvpatch.js === */
+/* === End: tools/method/item/wmvpatch.js === */
 
-/* === Start: tools/Method/item/emergencymethod.js === */
+/* === Start: tools/method/item/emergencymethod.js === */
 /* =========================================================================
  * Cutefish Emergency FPS Method (emergencymethod.js)
  * Automatically converts >60fps videos (e.g. 120fps) into 60fps slowmo,
@@ -3544,7 +3544,7 @@ if (window._tktk) {
 
 })();
 
-/* === End: tools/Method/item/emergencymethod.js === */
+/* === End: tools/method/item/emergencymethod.js === */
 
 /* === Start: tools/tiktok/tiktok-quality-tool.js === */
 (function() {
@@ -4954,7 +4954,7 @@ if (window._tktk) {
             window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 0, status: t('status_initializing'), file });
         }
 
-        logSection('Quality Method — Initializing');
+        logSection('Quality method — Initializing');
         log(`  File : ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`);
         let methodLogName = currentVersion.toUpperCase();
         if (currentVersion === 'v3') methodLogName = 'F R Y';
@@ -5033,7 +5033,7 @@ if (window._tktk) {
                 }
             }
         } catch (err) {
-            console.error('Quality Method Error:', err);
+            console.error('Quality method Error:', err);
             log(`\n!! Error: ${err.message}`);
             if (progressStatus) progressStatus.textContent = `Error: ${err.message}`;
             if (typeof window.showToast === 'function') window.showToast(`Error: ${err.message}`);
@@ -5147,7 +5147,7 @@ if (window._tktk) {
         id: 'tool-tiktok-patcher',
         _id: 'tool-tiktok-patcher',
         version: '3.7.0',
-        title: 'Quality Method',
+        title: 'Quality method',
         desc: 'TikTok HQ Upload',
         icon: 'high_quality',
         category: 'TikTok',

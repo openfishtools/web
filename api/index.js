@@ -271,10 +271,11 @@ app.get('/api/tools', async (req, res) => {
 
         helpers.sort((a, b) => {
             const getScore = (path) => {
-                if (path === 'Method/finalize.js') return 1;
-                if (path === 'Method/compress.js') return 2;
-                if (path.startsWith('Method/item/')) return 3;
-                if (path.startsWith('Method/')) return 4;
+                const lower = (path || '').toLowerCase();
+                if (lower === 'method/finalize.js') return 1;
+                if (lower === 'method/compress.js') return 2;
+                if (lower.startsWith('method/item/')) return 3;
+                if (lower.startsWith('method/')) return 4;
                 return 5;
             };
             return getScore(a) - getScore(b);
@@ -308,14 +309,14 @@ app.get('/api/tools', async (req, res) => {
             sha: 'main',
             updatedAt: new Date().toISOString(),
             helpers: [
-                'Method/finalize.js',
-                'Method/compress.js',
-                'Method/emergencymethod.js',
-                'Method/wmvpatch.js',
-                'Method/FRYMethod.js',
-                'Method/binarypatch.js',
-                'Method/fpspatch.js',
-                'Method/streamshield.js',
+                'method/finalize.js',
+                'method/compress.js',
+                'method/emergencymethod.js',
+                'method/wmvpatch.js',
+                'method/FRYMethod.js',
+                'method/binarypatch.js',
+                'method/fpspatch.js',
+                'method/streamshield.js',
                 'ai/upscale-gpu-enhancer.js'
             ],
             tools: [

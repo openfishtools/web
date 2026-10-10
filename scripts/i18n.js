@@ -17,7 +17,7 @@
             "tool_drop_file": "Drag & drop berkas di sini atau klik untuk memilih",
             "tool_drop_xml": "Drag & drop berkas XML di sini atau klik untuk memilih",
             "tool_drop_zip": "Drag & drop berkas ZIP di sini atau klik untuk memilih",
-            "patcher_cat_quality_method": "Metode Kualitas",
+            "patcher_cat_quality_method": "metode kualitas",
             "tool_drop_formats_video": "Mendukung MP4, MOV, WebM",
             "tool_drop_formats_media": "Mendukung MP4, MOV, WebM, PNG, JPG, WebP",
             "tool_drop_formats_zip": "Mendukung ZIP berisi gambar PNG, JPG, WebP",
@@ -26,7 +26,7 @@
             "patcher_subtitle": "TikTok HQ Upload",
             "patcher_partially_patched": "Ter-patch Sebagian",
             "patcher_drop_label": "Drag & drop video di sini atau klik untuk memilih",
-            "patcher_ver_title": "Pilih Metode:",
+            "patcher_ver_title": "Pilih metode:",
             "patcher_variant_title": "Alight Motion Download Variant (Opsional):",
             "patcher_variant_none": "Tidak Ada",
             "patcher_variant_5mb": "5MB Premium",
@@ -188,8 +188,8 @@
             "ios_warn_cancel": "Tutup",
             "ios_warn_proceed": "Mengerti",
             "ios_not_supported_err": "Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.",
-            "v3_warn_title": "Peringatan Metode V3",
-            "v3_warn_desc": "<p>Metode V3 menggunakan FastStart, pembersihan track data timecode, dan alignment padding 79KB. Pilih OFF (Direct Patch) untuk proses kilat tanpa kompresi, atau pilih preset HD/Compatibility untuk kompresi aman tanpa Out Of Memory.</p>",
+            "v3_warn_title": "Peringatan metode V3",
+            "v3_warn_desc": "<p>metode V3 menggunakan FastStart, pembersihan track data timecode, dan alignment padding 79KB. Pilih OFF (Direct Patch) untuk proses kilat tanpa kompresi, atau pilih preset HD/Compatibility untuk kompresi aman tanpa Out Of Memory.</p>",
             "v3_warn_cancel": "Batal",
             "v3_warn_proceed": "Lanjutkan",
             "ad_consent_title": "Suka pakai cutefish?",
@@ -235,8 +235,8 @@
             "resource_search_placeholder": "Cari resource...",
             "tools_title": "Alat",
             "contact_title": "Hubungi Kami",
-            "patcher_overlay_title": "Metode Ter-patch",
-            "patcher_overlay_desc": "Metode WMV saat ini tidak tersedia. Silakan gunakan metode F R Y atau FPS.",
+            "patcher_overlay_title": "metode Ter-patch",
+            "patcher_overlay_desc": "metode WMV saat ini tidak tersedia. Silakan gunakan metode F R Y atau FPS.",
             "patcher_overlay_ignore": "Abaikan",
             "patcher_cat_recommended": "Rekomendasi",
             "patcher_cat_backup": "Cadangan",
@@ -351,28 +351,28 @@
                 [format] .mp4
                 [fps] 30 FPS Presentation Patch
                 [info] Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.
-                [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                [warn] metode ini tidak membypass quality, hanya FPS saja.
             `,
             "patcher_desc_fps_off": `
                 [format] .mp4
                 [mode] Direct Pass-Through
                 [fps] 30 FPS Presentation Patch
                 [info] Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.
-                [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                [warn] metode ini tidak membypass quality, hanya FPS saja.
             `,
             "patcher_desc_fps_720p": `
                 [format] .mp4
                 [resolution] 720p
                 [fps] 30 FPS Presentation Patch
                 [info] Mengompresi video ke 720p dengan bitrate hemat MB, lalu menerapkan timescale patch agar playback di TikTok berjalan halus.
-                [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                [warn] metode ini tidak membypass quality, hanya FPS saja.
             `,
             "patcher_desc_fps_1080p": `
                 [format] .mp4
                 [resolution] 1080p
                 [fps] 30 FPS Presentation Patch
                 [info] Mengompresi video pada resolusi Full HD 1080p dengan ukuran MB kecil dan tajam pada pergerakan cepat, lalu menerapkan timescale patch.
-                [warn] Metode ini tidak membypass quality, hanya FPS saja.
+                [warn] metode ini tidak membypass quality, hanya FPS saja.
             `,
             "offline_title": "Sumber Daya Offline Belum Lengkap",
             "offline_desc": "Unduh paket resource FFmpeg & AI Model offline agar semua tools dapat berjalan lancar tanpa koneksi internet.",
@@ -433,7 +433,7 @@
             "stats_bitrate": "Bitrate",
             "stats_duration": "Durasi",
             "stats_size": "Ukuran File",
-            "stats_method": "Method",
+            "stats_method": "method",
             "stats_views": "Views",
             "stats_likes": "Likes",
             "stats_comments": "Komentar",
@@ -571,7 +571,7 @@
             "tool_drop_file": "Drag & drop file here or click to select",
             "tool_drop_xml": "Drag & drop XML file here or click to select",
             "tool_drop_zip": "Drag & drop ZIP file here or click to select",
-            "patcher_cat_quality_method": "Quality Method",
+            "patcher_cat_quality_method": "Quality method",
             "tool_drop_formats_video": "Supports MP4, MOV, WebM",
             "tool_drop_formats_media": "Supports MP4, MOV, WebM, PNG, JPG, WebP",
             "tool_drop_formats_zip": "Supports ZIP containing PNG, JPG, WebP",
@@ -580,7 +580,7 @@
             "patcher_subtitle": "TikTok HQ Upload",
             "patcher_partially_patched": "Partially patched",
             "patcher_drop_label": "Drag & drop video here or click to select",
-            "patcher_ver_title": "Choose Method:",
+            "patcher_ver_title": "Choose method:",
             "patcher_variant_title": "AM Download Variant (Optional):",
             "patcher_variant_none": "None",
             "patcher_variant_5mb": "5MB Premium",
@@ -741,8 +741,8 @@
             "ios_warn_cancel": "Close",
             "ios_warn_proceed": "Understood",
             "ios_not_supported_err": "iOS devices are not supported. Please use PC (Windows/macOS) or Android.",
-            "v3_warn_title": "V3 Method Warning",
-            "v3_warn_desc": "<p>V3 Method applies FastStart, data track cleaning, and 79KB alignment padding. Select OFF (Direct Patch) for instant 0% loss pass-through, or select HD/Compatibility for memory-safe compression without OOM crashes.</p>",
+            "v3_warn_title": "V3 method Warning",
+            "v3_warn_desc": "<p>V3 method applies FastStart, data track cleaning, and 79KB alignment padding. Select OFF (Direct Patch) for instant 0% loss pass-through, or select HD/Compatibility for memory-safe compression without OOM crashes.</p>",
             "v3_warn_cancel": "Cancel",
             "v3_warn_proceed": "Proceed",
             "ad_consent_title": "Enjoying cutefish?",
@@ -788,7 +788,7 @@
             "resource_search_placeholder": "Search resources...",
             "tools_title": "Tools",
             "contact_title": "Contact Us",
-            "patcher_overlay_title": "Method Patched",
+            "patcher_overlay_title": "method Patched",
             "patcher_overlay_desc": "WMV method is currently unavailable. Please use F R Y or FPS method.",
             "patcher_overlay_ignore": "Ignore",
             "patcher_cat_recommended": "Recommended",
@@ -988,7 +988,7 @@
             "stats_bitrate": "Bitrate",
             "stats_duration": "Duration",
             "stats_size": "File Size",
-            "stats_method": "Method",
+            "stats_method": "method",
             "stats_views": "Views",
             "stats_likes": "Likes",
             "stats_comments": "Comments",
