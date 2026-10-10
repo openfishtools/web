@@ -1809,8 +1809,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const prevAppTools = window.AppTools || {};
     window.AppTools = {
-        _registry: new Map(),
+        _registry: prevAppTools._registry || new Map(),
+        isLoading: prevAppTools.isLoading !== undefined ? prevAppTools.isLoading : true,
+        loadError: prevAppTools.loadError || null,
         register(toolDef) {
             if (!toolDef || typeof toolDef !== 'object') return;
             const id = toolDef.id || toolDef._id;
@@ -2677,6 +2680,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    function renderToolsSkeleton(container, count = 6) {
+        if (!container) return;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += `
+            <div class="skeleton-tool-card" aria-hidden="true">
+                <div class="skeleton-tool-card-icon"></div>
+                <div class="skeleton-tool-card-info">
+                    <div class="skeleton-tool-card-line title"></div>
+                    <div class="skeleton-tool-card-line"></div>
+                    <div class="skeleton-tool-card-line short"></div>
+                </div>
+                <div class="skeleton-tool-card-arrow"></div>
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function renderToolsError(container, errorMsg) {
+        if (!container) return;
+        const title = (window.getTranslation && window.getTranslation('tools_load_error')) || 'Gagal memuat tools';
+        const retryLabel = (window.getTranslation && window.getTranslation('tools_retry')) || 'Coba Lagi';
+        const rawMsg = (typeof errorMsg === 'string' && errorMsg.trim()) ? errorMsg : 'Koneksi ke server tools terputus atau gagal dimuat.';
+        container.innerHTML = `
+            <div class="empty-state tools-error-state">
+                <span class="material-symbols-rounded empty-state-icon error-icon">error_outline</span>
+                <p class="empty-state-text">${escapeHTML(title)}</p>
+                <p class="empty-state-subtext">${escapeHTML(rawMsg)}</p>
+                <button type="button" class="btn-tools-retry" id="btn-tools-retry">
+                    <span class="material-symbols-rounded">refresh</span>
+                    <span>${escapeHTML(retryLabel)}</span>
+                </button>
+            </div>`;
+        const retryBtn = container.querySelector('#btn-tools-retry');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (window.ToolsLoader && typeof window.ToolsLoader.reload === 'function') {
+                    window.ToolsLoader.reload();
+                } else {
+                    window.location.reload();
+                }
+            });
+        }
+    }
+
     function renderTools(query = '', filterCategory = 'All') {
         const container = document.getElementById('tools-grid');
         if (!container) return;
@@ -2754,10 +2803,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         } else {
-            const noToolsMsg = (window.getTranslation && window.getTranslation('no_results')) || 'No tools found';
+            // 1. If tools are still loading and no tools registered yet, keep/render precise skeleton:
+            if (window.AppTools && window.AppTools.isLoading && allTools.length === 0) {
+                renderToolsSkeleton(container);
+                return;
+            }
+
+            // 2. If loading failed with an error and no tools loaded, show simple error state:
+            if (window.AppTools && window.AppTools.loadError && allTools.length === 0) {
+                renderToolsError(container, window.AppTools.loadError);
+                return;
+            }
+
+            const noToolsMsg = (window.getTranslation && window.getTranslation('no_results')) || 'Tidak ada hasil ditemukan';
             container.innerHTML = `<div class="empty-state"><span class="material-symbols-rounded empty-state-icon">search_off</span><p class="empty-state-text">${noToolsMsg}</p></div>`;
         }
-    };
+    }
+    window.renderTools = renderTools;
 
     const populateResourceDetails = (resource) => {
         let selectedOs = null;
