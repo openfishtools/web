@@ -44,7 +44,9 @@
         }
 
         renderField(inputDef) {
-            const id = inputDef.id;
+            const id = inputDef.id || inputDef.name || 'field';
+            if (!inputDef.id) inputDef.id = id;
+            if (!inputDef.name) inputDef.name = id;
             const type = inputDef.type || 'text';
             const label = this.getLabel(inputDef);
             const defaultValue = inputDef.default !== undefined ? inputDef.default : '';
@@ -56,8 +58,12 @@
                 if (inputDef.primary !== false && !this.primaryFileInput) {
                     this.primaryFileInput = inputDef;
                     this.fieldControls.set(id, {
-                        getValue: () => this.values[id] || null,
-                        setValue: (val) => { this.values[id] = val; },
+                        getValue: () => this.values[id] || this.values.file || this.values.videoFile || null,
+                        setValue: (val) => {
+                            this.values[id] = val;
+                            this.values.file = val;
+                            this.values.videoFile = val;
+                        },
                         inputDef
                     });
                     return;
@@ -205,8 +211,11 @@
 
         setFile(file) {
             if (this.primaryFileInput) {
-                this.values[this.primaryFileInput.id] = file;
+                const id = this.primaryFileInput.id || this.primaryFileInput.name || 'file';
+                this.values[id] = file;
             }
+            this.values.file = file;
+            this.values.videoFile = file;
         }
 
         getValues() {
@@ -216,6 +225,13 @@
                     result[id] = ctrl.getValue();
                 }
             });
+            if (this.primaryFileInput) {
+                const primaryKey = this.primaryFileInput.id || this.primaryFileInput.name || 'file';
+                if (result[primaryKey]) {
+                    if (!result.file) result.file = result[primaryKey];
+                    if (!result.videoFile) result.videoFile = result[primaryKey];
+                }
+            }
             return result;
         }
 
@@ -225,19 +241,20 @@
             const values = this.getValues();
 
             for (const inputDef of inputs) {
+                const id = inputDef.id || inputDef.name;
                 if (inputDef.required) {
-                    const val = values[inputDef.id];
+                    const val = values[id];
                     if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
-                        const label = this.getLabel(inputDef) || inputDef.id;
+                        const label = this.getLabel(inputDef) || id;
                         return {
                             valid: false,
                             message: `Harap tentukan ${label} terlebih dahulu.`
                         };
                     }
                 }
-                if (inputDef.type === 'url' && values[inputDef.id]) {
+                if (inputDef.type === 'url' && values[id]) {
                     if (typeof inputDef.validate === 'function') {
-                        const check = inputDef.validate(values[inputDef.id]);
+                        const check = inputDef.validate(values[id]);
                         if (check !== true) {
                             return {
                                 valid: false,
@@ -310,48 +327,68 @@
         }
 
         appendLog(msg) {
-            if (!this.logsContainer) {
-                this.logsContainer = document.createElement('div');
-                this.logsContainer.id = 'tool-universal-logs-container';
-                this.logsContainer.className = 'process-logs-wrap';
-                this.logsContainer.innerHTML = `
-                    <div class="process-logs-header">
-                        <span class="process-logs-title">${(window.getTranslation && window.getTranslation('patcher_logs_title')) || 'Process Logs'}</span>
-                        <button type="button" class="btn-copy-logs" id="tool-universal-copy-logs">
-                            <span class="material-symbols-rounded">content_copy</span>
-                            <span>${(window.getTranslation && window.getTranslation('res_modal_copy')) || 'Copy'}</span>
-                        </button>
-                    </div>
-                    <pre id="tool-universal-logs" class="process-logs-pre"></pre>
-                `;
-                this.container.appendChild(this.logsContainer);
-                this.logsEl = this.logsContainer.querySelector('#tool-universal-logs');
+            let container = document.getElementById('tiktok-logs-container') || document.getElementById('tool-universal-logs-container') || this.logsContainer;
+            let el = document.getElementById('tiktok-logs') || document.getElementById('tool-universal-logs') || this.logsEl;
 
-                const copyBtn = this.logsContainer.querySelector('#tool-universal-copy-logs');
-                if (copyBtn) {
-                    copyBtn.addEventListener('click', () => {
-                        if (this.logsEl && this.logsEl.textContent) {
-                            navigator.clipboard.writeText(this.logsEl.textContent);
-                            if (typeof window.showToast === 'function') {
-                                window.showToast((window.getTranslation && window.getTranslation('logs_copied')) || 'Logs copied to clipboard');
+            if (!container || !el) {
+                if (!this.logsContainer) {
+                    this.logsContainer = document.createElement('div');
+                    this.logsContainer.id = 'tool-universal-logs-container';
+                    this.logsContainer.className = 'process-logs-wrap';
+                    this.logsContainer.innerHTML = `
+                        <div class="process-logs-header">
+                            <span class="process-logs-title">${(window.getTranslation && window.getTranslation('patcher_logs_title')) || 'Process Logs'}</span>
+                            <button type="button" class="btn-copy-logs" id="tool-universal-copy-logs">
+                                <span class="material-symbols-rounded">content_copy</span>
+                                <span>${(window.getTranslation && window.getTranslation('res_modal_copy')) || 'Copy'}</span>
+                            </button>
+                        </div>
+                        <pre id="tool-universal-logs" class="process-logs-pre"></pre>
+                    `;
+                    this.container.appendChild(this.logsContainer);
+                    this.logsEl = this.logsContainer.querySelector('#tool-universal-logs');
+
+                    const copyBtn = this.logsContainer.querySelector('#tool-universal-copy-logs');
+                    if (copyBtn) {
+                        copyBtn.addEventListener('click', () => {
+                            if (this.logsEl && this.logsEl.textContent) {
+                                navigator.clipboard.writeText(this.logsEl.textContent);
+                                if (typeof window.showToast === 'function') {
+                                    window.showToast((window.getTranslation && window.getTranslation('logs_copied')) || 'Logs copied to clipboard');
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
+                container = this.logsContainer;
+                el = this.logsEl;
             }
-            this.logsContainer.classList.remove('hidden');
-            if (this.logsEl) {
-                this.logsEl.textContent += (this.logsEl.textContent ? '\n' : '') + msg;
-                this.logsEl.scrollTop = this.logsEl.scrollHeight;
+
+            if (container) {
+                container.classList.remove('hidden');
+            }
+            if (el) {
+                const text = el.textContent || '';
+                const trimmedMsg = msg !== undefined && msg !== null ? String(msg) : '';
+                if (!text.endsWith(trimmedMsg + '\n') && !text.endsWith(trimmedMsg)) {
+                    el.textContent += (text ? '\n' : '') + trimmedMsg;
+                }
+                el.scrollTop = el.scrollHeight;
+            }
+
+            if (typeof window.updateOpenModalsLayout === 'function') {
+                window.updateOpenModalsLayout(true);
             }
         }
 
         clearLogs() {
-            if (this.logsEl) {
-                this.logsEl.textContent = '';
+            const el = document.getElementById('tiktok-logs') || document.getElementById('tool-universal-logs') || this.logsEl;
+            const container = document.getElementById('tiktok-logs-container') || document.getElementById('tool-universal-logs-container') || this.logsContainer;
+            if (el) {
+                el.textContent = '';
             }
-            if (this.logsContainer) {
-                this.logsContainer.classList.add('hidden');
+            if (container) {
+                container.classList.add('hidden');
             }
         }
     }

@@ -2330,6 +2330,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation(getProcessKey(tool))) || getProcessFallback(tool);
             }
+            const logsEl = document.getElementById('tiktok-logs');
+            const logsContainer = document.getElementById('tiktok-logs-container');
+            if (logsEl) logsEl.textContent = '';
+            if (logsContainer) logsContainer.classList.add('hidden');
         }
 
         const resetForNewVideo = () => {
@@ -2338,6 +2342,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeSchemaRenderer.setFile(null);
                 activeSchemaRenderer.clearLogs();
             }
+            const logsEl = document.getElementById('tiktok-logs');
+            const logsContainer = document.getElementById('tiktok-logs-container');
+            if (logsEl) logsEl.textContent = '';
+            if (logsContainer) logsContainer.classList.add('hidden');
             if (window.ToolProgressManager && tool && tool._id) {
                 window.ToolProgressManager.clear(tool._id);
             }
@@ -2433,8 +2441,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const inputs = activeSchemaRenderer.getValues();
-                    if (currentToolFile && activeSchemaRenderer.primaryFileInput) {
-                        inputs[activeSchemaRenderer.primaryFileInput.id] = currentToolFile;
+                    if (currentToolFile) {
+                        if (activeSchemaRenderer.primaryFileInput) {
+                            const primaryKey = activeSchemaRenderer.primaryFileInput.id || activeSchemaRenderer.primaryFileInput.name || 'file';
+                            inputs[primaryKey] = currentToolFile;
+                        }
+                        if (!inputs.file) inputs.file = currentToolFile;
+                        if (!inputs.videoFile) inputs.videoFile = currentToolFile;
                     }
 
                     processBtn.disabled = true;
@@ -3260,6 +3273,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toolBackdrop) {
         toolBackdrop.addEventListener('click', (e) => {
             if (e.target === toolBackdrop) closeToolModal();
+        });
+    }
+
+    const copyLogsBtn = document.getElementById('btn-copy-logs');
+    if (copyLogsBtn) {
+        copyLogsBtn.addEventListener('click', () => {
+            const logsEl = document.getElementById('tiktok-logs');
+            if (logsEl && logsEl.textContent) {
+                navigator.clipboard.writeText(logsEl.textContent);
+                if (typeof window.showToast === 'function') {
+                    window.showToast((window.getTranslation && window.getTranslation('logs_copied')) || 'Logs copied to clipboard');
+                }
+            }
         });
     }
 
