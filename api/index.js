@@ -223,12 +223,13 @@ let toolsManifestCache = {
     data: null,
     timestamp: 0
 };
-const TOOLS_CACHE_TTL_MS = 5 * 60 * 1000;
+const TOOLS_CACHE_TTL_MS = 60 * 1000;
 
 app.get('/api/tools', async (req, res) => {
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
     const now = Date.now();
-    if (toolsManifestCache.data && (now - toolsManifestCache.timestamp) < TOOLS_CACHE_TTL_MS) {
+    const isBust = req.query.fresh === '1' || !!req.query.bust;
+    if (!isBust && toolsManifestCache.data && (now - toolsManifestCache.timestamp) < TOOLS_CACHE_TTL_MS) {
         return res.json(toolsManifestCache.data);
     }
 

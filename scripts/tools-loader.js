@@ -12,7 +12,7 @@
     const API_ENDPOINT = '/api/tools';
     const LOCAL_FALLBACK = 'scripts/tools-bundle.js';
     const MANIFEST_CACHE_KEY = 'oft_tools_manifest_cache';
-    const MANIFEST_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+    const MANIFEST_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
