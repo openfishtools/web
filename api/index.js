@@ -695,7 +695,7 @@ async function requireDb(req, res, next) {
     }
 }
 
-app.use(['/api/socials', '/api/contacts', '/api/presets', '/api/resources', '/api/admin'], requireDb);
+app.use(['/api/socials', '/api/contacts', '/api/presets', '/api/admin'], requireDb);
 
 const SocialSchema = new mongoose.Schema({
     name: String,
@@ -2032,7 +2032,143 @@ app.post('/api/presets/:id/like', async (req, res) => {
     }
 });
 
-app.get('/api/resources', async (req, res) => res.json(await Resource.find().sort({ order: 1, _id: 1 })));
+const GITHUB_ORG_REPOS = 'https://api.github.com/orgs/openfishtools/repos?per_page=100';
+let githubReposCache = null;
+let githubReposCacheTime = 0;
+
+async function getOpenFishProjects() {
+    const now = Date.now();
+    if (githubReposCache && (now - githubReposCacheTime < 5 * 60 * 1000)) {
+        return githubReposCache;
+    }
+
+    const defaultProjects = [
+        {
+            _id: 'res-cep',
+            name: 'CEP',
+            title: 'FishTools',
+            dev: 'cutefishaep Team',
+            category: ['Extension', 'After Effects'],
+            icon: 'assets/projects/cep.svg',
+            info: 'v1.3.9',
+            description: 'After Effects extension panel for easing curves, conversion to Alight Motion, auto save, and project utilities.',
+            instruction: 'Extract to C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions or install via OpenFishTools installer.',
+            html_url: 'https://github.com/openfishtools/CEP',
+            os: [
+                {
+                    name: 'WIN',
+                    versions: [
+                        { label: 'v1.3.9 (Windows Installer)', url: 'https://github.com/openfishtools/CEP/releases' }
+                    ]
+                },
+                {
+                    name: 'MAC',
+                    versions: [
+                        { label: 'v1.3.9 (macOS PKG)', url: 'https://github.com/openfishtools/CEP/releases' }
+                    ]
+                }
+            ]
+        },
+        {
+            _id: 'res-studio',
+            name: 'Studio',
+            title: 'FishTools Studio',
+            dev: 'OpenFishTools Team',
+            category: ['Studio', 'Editor', 'Web App'],
+            icon: 'assets/projects/studio.svg',
+            info: 'v0.5.132',
+            description: 'Browser-based motion graphics video editor with multi-track timeline, keyframes, and extensible effect engine.',
+            instruction: 'Runs directly in modern browsers (Chrome 94+, Edge 94+, Safari 16.4+).',
+            html_url: 'https://github.com/openfishtools/Studio',
+            os: [
+                {
+                    name: 'WEB',
+                    versions: [
+                        { label: 'v0.5.132 (Web Editor)', url: 'https://github.com/openfishtools/Studio' }
+                    ]
+                }
+            ]
+        },
+        {
+            _id: 'res-web-tools',
+            name: 'web-tools',
+            title: 'Web Tools',
+            dev: 'OpenFishTools Team',
+            category: ['Tools', 'Libraries'],
+            icon: 'assets/projects/web-tools.svg',
+            info: 'v1.0.0',
+            description: 'Headless client-side video processing, AI matting, and animation conversion libraries for browsers.',
+            instruction: 'Can be fetched directly from CDN or imported as headless modules.',
+            html_url: 'https://github.com/openfishtools/web-tools',
+            os: [
+                {
+                    name: 'WEB',
+                    versions: [
+                        { label: 'v1.0.0 (CDN & Docs)', url: 'https://github.com/openfishtools/web-tools' }
+                    ]
+                }
+            ]
+        },
+        {
+            _id: 'res-web',
+            name: 'web',
+            title: 'Website',
+            dev: 'OpenFishTools Team',
+            category: ['Web App', 'Platform'],
+            icon: 'assets/projects/web.svg',
+            info: 'v1.0.0',
+            description: 'Official web platform and interactive tools suite for OpenFishTools.',
+            instruction: 'High-performance interactive web application built with vanilla web technologies.',
+            html_url: 'https://github.com/openfishtools/web',
+            os: [
+                {
+                    name: 'WEB',
+                    versions: [
+                        { label: 'v1.0.0 (Live App)', url: 'https://web-tau-lovat-70.vercel.app' }
+                    ]
+                }
+            ]
+        }
+    ];
+
+    try {
+        const fetchHeaders = {
+            'User-Agent': 'OpenFishTools-Web'
+        };
+        if (process.env.GITHUB_TOKEN) {
+            fetchHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+        }
+        const resp = await fetch(GITHUB_ORG_REPOS, { headers: fetchHeaders });
+        if (resp.ok) {
+            const repos = await resp.json();
+            if (Array.isArray(repos)) {
+                repos.forEach(repo => {
+                    const match = defaultProjects.find(p => (p.name || '').toLowerCase() === (repo.name || '').toLowerCase());
+                    if (match) {
+                        if (repo.description) match.description = repo.description;
+                        if (repo.stargazers_count !== undefined) match.stars = repo.stargazers_count;
+                        if (repo.updated_at) match.updated_at = repo.updated_at;
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        // Fallback to defaultProjects
+    }
+
+    githubReposCache = defaultProjects;
+    githubReposCacheTime = now;
+    return defaultProjects;
+}
+
+app.get('/api/resources', async (req, res) => {
+    try {
+        const projects = await getOpenFishProjects();
+        res.json(projects);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load projects' });
+    }
+});
 app.post('/api/resources', requireAdmin, async (req, res) => res.json(await new Resource(req.body).save()));
 app.put('/api/resources/reorder', requireAdmin, async (req, res) => {
     try {

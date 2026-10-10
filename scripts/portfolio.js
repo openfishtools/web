@@ -1322,7 +1322,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (n.includes('web') || n.includes('browser') || n.includes('online')) return 'WEB';
         return Object.keys(OS_SVG).find(k => k.toLowerCase() === n) || null;
     };
-    const RESOURCE_PASSWORD = 'EDITINGSTUFF';
 
     let allResources = [];
     let activeResourceCategory = 'All';
@@ -1413,146 +1412,156 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!resourcesLoaded && !resourcesLoading && allResources.length === 0) {
             resourcesLoading = true;
             let fetchSucceeded = false;
-            try {
-                const res = await fetch('/api/resources');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                        allResources = data.filter(r => !r.hidden);
-                        fetchSucceeded = true;
-                    }
-                }
-            } catch (e) {
-                console.warn('[Resources] Failed to fetch /api/resources:', e);
-            }
 
-            if (!fetchSucceeded) {
-                allResources = [
+            const DEFAULT_OPENFISH_PROJECTS = [
                 {
-                    _id: 'res-1',
-                    title: 'FishTools 1.3.0',
+                    _id: 'res-web',
+                    name: 'web',
+                    title: 'Website',
+                    dev: 'OpenFishTools Team',
+                    category: ['Web App', 'Platform'],
+                    icon: '/assets/projects/web.svg',
+                    info: 'v1.0.0',
+                    description: 'Official web platform and interactive tools suite for OpenFishTools.',
+                    instruction: 'High-performance interactive web application built with vanilla web technologies.',
+                    html_url: 'https://github.com/openfishtools/web',
+                    os: [
+                        {
+                            name: 'WEB',
+                            versions: [
+                                { label: 'v1.0.0 (Live App)', url: 'https://web-tau-lovat-70.vercel.app' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    _id: 'res-web-tools',
+                    name: 'web-tools',
+                    title: 'Web Tools',
+                    dev: 'OpenFishTools Team',
+                    category: ['Tools', 'Libraries'],
+                    icon: '/assets/projects/web-tools.svg',
+                    info: 'v1.0.0',
+                    description: 'Headless client-side video processing, AI matting, and animation conversion libraries for browsers.',
+                    instruction: 'Can be fetched directly from CDN or imported as headless modules.',
+                    html_url: 'https://github.com/openfishtools/web-tools',
+                    os: [
+                        {
+                            name: 'WEB',
+                            versions: [
+                                { label: 'v1.0.0 (CDN & Docs)', url: 'https://github.com/openfishtools/web-tools' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    _id: 'res-cep',
+                    name: 'CEP',
+                    title: 'FishTools',
                     dev: 'cutefishaep Team',
-                    category: ['Made By Cutefish', 'Tools'],
-                    icon: 'assets/icon/Ae.png',
-                    info: '42 MB',
-                    instruction: 'Extract to C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions and enable unsigned extensions in registry/terminal.',
+                    category: ['Extension', 'After Effects'],
+                    icon: '/assets/projects/cep.svg',
+                    info: 'v1.3.9',
+                    description: 'After Effects extension panel for easing curves, conversion to Alight Motion, auto save, and project utilities.',
+                    instruction: 'Extract to C:\\Program Files (x86)\\Common Files\\Adobe\\CEP\\extensions or install via OpenFishTools installer.',
+                    html_url: 'https://github.com/openfishtools/CEP',
                     os: [
                         {
                             name: 'WIN',
                             versions: [
-                                { label: 'v1.3.0 (AE 2022-2024)', url: 'https://github.com/cutefishaep' },
-                                { label: 'v1.2.0 (Legacy)', url: 'https://github.com/cutefishaep' }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    _id: 'res-2',
-                    title: 'Sapphire Plugins 2024',
-                    dev: 'Boris FX',
-                    category: ['Plugin'],
-                    icon: 'assets/icon/Ae.png',
-                    info: '1.2 GB',
-                    instruction: 'Run installer as administrator, select After Effects directory, apply patch fix.',
-                    os: [
-                        {
-                            name: 'WIN',
-                            versions: [
-                                { label: '2024.1 (AE 2024)', url: 'https://borisfx.com' },
-                                { label: '2023.5 (AE 2023)', url: 'https://borisfx.com' }
+                                { label: 'v1.3.9 (Windows Installer)', url: 'https://github.com/openfishtools/CEP/releases' }
                             ]
                         },
                         {
                             name: 'MAC',
                             versions: [
-                                { label: '2024.1 (AE 2024)', url: 'https://borisfx.com' }
+                                { label: 'v1.3.9 (macOS PKG)', url: 'https://github.com/openfishtools/CEP/releases' }
                             ]
                         }
                     ]
                 },
                 {
-                    _id: 'res-3',
-                    title: 'Twixtor Pro & RSMB',
-                    dev: 'RE:Vision Effects',
-                    category: ['Plugin'],
-                    icon: 'assets/icon/Ae.png',
-                    info: '85 MB',
-                    instruction: 'Install into Adobe After Effects Plug-ins folder. Enter license key or use offline activation.',
+                    _id: 'res-studio',
+                    name: 'Studio',
+                    title: 'FishTools Studio',
+                    dev: 'OpenFishTools Team',
+                    category: ['Studio', 'Editor', 'Web App'],
+                    icon: '/assets/projects/studio.svg',
+                    info: 'v0.5.132',
+                    description: 'Browser-based motion graphics video editor with multi-track timeline, keyframes, and extensible effect engine.',
+                    instruction: 'Runs directly in modern browsers (Chrome 94+, Edge 94+, Safari 16.4+).',
+                    html_url: 'https://github.com/openfishtools/Studio',
                     os: [
                         {
-                            name: 'WIN',
+                            name: 'WEB',
                             versions: [
-                                { label: 'v7.4.0 (Windows)', url: 'https://revisionfx.com' }
-                            ]
-                        },
-                        {
-                            name: 'MAC',
-                            versions: [
-                                { label: 'v7.4.0 (macOS)', url: 'https://revisionfx.com' }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    _id: 'res-4',
-                    title: 'Alight Motion Pro 5.0',
-                    dev: 'Alight Creative',
-                    category: ['Software'],
-                    icon: 'assets/icon/Am.png',
-                    info: '148 MB',
-                    instruction: 'Allow installation from unknown sources in Android settings and install APK.',
-                    os: [
-                        {
-                            name: 'ANDROID',
-                            versions: [
-                                { label: 'v5.0.260 (Latest)', url: 'https://alightcreative.com' },
-                                { label: 'v4.5.180 (Stable)', url: 'https://alightcreative.com' }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    _id: 'res-5',
-                    title: 'Real-ESRGAN AI Video Enhancer',
-                    dev: 'xinntao',
-                    category: ['Made By Cutefish', 'Tools'],
-                    icon: 'assets/icon/Node.png',
-                    info: '64 MB',
-                    instruction: 'Extract zip and run with command: realesrgan-ncnn-vulkan.exe -i input.mp4 -o output.mp4 -n realesr-animevideov3.',
-                    os: [
-                        {
-                            name: 'WIN',
-                            versions: [
-                                { label: 'v0.2.5 Vulkan GPU', url: 'https://github.com/xinntao/Real-ESRGAN' }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    _id: 'res-6',
-                    title: 'Adobe After Effects 2024',
-                    dev: 'Adobe',
-                    category: ['Software'],
-                    icon: 'assets/icon/Ae.png',
-                    info: '3.4 GB',
-                    instruction: 'Run Setup.exe, follow on-screen installer instructions, and launch After Effects.',
-                    os: [
-                        {
-                            name: 'WIN',
-                            versions: [
-                                { label: 'v24.2.1 Multi', url: 'https://adobe.com' }
-                            ]
-                        },
-                        {
-                            name: 'MAC',
-                            versions: [
-                                { label: 'v24.2.1 Universal', url: 'https://adobe.com' }
+                                { label: 'v0.5.132 (Web Editor)', url: 'https://github.com/openfishtools/Studio' }
                             ]
                         }
                     ]
                 }
             ];
+
+            try {
+                const cached = sessionStorage.getItem('oft_projects_cache');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allResources = parsed;
+                        fetchSucceeded = true;
+                    }
+                }
+            } catch (e) {}
+
+            if (!fetchSucceeded) {
+                try {
+                    const res = await fetch('/api/resources');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (Array.isArray(data) && data.length > 0) {
+                            allResources = data.filter(r => !r.hidden);
+                            fetchSucceeded = true;
+                            try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Resources] Failed to fetch /api/resources:', e);
+                }
             }
+
+            if (!fetchSucceeded) {
+                try {
+                    const ghRes = await fetch('https://api.github.com/orgs/openfishtools/repos', {
+                        headers: { 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (ghRes.ok) {
+                        const ghRepos = await ghRes.json();
+                        if (Array.isArray(ghRepos)) {
+                            const merged = DEFAULT_OPENFISH_PROJECTS.map(proj => {
+                                const repo = ghRepos.find(r => (r.name || '').toLowerCase() === (proj.name || '').toLowerCase());
+                                if (repo) {
+                                    return {
+                                        ...proj,
+                                        description: repo.description || proj.description,
+                                        stars: repo.stargazers_count !== undefined ? repo.stargazers_count : undefined
+                                    };
+                                }
+                                return proj;
+                            });
+                            allResources = merged;
+                            fetchSucceeded = true;
+                            try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Resources] Failed to fetch GitHub org repos:', e);
+                }
+            }
+
+            if (!fetchSucceeded) {
+                allResources = DEFAULT_OPENFISH_PROJECTS;
+            }
+
             resourcesLoaded = true;
             resourcesLoading = false;
         }
@@ -1578,10 +1587,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         filtered.sort((a, b) => {
-            const aIsCute = (Array.isArray(a.category) ? a.category : [a.category]).includes('Made By Cutefish');
-            const bIsCute = (Array.isArray(b.category) ? b.category : [b.category]).includes('Made By Cutefish');
-            if (aIsCute && !bIsCute) return -1;
-            if (!aIsCute && bIsCute) return 1;
+            const order = ['website', 'web tools', 'fishtools', 'fishtools studio'];
+            const aIdx = order.indexOf((a.title || '').toLowerCase());
+            const bIdx = order.indexOf((b.title || '').toLowerCase());
+            if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+            if (aIdx !== -1) return -1;
+            if (bIdx !== -1) return 1;
             return 0;
         });
 
@@ -2913,7 +2924,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const downloadSection = document.getElementById('res-modal-download-section');
         const verSection = document.getElementById('res-modal-ver-section');
-        const passwordSection = document.getElementById('res-modal-password-section');
         const instrSection = document.getElementById('res-modal-instruction-section');
 
         const downloadBtn = document.getElementById('res-modal-download-btn');
@@ -2921,10 +2931,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const verChipsEl = document.getElementById('res-modal-ver-chips');
         const osChipsEl = document.getElementById('res-modal-os-chips');
 
-        verSection.classList.add('hidden');
-        downloadSection.classList.add('hidden');
-        passwordSection.classList.add('hidden');
-        instrSection.classList.add('hidden');
+        if (verSection) verSection.classList.add('hidden');
+        if (downloadSection) downloadSection.classList.add('hidden');
+        if (instrSection) instrSection.classList.add('hidden');
 
         const adjustModalLayout = (duration = 0.38) => {
             const cardEl = document.getElementById('res-modal-card');
@@ -2958,60 +2967,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 const versions = osVersionMap[selectedOs] || [];
                 const entry = versions.find(v => v.label === selectedVer);
                 if (entry && entry.url) {
-                    downloadBtn.disabled = false;
-                    downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
-                    downloadLabel.textContent = `${OS_LABEL[selectedOs] || selectedOs} • ${selectedVer}`;
+                    if (downloadBtn) {
+                        downloadBtn.disabled = false;
+                        downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
+                    }
+                    if (downloadLabel) downloadLabel.textContent = `${OS_LABEL[selectedOs] || selectedOs} • ${selectedVer}`;
 
-                    downloadSection.classList.remove('hidden');
-                    passwordSection.classList.remove('hidden');
-                    if (resource.instruction) {
+                    if (downloadSection) downloadSection.classList.remove('hidden');
+                    if (resource.instruction && instrSection) {
                         instrSection.classList.remove('hidden');
                     }
                 } else {
-                    downloadBtn.disabled = true;
-                    downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No download link configured';
-                    downloadSection.classList.remove('hidden');
-                    passwordSection.classList.add('hidden');
-                    instrSection.classList.add('hidden');
+                    if (downloadBtn) downloadBtn.disabled = true;
+                    if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No download link configured';
+                    if (downloadSection) downloadSection.classList.remove('hidden');
+                    if (instrSection) instrSection.classList.add('hidden');
                 }
             } else {
-                downloadBtn.disabled = true;
-                downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_modal_select_os')) || 'Select OS & Version';
-                downloadSection.classList.add('hidden');
-                passwordSection.classList.add('hidden');
-                instrSection.classList.add('hidden');
+                if (downloadBtn) downloadBtn.disabled = true;
+                if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_modal_select_os')) || 'Select OS & Version';
+                if (downloadSection) downloadSection.classList.add('hidden');
+                if (instrSection) instrSection.classList.add('hidden');
             }
         };
 
         const renderVerChips = () => {
             if (!selectedOs) {
-                verSection.classList.add('hidden');
+                if (verSection) verSection.classList.add('hidden');
                 adjustModalLayout();
                 return;
             }
             const versions = osVersionMap[selectedOs] || [];
             if (!versions.length) {
                 const noVerText = (window.getTranslation && window.getTranslation('res_no_versions')) || 'No versions available';
-                verChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noVerText}</span>`;
-                verSection.classList.remove('hidden');
+                if (verChipsEl) verChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noVerText}</span>`;
+                if (verSection) verSection.classList.remove('hidden');
                 adjustModalLayout();
                 return;
             }
-            verChipsEl.innerHTML = versions.map(v =>
-                `<button type="button" class="res-popup-chip ${selectedVer === v.label ? 'active' : ''}" data-ver="${v.label}">${v.label}</button>`
-            ).join('');
-            verSection.classList.remove('hidden');
+            if (verChipsEl) {
+                verChipsEl.innerHTML = versions.map(v =>
+                    `<button type="button" class="res-popup-chip ${selectedVer === v.label ? 'active' : ''}" data-ver="${v.label}">${v.label}</button>`
+                ).join('');
+            }
+            if (verSection) verSection.classList.remove('hidden');
             adjustModalLayout();
 
-            verChipsEl.querySelectorAll('.res-popup-chip').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    selectedVer = btn.dataset.ver;
-                    verChipsEl.querySelectorAll('.res-popup-chip').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    updateDownloadBtn();
-                    adjustModalLayout();
+            if (verChipsEl) {
+                verChipsEl.querySelectorAll('.res-popup-chip').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selectedVer = btn.dataset.ver;
+                        verChipsEl.querySelectorAll('.res-popup-chip').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        updateDownloadBtn();
+                        adjustModalLayout();
+                    });
                 });
-            });
+            }
         };
 
         const osSection = document.getElementById('res-modal-os-section');
@@ -3022,7 +3034,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isWebApp) {
             if (osSection) osSection.classList.add('hidden');
-            verSection.classList.add('hidden');
+            if (verSection) verSection.classList.add('hidden');
             
             let launchUrl = '';
             const osKeys = Object.keys(osVersionMap);
@@ -3034,26 +3046,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (launchUrl) {
-                downloadBtn.disabled = false;
-                downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
+                if (downloadBtn) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
+                }
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_launch_apps';
                     downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
                 }
-                downloadLabel.textContent = 'Open in new tab';
+                if (downloadLabel) downloadLabel.textContent = 'Open in new tab';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
-                downloadSection.classList.remove('hidden');
-                passwordSection.classList.add('hidden');
-                if (resource.instruction) instrSection.classList.remove('hidden');
+                if (downloadSection) downloadSection.classList.remove('hidden');
+                if (resource.instruction && instrSection) instrSection.classList.remove('hidden');
             } else {
-                downloadBtn.disabled = true;
+                if (downloadBtn) downloadBtn.disabled = true;
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_launch_apps';
                     downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
                 }
-                downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
+                if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
-                downloadSection.classList.remove('hidden');
+                if (downloadSection) downloadSection.classList.remove('hidden');
             }
             adjustModalLayout();
         } else {
@@ -3066,48 +3079,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (osSection) osSection.classList.remove('hidden');
             const osKeys = Object.keys(osVersionMap);
             if (osKeys.length > 0) {
-                osChipsEl.innerHTML = osKeys.map(key =>
-                    `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
-                        ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
-                    </button>`
-                ).join('');
-                osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        selectedOs = btn.dataset.os;
-                        selectedVer = null;
-                        osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
+                if (osChipsEl) {
+                    osChipsEl.innerHTML = osKeys.map(key =>
+                        `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
+                            ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
+                        </button>`
+                    ).join('');
+                    osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            selectedOs = btn.dataset.os;
+                            selectedVer = null;
+                            osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
 
-                        downloadSection.classList.add('hidden');
-                        passwordSection.classList.add('hidden');
-                        instrSection.classList.add('hidden');
+                            if (downloadSection) downloadSection.classList.add('hidden');
+                            if (instrSection) instrSection.classList.add('hidden');
 
-                        renderVerChips();
+                            renderVerChips();
+                        });
                     });
-                });
+                }
             } else {
                 const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
-                osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
+                if (osChipsEl) osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
             }
         }
 
-        document.getElementById('res-modal-password').textContent = RESOURCE_PASSWORD;
-        const copyBtn = document.getElementById('res-modal-copy-btn');
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(RESOURCE_PASSWORD).then(() => {
-                const icon = copyBtn.querySelector('.material-symbols-rounded');
-                const text = copyBtn.querySelector('span:not(.material-symbols-rounded)');
-                if (icon) icon.textContent = 'check';
-                if (text) text.textContent = (window.getTranslation && window.getTranslation('copied')) || 'Copied!';
-                setTimeout(() => {
-                    if (icon) icon.textContent = 'content_copy';
-                    if (text) text.textContent = (window.getTranslation && window.getTranslation('res_modal_copy')) || 'Copy';
-                }, 1800);
-            });
-        };
-
         const instrEl = document.getElementById('res-modal-instruction');
-        if (resource.instruction) {
+        if (resource.instruction && instrEl) {
             instrEl.textContent = resource.instruction;
         }
     };
