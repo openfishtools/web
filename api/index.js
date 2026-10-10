@@ -59,12 +59,20 @@ app.use((req, res, next) => {
     next();
 });
 
-// API Protection Shield - Block direct external access outside cutefish.my.id
+// API Protection Shield - Block direct external access outside authorized domains
 const PROXY_SECRET = process.env.PROXY_SECRET;
 
 app.use((req, res, next) => {
-    // Allow localhost during local development
-    if (req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
+    const host = (req.hostname || '').toLowerCase();
+
+    // Allow localhost, Vercel deployments (*.vercel.app), and official domains
+    if (
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host.endsWith('.vercel.app') ||
+        host === 'cutefish.my.id' ||
+        host === 'www.cutefish.my.id'
+    ) {
         return next();
     }
 
@@ -73,15 +81,19 @@ app.use((req, res, next) => {
         return next();
     }
 
-    // Protect all /api and /realesrgan routes
+    // Protect /api and /realesrgan routes from unauthorized external crawlers
     if (req.path.startsWith('/api') || req.path.startsWith('/realesrgan')) {
         const clientSecret = req.headers['x-cf-secret'];
-        if (!PROXY_SECRET || clientSecret !== PROXY_SECRET) {
-            return res.status(403).json({
-                error: 'Forbidden',
-                message: 'Please use cutefish.my.id to access this feature instead of using this API directly, AND STOP MAKING ME SWAP VERCEL ACCOUNTS OVER AND OVER AGAIN JUST TO RESET THE VERCEL LIMIT!'
-            });
+        if (PROXY_SECRET && clientSecret === PROXY_SECRET) {
+            return next();
         }
+        if (!PROXY_SECRET) {
+            return next();
+        }
+        return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Please use cutefish.my.id or the official app to access this API.'
+        });
     }
     next();
 });
