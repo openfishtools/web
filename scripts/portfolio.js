@@ -1537,17 +1537,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (ghRes.ok) {
                         const ghRepos = await ghRes.json();
                         if (Array.isArray(ghRepos)) {
-                            const merged = DEFAULT_OPENFISH_PROJECTS.map(proj => {
+                            const merged = await Promise.all(DEFAULT_OPENFISH_PROJECTS.map(async (proj) => {
                                 const repo = ghRepos.find(r => (r.name || '').toLowerCase() === (proj.name || '').toLowerCase());
+                                const updated = { ...proj };
                                 if (repo) {
-                                    return {
-                                        ...proj,
-                                        description: repo.description || proj.description,
-                                        stars: repo.stargazers_count !== undefined ? repo.stargazers_count : undefined
-                                    };
+                                    updated.description = repo.description || proj.description;
+                                    if (repo.stargazers_count !== undefined) updated.stars = repo.stargazers_count;
                                 }
-                                return proj;
-                            });
+                                try {
+                                    const rawPkg = await fetch(`https://raw.githubusercontent.com/openfishtools/${proj.name}/main/package.json`, { signal: AbortSignal.timeout(2500) });
+                                    if (rawPkg.ok) {
+                                        const pkg = await rawPkg.json();
+                                        if (pkg.version) {
+                                            const vStr = `v${pkg.version.replace(/^v/, '')}`;
+                                            updated.info = vStr;
+                                            if (updated.os && Array.isArray(updated.os)) {
+                                                updated.os = updated.os.map(o => ({
+                                                    ...o,
+                                                    versions: (o.versions || []).map((ver, idx) => {
+                                                        if (idx === 0) {
+                                                            const sub = ver.label.includes('(') ? ` (${ver.label.split('(')[1]}` : '';
+                                                            return { ...ver, label: `${vStr}${sub}` };
+                                                        }
+                                                        return ver;
+                                                    })
+                                                }));
+                                            }
+                                        }
+                                    }
+                                } catch (err) {}
+                                return updated;
+                            }));
                             allResources = merged;
                             fetchSucceeded = true;
                             try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}

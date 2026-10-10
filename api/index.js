@@ -2142,14 +2142,32 @@ async function getOpenFishProjects() {
         if (resp.ok) {
             const repos = await resp.json();
             if (Array.isArray(repos)) {
-                repos.forEach(repo => {
+                await Promise.allSettled(repos.map(async (repo) => {
                     const match = defaultProjects.find(p => (p.name || '').toLowerCase() === (repo.name || '').toLowerCase());
                     if (match) {
                         if (repo.description) match.description = repo.description;
                         if (repo.stargazers_count !== undefined) match.stars = repo.stargazers_count;
                         if (repo.updated_at) match.updated_at = repo.updated_at;
+                        try {
+                            const rawPkg = await fetch(`https://raw.githubusercontent.com/openfishtools/${repo.name}/main/package.json`, { signal: AbortSignal.timeout(3000) });
+                            if (rawPkg.ok) {
+                                const pkg = await rawPkg.json();
+                                if (pkg.version) {
+                                    const vStr = `v${pkg.version.replace(/^v/, '')}`;
+                                    match.info = vStr;
+                                    if (match.os && Array.isArray(match.os)) {
+                                        match.os.forEach(o => {
+                                            if (Array.isArray(o.versions) && o.versions[0]) {
+                                                const sub = o.versions[0].label.includes('(') ? ` (${o.versions[0].label.split('(')[1]}` : '';
+                                                o.versions[0].label = `${vStr}${sub}`;
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (err) {}
                     }
-                });
+                }));
             }
         }
     } catch (e) {
