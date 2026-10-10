@@ -1458,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     _id: 'res-cep',
                     name: 'CEP',
                     title: 'FishTools',
-                    dev: 'cutefishaep Team',
+                    dev: 'OpenFishTools Team',
                     category: ['Extension', 'After Effects'],
                     icon: '/assets/projects/cep.svg',
                     info: 'v1.3.9',
