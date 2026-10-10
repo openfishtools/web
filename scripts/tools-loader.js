@@ -14,6 +14,12 @@
     const API_ENDPOINT = '/api/tools';
     const LOCAL_FALLBACK = 'scripts/tools-bundle.js';
 
+    // Configurable delays for smooth UI transitions and throttled execution
+    const FETCH_DELAY_MS = 600; // Delay before fetch to let skeleton display smoothly
+    const TOOL_STAGGER_DELAY_MS = 40; // Subtle throttle between loading scripts
+
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     function loadScript(src) {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -69,6 +75,11 @@
     }
 
     async function discoverTools() {
+        // Initial delay so skeleton loading animation displays smoothly without flash
+        if (FETCH_DELAY_MS > 0) {
+            await sleep(FETCH_DELAY_MS);
+        }
+
         // 1. Try local serverless endpoint /api/tools
         try {
             const res = await fetch(API_ENDPOINT, { cache: 'no-cache' });
@@ -113,12 +124,15 @@
             }
         }
 
-        // 2. Load main tools in sequence
+        // 2. Load main tools in sequence with smooth stagger
         let loadedCount = 0;
         for (const toolPath of manifest.tools) {
             try {
                 await loadScriptWithFallback(toolPath, cacheBuster);
                 loadedCount++;
+                if (TOOL_STAGGER_DELAY_MS > 0) {
+                    await sleep(TOOL_STAGGER_DELAY_MS);
+                }
             } catch (err) {
                 console.warn(`[ToolsLoader] Failed to load tool ${toolPath}:`, err);
             }

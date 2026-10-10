@@ -1835,8 +1835,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this._registry.set(id, toolDef);
             allTools = Array.from(this._registry.values());
             if (typeof renderTools === 'function') {
-                const searchInput = document.getElementById('tools-search');
-                renderTools(searchInput ? searchInput.value : '', activeToolCategory);
+                if (window._renderToolsRaf) cancelAnimationFrame(window._renderToolsRaf);
+                window._renderToolsRaf = requestAnimationFrame(() => {
+                    const searchInput = document.getElementById('tools-search');
+                    renderTools(searchInput ? searchInput.value : '', activeToolCategory);
+                });
             }
         },
         get(id) {
