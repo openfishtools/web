@@ -2300,7 +2300,7 @@ body:not([data-view="home"]) .signpost-overlay {
     padding: 14px 16px;
     border-radius: 14px;
     border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
-    max-height: 220px;
+    max-height: 280px;
     overflow-y: auto;
     overscroll-behavior: contain;
     word-break: break-word;
@@ -2323,6 +2323,22 @@ body:not([data-view="home"]) .signpost-overlay {
 .res-modal-desc-box::-webkit-scrollbar-thumb:hover,
 .res-modal-instruction-box::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.32);
+}
+
+.res-modal-desc-box .gh-readme-center {
+    text-align: center;
+    margin: 8px 0 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.res-modal-desc-box .gh-readme-center p {
+    text-align: center;
+    margin: 4px 0;
+}
+.res-modal-desc-box .gh-readme-center img {
+    margin: 0 auto;
 }
 
 .res-modal-desc-box h1,
@@ -2378,6 +2394,13 @@ body:not([data-view="home"]) .signpost-overlay {
     border-radius: 6px;
 }
 
+.res-modal-desc-box img[src*="shields.io"],
+.res-modal-desc-box a img {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 2px 3px;
+}
+
 .res-modal-desc-box code {
     font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
     font-size: 11.5px;
@@ -2398,10 +2421,38 @@ body:not([data-view="home"]) .signpost-overlay {
     padding: 0;
 }
 
+.res-modal-desc-box table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    overflow-x: auto;
+    display: block;
+    font-size: 12.5px;
+}
+.res-modal-desc-box th,
+.res-modal-desc-box td {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 10px;
+    text-align: left;
+}
+.res-modal-desc-box th {
+    background: rgba(255, 255, 255, 0.06);
+    font-weight: 600;
+}
+
 .res-modal-desc-box hr {
     border: none;
     border-top: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
     margin: 12px 0;
+}
+
+.res-modal-desc-box blockquote {
+    border-left: 3px solid var(--md-sys-color-primary, #b6ff00);
+    margin: 8px 0;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0 6px 6px 0;
 }
 
 .res-modal-password-card {
@@ -2479,11 +2530,8 @@ body:not([data-view="home"]) .signpost-overlay {
     width: 100%;
     box-sizing: border-box;
     flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
     background: var(--md-sys-color-surface-container);
-    padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
-    margin: auto -18px -24px;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 10;
 }
@@ -3730,8 +3778,8 @@ body:not([data-view="home"]) .signpost-overlay {
         gap: 12px !important;
     }
     .res-modal-footer {
-        padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
-        margin: auto -16px -20px !important;
+        padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+        margin: 0 !important;
     }
     .res-modal-os-chips {
         grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
@@ -3750,8 +3798,13 @@ body:not([data-view="home"]) .signpost-overlay {
         height: 44px !important;
         font-size: 13px !important;
     }
-    .res-modal-github-btn {
+    .res-modal-github-btn:not(.res-github-btn-primary) {
         width: 44px !important;
+        height: 44px !important;
+    }
+    .res-modal-github-btn.res-github-btn-primary {
+        width: 100% !important;
+        flex: 1 !important;
         height: 44px !important;
     }
 }@media (max-width: 480px){

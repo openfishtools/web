@@ -1503,11 +1503,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
 
             try {
-                const cached = sessionStorage.getItem('oft_projects_cache');
+                const cached = sessionStorage.getItem('oft_projects_cache_v3');
                 if (cached) {
                     const parsed = JSON.parse(cached);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        allResources = parsed;
+                        allResources = parsed.map(r => ({
+                            ...r,
+                            dev: (r.dev && !r.dev.toLowerCase().includes('team')) ? r.dev : 'OpenFishTools'
+                        }));
                         fetchSucceeded = true;
                     }
                 }
@@ -1515,15 +1518,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!fetchSucceeded) {
                 try {
-                    const res = await fetch('/api/resources');
+                    const res = await fetch('/api/resources?fresh=1');
                     if (res.ok) {
                         const data = await res.json();
                         if (Array.isArray(data) && data.length > 0) {
-                            const visible = data.filter(r => !r.hidden);
+                            const visible = data.filter(r => !r.hidden).map(r => ({
+                                ...r,
+                                dev: (r.dev && !r.dev.toLowerCase().includes('team')) ? r.dev : 'OpenFishTools'
+                            }));
                             if (visible.length > 0) {
                                 allResources = visible;
                                 fetchSucceeded = true;
-                                try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}
+                                try { sessionStorage.setItem('oft_projects_cache_v3', JSON.stringify(allResources)); } catch (e) {}
                             }
                         }
                     }
@@ -1661,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="resource-info-compact">
                         <h4 class="resource-title-compact">${r.title}</h4>
-                        <p class="resource-dev-compact">${r.dev || 'cutefishaep Team'}</p>
+                        <p class="resource-dev-compact">${(r.dev && !r.dev.toLowerCase().includes('team')) ? r.dev : 'OpenFishTools'}</p>
                         <div class="resource-meta-compact">
                             ${osIconsHtml ? `<span class="os-chip">${osIconsHtml}</span>` : ''}
                             <span class="resource-info-text">${r.info || ''}</span>
@@ -2983,50 +2989,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<p>${text}</p>`;
     }
 
-    function cleanReadmeForModal(md, resourceTitle) {
+    function formatMarkdown(md, repoName) {
         if (!md) return '';
         let text = String(md);
 
-        // Extract bold summary sentence from center div wrapper if present
+        // Preprocess <div align="center">...</div> to ensure inner markdown (headings, badges, bold, images) is rendered
         text = text.replace(/<div align="center">([\s\S]*?)<\/div>/gi, (match, inner) => {
-            const boldMatch = inner.match(/\*\*([^*]+)\*\*/);
-            return boldMatch ? `\n\n**${boldMatch[1].trim()}**\n\n` : '';
+            let innerHtml = '';
+            if (typeof window.marked !== 'undefined' && typeof window.marked.parse === 'function') {
+                innerHtml = window.marked.parse(inner.trim(), { gfm: true, breaks: true });
+            } else {
+                innerHtml = simpleMarkdownParse(inner.trim());
+            }
+            return `<div class="gh-readme-center">${innerHtml}</div>`;
         });
 
-        // Strip language navigation links
-        text = text.replace(/\[English\]\([^)]+\)\s*•\s*\[[^\]]+\]\([^)]+\)/gi, '');
-        text = text.replace(/<a name="[^"]+"><\/a>/gi, '');
-
-        // Strip duplicate main headers
-        if (resourceTitle) {
-            const escaped = resourceTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            text = text.replace(new RegExp(`^#\\s+${escaped}[^\\n]*\\n`, 'gim'), '');
-        }
-        text = text.replace(/^#\s+[^\n]+\n/m, '');
-
-        // Strip shield badges
-        text = text.replace(/\[!\[[^\]]*\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/gi, '');
-        text = text.replace(/!\[[^\]]*\]\([^)]*img\.shields\.io[^)]*\)/gi, '');
-
-        // Strip leading horizontal rules and clean newlines
-        text = text.replace(/^\s*---\s*\n+/g, '');
-        text = text.replace(/\n{3,}/g, '\n\n').trim();
-        return text;
-    }
-
-    function formatMarkdown(md, repoName, resourceTitle) {
-        if (!md) return '';
-        const cleanedMd = cleanReadmeForModal(md, resourceTitle);
         let html = '';
         if (typeof window.marked !== 'undefined' && typeof window.marked.parse === 'function') {
-            html = window.marked.parse(cleanedMd, { gfm: true, breaks: true });
+            html = window.marked.parse(text, { gfm: true, breaks: true });
         } else {
-            html = simpleMarkdownParse(cleanedMd);
+            html = simpleMarkdownParse(text);
         }
+
         if (repoName) {
+            // Fix relative URLs in href to point to the repository blob on GitHub
             html = html.replace(/href="(?!https?:\/\/|#|mailto:)([^"]+)"/g, (match, path) => {
                 return `href="https://github.com/openfishtools/${repoName}/blob/main/${path.replace(/^\.?\//, '')}" target="_blank" rel="noopener noreferrer"`;
             });
+            // Fix relative image src to raw GitHub usercontent
+            html = html.replace(/src="(?!https?:\/\/|data:)([^"]+)"/g, (match, path) => {
+                return `src="https://raw.githubusercontent.com/openfishtools/${repoName}/main/${path.replace(/^\.?\//, '')}"`;
+            });
+            // Ensure all links open safely in a new window
             html = html.replace(/<a (?!.*?target=)/g, '<a target="_blank" rel="noopener noreferrer" ');
         }
         return html;
@@ -3314,6 +3308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         osChipsEl.innerHTML = osKeys.map(key =>
                             `<button type="button" class="res-popup-chip os-chip-btn ${selectedOs === key ? 'active' : ''}" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
                                 ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
+                                <span>${OS_LABEL[key] || key}</span>
                             </button>`
                         ).join('');
                         osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
@@ -3378,7 +3373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const instrEl = document.getElementById('res-modal-instruction');
         if (instrEl) {
             instrEl.className = 'res-modal-instruction-box res-modal-desc-box';
-            instrEl.innerHTML = formatMarkdown(descText, resource.name, resource.title);
+            instrEl.innerHTML = formatMarkdown(descText, resource.name);
             if (instrSection) instrSection.classList.remove('hidden');
         } else if (instrSection) {
             instrSection.classList.add('hidden');
@@ -3386,7 +3381,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fetch formatted README.md from repo
         if (resource.name && instrEl) {
-            const readmeCacheKey = `oft_readme_${resource.name}`;
+            const readmeCacheKey = `oft_readme_v2_${resource.name}`;
             const fetchReadme = async () => {
                 let md = null;
                 try {
@@ -3405,7 +3400,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (_) {}
                 }
                 if (md && instrEl) {
-                    instrEl.innerHTML = formatMarkdown(md, resource.name, resource.title);
+                    instrEl.innerHTML = formatMarkdown(md, resource.name);
                     adjustModalLayout();
                 }
             };
@@ -3435,9 +3430,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (Array.isArray(releases) && releases.length > 0) {
                     resource.releases = releases;
+                    const hadPlatforms = hasPlatformBinaries();
                     integrateReleases(releases);
-                    setupModalActions();
-                    if (selectedOs) {
+                    const nowPlatforms = hasPlatformBinaries();
+                    if (!hadPlatforms && nowPlatforms) {
+                        setupModalActions();
+                    } else if (selectedOs) {
                         const curVers = osVersionMap[selectedOs] || [];
                         if (!selectedVer && curVers.length > 0) {
                             selectedVer = curVers[0].label;
@@ -3445,6 +3443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderVerChips();
                         updateDownloadBtn();
                     }
+                    adjustModalLayout();
                 }
             };
             searchReleases();
