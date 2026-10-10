@@ -104,23 +104,54 @@
         }
 
         // 2. Fallback to GitHub Trees API
-        const ghRes = await fetch(GITHUB_TREES_API, {
-            headers: { 'Accept': 'application/vnd.github.v3+json' }
-        });
-        if (!ghRes.ok) {
-            throw new Error(`GitHub API returned status ${ghRes.status}`);
-        }
-        const ghData = await ghRes.json();
-        if (!Array.isArray(ghData.tree)) {
-            throw new Error('Invalid GitHub tree structure');
+        try {
+            const ghRes = await fetch(GITHUB_TREES_API, {
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (ghRes.ok) {
+                const ghData = await ghRes.json();
+                if (Array.isArray(ghData.tree)) {
+                    const manifest = parseTreeToManifest(ghData.tree);
+                    manifest.sha = ghData.sha || null;
+                    manifest.timestamp = Date.now();
+                    try { sessionStorage.setItem(MANIFEST_CACHE_KEY, JSON.stringify(manifest)); } catch (_) {}
+                    console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools dynamically from GitHub web-tools tree (sha: ${manifest.sha || 'latest'}).`);
+                    return manifest;
+                }
+            }
+        } catch (ghErr) {
+            console.debug('[ToolsLoader] GitHub Trees API unavailable:', ghErr.message);
         }
 
-        const manifest = parseTreeToManifest(ghData.tree);
-        manifest.sha = ghData.sha || null;
-        manifest.timestamp = Date.now();
-        try { sessionStorage.setItem(MANIFEST_CACHE_KEY, JSON.stringify(manifest)); } catch (_) {}
-        console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools dynamically from GitHub web-tools tree (sha: ${manifest.sha || 'latest'}).`);
-        return manifest;
+        // 3. Guaranteed static manifest fallback
+        return {
+            helpers: [
+                'Method/finalize.js',
+                'Method/compress.js',
+                'Method/emergencymethod.js',
+                'Method/wmvpatch.js',
+                'Method/FRYMethod.js',
+                'Method/binarypatch.js',
+                'Method/fpspatch.js',
+                'Method/streamshield.js',
+                'ai/upscale-gpu-enhancer.js'
+            ],
+            tools: [
+                'ai/rembg-tool.js',
+                'ai/upscale-tool.js',
+                'converters/ae-to-am-beatmark-tool.js',
+                'converters/fivemb-generator-tool.js',
+                'tiktok/tiktok-downloader-tool.js',
+                'tiktok/tiktok-quality-tool.js',
+                'tiktok/tiktok-stats-tool.js',
+                'video/audio-extractor-tool.js',
+                'video/image-sequence-tool.js',
+                'video/video-compressor-tool.js',
+                'video/video-interpolation-tool.js'
+            ],
+            sha: 'main',
+            timestamp: Date.now()
+        };
     }
 
     async function loadRemoteTools() {

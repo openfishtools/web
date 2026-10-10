@@ -302,10 +302,36 @@ app.get('/api/tools', async (req, res) => {
         if (toolsManifestCache.data) {
             return res.json(toolsManifestCache.data);
         }
-        return res.status(502).json({
-            success: false,
-            error: err.message,
-            fallbackRequired: true
+        return res.json({
+            success: true,
+            isFallback: true,
+            sha: 'main',
+            updatedAt: new Date().toISOString(),
+            helpers: [
+                'Method/finalize.js',
+                'Method/compress.js',
+                'Method/emergencymethod.js',
+                'Method/wmvpatch.js',
+                'Method/FRYMethod.js',
+                'Method/binarypatch.js',
+                'Method/fpspatch.js',
+                'Method/streamshield.js',
+                'ai/upscale-gpu-enhancer.js'
+            ],
+            tools: [
+                'ai/rembg-tool.js',
+                'ai/upscale-tool.js',
+                'converters/ae-to-am-beatmark-tool.js',
+                'converters/fivemb-generator-tool.js',
+                'tiktok/tiktok-downloader-tool.js',
+                'tiktok/tiktok-quality-tool.js',
+                'tiktok/tiktok-stats-tool.js',
+                'video/audio-extractor-tool.js',
+                'video/image-sequence-tool.js',
+                'video/video-compressor-tool.js',
+                'video/video-interpolation-tool.js'
+            ],
+            totalTools: 11
         });
     }
 });
