@@ -219,6 +219,95 @@ app.get('/api/version', (req, res) => {
     res.json(getDynamicBuildInfo());
 });
 
+let toolsManifestCache = {
+    data: null,
+    timestamp: 0
+};
+const TOOLS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+app.get('/api/tools', async (req, res) => {
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    const now = Date.now();
+    if (toolsManifestCache.data && (now - toolsManifestCache.timestamp) < TOOLS_CACHE_TTL_MS) {
+        return res.json(toolsManifestCache.data);
+    }
+
+    try {
+        const headers = {
+            'User-Agent': 'OpenFishTools-App',
+            'Accept': 'application/vnd.github.v3+json'
+        };
+        if (process.env.GITHUB_TOKEN) {
+            headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+        }
+        const resp = await fetch('https://api.github.com/repos/openfishtools/web-tools/git/trees/main?recursive=1', {
+            headers,
+            signal: AbortSignal.timeout(6000)
+        });
+
+        if (!resp.ok) {
+            throw new Error(`GitHub Trees API responded with status ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const tree = Array.isArray(data.tree) ? data.tree : [];
+
+        const jsFiles = tree
+            .filter(item => item && item.type === 'blob' && typeof item.path === 'string' && item.path.endsWith('.js'))
+            .map(item => item.path)
+            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.'));
+
+        const helpers = [];
+        const tools = [];
+
+        for (const p of jsFiles) {
+            if (p.endsWith('-tool.js')) {
+                tools.push(p);
+            } else {
+                helpers.push(p);
+            }
+        }
+
+        helpers.sort((a, b) => {
+            const getScore = (path) => {
+                if (path === 'Method/finalize.js') return 1;
+                if (path === 'Method/compress.js') return 2;
+                if (path.startsWith('Method/item/')) return 3;
+                if (path.startsWith('Method/')) return 4;
+                return 5;
+            };
+            return getScore(a) - getScore(b);
+        });
+
+        tools.sort();
+
+        const manifest = {
+            success: true,
+            updatedAt: new Date().toISOString(),
+            helpers,
+            tools,
+            totalTools: tools.length
+        };
+
+        toolsManifestCache = {
+            data: manifest,
+            timestamp: now
+        };
+
+        return res.json(manifest);
+    } catch (err) {
+        console.warn('[/api/tools] Failed to fetch dynamic tools tree:', err.message);
+        if (toolsManifestCache.data) {
+            return res.json(toolsManifestCache.data);
+        }
+        return res.status(502).json({
+            success: false,
+            error: err.message,
+            fallbackRequired: true
+        });
+    }
+});
+
 app.get('/realesrgan/*', async (req, res) => {
     try {
         const targetUrl = `https://upscale.chino.icu${req.originalUrl}`;

@@ -1812,11 +1812,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.AppTools = {
         _registry: new Map(),
         register(toolDef) {
-            if (!toolDef) return;
+            if (!toolDef || typeof toolDef !== 'object') return;
             const id = toolDef.id || toolDef._id;
-            if (!id) return;
+            if (!id || typeof id !== 'string') {
+                console.warn('[AppTools] Ignored tool registration: missing valid id.', toolDef);
+                return;
+            }
+            if (!toolDef.title || !toolDef.icon) {
+                console.warn(`[AppTools] Ignored script registration for '${id}': missing title or icon (not a valid main tool).`);
+                return;
+            }
+            if (toolDef.isTool === false) {
+                console.warn(`[AppTools] Skipping '${id}': isTool is explicitly false.`);
+                return;
+            }
+            toolDef.isTool = true;
             toolDef.id = id;
             toolDef._id = id;
+            if (!toolDef.category) {
+                toolDef.category = ['Tools'];
+            }
             this._registry.set(id, toolDef);
             allTools = Array.from(this._registry.values());
             if (typeof renderTools === 'function') {
