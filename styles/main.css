@@ -2271,8 +2271,8 @@ body:not([data-view="home"]) .signpost-overlay {
     color: var(--md-sys-color-on-surface);
     font-size: 13px;
     font-weight: 600;
-    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-    letter-spacing: 0.3px;
+    font-family: inherit;
+    letter-spacing: 0.2px;
     cursor: pointer;
     transition: all 0.2s var(--ease-spring-soft);
 }

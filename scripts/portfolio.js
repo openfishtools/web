@@ -3308,7 +3308,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         osChipsEl.innerHTML = osKeys.map(key =>
                             `<button type="button" class="res-popup-chip os-chip-btn ${selectedOs === key ? 'active' : ''}" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
                                 ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
-                                <span>${OS_LABEL[key] || key}</span>
                             </button>`
                         ).join('');
                         osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
