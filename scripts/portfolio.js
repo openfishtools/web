@@ -2949,8 +2949,55 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!str) return '';
         const m = String(str).match(/(\d+(?:\.\d+)+)/);
         if (m) return m[1];
-        const cleaned = String(str).replace(/[^\d.]/g, '').replace(/^\.+|\.+$/g, '');
-        return cleaned || String(str);
+        const single = String(str).match(/(\d+)/);
+        if (single) return single[1];
+        return '';
+    }
+
+    function simpleMarkdownParse(md) {
+        if (!md) return '';
+        let text = String(md)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        text = text.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+        text = text.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+        text = text.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+
+        text = text.replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>');
+        text = text.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+        text = text.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+
+        text = text.replace(/\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)/gim, '<a href="$3" target="_blank" rel="noopener noreferrer"><img src="$2" alt="$1"></a>');
+        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1">');
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+        text = text.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
+        text = text.replace(/`([^`]+)`/gim, '<code>$1</code>');
+
+        text = text.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+        text = text.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
+
+        text = text.replace(/\n\s*\n/gim, '</p><p>');
+        return `<p>${text}</p>`;
+    }
+
+    function formatMarkdown(md, repoName) {
+        if (!md) return '';
+        let html = '';
+        if (typeof window.marked !== 'undefined' && typeof window.marked.parse === 'function') {
+            html = window.marked.parse(md, { gfm: true, breaks: true });
+        } else {
+            html = simpleMarkdownParse(md);
+        }
+        if (repoName) {
+            html = html.replace(/href="(?!https?:\/\/|#|mailto:)([^"]+)"/g, (match, path) => {
+                return `href="https://github.com/openfishtools/${repoName}/blob/main/${path.replace(/^\.?\//, '')}" target="_blank" rel="noopener noreferrer"`;
+            });
+            html = html.replace(/<a (?!.*?target=)/g, '<a target="_blank" rel="noopener noreferrer" ');
+        }
+        return html;
     }
 
     const populateResourceDetails = (resource) => {
@@ -2965,7 +3012,7 @@ document.addEventListener('DOMContentLoaded', () => {
             osVersionMap[key] = (o.versions || []).map(v => ({
                 label: cleanVersionStr(v.label || resource.info),
                 url: v.url
-            }));
+            })).filter(v => !!v.label && /^\d+(\.\d+)*$/.test(v.label));
         });
 
         // Integrate releases assets if present
@@ -2974,19 +3021,52 @@ document.addEventListener('DOMContentLoaded', () => {
             const winList = osVersionMap['WIN'] ? [...osVersionMap['WIN']] : [];
             const macList = osVersionMap['MAC'] ? [...osVersionMap['MAC']] : [];
             releases.forEach(rel => {
-                const ver = cleanVersionStr(rel.tag_name || rel.name) || cleanVersionStr(resource.info) || '1.3.9';
+                let ver = cleanVersionStr(rel.tag_name) || cleanVersionStr(rel.name);
                 const assets = rel.assets || [];
+                if (!ver) {
+                    for (const a of assets) {
+                        const av = cleanVersionStr(a.name);
+                        if (av) { ver = av; break; }
+                    }
+                }
+                if (!ver) {
+                    ver = cleanVersionStr(resource.info);
+                }
+                if (!ver || !/^\d+(\.\d+)*$/.test(ver)) return;
+
                 const exe = assets.find(a => /\.(exe|msi)$/i.test(a.name)) || assets.find(a => /\.zip$/i.test(a.name));
                 const mac = assets.find(a => /\.(dmg|pkg)$/i.test(a.name)) || assets.find(a => /\.zip$/i.test(a.name));
-                if (exe && !winList.some(v => v.label === ver)) {
-                    winList.push({ label: ver, url: exe.browser_download_url });
+                if (exe) {
+                    const existing = winList.find(v => v.label === ver);
+                    if (existing) {
+                        existing.url = exe.browser_download_url;
+                    } else {
+                        winList.push({ label: ver, url: exe.browser_download_url });
+                    }
                 }
-                if (mac && !macList.some(v => v.label === ver)) {
-                    macList.push({ label: ver, url: mac.browser_download_url });
+                if (mac) {
+                    const existing = macList.find(v => v.label === ver);
+                    if (existing) {
+                        existing.url = mac.browser_download_url;
+                    } else {
+                        macList.push({ label: ver, url: mac.browser_download_url });
+                    }
                 }
             });
-            if (winList.length > 0) osVersionMap['WIN'] = winList;
-            if (macList.length > 0) osVersionMap['MAC'] = macList;
+
+            const sanitizeVersions = (list) => {
+                const map = new Map();
+                list.forEach(item => {
+                    const clean = cleanVersionStr(item.label);
+                    if (clean && /^\d+(\.\d+)*$/.test(clean) && !map.has(clean)) {
+                        map.set(clean, { label: clean, url: item.url });
+                    }
+                });
+                return Array.from(map.values());
+            };
+
+            if (winList.length > 0) osVersionMap['WIN'] = sanitizeVersions(winList);
+            if (macList.length > 0) osVersionMap['MAC'] = sanitizeVersions(macList);
         };
 
         if (resource.releases) {
@@ -3230,11 +3310,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const descText = resource.description || resource.instruction || '';
         const instrEl = document.getElementById('res-modal-instruction');
-        if (descText && instrEl) {
-            instrEl.textContent = descText;
+        if (instrEl) {
+            instrEl.className = 'res-modal-instruction-box res-modal-desc-box';
+            instrEl.innerHTML = formatMarkdown(descText, resource.name);
             if (instrSection) instrSection.classList.remove('hidden');
         } else if (instrSection) {
             instrSection.classList.add('hidden');
+        }
+
+        // Fetch formatted README.md from repo
+        if (resource.name && instrEl) {
+            const readmeCacheKey = `oft_readme_${resource.name}`;
+            const fetchReadme = async () => {
+                let md = null;
+                try {
+                    const cached = sessionStorage.getItem(readmeCacheKey);
+                    if (cached) md = cached;
+                } catch (_) {}
+                if (!md) {
+                    try {
+                        const r = await fetch(`https://raw.githubusercontent.com/openfishtools/${resource.name}/main/README.md`, { signal: AbortSignal.timeout(4000) });
+                        if (r.ok) {
+                            md = await r.text();
+                            if (md) {
+                                try { sessionStorage.setItem(readmeCacheKey, md); } catch (_) {}
+                            }
+                        }
+                    } catch (_) {}
+                }
+                if (md && instrEl) {
+                    instrEl.innerHTML = formatMarkdown(md, resource.name);
+                    adjustModalLayout();
+                }
+            };
+            fetchReadme();
         }
 
         // Background release search for latest assets (.exe, .pkg, .dmg)

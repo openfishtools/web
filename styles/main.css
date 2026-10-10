@@ -2289,12 +2289,114 @@ body:not([data-view="home"]) .signpost-overlay {
 .res-modal-instruction-box,
 .res-modal-desc-box {
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.65;
     color: var(--md-sys-color-on-surface);
     background: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.04));
     padding: 14px 16px;
     border-radius: 14px;
     border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    word-break: break-word;
+}
+
+.res-modal-desc-box::-webkit-scrollbar,
+.res-modal-instruction-box::-webkit-scrollbar {
+    width: 6px;
+}
+.res-modal-desc-box::-webkit-scrollbar-track,
+.res-modal-instruction-box::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+}
+.res-modal-desc-box::-webkit-scrollbar-thumb,
+.res-modal-instruction-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+}
+.res-modal-desc-box::-webkit-scrollbar-thumb:hover,
+.res-modal-instruction-box::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+.res-modal-desc-box h1,
+.res-modal-desc-box h2,
+.res-modal-desc-box h3,
+.res-modal-desc-box h4 {
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
+    line-height: 1.3;
+}
+.res-modal-desc-box h1:first-child,
+.res-modal-desc-box h2:first-child,
+.res-modal-desc-box h3:first-child,
+.res-modal-desc-box div:first-child > h1 {
+    margin-top: 0;
+}
+.res-modal-desc-box h1 { font-size: 16px; }
+.res-modal-desc-box h2 { font-size: 15px; }
+.res-modal-desc-box h3 { font-size: 14px; }
+.res-modal-desc-box h4 { font-size: 13px; }
+
+.res-modal-desc-box p {
+    margin: 6px 0;
+    line-height: 1.6;
+}
+
+.res-modal-desc-box ul,
+.res-modal-desc-box ol {
+    margin: 6px 0 6px 20px;
+    padding: 0;
+}
+
+.res-modal-desc-box li {
+    margin-bottom: 4px;
+}
+
+.res-modal-desc-box a {
+    color: var(--md-sys-color-primary, #b6ff00);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.res-modal-desc-box a:hover {
+    opacity: 0.85;
+}
+
+.res-modal-desc-box img {
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+    display: inline-block;
+    border-radius: 6px;
+}
+
+.res-modal-desc-box code {
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    font-size: 11.5px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+.res-modal-desc-box pre {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+.res-modal-desc-box pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.res-modal-desc-box hr {
+    border: none;
+    border-top: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
+    margin: 12px 0;
 }
 
 .res-modal-password-card {
