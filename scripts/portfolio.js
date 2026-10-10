@@ -3054,26 +3054,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (downloadIcon) downloadIcon.textContent = 'download';
                     if (downloadSection) downloadSection.classList.remove('hidden');
-                    if (resource.instruction && instrSection) {
-                        instrSection.classList.remove('hidden');
-                    }
                 } else {
-                    if (downloadBtn) downloadBtn.disabled = true;
+                    if (downloadBtn) {
+                        downloadBtn.disabled = true;
+                        downloadBtn.onclick = null;
+                    }
                     if (downloadMainText) {
                         downloadMainText.dataset.i18n = 'res_no_link';
                         downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No link available';
                     }
                     if (downloadSection) downloadSection.classList.remove('hidden');
-                    if (instrSection) instrSection.classList.add('hidden');
                 }
             } else {
-                if (downloadBtn) downloadBtn.disabled = true;
+                if (downloadBtn) {
+                    downloadBtn.disabled = true;
+                    downloadBtn.onclick = null;
+                }
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_modal_download';
                     downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_download')) || 'Download Resource';
                 }
-                if (downloadSection) downloadSection.classList.add('hidden');
-                if (instrSection) instrSection.classList.add('hidden');
+                if (downloadIcon) downloadIcon.textContent = 'download';
+                if (downloadSection) downloadSection.classList.remove('hidden');
             }
         };
 
@@ -3141,7 +3143,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 if (downloadSection) downloadSection.classList.remove('hidden');
-                if (resource.instruction && instrSection) instrSection.classList.remove('hidden');
             } else {
                 if (downloadBtn) downloadBtn.disabled = true;
                 if (downloadMainText) {
@@ -3190,28 +3191,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             if (osSection) osSection.classList.remove('hidden');
+            if (verSection) verSection.classList.add('hidden');
+            selectedOs = null;
+            selectedVer = null;
+
             const osKeys = Object.keys(osVersionMap);
             if (osKeys.length > 0) {
-                // Auto-select platform (user OS or first available)
-                const userAgent = navigator.userAgent || '';
-                const isMac = /Macintosh|Mac OS X/i.test(userAgent);
-                if (isMac && osKeys.includes('MAC')) {
-                    selectedOs = 'MAC';
-                } else if (osKeys.includes('WIN')) {
-                    selectedOs = 'WIN';
-                } else {
-                    selectedOs = osKeys[0];
-                }
-
-                // Default choose latest version
-                const curVersions = osVersionMap[selectedOs] || [];
-                if (curVersions.length > 0) {
-                    selectedVer = curVersions[0].label;
-                }
-
                 if (osChipsEl) {
                     osChipsEl.innerHTML = osKeys.map(key =>
-                        `<button type="button" class="res-popup-chip os-chip-btn ${selectedOs === key ? 'active' : ''}" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
+                        `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
                             ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
                         </button>`
                     ).join('');
@@ -3228,11 +3216,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             renderVerChips();
                             updateDownloadBtn();
+                            adjustModalLayout();
                         });
                     });
                 }
 
-                renderVerChips();
                 updateDownloadBtn();
             } else {
                 const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
@@ -3240,9 +3228,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const descText = resource.description || resource.instruction || '';
         const instrEl = document.getElementById('res-modal-instruction');
-        if (resource.instruction && instrEl) {
-            instrEl.textContent = resource.instruction;
+        if (descText && instrEl) {
+            instrEl.textContent = descText;
+            if (instrSection) instrSection.classList.remove('hidden');
+        } else if (instrSection) {
+            instrSection.classList.add('hidden');
         }
 
         // Background release search for latest assets (.exe, .pkg, .dmg)

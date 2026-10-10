@@ -2241,16 +2241,17 @@ body:not([data-view="home"]) .signpost-overlay {
 }
 
 .os-chip-btn.active {
-    background: rgba(182, 255, 0, 0.12) !important;
+    background: var(--md-sys-color-primary, #b6ff00) !important;
     border-color: var(--md-sys-color-primary, #b6ff00) !important;
-    box-shadow: 0 0 18px rgba(182, 255, 0, 0.2) !important;
-    transform: translateY(-1px);
+    color: #10120c !important;
+    box-shadow: none !important;
+    transform: none;
 }
 
 .os-chip-btn.active .os-icon-svg {
-    filter: invert(85%) sepia(50%) saturate(1200%) hue-rotate(30deg) brightness(110%);
+    filter: brightness(0);
     opacity: 1;
-    transform: scale(1.08);
+    transform: none;
 }
 
 .res-popup-chip {
@@ -2278,22 +2279,22 @@ body:not([data-view="home"]) .signpost-overlay {
 }
 
 .res-popup-chip.active {
-    background: rgba(182, 255, 0, 0.14);
-    border-color: var(--md-sys-color-primary, #b6ff00);
-    color: var(--md-sys-color-primary, #b6ff00);
-    box-shadow: 0 0 14px rgba(182, 255, 0, 0.18);
+    background: var(--md-sys-color-primary, #b6ff00) !important;
+    border-color: var(--md-sys-color-primary, #b6ff00) !important;
+    color: #10120c !important;
+    box-shadow: none !important;
     font-weight: 700;
 }
 
-.res-modal-instruction-box {
+.res-modal-instruction-box,
+.res-modal-desc-box {
     font-size: 13px;
     line-height: 1.6;
     color: var(--md-sys-color-on-surface);
-    background: rgba(255, 255, 255, 0.03);
-    padding: 12px 16px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-left: 3px solid var(--md-sys-color-primary);
+    background: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.04));
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--md-sys-color-outline-variant, rgba(255, 255, 255, 0.08));
 }
 
 .res-modal-password-card {
