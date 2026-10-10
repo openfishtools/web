@@ -2983,13 +2983,45 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<p>${text}</p>`;
     }
 
-    function formatMarkdown(md, repoName) {
+    function cleanReadmeForModal(md, resourceTitle) {
         if (!md) return '';
+        let text = String(md);
+
+        // Extract bold summary sentence from center div wrapper if present
+        text = text.replace(/<div align="center">([\s\S]*?)<\/div>/gi, (match, inner) => {
+            const boldMatch = inner.match(/\*\*([^*]+)\*\*/);
+            return boldMatch ? `\n\n**${boldMatch[1].trim()}**\n\n` : '';
+        });
+
+        // Strip language navigation links
+        text = text.replace(/\[English\]\([^)]+\)\s*•\s*\[[^\]]+\]\([^)]+\)/gi, '');
+        text = text.replace(/<a name="[^"]+"><\/a>/gi, '');
+
+        // Strip duplicate main headers
+        if (resourceTitle) {
+            const escaped = resourceTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            text = text.replace(new RegExp(`^#\\s+${escaped}[^\\n]*\\n`, 'gim'), '');
+        }
+        text = text.replace(/^#\s+[^\n]+\n/m, '');
+
+        // Strip shield badges
+        text = text.replace(/\[!\[[^\]]*\]\([^)]*img\.shields\.io[^)]*\)\]\([^)]*\)/gi, '');
+        text = text.replace(/!\[[^\]]*\]\([^)]*img\.shields\.io[^)]*\)/gi, '');
+
+        // Strip leading horizontal rules and clean newlines
+        text = text.replace(/^\s*---\s*\n+/g, '');
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        return text;
+    }
+
+    function formatMarkdown(md, repoName, resourceTitle) {
+        if (!md) return '';
+        const cleanedMd = cleanReadmeForModal(md, resourceTitle);
         let html = '';
         if (typeof window.marked !== 'undefined' && typeof window.marked.parse === 'function') {
-            html = window.marked.parse(md, { gfm: true, breaks: true });
+            html = window.marked.parse(cleanedMd, { gfm: true, breaks: true });
         } else {
-            html = simpleMarkdownParse(md);
+            html = simpleMarkdownParse(cleanedMd);
         }
         if (repoName) {
             html = html.replace(/href="(?!https?:\/\/|#|mailto:)([^"]+)"/g, (match, path) => {
@@ -3194,125 +3226,159 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        if (isWebApp) {
-            if (osSection) osSection.classList.add('hidden');
-            if (verSection) verSection.classList.add('hidden');
+        function isValidActionLink(url, repoName) {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            if (!trimmed) return false;
+            const repoRootRegex = new RegExp(`^https?:\\/\\/github\\.com\\/openfishtools\\/${repoName}\\/?$`, 'i');
+            if (repoRootRegex.test(trimmed)) return false;
+            return true;
+        }
 
-            let launchUrl = (resource.homepage && String(resource.homepage).trim()) || '';
-            if (!launchUrl) {
-                const osKeys = Object.keys(osVersionMap);
-                for (const key of osKeys) {
-                    if (osVersionMap[key].length > 0 && osVersionMap[key][0].url) {
-                        launchUrl = osVersionMap[key][0].url;
-                        break;
-                    }
+        const hasReleaseAssets = () => {
+            return Array.isArray(resource.releases) && resource.releases.some(r =>
+                Array.isArray(r.assets) && r.assets.length > 0 && r.assets.some(a => /\.(exe|msi|dmg|pkg|zip|tar\.gz)$/i.test(a.name))
+            );
+        };
+
+        const hasPlatformBinaries = () => {
+            return Object.keys(osVersionMap).some(k => {
+                if (k === 'WEB') return false;
+                const vers = osVersionMap[k] || [];
+                return vers.some(v => isValidActionLink(v.url, resource.name));
+            });
+        };
+
+        const getLiveWebUrl = () => {
+            if (resource.homepage && isValidActionLink(resource.homepage, resource.name)) {
+                return resource.homepage.trim();
+            }
+            if (osVersionMap['WEB'] && osVersionMap['WEB'].length > 0) {
+                const webEntry = osVersionMap['WEB'].find(v => isValidActionLink(v.url, resource.name));
+                if (webEntry && webEntry.url) {
+                    return webEntry.url.trim();
                 }
             }
-            if (!launchUrl) {
-                launchUrl = resource.html_url || '';
-            }
+            return '';
+        };
 
-            if (launchUrl) {
+        const setupModalActions = () => {
+            const liveWebUrl = getLiveWebUrl();
+            const isLiveWebApp = isWebApp && !!liveWebUrl;
+            const hasPlatforms = hasPlatformBinaries() || hasReleaseAssets();
+
+            if (!isLiveWebApp && !hasPlatforms) {
+                // Mode C: No download link and no releases -> hide platform choices, show only GitHub button
+                if (osSection) osSection.classList.add('hidden');
+                if (verSection) verSection.classList.add('hidden');
+                if (downloadBtn) downloadBtn.style.display = 'none';
+                if (githubBtn) {
+                    githubBtn.classList.add('res-github-btn-primary');
+                    githubBtn.href = resource.html_url || `https://github.com/openfishtools/${resource.name}`;
+                }
+                if (downloadSection) downloadSection.classList.remove('hidden');
+            } else if (isLiveWebApp) {
+                // Mode A: Live Web App
+                if (osSection) osSection.classList.add('hidden');
+                if (verSection) verSection.classList.add('hidden');
                 if (downloadBtn) {
+                    downloadBtn.style.display = 'flex';
                     downloadBtn.disabled = false;
-                    downloadBtn.onclick = () => window.open(ensureProtocol(launchUrl), '_blank');
+                    downloadBtn.onclick = () => window.open(ensureProtocol(liveWebUrl), '_blank');
                 }
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_launch_apps';
-                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Web App';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Open Website';
                 }
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
+                if (githubBtn) {
+                    githubBtn.classList.remove('res-github-btn-primary');
+                    githubBtn.href = resource.html_url || `https://github.com/openfishtools/${resource.name}`;
+                }
                 if (downloadSection) downloadSection.classList.remove('hidden');
             } else {
-                if (downloadBtn) downloadBtn.disabled = true;
-                if (downloadMainText) {
-                    downloadMainText.dataset.i18n = 'res_launch_apps';
-                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Web App';
+                // Mode B: Software with platform downloads / releases
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'flex';
                 }
-                if (downloadIcon) downloadIcon.textContent = 'open_in_new';
-                if (downloadSection) downloadSection.classList.remove('hidden');
+                if (githubBtn) {
+                    githubBtn.classList.remove('res-github-btn-primary');
+                    githubBtn.href = resource.html_url || `https://github.com/openfishtools/${resource.name}`;
+                }
+                if (osSection) osSection.classList.remove('hidden');
+                if (verSection) verSection.classList.add('hidden');
+
+                const osKeys = Object.keys(osVersionMap).filter(k => k !== 'WEB' || hasPlatformBinaries());
+                if (osKeys.length > 0) {
+                    if (osChipsEl) {
+                        osChipsEl.innerHTML = osKeys.map(key =>
+                            `<button type="button" class="res-popup-chip os-chip-btn ${selectedOs === key ? 'active' : ''}" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
+                                ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
+                            </button>`
+                        ).join('');
+                        osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                selectedOs = btn.dataset.os;
+                                selectedVer = null;
+                                const newVers = osVersionMap[selectedOs] || [];
+                                if (newVers.length > 0) {
+                                    selectedVer = newVers[0].label;
+                                }
+                                osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
+                                btn.classList.add('active');
+
+                                renderVerChips();
+                                updateDownloadBtn();
+                                adjustModalLayout();
+                            });
+                        });
+                    }
+                    updateDownloadBtn();
+                } else {
+                    if (osSection) osSection.classList.add('hidden');
+                }
             }
             adjustModalLayout();
+        };
 
-            // Background check for repo homepage on GitHub
-            if (resource.name) {
-                const repoCacheKey = `oft_repo_hp_${resource.name}`;
-                const fetchRepoHomepage = async () => {
-                    let hp = null;
+        setupModalActions();
+
+        // Background check for repo homepage on GitHub
+        if (resource.name) {
+            const repoCacheKey = `oft_repo_hp_${resource.name}`;
+            const fetchRepoHomepage = async () => {
+                let hp = null;
+                try {
+                    const cached = sessionStorage.getItem(repoCacheKey);
+                    if (cached) hp = cached;
+                } catch (_) {}
+                if (!hp) {
                     try {
-                        const cached = sessionStorage.getItem(repoCacheKey);
-                        if (cached) hp = cached;
-                    } catch (_) {}
-                    if (!hp) {
-                        try {
-                            const r = await fetch(`https://api.github.com/repos/openfishtools/${resource.name}`, { signal: AbortSignal.timeout(3500) });
-                            if (r.ok) {
-                                const repoData = await r.json();
-                                if (repoData && repoData.homepage) {
-                                    hp = String(repoData.homepage).trim();
-                                    if (hp) {
-                                        try { sessionStorage.setItem(repoCacheKey, hp); } catch (_) {}
-                                    }
+                        const r = await fetch(`https://api.github.com/repos/openfishtools/${resource.name}`, { signal: AbortSignal.timeout(3500) });
+                        if (r.ok) {
+                            const repoData = await r.json();
+                            if (repoData && repoData.homepage) {
+                                hp = String(repoData.homepage).trim();
+                                if (hp) {
+                                    try { sessionStorage.setItem(repoCacheKey, hp); } catch (_) {}
                                 }
                             }
-                        } catch (_) {}
-                    }
-                    if (hp) {
-                        resource.homepage = hp;
-                        if (downloadBtn) {
-                            downloadBtn.disabled = false;
-                            downloadBtn.onclick = () => window.open(ensureProtocol(hp), '_blank');
                         }
-                        if (downloadSection) downloadSection.classList.remove('hidden');
-                        adjustModalLayout();
-                    }
-                };
-                fetchRepoHomepage();
-            }
-        } else {
-            if (osSection) osSection.classList.remove('hidden');
-            if (verSection) verSection.classList.add('hidden');
-            selectedOs = null;
-            selectedVer = null;
-
-            const osKeys = Object.keys(osVersionMap);
-            if (osKeys.length > 0) {
-                if (osChipsEl) {
-                    osChipsEl.innerHTML = osKeys.map(key =>
-                        `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
-                            ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
-                        </button>`
-                    ).join('');
-                    osChipsEl.querySelectorAll('.os-chip-btn').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            selectedOs = btn.dataset.os;
-                            selectedVer = null;
-                            const newVers = osVersionMap[selectedOs] || [];
-                            if (newVers.length > 0) {
-                                selectedVer = newVers[0].label;
-                            }
-                            osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-
-                            renderVerChips();
-                            updateDownloadBtn();
-                            adjustModalLayout();
-                        });
-                    });
+                    } catch (_) {}
                 }
-
-                updateDownloadBtn();
-            } else {
-                const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
-                if (osChipsEl) osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
-            }
+                if (hp) {
+                    resource.homepage = hp;
+                    setupModalActions();
+                }
+            };
+            fetchRepoHomepage();
         }
 
         const descText = resource.description || resource.instruction || '';
         const instrEl = document.getElementById('res-modal-instruction');
         if (instrEl) {
             instrEl.className = 'res-modal-instruction-box res-modal-desc-box';
-            instrEl.innerHTML = formatMarkdown(descText, resource.name);
+            instrEl.innerHTML = formatMarkdown(descText, resource.name, resource.title);
             if (instrSection) instrSection.classList.remove('hidden');
         } else if (instrSection) {
             instrSection.classList.add('hidden');
@@ -3339,7 +3405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (_) {}
                 }
                 if (md && instrEl) {
-                    instrEl.innerHTML = formatMarkdown(md, resource.name);
+                    instrEl.innerHTML = formatMarkdown(md, resource.name, resource.title);
                     adjustModalLayout();
                 }
             };
@@ -3347,7 +3413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Background release search for latest assets (.exe, .pkg, .dmg)
-        if (!isWebApp && resource.name) {
+        if (resource.name) {
             const cacheKey = `oft_rel_${resource.name}`;
             const searchReleases = async () => {
                 let releases = null;
@@ -3368,7 +3434,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (_) {}
                 }
                 if (Array.isArray(releases) && releases.length > 0) {
+                    resource.releases = releases;
                     integrateReleases(releases);
+                    setupModalActions();
                     if (selectedOs) {
                         const curVers = osVersionMap[selectedOs] || [];
                         if (!selectedVer && curVers.length > 0) {
