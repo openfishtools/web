@@ -160,6 +160,10 @@ body {
     flex-shrink: 0;
 }
 
+.res-ver-badge-inline-wrap {
+    margin-top: 4px;
+    display: inline-block;
+}
 
 .admin-login-overlay {
     position: fixed;
@@ -525,6 +529,41 @@ tbody tr:hover {
     color: var(--md-sys-color-error);
 }
 
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.online {
+    background-color: #4caf50;
+}
+
+.status-dot.offline {
+    background-color: #9e9e9e;
+}
+
+.radio-group {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface);
+}
+
+.radio-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--md-sys-color-primary);
+}
 
 .sw-badge-picker {
     display: flex;
@@ -669,6 +708,49 @@ tbody tr:hover {
     border: 1.5px solid transparent;
 }
 
+.dl-input-wrap.drag-over {
+    background-color: var(--md-sys-color-primary-container);
+    border-color: var(--md-sys-color-primary);
+}
+
+.dl-upload-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dl-upload-btn:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
+}
+
+.dl-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-error);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dl-delete-btn:hover {
+    background: var(--md-sys-color-error-container);
+}
 
 .no-sw-selected-hint {
     font-size: 13px;

@@ -305,14 +305,30 @@
                 if (data.html) {
                     dataContainer.innerHTML = data.html;
                 } else if (Array.isArray(data.items)) {
-                    dataContainer.innerHTML = `
-                        <div class="stats-grid">
-                            ${data.items.map(item => `
-                                <div class="stats-metric-card">
-                                    <div class="stats-metric-label">${item.label || ''}</div>
-                                    <div class="stats-metric-val">${item.value || '—'}</div>
+                    let previewHtml = '';
+                    if (data.preview) {
+                        const { cover, author, title } = data.preview;
+                        previewHtml = `
+                            <div class="stats-preview-container">
+                                ${cover ? `<div class="stats-video-cover-wrapper"><img src="${cover}" alt="Cover" class="stats-video-cover"></div>` : ''}
+                                <div class="stats-preview-info">
+                                    ${author ? `<div class="stats-creator-name">${author}</div>` : ''}
+                                    ${title ? `<div class="stats-caption">${title}</div>` : ''}
                                 </div>
-                            `).join('')}
+                            </div>
+                        `;
+                    }
+                    dataContainer.innerHTML = `
+                        <div class="stats-results-container">
+                            ${previewHtml}
+                            <div class="stats-details-card">
+                                ${data.items.map(item => `
+                                    <div class="stats-detail-row">
+                                        <span class="stats-detail-label">${item.label || ''}</span>
+                                        <strong>${item.value || '—'}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
                     `;
                 } else {

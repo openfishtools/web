@@ -2065,7 +2065,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
         activeSchemaRenderer = null;
 
-        if (tool.schema && Array.isArray(tool.schema.inputs)) {
+        if (typeof tool.initModal === 'function') {
+            if (tool.inputType === 'url' || tool.hideDropZone) {
+                if (dropZone) dropZone.classList.add('hidden');
+            } else {
+                if (dropZone) dropZone.classList.remove('hidden');
+                if (fileInput) fileInput.multiple = !!tool.multiFile;
+                if (tool._id === 'tool-image-sequence') {
+                    if (fileInput) fileInput.accept = '.zip,application/zip,application/x-zip-compressed';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_seq_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_seq_drop')) || 'Drop ZIP sequence here or click to browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_zip');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_zip')) || 'Supports ZIP containing PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-5mb-generator') {
+                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_fivemb_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_fivemb_drop')) || 'Drop Alight Motion XML here or browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_xml');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_xml')) || 'Supports Alight Motion project (.xml)';
+                    }
+                } else if (tool._id === 'tool-ae-am-beatmark') {
+                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_ae_am_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_ae_am_drop')) || 'Drop After Effects Project XML here';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_ae');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_ae')) || 'Supports After Effects (.xml)';
+                    }
+                } else if (tool._id === 'tool-upscale-enhancer') {
+                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_upscale_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_upscale_drop')) || 'Drop photos / videos here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-video-interpolation') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_interp_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_interp_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else if (tool._id === 'tool-remove-background') {
+                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_rembg_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_rembg_drop')) || 'Drop video or image here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-audio-extractor') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_audio_extractor_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_audio_extractor_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else if (tool._id === 'tool-video-compressor') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_compressor_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_compressor_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else {
+                    const schemaFileDef = (tool.schema && Array.isArray(tool.schema.inputs))
+                        ? tool.schema.inputs.find(i => i.type === 'file' && i.primary !== false)
+                        : null;
+                    if (schemaFileDef && fileInput) {
+                        fileInput.multiple = !!schemaFileDef.multiple;
+                        fileInput.accept = Array.isArray(schemaFileDef.accept) ? schemaFileDef.accept.join(',') : (schemaFileDef.accept || '*/*');
+                        if (dropTitle && schemaFileDef.label) dropTitle.textContent = schemaFileDef.label;
+                        if (dropSubtitle && schemaFileDef.subtitle) dropSubtitle.textContent = schemaFileDef.subtitle;
+                    } else {
+                        if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                        if (dropTitle) {
+                            dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
+                            dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
+                        }
+                        if (dropSubtitle) {
+                            dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                            dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                        }
+                    }
+                }
+            }
+
+            if (tool.hideProcessBtn) {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.add('hidden');
+            } else {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.remove('hidden');
+            }
+
+            if (tool.hideProgress) {
+                if (progressSec) progressSec.classList.add('hidden');
+            }
+
+            if (optContainer) {
+                optContainer.innerHTML = '';
+            }
+
+            const ui = (typeof window.ToolUI === 'function' && optContainer)
+                ? new window.ToolUI(optContainer)
+                : null;
+            tool.initModal({
+                ui,
+                optContainer,
+                dropZone,
+                fileInput,
+                processBtn,
+                processLabel,
+                downloadBtn,
+                progressSec
+            });
+        } else if (tool.schema && Array.isArray(tool.schema.inputs)) {
             const fileDef = tool.schema.inputs.find(i => i.type === 'file' && i.primary !== false);
             if (fileDef) {
                 if (dropZone) dropZone.classList.remove('hidden');
@@ -2153,134 +2289,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 activeSchemaRenderer.render();
-            }
-        } else {
-            if (tool.inputType === 'url' || tool.hideDropZone) {
-                if (dropZone) dropZone.classList.add('hidden');
-            } else {
-                if (dropZone) dropZone.classList.remove('hidden');
-                if (fileInput) fileInput.multiple = !!tool.multiFile;
-                if (tool._id === 'tool-image-sequence') {
-                    if (fileInput) fileInput.accept = '.zip,application/zip,application/x-zip-compressed';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_seq_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_seq_drop')) || 'Drop ZIP sequence here or click to browse';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_zip');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_zip')) || 'Supports ZIP containing PNG, JPG, WebP';
-                    }
-                } else if (tool._id === 'tool-5mb-generator') {
-                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_fivemb_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_fivemb_drop')) || 'Drop Alight Motion XML here or browse';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_xml');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_xml')) || 'Supports Alight Motion project (.xml)';
-                    }
-                } else if (tool._id === 'tool-ae-am-beatmark') {
-                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_ae_am_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_ae_am_drop')) || 'Drop After Effects Project XML here';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_ae');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_ae')) || 'Supports After Effects (.xml)';
-                    }
-                } else if (tool._id === 'tool-upscale-enhancer') {
-                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_upscale_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_upscale_drop')) || 'Drop photos / videos here or click to select';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
-                    }
-                } else if (tool._id === 'tool-video-interpolation') {
-                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_interp_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_interp_drop')) || 'Drop video here or click to select';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                    }
-                } else if (tool._id === 'tool-remove-background') {
-                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_rembg_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_rembg_drop')) || 'Drop video or image here or click to select';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
-                    }
-                } else if (tool._id === 'tool-audio-extractor') {
-                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_audio_extractor_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_audio_extractor_drop')) || 'Drop video here or click to select';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                    }
-                } else if (tool._id === 'tool-video-compressor') {
-                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'tool_compressor_drop');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_compressor_drop')) || 'Drop video here or click to select';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                    }
-                } else {
-                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                    if (dropTitle) {
-                        dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
-                        dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
-                    }
-                    if (dropSubtitle) {
-                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                    }
-                }
-            }
-
-            if (tool.hideProcessBtn) {
-                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.add('hidden');
-            } else {
-                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.remove('hidden');
-            }
-
-            if (tool.hideProgress) {
-                if (progressSec) progressSec.classList.add('hidden');
-            }
-
-            if (optContainer) {
-                optContainer.innerHTML = '';
-            }
-
-            if (typeof tool.initModal === 'function') {
-                const ui = (typeof window.ToolUI === 'function' && optContainer)
-                    ? new window.ToolUI(optContainer)
-                    : null;
-                tool.initModal({
-                    ui,
-                    optContainer,
-                    dropZone,
-                    fileInput,
-                    processBtn,
-                    processLabel,
-                    downloadBtn,
-                    progressSec
-                });
             }
         }
 
@@ -2430,6 +2438,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                if (typeof tool.onProcess === 'function') {
+                    const canProcess = typeof tool.canProcess === 'function'
+                        ? tool.canProcess(currentToolFile)
+                        : (tool.inputType === 'url' || tool.hideDropZone || !!currentToolFile);
+                    if (!canProcess) return;
+                    tool.onProcess(currentToolFile);
+                    return;
+                }
+
                 if (tool.schema && typeof tool.run === 'function') {
                     if (!activeSchemaRenderer) return;
                     const validation = activeSchemaRenderer.validate();
@@ -2536,14 +2553,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     return;
-                }
-
-                const canProcess = typeof tool.canProcess === 'function'
-                    ? tool.canProcess(currentToolFile)
-                    : (tool.inputType === 'url' || tool.hideDropZone || !!currentToolFile);
-                if (!canProcess) return;
-                if (typeof tool.onProcess === 'function') {
-                    tool.onProcess(currentToolFile);
                 }
             };
         }
