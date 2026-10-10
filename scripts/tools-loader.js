@@ -1,43 +1,82 @@
 /**
  * OpenFishTools Remote Tools Loader
- * Fetches the unified web-tools bundle from GitHub / jsDelivr CDN with local fallback.
+ * Dynamically loads modular tool scripts directly from GitHub web-tools repository via jsDelivr CDN.
+ * Falls back to local bundle if offline or unreachable.
  */
 
 (function () {
     'use strict';
 
-    const REMOTE_BUNDLE_URL = 'https://cdn.jsdelivr.net/gh/openfishtools/web-tools@main/dist/web-tools.bundle.js';
-    const LOCAL_FALLBACK_URL = 'scripts/tools-bundle.js';
+    const CDN_BASE = 'https://cdn.jsdelivr.net/gh/openfishtools/web-tools@main/';
+    const LOCAL_FALLBACK = 'scripts/tools-bundle.js';
 
-    function injectScript(src, isFallback = false) {
+    // Ordered list of tool scripts to load directly from web-tools
+    const TOOL_SCRIPTS = [
+        // 1. Method Main Engines
+        'Method/finalize.js',
+        'Method/compress.js',
+
+        // 2. Method Item Patches
+        'Method/item/streamshield.js',
+        'Method/item/binarypatch.js',
+        'Method/item/FRYMethod.js',
+        'Method/item/fpspatch.js',
+        'Method/item/wmvpatch.js',
+        'Method/item/emergencymethod.js',
+
+        // 3. TikTok Tools
+        'tiktok/tiktok-quality-tool.js',
+        'tiktok/tiktok-downloader-tool.js',
+        'tiktok/tiktok-stats-tool.js',
+
+        // 4. Video & Audio Tools
+        'video/video-compressor-tool.js',
+        'video/video-interpolation-tool.js',
+        'video/audio-extractor-tool.js',
+        'video/image-sequence-tool.js',
+
+        // 5. AI Tools
+        'ai/upscale-gpu-enhancer.js',
+        'ai/upscale-tool.js',
+        'ai/rembg-tool.js',
+
+        // 6. Converters
+        'converters/ae-to-am-beatmark-tool.js',
+        'converters/fivemb-generator-tool.js'
+    ];
+
+    function loadScript(src) {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            // Cache busting for remote bundle to ensure instant updates on push
-            const cacheBuster = isFallback ? '' : ('?t=' + Math.floor(Date.now() / (1000 * 60 * 5))); // 5-min cache window
-            script.src = src + cacheBuster;
-            script.defer = true;
-
-            script.onload = () => {
-                console.log(`[ToolsLoader] Successfully loaded tools bundle from: ${src}`);
-                resolve();
-            };
-
-            script.onerror = (err) => {
-                console.warn(`[ToolsLoader] Failed to load tools bundle from: ${src}`);
-                reject(err);
-            };
-
+            script.src = src;
+            script.async = false;
+            script.onload = () => resolve();
+            script.onerror = (err) => reject(err);
             document.head.appendChild(script);
         });
     }
 
-    // Try remote CDN first; on failure, automatically use local fallback
-    injectScript(REMOTE_BUNDLE_URL)
-        .catch(() => {
-            console.log(`[ToolsLoader] Switching to local fallback bundle: ${LOCAL_FALLBACK_URL}`);
-            return injectScript(LOCAL_FALLBACK_URL, true);
-        })
-        .catch((fatalErr) => {
-            console.error('[ToolsLoader] Fatal error: Could not load tools bundle from any source.', fatalErr);
-        });
+    async function loadRemoteTools() {
+        const cacheBuster = '?t=' + Math.floor(Date.now() / (1000 * 60 * 5));
+        for (const scriptPath of TOOL_SCRIPTS) {
+            await loadScript(CDN_BASE + scriptPath + cacheBuster);
+        }
+        console.log('[ToolsLoader] Successfully loaded all modular tools from GitHub web-tools.');
+    }
+
+    async function init() {
+        try {
+            await loadRemoteTools();
+        } catch (err) {
+            console.warn('[ToolsLoader] Failed to fetch remote tools from CDN, switching to local fallback bundle:', err);
+            try {
+                await loadScript(LOCAL_FALLBACK);
+                console.log('[ToolsLoader] Local fallback bundle loaded.');
+            } catch (fallbackErr) {
+                console.error('[ToolsLoader] Fatal: Unable to load tools from any source.', fallbackErr);
+            }
+        }
+    }
+
+    init();
 })();
