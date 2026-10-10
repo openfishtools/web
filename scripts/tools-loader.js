@@ -43,7 +43,7 @@
         const jsFiles = tree
             .filter(item => item && item.type === 'blob' && typeof item.path === 'string' && item.path.endsWith('.js'))
             .map(item => item.path)
-            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.'));
+            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.') && !p.includes('fishV2'));
 
         const helpers = [];
         const tools = [];
@@ -84,8 +84,9 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.helpers) && Array.isArray(data.tools) && data.tools.length > 0) {
+                    const cleanHelpers = data.helpers.filter(h => !h.includes('fishV2') && !h.startsWith('workers/') && !h.startsWith('experimental/'));
                     console.log(`[ToolsLoader] Discovered ${data.tools.length} tools via /api/tools (sha: ${data.sha || 'latest'}).`);
-                    return { helpers: data.helpers, tools: data.tools, sha: data.sha || null };
+                    return { helpers: cleanHelpers, tools: data.tools, sha: data.sha || null };
                 }
             }
         } catch (apiErr) {

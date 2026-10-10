@@ -255,7 +255,7 @@ app.get('/api/tools', async (req, res) => {
         const jsFiles = tree
             .filter(item => item && item.type === 'blob' && typeof item.path === 'string' && item.path.endsWith('.js'))
             .map(item => item.path)
-            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.'));
+            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.') && !p.includes('fishV2'));
 
         const helpers = [];
         const tools = [];
