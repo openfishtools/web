@@ -1418,8 +1418,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     _id: 'res-web',
                     name: 'web',
                     title: 'Website',
-                    dev: 'OpenFishTools Team',
-                    category: ['Web App', 'Platform'],
+                    dev: 'OpenFishTools',
+                    category: ['Web App'],
                     icon: '/assets/projects/web.svg',
                     info: 'v1.0.0',
                     description: 'Official web platform and interactive tools suite for OpenFishTools.',
@@ -1429,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             name: 'WEB',
                             versions: [
-                                { label: 'v1.0.0 (Live App)', url: 'https://web-tau-lovat-70.vercel.app' }
+                                { label: '1.0.0', url: 'https://web-tau-lovat-70.vercel.app' }
                             ]
                         }
                     ]
@@ -1438,8 +1438,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     _id: 'res-web-tools',
                     name: 'web-tools',
                     title: 'Web Tools',
-                    dev: 'OpenFishTools Team',
-                    category: ['Tools', 'Libraries'],
+                    dev: 'OpenFishTools',
+                    category: ['Web App', 'Tools'],
                     icon: '/assets/projects/web-tools.svg',
                     info: 'v1.0.0',
                     description: 'Headless client-side video processing, AI matting, and animation conversion libraries for browsers.',
@@ -1449,7 +1449,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             name: 'WEB',
                             versions: [
-                                { label: 'v1.0.0 (CDN & Docs)', url: 'https://github.com/openfishtools/web-tools' }
+                                { label: '1.0.0', url: 'https://github.com/openfishtools/web-tools' }
                             ]
                         }
                     ]
@@ -1458,8 +1458,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     _id: 'res-cep',
                     name: 'CEP',
                     title: 'FishTools',
-                    dev: 'OpenFishTools Team',
-                    category: ['Extension', 'After Effects'],
+                    dev: 'OpenFishTools',
+                    category: ['Extension'],
                     icon: '/assets/projects/cep.svg',
                     info: 'v1.3.9',
                     description: 'After Effects extension panel for easing curves, conversion to Alight Motion, auto save, and project utilities.',
@@ -1469,13 +1469,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             name: 'WIN',
                             versions: [
-                                { label: 'v1.3.9 (Windows Installer)', url: 'https://github.com/openfishtools/CEP/releases' }
+                                { label: '1.3.9', url: 'https://github.com/openfishtools/CEP/releases/download/main/OpenFishTools.exe' }
                             ]
                         },
                         {
                             name: 'MAC',
                             versions: [
-                                { label: 'v1.3.9 (macOS PKG)', url: 'https://github.com/openfishtools/CEP/releases' }
+                                { label: '1.3.9', url: 'https://github.com/openfishtools/CEP/releases/download/main/OpenFishTools.pkg' }
                             ]
                         }
                     ]
@@ -1484,8 +1484,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     _id: 'res-studio',
                     name: 'Studio',
                     title: 'FishTools Studio',
-                    dev: 'OpenFishTools Team',
-                    category: ['Studio', 'Editor', 'Web App'],
+                    dev: 'OpenFishTools',
+                    category: ['Web App'],
                     icon: '/assets/projects/studio.svg',
                     info: 'v0.5.132',
                     description: 'Browser-based motion graphics video editor with multi-track timeline, keyframes, and extensible effect engine.',
@@ -1495,7 +1495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             name: 'WEB',
                             versions: [
-                                { label: 'v0.5.132 (Web Editor)', url: 'https://github.com/openfishtools/Studio' }
+                                { label: '0.5.132', url: 'https://github.com/openfishtools/Studio' }
                             ]
                         }
                     ]
@@ -1552,15 +1552,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (rawPkg.ok) {
                                         const pkg = await rawPkg.json();
                                         if (pkg.version) {
-                                            const vStr = `v${pkg.version.replace(/^v/, '')}`;
-                                            updated.info = vStr;
+                                            const rawVer = String(pkg.version).trim();
+                                            const matchNum = rawVer.match(/(\d+(?:\.\d+)+)/);
+                                            const cleanVer = matchNum ? matchNum[1] : rawVer.replace(/[^\d.]/g, '');
+                                            updated.info = `v${cleanVer}`;
                                             if (updated.os && Array.isArray(updated.os)) {
                                                 updated.os = updated.os.map(o => ({
                                                     ...o,
                                                     versions: (o.versions || []).map((ver, idx) => {
                                                         if (idx === 0) {
-                                                            const sub = ver.label.includes('(') ? ` (${ver.label.split('(')[1]}` : '';
-                                                            return { ...ver, label: `${vStr}${sub}` };
+                                                            return { ...ver, label: cleanVer };
                                                         }
                                                         return ver;
                                                     })
@@ -1668,12 +1669,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const id = card.dataset.id;
                     const item = allResources.find(r => r._id === id);
                     if (item) {
-                        const isWeb = (Array.isArray(item.os) && item.os.length === 1 && (item.os[0].name || '').toUpperCase() === 'WEB') || (Array.isArray(item.category) ? item.category.some(c => String(c).toLowerCase().includes('web app')) : String(item.category || '').toLowerCase().includes('web app'));
-                        if (isWeb && item.os?.[0]?.versions?.[0]?.url) {
-                            window.open(item.os[0].versions[0].url, '_blank');
-                        } else {
-                            openResourceModal(item, card);
-                        }
+                        openResourceModal(item, card);
                     }
                 });
             });
@@ -2937,6 +2933,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.renderTools = renderTools;
 
+    function cleanVersionStr(str) {
+        if (!str) return '';
+        const m = String(str).match(/(\d+(?:\.\d+)+)/);
+        if (m) return m[1];
+        const cleaned = String(str).replace(/[^\d.]/g, '').replace(/^\.+|\.+$/g, '');
+        return cleaned || String(str);
+    }
+
     const populateResourceDetails = (resource) => {
         let selectedOs = null;
         let selectedVer = null;
@@ -2946,21 +2950,54 @@ document.addEventListener('DOMContentLoaded', () => {
         osArr.forEach(o => {
             const rawName = typeof o === 'string' ? o : (o.name || '');
             const key = resolveOsKey(rawName) || String(rawName).toUpperCase();
-            osVersionMap[key] = o.versions || [];
+            osVersionMap[key] = (o.versions || []).map(v => ({
+                label: cleanVersionStr(v.label || resource.info),
+                url: v.url
+            }));
         });
+
+        // Integrate releases assets if present
+        const integrateReleases = (releases) => {
+            if (!Array.isArray(releases) || releases.length === 0) return;
+            const winList = osVersionMap['WIN'] ? [...osVersionMap['WIN']] : [];
+            const macList = osVersionMap['MAC'] ? [...osVersionMap['MAC']] : [];
+            releases.forEach(rel => {
+                const ver = cleanVersionStr(rel.tag_name || rel.name) || cleanVersionStr(resource.info) || '1.3.9';
+                const assets = rel.assets || [];
+                const exe = assets.find(a => /\.(exe|msi)$/i.test(a.name)) || assets.find(a => /\.zip$/i.test(a.name));
+                const mac = assets.find(a => /\.(dmg|pkg)$/i.test(a.name)) || assets.find(a => /\.zip$/i.test(a.name));
+                if (exe && !winList.some(v => v.label === ver)) {
+                    winList.push({ label: ver, url: exe.browser_download_url });
+                }
+                if (mac && !macList.some(v => v.label === ver)) {
+                    macList.push({ label: ver, url: mac.browser_download_url });
+                }
+            });
+            if (winList.length > 0) osVersionMap['WIN'] = winList;
+            if (macList.length > 0) osVersionMap['MAC'] = macList;
+        };
+
+        if (resource.releases) {
+            integrateReleases(resource.releases);
+        }
 
         const downloadSection = document.getElementById('res-modal-download-section');
         const verSection = document.getElementById('res-modal-ver-section');
         const instrSection = document.getElementById('res-modal-instruction-section');
+        const osSection = document.getElementById('res-modal-os-section');
 
         const downloadBtn = document.getElementById('res-modal-download-btn');
-        const downloadLabel = document.getElementById('res-modal-download-label');
+        const downloadMainText = document.querySelector('#res-modal-download-btn .res-download-main-text');
+        const downloadIcon = document.querySelector('#res-modal-download-btn .material-symbols-rounded');
         const verChipsEl = document.getElementById('res-modal-ver-chips');
         const osChipsEl = document.getElementById('res-modal-os-chips');
+        const githubBtn = document.getElementById('res-modal-github-btn');
 
-        if (verSection) verSection.classList.add('hidden');
-        if (downloadSection) downloadSection.classList.add('hidden');
-        if (instrSection) instrSection.classList.add('hidden');
+        if (githubBtn) {
+            githubBtn.href = resource.html_url || 'https://github.com/openfishtools';
+        }
+
+        const isWebApp = (Array.isArray(resource.category) ? resource.category.some(c => String(c).toLowerCase().includes('web app')) : String(resource.category || '').toLowerCase().includes('web app')) && !osVersionMap['WIN'] && !osVersionMap['MAC'];
 
         const adjustModalLayout = (duration = 0.38) => {
             const cardEl = document.getElementById('res-modal-card');
@@ -2990,6 +3027,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const updateDownloadBtn = () => {
+            if (isWebApp) return;
             if (selectedOs && selectedVer) {
                 const versions = osVersionMap[selectedOs] || [];
                 const entry = versions.find(v => v.label === selectedVer);
@@ -2998,21 +3036,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         downloadBtn.disabled = false;
                         downloadBtn.onclick = () => window.open(ensureProtocol(entry.url), '_blank');
                     }
-                    if (downloadLabel) downloadLabel.textContent = `${OS_LABEL[selectedOs] || selectedOs} • ${selectedVer}`;
-
+                    if (downloadMainText) {
+                        downloadMainText.dataset.i18n = 'res_modal_download';
+                        downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_download')) || 'Download Resource';
+                    }
+                    if (downloadIcon) downloadIcon.textContent = 'download';
                     if (downloadSection) downloadSection.classList.remove('hidden');
                     if (resource.instruction && instrSection) {
                         instrSection.classList.remove('hidden');
                     }
                 } else {
                     if (downloadBtn) downloadBtn.disabled = true;
-                    if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No download link configured';
+                    if (downloadMainText) {
+                        downloadMainText.dataset.i18n = 'res_no_link';
+                        downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No link available';
+                    }
                     if (downloadSection) downloadSection.classList.remove('hidden');
                     if (instrSection) instrSection.classList.add('hidden');
                 }
             } else {
                 if (downloadBtn) downloadBtn.disabled = true;
-                if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_modal_select_os')) || 'Select OS & Version';
+                if (downloadMainText) {
+                    downloadMainText.dataset.i18n = 'res_modal_download';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_download')) || 'Download Resource';
+                }
                 if (downloadSection) downloadSection.classList.add('hidden');
                 if (instrSection) instrSection.classList.add('hidden');
             }
@@ -3053,16 +3100,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        const osSection = document.getElementById('res-modal-os-section');
-        const isWebApp = (Object.keys(osVersionMap).length === 1 && Object.keys(osVersionMap)[0] === 'WEB') || (Array.isArray(resource.category) ? resource.category.some(c => String(c).toLowerCase().includes('web app')) : String(resource.category || '').toLowerCase().includes('web app'));
-        
-        const downloadMainText = document.querySelector('#res-modal-download-btn .res-download-main-text');
-        const downloadIcon = document.querySelector('#res-modal-download-btn .material-symbols-rounded');
-
         if (isWebApp) {
             if (osSection) osSection.classList.add('hidden');
             if (verSection) verSection.classList.add('hidden');
-            
+
             let launchUrl = '';
             const osKeys = Object.keys(osVersionMap);
             for (const key of osKeys) {
@@ -3079,9 +3120,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_launch_apps';
-                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Web App';
                 }
-                if (downloadLabel) downloadLabel.textContent = 'Open in new tab';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 if (downloadSection) downloadSection.classList.remove('hidden');
                 if (resource.instruction && instrSection) instrSection.classList.remove('hidden');
@@ -3089,26 +3129,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (downloadBtn) downloadBtn.disabled = true;
                 if (downloadMainText) {
                     downloadMainText.dataset.i18n = 'res_launch_apps';
-                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch App';
+                    downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_launch_apps')) || 'Launch Web App';
                 }
-                if (downloadLabel) downloadLabel.textContent = (window.getTranslation && window.getTranslation('res_no_link')) || 'No URL configured';
                 if (downloadIcon) downloadIcon.textContent = 'open_in_new';
                 if (downloadSection) downloadSection.classList.remove('hidden');
             }
             adjustModalLayout();
         } else {
-            if (downloadMainText) {
-                downloadMainText.dataset.i18n = 'res_modal_get';
-                downloadMainText.textContent = (window.getTranslation && window.getTranslation('res_modal_get')) || 'Get Resource';
-            }
-            if (downloadIcon) downloadIcon.textContent = 'download';
-            
             if (osSection) osSection.classList.remove('hidden');
             const osKeys = Object.keys(osVersionMap);
             if (osKeys.length > 0) {
+                // Auto-select platform (user OS or first available)
+                const userAgent = navigator.userAgent || '';
+                const isMac = /Macintosh|Mac OS X/i.test(userAgent);
+                if (isMac && osKeys.includes('MAC')) {
+                    selectedOs = 'MAC';
+                } else if (osKeys.includes('WIN')) {
+                    selectedOs = 'WIN';
+                } else {
+                    selectedOs = osKeys[0];
+                }
+
+                // Default choose latest version
+                const curVersions = osVersionMap[selectedOs] || [];
+                if (curVersions.length > 0) {
+                    selectedVer = curVersions[0].label;
+                }
+
                 if (osChipsEl) {
                     osChipsEl.innerHTML = osKeys.map(key =>
-                        `<button type="button" class="res-popup-chip os-chip-btn" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
+                        `<button type="button" class="res-popup-chip os-chip-btn ${selectedOs === key ? 'active' : ''}" data-os="${key}" title="${OS_LABEL[key] || key}" aria-label="${OS_LABEL[key] || key}">
                             ${OS_SVG[key] ? `<img src="${OS_SVG[key]}" class="os-icon-svg" alt="${key}">` : ''}
                         </button>`
                     ).join('');
@@ -3116,16 +3166,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.addEventListener('click', () => {
                             selectedOs = btn.dataset.os;
                             selectedVer = null;
+                            const newVers = osVersionMap[selectedOs] || [];
+                            if (newVers.length > 0) {
+                                selectedVer = newVers[0].label;
+                            }
                             osChipsEl.querySelectorAll('.os-chip-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
 
-                            if (downloadSection) downloadSection.classList.add('hidden');
-                            if (instrSection) instrSection.classList.add('hidden');
-
                             renderVerChips();
+                            updateDownloadBtn();
                         });
                     });
                 }
+
+                renderVerChips();
+                updateDownloadBtn();
             } else {
                 const noPlatText = (window.getTranslation && window.getTranslation('res_no_platforms')) || 'No platforms configured';
                 if (osChipsEl) osChipsEl.innerHTML = `<span style="color:var(--md-sys-color-on-surface-variant);font-size:13px">${noPlatText}</span>`;
@@ -3135,6 +3190,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const instrEl = document.getElementById('res-modal-instruction');
         if (resource.instruction && instrEl) {
             instrEl.textContent = resource.instruction;
+        }
+
+        // Background release search for latest assets (.exe, .pkg, .dmg)
+        if (!isWebApp && resource.name) {
+            const cacheKey = `oft_rel_${resource.name}`;
+            const searchReleases = async () => {
+                let releases = null;
+                try {
+                    const cached = sessionStorage.getItem(cacheKey);
+                    if (cached) releases = JSON.parse(cached);
+                } catch (_) {}
+                if (!releases) {
+                    try {
+                        const r = await fetch(`https://api.github.com/repos/openfishtools/${resource.name}/releases`, { signal: AbortSignal.timeout(3000) });
+                        if (r.ok) {
+                            const data = await r.json();
+                            if (Array.isArray(data) && data.length > 0) {
+                                releases = data;
+                                try { sessionStorage.setItem(cacheKey, JSON.stringify(releases)); } catch (_) {}
+                            }
+                        }
+                    } catch (_) {}
+                }
+                if (Array.isArray(releases) && releases.length > 0) {
+                    integrateReleases(releases);
+                    if (selectedOs) {
+                        const curVers = osVersionMap[selectedOs] || [];
+                        if (!selectedVer && curVers.length > 0) {
+                            selectedVer = curVers[0].label;
+                        }
+                        renderVerChips();
+                        updateDownloadBtn();
+                    }
+                }
+            };
+            searchReleases();
         }
     };
 

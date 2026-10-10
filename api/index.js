@@ -2047,8 +2047,8 @@ async function getOpenFishProjects() {
             _id: 'res-cep',
             name: 'CEP',
             title: 'FishTools',
-            dev: 'OpenFishTools Team',
-            category: ['Extension', 'After Effects'],
+            dev: 'OpenFishTools',
+            category: ['Extension'],
             icon: 'assets/projects/cep.svg',
             info: 'v1.3.9',
             description: 'After Effects extension panel for easing curves, conversion to Alight Motion, auto save, and project utilities.',
@@ -2058,13 +2058,13 @@ async function getOpenFishProjects() {
                 {
                     name: 'WIN',
                     versions: [
-                        { label: 'v1.3.9 (Windows Installer)', url: 'https://github.com/openfishtools/CEP/releases' }
+                        { label: '1.3.9', url: 'https://github.com/openfishtools/CEP/releases/download/main/OpenFishTools.exe' }
                     ]
                 },
                 {
                     name: 'MAC',
                     versions: [
-                        { label: 'v1.3.9 (macOS PKG)', url: 'https://github.com/openfishtools/CEP/releases' }
+                        { label: '1.3.9', url: 'https://github.com/openfishtools/CEP/releases/download/main/OpenFishTools.pkg' }
                     ]
                 }
             ]
@@ -2073,8 +2073,8 @@ async function getOpenFishProjects() {
             _id: 'res-studio',
             name: 'Studio',
             title: 'FishTools Studio',
-            dev: 'OpenFishTools Team',
-            category: ['Studio', 'Editor', 'Web App'],
+            dev: 'OpenFishTools',
+            category: ['Web App'],
             icon: 'assets/projects/studio.svg',
             info: 'v0.5.132',
             description: 'Browser-based motion graphics video editor with multi-track timeline, keyframes, and extensible effect engine.',
@@ -2084,7 +2084,7 @@ async function getOpenFishProjects() {
                 {
                     name: 'WEB',
                     versions: [
-                        { label: 'v0.5.132 (Web Editor)', url: 'https://github.com/openfishtools/Studio' }
+                        { label: '0.5.132', url: 'https://github.com/openfishtools/Studio' }
                     ]
                 }
             ]
@@ -2093,8 +2093,8 @@ async function getOpenFishProjects() {
             _id: 'res-web-tools',
             name: 'web-tools',
             title: 'Web Tools',
-            dev: 'OpenFishTools Team',
-            category: ['Tools', 'Libraries'],
+            dev: 'OpenFishTools',
+            category: ['Web App', 'Tools'],
             icon: 'assets/projects/web-tools.svg',
             info: 'v1.0.0',
             description: 'Headless client-side video processing, AI matting, and animation conversion libraries for browsers.',
@@ -2104,7 +2104,7 @@ async function getOpenFishProjects() {
                 {
                     name: 'WEB',
                     versions: [
-                        { label: 'v1.0.0 (CDN & Docs)', url: 'https://github.com/openfishtools/web-tools' }
+                        { label: '1.0.0', url: 'https://github.com/openfishtools/web-tools' }
                     ]
                 }
             ]
@@ -2113,8 +2113,8 @@ async function getOpenFishProjects() {
             _id: 'res-web',
             name: 'web',
             title: 'Website',
-            dev: 'OpenFishTools Team',
-            category: ['Web App', 'Platform'],
+            dev: 'OpenFishTools',
+            category: ['Web App'],
             icon: 'assets/projects/web.svg',
             info: 'v1.0.0',
             description: 'Official web platform and interactive tools suite for OpenFishTools.',
@@ -2124,7 +2124,7 @@ async function getOpenFishProjects() {
                 {
                     name: 'WEB',
                     versions: [
-                        { label: 'v1.0.0 (Live App)', url: 'https://web-tau-lovat-70.vercel.app' }
+                        { label: '1.0.0', url: 'https://web-tau-lovat-70.vercel.app' }
                     ]
                 }
             ]
@@ -2153,16 +2153,35 @@ async function getOpenFishProjects() {
                             if (rawPkg.ok) {
                                 const pkg = await rawPkg.json();
                                 if (pkg.version) {
-                                    const vStr = `v${pkg.version.replace(/^v/, '')}`;
-                                    match.info = vStr;
+                                    const rawVer = String(pkg.version).trim();
+                                    const matchNum = rawVer.match(/(\d+(?:\.\d+)+)/);
+                                    const cleanVer = matchNum ? matchNum[1] : rawVer.replace(/[^\d.]/g, '');
+                                    match.info = `v${cleanVer}`;
                                     if (match.os && Array.isArray(match.os)) {
                                         match.os.forEach(o => {
                                             if (Array.isArray(o.versions) && o.versions[0]) {
-                                                const sub = o.versions[0].label.includes('(') ? ` (${o.versions[0].label.split('(')[1]}` : '';
-                                                o.versions[0].label = `${vStr}${sub}`;
+                                                o.versions[0].label = cleanVer;
                                             }
                                         });
                                     }
+                                }
+                            }
+                        } catch (err) {}
+
+                        try {
+                            const relRes = await fetch(`https://api.github.com/repos/openfishtools/${repo.name}/releases`, { headers: fetchHeaders, signal: AbortSignal.timeout(3000) });
+                            if (relRes.ok) {
+                                const releases = await relRes.json();
+                                if (Array.isArray(releases) && releases.length > 0) {
+                                    match.releases = releases.map(rel => ({
+                                        tag_name: rel.tag_name,
+                                        name: rel.name,
+                                        html_url: rel.html_url,
+                                        assets: (rel.assets || []).map(a => ({
+                                            name: a.name,
+                                            browser_download_url: a.browser_download_url
+                                        }))
+                                    }));
                                 }
                             }
                         } catch (err) {}
