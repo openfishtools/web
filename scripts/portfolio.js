@@ -1930,7 +1930,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             cardEl.style.height = '';
         }
-        void cardEl.offsetHeight;
 
         const targetH = Math.min(naturalH, window.innerHeight * maxHeightRatio);
         const targetTop = isMobile ? (window.innerHeight - targetH) : Math.max(16, (window.innerHeight - targetH) / 2);
