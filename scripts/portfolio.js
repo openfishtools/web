@@ -1519,9 +1519,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res.ok) {
                         const data = await res.json();
                         if (Array.isArray(data) && data.length > 0) {
-                            allResources = data.filter(r => !r.hidden);
-                            fetchSucceeded = true;
-                            try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}
+                            const visible = data.filter(r => !r.hidden);
+                            if (visible.length > 0) {
+                                allResources = visible;
+                                fetchSucceeded = true;
+                                try { sessionStorage.setItem('oft_projects_cache', JSON.stringify(allResources)); } catch (e) {}
+                            }
                         }
                     }
                 } catch (e) {
@@ -1578,12 +1581,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (!fetchSucceeded) {
+            if (!fetchSucceeded || !allResources || allResources.length === 0) {
                 allResources = DEFAULT_OPENFISH_PROJECTS;
             }
 
             resourcesLoaded = true;
             resourcesLoading = false;
+        }
+
+        if (!Array.isArray(allResources) || allResources.length === 0) {
+            allResources = DEFAULT_OPENFISH_PROJECTS;
         }
 
         renderResourceCategories(allResources);

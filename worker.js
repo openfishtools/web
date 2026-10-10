@@ -166,7 +166,7 @@ export default {
                 return Response.redirect('https://cutefish.my.id', 302);
             }
 
-            const backendOrigin = env.BACKEND_API_URL || 'https://editorstuff.vercel.app';
+            const backendOrigin = env.BACKEND_API_URL || 'https://web-tau-lovat-70.vercel.app';
             const targetUrl = new URL(url.pathname + url.search, backendOrigin);
 
             // Cloudflare Edge Cache for public read-only GET endpoints (Saves Vercel Limits)

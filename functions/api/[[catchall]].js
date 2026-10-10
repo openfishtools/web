@@ -162,7 +162,7 @@ export async function onRequest(context) {
         } catch (_) {}
     }
 
-    const backendOrigin = context.env.BACKEND_API_URL || 'https://editorstuff.vercel.app';
+    const backendOrigin = context.env.BACKEND_API_URL || 'https://web-tau-lovat-70.vercel.app';
     const targetUrl = new URL(url.pathname + url.search, backendOrigin);
 
     const headers = new Headers(context.request.headers);
