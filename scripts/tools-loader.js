@@ -8,8 +8,6 @@
 (function () {
     'use strict';
 
-    const CDN_PRIMARY = 'https://cdn.jsdelivr.net/gh/openfishtools/web-tools@main/';
-    const CDN_FALLBACK = 'https://raw.githubusercontent.com/openfishtools/web-tools/main/';
     const GITHUB_TREES_API = 'https://api.github.com/repos/openfishtools/web-tools/git/trees/main?recursive=1';
     const API_ENDPOINT = '/api/tools';
     const LOCAL_FALLBACK = 'scripts/tools-bundle.js';
@@ -32,12 +30,12 @@
         });
     }
 
-    async function loadScriptWithFallback(relPath, cacheBuster) {
+    async function loadScriptWithFallback(relPath, primaryBase, fallbackBase, cacheBuster) {
         try {
-            await loadScript(CDN_PRIMARY + relPath + cacheBuster);
+            await loadScript(primaryBase + relPath + cacheBuster);
         } catch (primaryErr) {
             console.warn(`[ToolsLoader] Primary CDN failed for ${relPath}, attempting fallback...`, primaryErr);
-            await loadScript(CDN_FALLBACK + relPath + cacheBuster);
+            await loadScript(fallbackBase + relPath + cacheBuster);
         }
     }
 
@@ -86,8 +84,8 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.helpers) && Array.isArray(data.tools) && data.tools.length > 0) {
-                    console.log(`[ToolsLoader] Discovered ${data.tools.length} tools via /api/tools.`);
-                    return { helpers: data.helpers, tools: data.tools };
+                    console.log(`[ToolsLoader] Discovered ${data.tools.length} tools via /api/tools (sha: ${data.sha || 'latest'}).`);
+                    return { helpers: data.helpers, tools: data.tools, sha: data.sha || null };
                 }
             }
         } catch (apiErr) {
@@ -107,18 +105,22 @@
         }
 
         const manifest = parseTreeToManifest(ghData.tree);
-        console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools dynamically from GitHub web-tools tree.`);
+        manifest.sha = ghData.sha || null;
+        console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools dynamically from GitHub web-tools tree (sha: ${manifest.sha || 'latest'}).`);
         return manifest;
     }
 
     async function loadRemoteTools() {
         const manifest = await discoverTools();
-        const cacheBuster = '?t=' + Math.floor(Date.now() / (1000 * 60 * 5));
+        const ref = manifest.sha || 'main';
+        const primaryBase = `https://cdn.jsdelivr.net/gh/openfishtools/web-tools@${ref}/`;
+        const fallbackBase = `https://raw.githubusercontent.com/openfishtools/web-tools/${ref}/`;
+        const cacheBuster = manifest.sha ? '' : ('?t=' + Math.floor(Date.now() / (1000 * 60 * 5)));
 
         // 1. Load helper & method scripts first in sequence
         for (const helperPath of manifest.helpers) {
             try {
-                await loadScriptWithFallback(helperPath, cacheBuster);
+                await loadScriptWithFallback(helperPath, primaryBase, fallbackBase, cacheBuster);
             } catch (err) {
                 console.warn(`[ToolsLoader] Failed to load helper ${helperPath}:`, err);
             }
@@ -128,7 +130,7 @@
         let loadedCount = 0;
         for (const toolPath of manifest.tools) {
             try {
-                await loadScriptWithFallback(toolPath, cacheBuster);
+                await loadScriptWithFallback(toolPath, primaryBase, fallbackBase, cacheBuster);
                 loadedCount++;
                 if (TOOL_STAGGER_DELAY_MS > 0) {
                     await sleep(TOOL_STAGGER_DELAY_MS);

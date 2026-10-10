@@ -2569,11 +2569,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const titleAttr = t.titleKey ? ` data-i18n="${t.titleKey}"` : '';
                 const descAttr = t.descKey ? ` data-i18n="${t.descKey}"` : '';
 
+                const verBadge = t.version ? (String(t.version).startsWith('v') ? t.version : 'v' + t.version) : 'v1.0.0';
+
                 return `
                 <div class="tool-card ${state.isProcessing ? 'tool-card-processing' : ''}" data-id="${t._id}">
                     <div class="tool-icon-wrapper">
                         ${iconHtml}
-                        <span class="tool-ver-badge">${t.version || 'v1.0.0'}</span>
+                        <span class="tool-ver-badge">${verBadge}</span>
                     </div>
                     <div class="tool-info">
                         <h4 class="tool-title"${titleAttr}>${title}</h4>

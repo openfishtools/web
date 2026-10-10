@@ -283,6 +283,7 @@ app.get('/api/tools', async (req, res) => {
 
         const manifest = {
             success: true,
+            sha: data.sha || null,
             updatedAt: new Date().toISOString(),
             helpers,
             tools,
