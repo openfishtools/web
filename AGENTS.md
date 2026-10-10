@@ -1,73 +1,70 @@
-# 🤖 Project Agent Instructions & Commands
+<!-- caveman-begin -->
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
 
-Repository: **Editorstuff** (`cutefishaep/editorstuff`)  
-Focus: Media utilities, Creator tools, and TikTok Quality Bypass Research.
+Rules:
+- Answer first: Answer, then reason, then next step.
+- Kill ceremony: No greeting, hedging, pleasantries, recap, or closer.
+- Short word: "fix" not "implement a solution for".
+- Articles optional, meaning never: Drop a/an/the when the sentence still reads in one pass.
+- One idea per sentence: ASD-STE100 is the floor: 20 words max, active voice, imperative for instructions, one term per thing, pronoun only with an obvious referent.
+- Payload verbatim: Code blocks unchanged.
+- Tool runs: bounded status: No text between routine calls.
+- User's language: Compress the style, not the language.
+- Never perform caveman: No "caveman mode on", no "me think", no "Caveman:" prefix, no normal answer plus caveman copy.
 
----
+Switch: /caveman (default), /ultracave (fragments, each fact once), /megacave (Classical Chinese 文言文)
+Stop: "stop caveman" or "normal mode"
 
-## ⚡ Custom Commands
+Auto-Clarity: plain prose for security warnings, irreversible actions, step order a fragment could scramble, user confused. Resume after.
 
-### `/newmethod`
-Ketika user mengetik atau memerintahkan `/newmethod`, agent harus menjalankan alur kerja riset eksperimental berikut secara otonom tanpa berhenti hingga metode baru berhasil:
+Boundaries: code, comments, commits, PRs, docs written normal.
+Floor: code, commands, paths, numbers and error strings verbatim; never drop not/never/no/only.
+<!-- caveman-end -->
 
-1. **Analisa State & Histori Riset**:
-   - Buka dan baca `Experiment/agen.md` untuk memahami metode apa saja yang sudah diuji, mana yang gagal, dan mana yang berhasil (`binary`, `StreamShield`).
-   - Periksa script pipeline di folder `Experiment/` (`encode.js`, `newMethod.js`, `run.js`, `analyze.js`, `upload.js`, `config.json`).
+# OpenFishTools Web Platform AI Agent Guidelines
 
-2. **Rancang Hipotesis / Engine Metode Baru**:
-   - Buat variasi atau pendekatan arsitektur manipulasi atom MP4 baru (misalnya manipulasi track time offset, auxiliary media streams, atom tagging, timescale trick, unindexed chunk placement, atau boundary spoofing).
-   - **Batasan Mutlak**:
-     - **0% Kompresi Lossless**: Dilarang keras melakukan FFmpeg re-encode lossy (tanpa menurunkan CRF/bitrate visual). Harus pure container/atom pass-through.
-     - **Ringan & Cepat**: Eksekusi patch dalam memori harus instan (< 1 detik).
-     - **Minimal Token Log**: Jangan gunakan emoji berlebihan atau banner ASCII art di log konsol.
+## 1. System Architecture & Component Map
+- `index.html`: Main single-page application shell, interactive tool runner grid, resource cards, and modal containers.
+- `scripts/portfolio.js`: Core client controller: tool orchestration, dynamic resource catalog rendering, category filtering, search, and fluid FLIP modal morphing.
+- `api/index.js`: Express application server handling:
+  - `/api/resources`: Live GitHub Org repository fetcher with in-memory cache and zero database dependency.
+  - `/api/tools`: Live GitHub tree manifest query mapping tools from `openfishtools/web-tools`.
+  - `/api/version`: Dynamic deployment and build commit metadata endpoint.
+- `styles/portfolio.css`: Main UI design system tokens, card grids, modal transitions, and responsive styles.
+- `assets/projects/`: Official vector SVG project logos (`web.svg`, `web-tools.svg`, `cep.svg`, `studio.svg`).
+- `build/`: Staging and Cloudflare Pages builders (`build.js`, `build-cf.js`).
+- `package.json`: Single source of truth for web platform version.
 
-3. **Implementasi & Uji Coba Otomatis**:
-   - Terapkan kode metode baru ke dalam `Experiment/newMethod.js` atau modul engine di `Experiment/`.
-   - Jalankan master runner untuk tes langsung:
-     ```bash
-     node Experiment/run.js --method <method_name> --force
-     ```
-   - **PENTING**: `run.js` sudah otomatis melakukan encode, upload ke TikTok `@fur.ae`, menunggu status publish, dan inspeksi atom stream live TikTok CDN. Dilarang melakukan double analyze terpisah jika `run.js` sudah menampilkannya.
+## 2. Resource Catalog Rules (ZERO DATABASE DEPENDENCY)
+- **NO Database Coupling**: The `/api/resources` route MUST NEVER depend on MongoDB, Mongoose, or database connections.
+- **GitHub Live Sync**: Resources are fetched directly from GitHub Organization repositories (`https://api.github.com/orgs/openfishtools/repos`) backed by in-memory caching and resilient fallback registry.
+- **No Archive Password**: Do not reintroduce archive password prompts (`#res-modal-password-section`). Public projects require no password.
 
-4. **Iterasi Sampai Berhasil**:
-   - Jika hasil inspeksi CDN live menunjukkan transcode/kompresi paksa ByteDance (misal 576x1024 SD @ 30fps), analisa penyebab kegagalannya dan ulangi langkah 2–3 dengan hipotesis baru.
-   - Lakukan iterasi terus menerus hingga diperoleh hasil CDN live: **1080x1920 @ 60 FPS** tanpa degradasi bitrate.
+## 3. Modal Morphing & FLIP Animation Standards
+- **Universal Morphing**: Modals use FLIP geometry calculations via `getModalTargetGeometry()`.
+- **Resting & Transition States**:
+  - Source card must hide during transition and cleanly restore on close.
+  - Transition duration must remain clamped (0.34s–0.42s) with `var(--ease-spring-soft)` timing.
+- **Responsive Geometry**:
+  - Mobile (<= 600px): Bottom-sheet style layout.
+  - Desktop (>= 601px): Centered card expansion.
 
-5. **Dokumentasi & Penyimpanan**:
-   - Simpan script metode yang berhasil ke dalam folder `Experiment/Working Method/<nama_metode>.js`.
-   - Update tabel pengujian dan temuan teknis di `Experiment/agen.md`.
-   - Berikan laporan hasil akhir yang ringkas, perbandingan bitrate/resolusi, dan tautan video TikTok hasil tes ke user.
+## 4. Strict File Manipulation Tooling (NO SCRIPT-BASED EDITS)
+- **STRICTLY FORBIDDEN**: Using Python scripts, Node.js scripts, `sed`, `awk`, `echo >`, `cat << 'EOF'`, or shell redirection to edit or generate code files.
+- **MANDATORY**: All file creations and code modifications MUST strictly use the agent's native tool calls (`replace_file_content` or `write_to_file`).
 
----
+## 5. Error Investigation & Diagnostic Protocol
+When debugging UI or server issues:
+1. **Localhost Server**: Start dev server (`npm start` or `node api/index.js`) on `http://localhost:3000`.
+2. **Inspect Console**: Check browser DevTools console for uncaught exceptions, network failures, or layout reflows.
+3. **Build Verification**: Run `npm run build` to verify Cloudflare Pages staging build succeeds before pushing.
 
-## 🛠️ General Guidelines
+## 6. Versioning & SSOT
+- **Single Source of Truth**: Platform version is defined in `package.json`.
+- **Bumping Version**: Update `"version"` in `package.json` directly. Shields badges and external consumers query this value automatically.
+- **NO Hardcoded Fallbacks**: Never hardcode fallback version literals in library files.
 
-- **Isolasi Mutlak Direktori Eksperimen**: Folder `Experiment/` mutlak bersifat lokal-only (berisi API token, video mentah, dan file pengujian). Dilarang keras menyalin, men-stage, atau men-deploy file dari `Experiment/` ke `dist-cf/` atau git commit.
-- **UI & Code Consistency**: Setiap perubahan pada file di `scripts/`, `styles/`, atau `index.html` harus disinkronkan ke direktori build `dist-cf/`.
-- **Branding Mutlak**: Dilarang keras membawa atau memunculkan nama selain **cutefish.my.id** / **cutefish** (dan **FISH** khusus untuk nama metode di UI user-facing). Dilarang menyertakan nama pihak ketiga, kredit eksternal, atau watermark lain di UI, output patch, maupun kode publik.
-- **Format Deskripsi UI**: Gunakan format deskripsi modular (`[format]`, `[mode]`, `[resolution]`, `[info]`) tanpa menambahkan baris metode berulang atau kata-kata teknis internal yang tidak relevan bagi user.
-
----
-
-## 📐 Arsitektur Pipeline Patcher & CMT
-
-Konsep alur kerja mutlak:
-$$\text{Upload} \longrightarrow \text{Analisa Video} \longrightarrow \text{Method (Compress ON / OFF)} \longrightarrow \text{Process} \longrightarrow \text{Finalize}$$
-
-1. **Upload**: User mengunggah file video.
-2. **Analisa Video**:
-   - Sistem secara instan menginspeksi metadata atom MP4 (`inspectMp4Meta`) dan status ekstensi/userscript:
-     - **Size > 60MB**: *Optionally need to be compressed*. Menampilkan rekomendasi kompresi agar proses upload ke TikTok lancar tanpa kegagalan transfer, namun mode kompresi tetap opsional (user bebas memilih `OFF`, `720P`, atau `1080P`).
-     - **Resolusi > 1080p**: *Wajib dikompres* (`Compress OFF` di-disable secara mutlak, otomatis dikunci ke `1080P` atau `720P`).
-     - **FPS > 120 FPS**: Deteksi high framerate yang memerlukan konversi slow motion atau Userscript Bypass Cloud Canvas agar tidak rusak/di-transcode paksa oleh TikTok.
-3. **Method (Compress ON / OFF)**:
-   - Pemilihan kategori & metode (Rekomendasi: `FISH`, `BINARY`, `F R Y`; Backup: `FPS`, `WMV`).
-   - Pemilihan mode kompresi (`OFF`, `720P`, `1080P`). Jika resolusi > 1080p, opsi `OFF` dinonaktifkan (`disabled`).
-4. **Process**:
-   - Jika kompresi aktif $\rightarrow$ jalankan pipeline kompresi (`compress.js`).
-   - Terapkan patch atom MP4 murni dalam memori sesuai engine metode yang dipilih tanpa re-encode lossy.
-5. **Finalize**:
-   - Seluruh hasil patch WAJIB dialirkan ke `finalize.js` (`finalizePatcherDownload`).
-   - Format nama output distandarisasi ke: `(nama file)_hd.mp4`.
-   - Menangani trigger auto-download, tombol download modal, progres 100%, toast notifikasi, dan prompt upload TikTok Studio.
-
+## 7. Strict Git Safety & Working Tree Protection
+- **Zero Silent Git Changes**: STRICTLY FORBIDDEN to run `git checkout`, `git restore`, `git reset`, `git clean`, `git pull`, `git switch`, or any Git command that alters or discards local changes without explicit user consent.
+- **Preserve Uncommitted Work**: Always respect and preserve active uncommitted edits and untracked files in the working directory.
+- **Zero Emojis**: Git commit messages, comments, and documentation must never contain emojis.
