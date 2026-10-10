@@ -300,6 +300,7 @@
         addSegmentedPills(options = {}) {
             const {
                 label = '',
+                labelKey = '',
                 options: items = [],
                 value = items.length > 0 ? (typeof items[0] === 'object' ? items[0].value : items[0]) : '',
                 onChange = null
@@ -308,10 +309,17 @@
             const group = document.createElement('div');
             group.className = 'tool-ui-group';
 
-            if (label) {
+            if (label || labelKey) {
                 const labelEl = document.createElement('div');
                 labelEl.className = 'tool-input-label';
                 labelEl.textContent = label;
+                if (labelKey) {
+                    labelEl.setAttribute('data-i18n', labelKey);
+                    if (window.getTranslation) {
+                        const tr = window.getTranslation(labelKey);
+                        if (tr && tr !== labelKey) labelEl.textContent = tr;
+                    }
+                }
                 group.appendChild(labelEl);
             }
 
@@ -323,13 +331,20 @@
 
             items.forEach(item => {
                 const itemVal = typeof item === 'object' ? item.value : item;
-                const itemLabel = typeof item === 'object' ? (item.label || item.value) : item;
                 const itemIcon = typeof item === 'object' ? item.icon : '';
+                const itemKey = typeof item === 'object' ? (item.labelKey || '') : '';
+                let itemLabel = typeof item === 'object' ? (item.label || item.value) : item;
+
+                if (itemKey && window.getTranslation) {
+                    const tr = window.getTranslation(itemKey);
+                    if (tr && tr !== itemKey) itemLabel = tr;
+                }
 
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'tool-ui-pill' + (itemVal === currentValue ? ' active' : '');
                 btn.dataset.value = itemVal;
+                if (itemKey) btn.setAttribute('data-i18n', itemKey);
 
                 if (itemIcon) {
                     btn.innerHTML = `<span class="material-symbols-rounded tool-ui-pill-icon">${itemIcon}</span><span>${itemLabel}</span>`;

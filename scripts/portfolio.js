@@ -2073,12 +2073,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     fileInput.multiple = !!fileDef.multiple;
                     fileInput.accept = Array.isArray(fileDef.accept) ? fileDef.accept.join(',') : (fileDef.accept || '*/*');
                 }
-                if (dropTitle) {
-                    const label = (fileDef.labelKey && window.getTranslation && window.getTranslation(fileDef.labelKey)) || fileDef.label || 'Drop file here or click to select';
-                    dropTitle.textContent = label;
+                let dropKey = fileDef.labelKey || '';
+                if (!dropKey) {
+                    const acc = String(fileDef.accept || '').toLowerCase();
+                    if (acc.includes('video') && acc.includes('image')) dropKey = 'tool_drop_media';
+                    else if (acc.includes('video')) dropKey = 'tool_drop_video';
+                    else if (acc.includes('image')) dropKey = 'tool_drop_image';
+                    else if (acc.includes('audio')) dropKey = 'tool_drop_audio';
+                    else if (acc.includes('zip')) dropKey = 'tool_drop_zip';
+                    else if (acc.includes('xml') || acc.includes('aepx')) dropKey = 'tool_drop_xml';
+                    else dropKey = 'tool_drop_file';
                 }
+
+                if (dropTitle) {
+                    let translated = '';
+                    if (window.getTranslation && dropKey) {
+                        const tr = window.getTranslation(dropKey);
+                        if (tr && tr !== dropKey) translated = tr;
+                    }
+                    if (!translated) {
+                        translated = fileDef.label || (window.getTranslation && window.getTranslation('tool_drop_video')) || 'Drop file here or click to select';
+                    }
+                    dropTitle.textContent = translated;
+                    if (dropKey) {
+                        dropTitle.setAttribute('data-i18n', dropKey);
+                    } else {
+                        dropTitle.removeAttribute('data-i18n');
+                    }
+                }
+
+                let subKey = fileDef.subtitleKey || '';
+                if (!subKey) {
+                    const acc = String(fileDef.accept || '').toLowerCase();
+                    if (acc.includes('zip')) subKey = 'tool_drop_formats_zip';
+                    else if (acc.includes('xml') || acc.includes('aepx')) subKey = 'tool_drop_formats_xml';
+                    else if (acc.includes('video') && acc.includes('image')) subKey = 'tool_drop_formats_media';
+                    else if (acc.includes('video')) subKey = 'tool_drop_formats_video';
+                    else subKey = 'tool_drop_formats_media';
+                }
+
                 if (dropSubtitle) {
-                    dropSubtitle.textContent = fileDef.subtitle || (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports media files';
+                    let translatedSub = '';
+                    if (window.getTranslation && subKey) {
+                        const tr = window.getTranslation(subKey);
+                        if (tr && tr !== subKey) translatedSub = tr;
+                    }
+                    if (!translatedSub) {
+                        translatedSub = fileDef.subtitle || (window.getTranslation && window.getTranslation(subKey)) || 'Supports media files';
+                    }
+                    dropSubtitle.textContent = translatedSub;
+                    if (subKey) {
+                        dropSubtitle.setAttribute('data-i18n', subKey);
+                    } else {
+                        dropSubtitle.removeAttribute('data-i18n');
+                    }
                 }
             } else {
                 if (dropZone) dropZone.classList.add('hidden');

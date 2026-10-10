@@ -121,6 +121,7 @@
             if (type === 'segmented') {
                 const ctrl = this.ui.addSegmentedPills({
                     label,
+                    labelKey: inputDef.labelKey || '',
                     options: inputDef.options || [],
                     value: defaultValue,
                     onChange: (val) => {
