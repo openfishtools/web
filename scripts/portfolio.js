@@ -1546,6 +1546,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (repo) {
                                     updated.description = repo.description || proj.description;
                                     if (repo.stargazers_count !== undefined) updated.stars = repo.stargazers_count;
+                                    if (repo.homepage) {
+                                        const hp = String(repo.homepage).trim();
+                                        if (hp) {
+                                            updated.homepage = hp;
+                                            if (updated.os && Array.isArray(updated.os)) {
+                                                const webOs = updated.os.find(o => (o.name || '').toUpperCase() === 'WEB');
+                                                if (webOs && Array.isArray(webOs.versions)) {
+                                                    webOs.versions.forEach(v => { v.url = hp; });
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 try {
                                     const rawPkg = await fetch(`https://raw.githubusercontent.com/openfishtools/${proj.name}/main/package.json`, { signal: AbortSignal.timeout(2500) });
@@ -3104,13 +3116,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (osSection) osSection.classList.add('hidden');
             if (verSection) verSection.classList.add('hidden');
 
-            let launchUrl = '';
-            const osKeys = Object.keys(osVersionMap);
-            for (const key of osKeys) {
-                if (osVersionMap[key].length > 0 && osVersionMap[key][0].url) {
-                    launchUrl = osVersionMap[key][0].url;
-                    break;
+            let launchUrl = (resource.homepage && String(resource.homepage).trim()) || '';
+            if (!launchUrl) {
+                const osKeys = Object.keys(osVersionMap);
+                for (const key of osKeys) {
+                    if (osVersionMap[key].length > 0 && osVersionMap[key][0].url) {
+                        launchUrl = osVersionMap[key][0].url;
+                        break;
+                    }
                 }
+            }
+            if (!launchUrl) {
+                launchUrl = resource.html_url || '';
             }
 
             if (launchUrl) {
@@ -3135,6 +3152,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (downloadSection) downloadSection.classList.remove('hidden');
             }
             adjustModalLayout();
+
+            // Background check for repo homepage on GitHub
+            if (resource.name) {
+                const repoCacheKey = `oft_repo_hp_${resource.name}`;
+                const fetchRepoHomepage = async () => {
+                    let hp = null;
+                    try {
+                        const cached = sessionStorage.getItem(repoCacheKey);
+                        if (cached) hp = cached;
+                    } catch (_) {}
+                    if (!hp) {
+                        try {
+                            const r = await fetch(`https://api.github.com/repos/openfishtools/${resource.name}`, { signal: AbortSignal.timeout(3500) });
+                            if (r.ok) {
+                                const repoData = await r.json();
+                                if (repoData && repoData.homepage) {
+                                    hp = String(repoData.homepage).trim();
+                                    if (hp) {
+                                        try { sessionStorage.setItem(repoCacheKey, hp); } catch (_) {}
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                    }
+                    if (hp) {
+                        resource.homepage = hp;
+                        if (downloadBtn) {
+                            downloadBtn.disabled = false;
+                            downloadBtn.onclick = () => window.open(ensureProtocol(hp), '_blank');
+                        }
+                        if (downloadSection) downloadSection.classList.remove('hidden');
+                        adjustModalLayout();
+                    }
+                };
+                fetchRepoHomepage();
+            }
         } else {
             if (osSection) osSection.classList.remove('hidden');
             const osKeys = Object.keys(osVersionMap);

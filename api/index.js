@@ -2036,9 +2036,9 @@ const GITHUB_ORG_REPOS = 'https://api.github.com/orgs/openfishtools/repos?per_pa
 let githubReposCache = null;
 let githubReposCacheTime = 0;
 
-async function getOpenFishProjects() {
+async function getOpenFishProjects(forceFresh = false) {
     const now = Date.now();
-    if (githubReposCache && (now - githubReposCacheTime < 5 * 60 * 1000)) {
+    if (!forceFresh && githubReposCache && (now - githubReposCacheTime < 60 * 1000)) {
         return githubReposCache;
     }
 
@@ -2148,6 +2148,18 @@ async function getOpenFishProjects() {
                         if (repo.description) match.description = repo.description;
                         if (repo.stargazers_count !== undefined) match.stars = repo.stargazers_count;
                         if (repo.updated_at) match.updated_at = repo.updated_at;
+                        if (repo.homepage) {
+                            const hp = String(repo.homepage).trim();
+                            if (hp) {
+                                match.homepage = hp;
+                                if (match.os && Array.isArray(match.os)) {
+                                    const webOs = match.os.find(o => (o.name || '').toUpperCase() === 'WEB');
+                                    if (webOs && Array.isArray(webOs.versions)) {
+                                        webOs.versions.forEach(v => { v.url = hp; });
+                                    }
+                                }
+                            }
+                        }
                         try {
                             const rawPkg = await fetch(`https://raw.githubusercontent.com/openfishtools/${repo.name}/main/package.json`, { signal: AbortSignal.timeout(3000) });
                             if (rawPkg.ok) {
@@ -2200,7 +2212,8 @@ async function getOpenFishProjects() {
 
 app.get('/api/resources', async (req, res) => {
     try {
-        const projects = await getOpenFishProjects();
+        const isBust = req.query.fresh === '1' || !!req.query.bust;
+        const projects = await getOpenFishProjects(isBust);
         res.json(projects);
     } catch (err) {
         res.status(500).json({ error: 'Failed to load projects' });
