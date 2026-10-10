@@ -1,14 +1,14 @@
+# Cloudflare Pages specific
 dist-cf/
 functions/
-index.html
-admin.html
-styles/
-scripts/
-assets/
-sw.js
-favicon.ico
 _headers
 _redirects
-userscript/
-t_version.json
 wrangler.jsonc
+
+# Sensitive / Local environment
+.env
+.env.*
+.env.local
+Experiment/
+*.log
+.DS_Store

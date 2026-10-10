@@ -5,9 +5,28 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "memory": 256,
         "maxDuration": 15
       }
+    },
+    {
+      "src": "{index.html,admin.html,favicon.ico,favicon.svg,coi-serviceworker.min.js,sw.js,t_version.json}",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "styles/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "scripts/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "userscript/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
