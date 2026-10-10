@@ -2000,6 +2000,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentToolFile = null;
     let currentToolItem = null;
+    let activeSchemaRenderer = null;
 
     function populateToolDetails(tool) {
         currentToolItem = tool;
@@ -2059,132 +2060,177 @@ document.addEventListener('DOMContentLoaded', () => {
         const dropTitle = document.getElementById('tool-drop-title');
         const dropSubtitle = document.getElementById('tool-drop-subtitle');
 
-        if (tool.inputType === 'url' || tool.hideDropZone) {
-            if (dropZone) dropZone.classList.add('hidden');
-        } else {
-            if (dropZone) dropZone.classList.remove('hidden');
-            if (fileInput) fileInput.multiple = !!tool.multiFile;
-            if (tool._id === 'tool-image-sequence') {
-                if (fileInput) fileInput.accept = '.zip,application/zip,application/x-zip-compressed';
+        activeSchemaRenderer = null;
+
+        if (tool.schema && Array.isArray(tool.schema.inputs)) {
+            const fileDef = tool.schema.inputs.find(i => i.type === 'file' && i.primary !== false);
+            if (fileDef) {
+                if (dropZone) dropZone.classList.remove('hidden');
+                if (fileInput) {
+                    fileInput.multiple = !!fileDef.multiple;
+                    fileInput.accept = Array.isArray(fileDef.accept) ? fileDef.accept.join(',') : (fileDef.accept || '*/*');
+                }
                 if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_seq_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_seq_drop')) || 'Drop ZIP sequence here or click to browse';
+                    const label = (fileDef.labelKey && window.getTranslation && window.getTranslation(fileDef.labelKey)) || fileDef.label || 'Drop file here or click to select';
+                    dropTitle.textContent = label;
                 }
                 if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_zip');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_zip')) || 'Supports ZIP containing PNG, JPG, WebP';
-                }
-            } else if (tool._id === 'tool-5mb-generator') {
-                if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_fivemb_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_fivemb_drop')) || 'Drop Alight Motion XML here or browse';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_xml');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_xml')) || 'Supports Alight Motion project (.xml)';
-                }
-            } else if (tool._id === 'tool-ae-am-beatmark') {
-                if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_ae_am_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_ae_am_drop')) || 'Drop After Effects Project XML here';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_ae');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_ae')) || 'Supports After Effects (.xml)';
-                }
-            } else if (tool._id === 'tool-upscale-enhancer') {
-                if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_upscale_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_upscale_drop')) || 'Drop photos / videos here or click to select';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
-                }
-            } else if (tool._id === 'tool-video-interpolation') {
-                if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_interp_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_interp_drop')) || 'Drop video here or click to select';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                }
-            } else if (tool._id === 'tool-remove-background') {
-                if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_rembg_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_rembg_drop')) || 'Drop video or image here or click to select';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
-                }
-            } else if (tool._id === 'tool-audio-extractor') {
-                if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_audio_extractor_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_audio_extractor_drop')) || 'Drop video here or click to select';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                }
-            } else if (tool._id === 'tool-video-compressor') {
-                if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'tool_compressor_drop');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_compressor_drop')) || 'Drop video here or click to select';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    dropSubtitle.textContent = fileDef.subtitle || (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports media files';
                 }
             } else {
-                if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                if (dropTitle) {
-                    dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
-                    dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
-                }
-                if (dropSubtitle) {
-                    dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                    dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                if (dropZone) dropZone.classList.add('hidden');
+            }
+
+            if (tool.hideProcessBtn) {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.add('hidden');
+            } else {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.remove('hidden');
+            }
+
+            if (tool.hideProgress) {
+                if (progressSec) progressSec.classList.add('hidden');
+            }
+
+            if (optContainer) {
+                optContainer.innerHTML = '';
+            }
+
+            if (window.ToolSchemaRenderer && optContainer) {
+                activeSchemaRenderer = new window.ToolSchemaRenderer(tool, optContainer, {
+                    onEnter: () => {
+                        if (processBtn) processBtn.click();
+                    }
+                });
+                activeSchemaRenderer.render();
+            }
+        } else {
+            if (tool.inputType === 'url' || tool.hideDropZone) {
+                if (dropZone) dropZone.classList.add('hidden');
+            } else {
+                if (dropZone) dropZone.classList.remove('hidden');
+                if (fileInput) fileInput.multiple = !!tool.multiFile;
+                if (tool._id === 'tool-image-sequence') {
+                    if (fileInput) fileInput.accept = '.zip,application/zip,application/x-zip-compressed';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_seq_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_seq_drop')) || 'Drop ZIP sequence here or click to browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_zip');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_zip')) || 'Supports ZIP containing PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-5mb-generator') {
+                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_fivemb_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_fivemb_drop')) || 'Drop Alight Motion XML here or browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_xml');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_xml')) || 'Supports Alight Motion project (.xml)';
+                    }
+                } else if (tool._id === 'tool-ae-am-beatmark') {
+                    if (fileInput) fileInput.accept = '.xml,text/xml,application/xml';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_ae_am_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_ae_am_drop')) || 'Drop After Effects Project XML here';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_ae');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_ae')) || 'Supports After Effects (.xml)';
+                    }
+                } else if (tool._id === 'tool-upscale-enhancer') {
+                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_upscale_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_upscale_drop')) || 'Drop photos / videos here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-video-interpolation') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_interp_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_interp_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else if (tool._id === 'tool-remove-background') {
+                    if (fileInput) fileInput.accept = 'video/*,image/*,video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_rembg_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_rembg_drop')) || 'Drop video or image here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_media');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_media')) || 'Supports MP4, MOV, WebM, PNG, JPG, WebP';
+                    }
+                } else if (tool._id === 'tool-audio-extractor') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_audio_extractor_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_audio_extractor_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else if (tool._id === 'tool-video-compressor') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'tool_compressor_drop');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('tool_compressor_drop')) || 'Drop video here or click to select';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
+                } else {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
                 }
             }
-        }
 
-        if (tool.hideProcessBtn) {
-            if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.add('hidden');
-        } else {
-            if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.remove('hidden');
-        }
+            if (tool.hideProcessBtn) {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.add('hidden');
+            } else {
+                if (processBtn && processBtn.parentElement) processBtn.parentElement.classList.remove('hidden');
+            }
 
-        if (tool.hideProgress) {
-            if (progressSec) progressSec.classList.add('hidden');
-        }
+            if (tool.hideProgress) {
+                if (progressSec) progressSec.classList.add('hidden');
+            }
 
-        if (optContainer) {
-            optContainer.innerHTML = '';
-        }
+            if (optContainer) {
+                optContainer.innerHTML = '';
+            }
 
-        if (typeof tool.initModal === 'function') {
-            const ui = (typeof window.ToolUI === 'function' && optContainer)
-                ? new window.ToolUI(optContainer)
-                : null;
-            tool.initModal({
-                ui,
-                optContainer,
-                dropZone,
-                fileInput,
-                processBtn,
-                processLabel,
-                downloadBtn,
-                progressSec
-            });
+            if (typeof tool.initModal === 'function') {
+                const ui = (typeof window.ToolUI === 'function' && optContainer)
+                    ? new window.ToolUI(optContainer)
+                    : null;
+                tool.initModal({
+                    ui,
+                    optContainer,
+                    dropZone,
+                    fileInput,
+                    processBtn,
+                    processLabel,
+                    downloadBtn,
+                    progressSec
+                });
+            }
         }
 
         const activeState = (window.ToolProgressManager && tool && tool._id) ? window.ToolProgressManager.get(tool._id) : null;
@@ -2237,6 +2283,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const resetForNewVideo = () => {
             currentToolFile = null;
+            if (activeSchemaRenderer) {
+                activeSchemaRenderer.setFile(null);
+                activeSchemaRenderer.clearLogs();
+            }
             if (window.ToolProgressManager && tool && tool._id) {
                 window.ToolProgressManager.clear(tool._id);
             }
@@ -2259,6 +2309,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleFileSelect = (file) => {
             if (!file) return;
             currentToolFile = file;
+            if (activeSchemaRenderer) {
+                activeSchemaRenderer.setFile(file);
+            }
             if (window._tktk) window._tktk.selectedFile = file;
             if (fileNameEl) fileNameEl.textContent = file.name;
             if (fileSizeEl) fileSizeEl.textContent = `(${(file.size / (1024 * 1024)).toFixed(1)} MB)`;
@@ -2312,11 +2365,115 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (processBtn) {
-            processBtn.onclick = () => {
+            processBtn.onclick = async () => {
                 if (processBtn.dataset.state === 'completed') {
                     resetForNewVideo();
                     return;
                 }
+
+                if (tool.schema && typeof tool.run === 'function') {
+                    if (!activeSchemaRenderer) return;
+                    const validation = activeSchemaRenderer.validate();
+                    if (!validation.valid) {
+                        if (typeof window.showToast === 'function') {
+                            window.showToast(validation.message);
+                        }
+                        return;
+                    }
+
+                    const inputs = activeSchemaRenderer.getValues();
+                    if (currentToolFile && activeSchemaRenderer.primaryFileInput) {
+                        inputs[activeSchemaRenderer.primaryFileInput.id] = currentToolFile;
+                    }
+
+                    processBtn.disabled = true;
+                    processBtn.dataset.state = 'processing';
+                    if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_processing')) || 'Processing...';
+                    if (progressSec) progressSec.classList.remove('hidden');
+                    if (progressFill) progressFill.style.width = '0%';
+                    if (progressPercent) progressPercent.textContent = '0%';
+                    if (progressStatus) progressStatus.textContent = 'Starting...';
+
+                    activeSchemaRenderer.clearLogs();
+
+                    const abortController = new AbortController();
+                    const context = {
+                        onProgress: (percent, statusText) => {
+                            const p = Math.max(0, Math.min(100, Math.round(percent)));
+                            if (progressFill) progressFill.style.width = `${p}%`;
+                            if (progressPercent) progressPercent.textContent = `${p}%`;
+                            if (progressStatus && statusText) progressStatus.textContent = statusText;
+                            if (window.ToolProgressManager && tool._id) {
+                                window.ToolProgressManager.set(tool._id, {
+                                    isProcessing: p < 100,
+                                    percent: p,
+                                    status: statusText || `${p}%`,
+                                    file: currentToolFile
+                                });
+                            }
+                        },
+                        onLog: (msg) => {
+                            activeSchemaRenderer.appendLog(msg);
+                        },
+                        onPreview: (previewData) => {
+                            activeSchemaRenderer.renderPreview(previewData);
+                        },
+                        signal: abortController.signal
+                    };
+
+                    try {
+                        const output = await tool.run(inputs, context);
+
+                        // Opsi A: Automatic Download & show download button
+                        if (output && output.type === 'file' && output.data) {
+                            const blob = output.data instanceof Blob ? output.data : new Blob([output.data], { type: output.mimeType || 'application/octet-stream' });
+                            const blobUrl = URL.createObjectURL(blob);
+                            const filename = output.filename || `${tool.id}_output`;
+
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            if (downloadBtn) {
+                                downloadBtn.href = blobUrl;
+                                downloadBtn.download = filename;
+                                downloadBtn.classList.remove('hidden');
+                            }
+
+                            if (typeof window.showToast === 'function') {
+                                window.showToast((window.getTranslation && window.getTranslation('status_completed_toast')) || 'Selesai! File berhasil diunduh.');
+                            }
+                        } else if (output && output.type === 'data') {
+                            activeSchemaRenderer.renderDataOutput(output.data);
+                        }
+
+                        processBtn.disabled = false;
+                        processBtn.dataset.state = 'completed';
+                        if (processLabel) processLabel.textContent = (window.getTranslation && window.getTranslation('status_process_another')) || 'Process Another';
+                        const processIcon = document.getElementById('tool-process-icon');
+                        if (processIcon) processIcon.textContent = 'restart_alt';
+                        if (progressFill) progressFill.style.width = '100%';
+                        if (progressPercent) progressPercent.textContent = '100%';
+                        if (progressStatus) progressStatus.textContent = 'Completed!';
+                    } catch (err) {
+                        console.error(`[Tool Run Error] ${tool.id}:`, err);
+                        processBtn.disabled = false;
+                        processBtn.dataset.state = 'error';
+                        if (processLabel) processLabel.textContent = 'Failed (Try Again)';
+                        if (progressStatus) progressStatus.textContent = `Error: ${err.message || err}`;
+                        if (typeof window.showToast === 'function') {
+                            window.showToast(`Error: ${err.message || err}`);
+                        }
+                        if (window.ToolProgressManager && tool._id) {
+                            window.ToolProgressManager.clear(tool._id);
+                        }
+                    }
+                    return;
+                }
+
                 const canProcess = typeof tool.canProcess === 'function'
                     ? tool.canProcess(currentToolFile)
                     : (tool.inputType === 'url' || tool.hideDropZone || !!currentToolFile);

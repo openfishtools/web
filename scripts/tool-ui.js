@@ -554,6 +554,53 @@
             this.container.appendChild(customDiv);
             return customDiv;
         }
+
+        /**
+         * Add a styled multiline textarea
+         */
+        addTextarea(options = {}) {
+            const {
+                id = 'tool-textarea-' + Math.random().toString(36).substring(2, 9),
+                label = '',
+                placeholder = '',
+                value = '',
+                rows = 4,
+                onChange = null
+            } = options;
+
+            const group = document.createElement('div');
+            group.className = 'tool-input-group';
+
+            if (label) {
+                const labelEl = document.createElement('label');
+                labelEl.className = 'tool-input-label';
+                labelEl.htmlFor = id;
+                labelEl.textContent = label;
+                group.appendChild(labelEl);
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.id = id;
+            textarea.className = 'tool-input-text tool-input-textarea';
+            textarea.placeholder = placeholder;
+            textarea.value = value;
+            textarea.rows = rows;
+
+            textarea.addEventListener('input', (e) => {
+                if (typeof onChange === 'function') onChange(e.target.value);
+            });
+
+            group.appendChild(textarea);
+            this.container.appendChild(group);
+
+            return {
+                group,
+                textarea,
+                getValue: () => textarea.value,
+                setValue: (v) => { textarea.value = v; },
+                onChange: (cb) => { onChange = cb; }
+            };
+        }
     }
 
     window.ToolUI = ToolUI;
