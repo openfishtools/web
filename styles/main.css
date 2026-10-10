@@ -7086,3 +7086,347 @@ body.preset-popup-active .preset-modal-card.expanded {
         animation: none !important;
     }
 }
+
+/* ============================================================
+   TOOL UI COMPONENT KIT PRIMITIVES
+   Clean styling for programmatic ToolUI elements
+   ============================================================ */
+
+.tool-ui-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.tool-ui-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.tool-ui-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    font-family: var(--font-mono, monospace);
+}
+
+.tool-ui-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--md-sys-color-surface-container-highest);
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.tool-ui-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.tool-ui-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+.tool-ui-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.tool-ui-slider::-moz-range-thumb:hover {
+    transform: scale(1.15);
+}
+
+.tool-ui-select-wrapper {
+    position: relative;
+    cursor: pointer;
+}
+
+.tool-ui-select {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--md-sys-color-on-surface);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 28px;
+}
+
+.tool-ui-select option {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
+.tool-ui-select-arrow {
+    position: absolute;
+    right: 12px;
+    pointer-events: none;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 20px;
+}
+
+.tool-ui-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+.tool-ui-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tool-ui-pill:hover {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+}
+
+.tool-ui-pill.active {
+    background: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary, #000);
+}
+
+.tool-ui-pill-icon {
+    font-size: 16px;
+}
+
+.tool-ui-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--radius-m);
+}
+
+.tool-ui-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tool-ui-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    cursor: pointer;
+}
+
+.tool-ui-toggle-desc {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.tool-ui-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.tool-ui-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.tool-ui-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--md-sys-color-surface-container-highest);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--radius-pill);
+    transition: 0.25s ease;
+}
+
+.tool-ui-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--md-sys-color-on-surface-variant);
+    border-radius: 50%;
+    transition: 0.25s ease;
+}
+
+.tool-ui-switch input:checked + .tool-ui-switch-slider {
+    background-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
+}
+
+.tool-ui-switch input:checked + .tool-ui-switch-slider:before {
+    transform: translateX(20px);
+    background-color: var(--md-sys-color-on-primary, #000);
+}
+
+.tool-ui-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius-m);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%;
+}
+
+.tool-ui-btn-tonal {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.tool-ui-btn-tonal:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.tool-ui-btn-primary {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary, #000);
+}
+
+.tool-ui-btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+.tool-ui-btn-outlined {
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-surface);
+}
+
+.tool-ui-btn-outlined:hover {
+    background: var(--md-sys-color-surface-container-high);
+}
+
+.tool-ui-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-m);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.tool-ui-alert.hidden {
+    display: none !important;
+}
+
+.tool-ui-alert-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.tool-ui-alert-info {
+    background: rgba(100, 181, 246, 0.12);
+    border: 1px solid rgba(100, 181, 246, 0.28);
+    color: #90caf9;
+}
+
+.tool-ui-alert-warning {
+    background: rgba(255, 183, 77, 0.12);
+    border: 1px solid rgba(255, 183, 77, 0.28);
+    color: #ffb74d;
+}
+
+.tool-ui-alert-error {
+    background: rgba(239, 83, 80, 0.12);
+    border: 1px solid rgba(239, 83, 80, 0.28);
+    color: #ef5350;
+}
+
+.tool-ui-alert-success {
+    background: rgba(102, 187, 106, 0.12);
+    border: 1px solid rgba(102, 187, 106, 0.28);
+    color: #81c784;
+}
+
+.tool-ui-section-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--radius-l);
+}
+
+.tool-ui-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--md-sys-color-primary);
+    margin: 0;
+}
+
+.tool-ui-section-desc {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 0;
+}
+
+.tool-ui-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+

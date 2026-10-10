@@ -1809,130 +1809,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.AppUI = {
-        createInput(opts = {}) {
-            const { label = '', placeholder = '', value = '', icon = 'edit', onChange, onEnter } = opts;
-            const group = document.createElement('div');
-            group.className = 'tool-input-group';
-            if (label) {
-                const lbl = document.createElement('label');
-                lbl.className = 'tool-input-label';
-                lbl.textContent = label;
-                group.appendChild(lbl);
-            }
-            const wrapper = document.createElement('div');
-            wrapper.className = 'tool-input-wrapper';
-            if (icon) {
-                const ico = document.createElement('span');
-                ico.className = 'material-symbols-rounded tool-input-icon';
-                ico.textContent = icon;
-                wrapper.appendChild(ico);
-            }
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'tool-input-text';
-            input.placeholder = placeholder;
-            input.value = value;
-            wrapper.appendChild(input);
-
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'tool-input-clear-btn hidden';
-            clearBtn.innerHTML = '<span class="material-symbols-rounded">close</span>';
-            wrapper.appendChild(clearBtn);
-
-            input.addEventListener('input', () => {
-                clearBtn.classList.toggle('hidden', !input.value);
-                if (typeof onChange === 'function') onChange(input.value);
-            });
-            clearBtn.addEventListener('click', () => {
-                input.value = '';
-                clearBtn.classList.add('hidden');
-                input.focus();
-                if (typeof onChange === 'function') onChange('');
-            });
-            if (typeof onEnter === 'function') {
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') onEnter(input.value);
-                });
-            }
-            group.appendChild(wrapper);
-            return { element: group, input };
-        },
-
-        createSlider(opts = {}) {
-            const { label = '', min = 0, max = 100, step = 1, value = 50, unit = '', onChange } = opts;
-            const group = document.createElement('div');
-            group.className = 'tool-input-group';
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-
-            const lbl = document.createElement('label');
-            lbl.className = 'tool-input-label';
-            lbl.textContent = label;
-            header.appendChild(lbl);
-
-            const valDisplay = document.createElement('span');
-            valDisplay.className = 'tool-slider-val';
-            valDisplay.style.fontSize = '12px';
-            valDisplay.style.fontWeight = '700';
-            valDisplay.style.color = 'var(--md-sys-color-primary)';
-            valDisplay.textContent = `${value}${unit}`;
-            header.appendChild(valDisplay);
-            group.appendChild(header);
-
-            const slider = document.createElement('input');
-            slider.type = 'range';
-            slider.min = min;
-            slider.max = max;
-            slider.step = step;
-            slider.value = value;
-            slider.style.width = '100%';
-            slider.style.accentColor = 'var(--md-sys-color-primary)';
-
-            slider.addEventListener('input', () => {
-                valDisplay.textContent = `${slider.value}${unit}`;
-                if (typeof onChange === 'function') onChange(Number(slider.value));
-            });
-            group.appendChild(slider);
-            return { element: group, slider, valDisplay };
-        },
-
-        createSelect(opts = {}) {
-            const { label = '', options = [], value = '', onChange } = opts;
-            const group = document.createElement('div');
-            group.className = 'tool-input-group';
-            if (label) {
-                const lbl = document.createElement('label');
-                lbl.className = 'tool-input-label';
-                lbl.textContent = label;
-                group.appendChild(lbl);
-            }
-            const select = document.createElement('select');
-            select.className = 'tool-input-wrapper';
-            select.style.cursor = 'pointer';
-            select.style.fontSize = '0.9rem';
-            select.style.fontWeight = '500';
-            select.style.color = 'var(--md-sys-color-on-surface)';
-
-            options.forEach(opt => {
-                const optEl = document.createElement('option');
-                optEl.value = typeof opt === 'object' ? opt.value : opt;
-                optEl.textContent = typeof opt === 'object' ? opt.label : opt;
-                if (optEl.value === value) optEl.selected = true;
-                select.appendChild(optEl);
-            });
-
-            select.addEventListener('change', () => {
-                if (typeof onChange === 'function') onChange(select.value);
-            });
-            group.appendChild(select);
-            return { element: group, select };
-        }
-    };
-
     window.AppTools = {
         _registry: new Map(),
         register(toolDef) {
@@ -2296,15 +2172,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (typeof tool.initModal === 'function') {
+            const ui = (typeof window.ToolUI === 'function' && optContainer)
+                ? new window.ToolUI(optContainer)
+                : null;
             tool.initModal({
+                ui,
                 optContainer,
                 dropZone,
                 fileInput,
                 processBtn,
                 processLabel,
                 downloadBtn,
-                progressSec,
-                ui: window.AppUI
+                progressSec
             });
         }
 
