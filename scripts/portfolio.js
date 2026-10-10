@@ -1809,31 +1809,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Sumber tunggal versi tool: /t_version.json
-    window.T_VERSIONS = {};
-
-    fetch('./t_version.json', { cache: 'no-cache' })
-        .then(res => res.ok ? res.json() : {})
-        .then(map => {
-            if (!map || typeof map !== 'object') return;
-            window.T_VERSIONS = map;
-            let changed = false;
-            if (window.AppTools && window.AppTools._registry) {
-                window.AppTools._registry.forEach((def, id) => {
-                    const v = map[id];
-                    if (v && def.version !== v) {
-                        def.version = v;
-                        changed = true;
-                    }
-                });
-            }
-            if (changed && typeof renderTools === 'function') {
-                const searchInput = document.getElementById('tools-search');
-                renderTools(searchInput ? searchInput.value : '', activeToolCategory);
-            }
-        })
-        .catch(() => {});
-
     window.AppTools = {
         _registry: new Map(),
         register(toolDef) {
@@ -1842,8 +1817,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!id) return;
             toolDef.id = id;
             toolDef._id = id;
-            const extV = window.T_VERSIONS[id];
-            if (extV) toolDef.version = extV;
             this._registry.set(id, toolDef);
             allTools = Array.from(this._registry.values());
             if (typeof renderTools === 'function') {

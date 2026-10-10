@@ -12,7 +12,6 @@ const COPY_TARGETS = [
     'favicon.svg',
     'coi-serviceworker.min.js',
     'sw.js',
-    't_version.json',
     '_headers',
     '_redirects',
     'assets',

@@ -5146,6 +5146,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-tiktok-patcher',
         _id: 'tool-tiktok-patcher',
+        version: '3.7.0',
         title: 'Quality Method',
         desc: 'TikTok HQ Upload',
         icon: 'high_quality',
@@ -5405,6 +5406,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-tiktok-downloader',
         _id: 'tool-tiktok-downloader',
+        version: 'v1.0.3',
         title: 'TikTok Downloader',
         desc: 'Powered By TikWm - Download HD Video',
         icon: 'download',
@@ -6106,6 +6108,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-tiktok-stats',
         _id: 'tool-tiktok-stats',
+        version: 'v1.1.5',
         title: 'TikTok Statistics',
         desc: 'Metadata & Stream Analyser',
         icon: 'query_stats',
@@ -7079,6 +7082,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-video-compressor',
         _id: 'tool-video-compressor',
+        version: '2.2.0',
         title: 'Video Compressor',
         desc: 'Compress video to custom quality and file sizes',
         icon: 'compress',
@@ -7625,6 +7629,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-video-interpolation',
         _id: 'tool-video-interpolation',
+        version: '1.0.3',
         title: 'Video Interpolation',
         titleKey: 'tool_interp_title',
         desc: 'FPS Upscaler',
@@ -7949,6 +7954,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-audio-extractor',
         _id: 'tool-audio-extractor',
+        version: '1.0.0',
         title: 'Audio Extractor',
         titleKey: 'tool_audio_extractor_title',
         desc: 'Video to Audio',
@@ -8426,6 +8432,7 @@ if (window._tktk) {
     const toolDefinition = {
         id: 'tool-image-sequence',
         _id: 'tool-image-sequence',
+        version: '1.1.0',
         title: 'Image Sequence to Video',
         titleKey: 'tool_seq_title',
         desc: 'AM Zip Exporter',
@@ -10681,6 +10688,7 @@ window.UpscaleGpuEnhancer = GpuEnhancer;
     const toolDefinition = {
         id: 'tool-upscale-enhancer',
         _id: 'tool-upscale-enhancer',
+        version: '1.3.0',
         title: 'Qualitelio Enhancer',
         titleKey: 'tool_upscale_title',
         desc: 'Media Upscaler',
@@ -12555,6 +12563,7 @@ window.UpscaleGpuEnhancer = GpuEnhancer;
     const toolDefinition = {
         id: 'tool-remove-background',
         _id: 'tool-remove-background',
+        version: '1.5.0',
         title: 'Remove Background',
         titleKey: 'tool_rembg_title',
         desc: 'AI Matting',
@@ -12953,6 +12962,7 @@ window.UpscaleGpuEnhancer = GpuEnhancer;
     const toolDefinition = {
         id: 'tool-ae-am-beatmark',
         _id: 'tool-ae-am-beatmark',
+        version: '1.0.0',
         title: 'AE to AM',
         titleKey: 'tool_ae_am_title',
         desc: 'Beatmark Converter',
@@ -13477,6 +13487,7 @@ window.UpscaleGpuEnhancer = GpuEnhancer;
     const toolDefinition = {
         id: 'tool-5mb-generator',
         _id: 'tool-5mb-generator',
+        version: '1.0.0',
         title: '5MB XML Generator',
         titleKey: 'tool_fivemb_title',
         desc: 'Alight Motion',

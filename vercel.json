@@ -9,7 +9,7 @@
       }
     },
     {
-      "src": "{index.html,admin.html,favicon.ico,favicon.svg,coi-serviceworker.min.js,sw.js,t_version.json}",
+      "src": "{index.html,admin.html,favicon.ico,favicon.svg,coi-serviceworker.min.js,sw.js}",
       "use": "@vercel/static"
     },
     {
