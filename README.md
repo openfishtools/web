@@ -21,5 +21,12 @@ npm run build:cf
 
 ## License
 
-Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0).
-See [LICENSE](LICENSE) for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International ([CC BY-NC-ND 4.0](LICENSE)).
+
+### Summary
+- **Do**:
+  - Share, copy, and redistribute the material in any medium or format.
+  - Give appropriate credit and link to [OpenFishTools](https://github.com/openfishtools).
+- **Don't**:
+  - Use the platform or code for commercial purposes without prior permission.
+  - Distribute modified versions (remixes, alterations, or derivative works).
