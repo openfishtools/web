@@ -2151,25 +2151,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
                         dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
                     }
+                } else if (tool._id === 'tool-tiktok-patcher') {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
+                    }
                 } else {
+                    if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
                     const schemaFileDef = (tool.schema && Array.isArray(tool.schema.inputs))
                         ? tool.schema.inputs.find(i => i.type === 'file' && i.primary !== false)
                         : null;
                     if (schemaFileDef && fileInput) {
                         fileInput.multiple = !!schemaFileDef.multiple;
                         fileInput.accept = Array.isArray(schemaFileDef.accept) ? schemaFileDef.accept.join(',') : (schemaFileDef.accept || '*/*');
-                        if (dropTitle && schemaFileDef.label) dropTitle.textContent = schemaFileDef.label;
-                        if (dropSubtitle && schemaFileDef.subtitle) dropSubtitle.textContent = schemaFileDef.subtitle;
-                    } else {
-                        if (fileInput) fileInput.accept = 'video/mp4,video/quicktime,video/webm,video/*';
-                        if (dropTitle) {
-                            dropTitle.setAttribute('data-i18n', 'patcher_drop_label');
-                            dropTitle.textContent = (window.getTranslation && window.getTranslation('patcher_drop_label')) || 'Drop video here or click to browse';
-                        }
-                        if (dropSubtitle) {
-                            dropSubtitle.setAttribute('data-i18n', 'tool_drop_formats_video');
-                            dropSubtitle.textContent = (window.getTranslation && window.getTranslation('tool_drop_formats_video')) || 'Supports MP4, MOV, WebM';
-                        }
+                    }
+                    const dropKey = (schemaFileDef && schemaFileDef.labelKey) || 'patcher_drop_label';
+                    const subKey = (schemaFileDef && schemaFileDef.subtitleKey) || 'tool_drop_formats_video';
+                    if (dropTitle) {
+                        dropTitle.setAttribute('data-i18n', dropKey);
+                        dropTitle.textContent = (window.getTranslation && window.getTranslation(dropKey)) || (schemaFileDef && schemaFileDef.label) || 'Drop video here or click to browse';
+                    }
+                    if (dropSubtitle) {
+                        dropSubtitle.setAttribute('data-i18n', subKey);
+                        dropSubtitle.textContent = (window.getTranslation && window.getTranslation(subKey)) || (schemaFileDef && schemaFileDef.subtitle) || 'Supports MP4, MOV, WebM';
                     }
                 }
             }
