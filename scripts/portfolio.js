@@ -1421,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     dev: 'OpenFishTools',
                     category: ['Web App'],
                     icon: '/assets/projects/web.svg',
-                    info: 'v1.0.0',
+                    info: 'v1.0.1',
                     description: 'Official web platform and interactive tools suite for OpenFishTools.',
                     instruction: 'High-performance interactive web application built with vanilla web technologies.',
                     html_url: 'https://github.com/openfishtools/web',
@@ -1429,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         {
                             name: 'WEB',
                             versions: [
-                                { label: '1.0.0', url: 'https://web-tau-lovat-70.vercel.app' }
+                                { label: '1.0.1', url: 'https://web-tau-lovat-70.vercel.app' }
                             ]
                         }
                     ]

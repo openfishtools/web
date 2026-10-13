@@ -6,7 +6,7 @@
 
   **Web platform for the OpenFishTools suite.**
 
-  [![Version: 1.0.0](https://img.shields.io/badge/version-1.0.0-9DFF00.svg)](package.json)
+  [![Version: 1.0.1](https://img.shields.io/badge/version-1.0.1-9DFF00.svg)](package.json)
   [![Category: Web App](https://img.shields.io/badge/category-Web_App-blue.svg)](#)
   [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](LICENSE)
 
