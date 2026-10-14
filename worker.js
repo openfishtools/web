@@ -191,18 +191,25 @@ export default {
             if (cacheTtl > 0) {
                 const cachedResponse = await cache.match(cacheKey);
                 if (cachedResponse) {
-                    const hitHeaders = new Headers(cachedResponse.headers);
-                    hitHeaders.set('CF-Cache-Status', 'HIT');
-                    hitHeaders.set('X-Edge-Cache', 'HIT');
-                    hitHeaders.set('Access-Control-Allow-Origin', corsOrigin);
-                    hitHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-                    hitHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
-                    hitHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
-                    return new Response(cachedResponse.body, {
-                        status: cachedResponse.status,
-                        statusText: cachedResponse.statusText,
-                        headers: hitHeaders
-                    });
+                    const cachedText = await cachedResponse.clone().text();
+                    if (cachedText.trim() === '[]') {
+                        if (ctx && ctx.waitUntil) {
+                            ctx.waitUntil(cache.delete(cacheKey));
+                        }
+                    } else {
+                        const hitHeaders = new Headers(cachedResponse.headers);
+                        hitHeaders.set('CF-Cache-Status', 'HIT');
+                        hitHeaders.set('X-Edge-Cache', 'HIT');
+                        hitHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                        hitHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+                        hitHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                        hitHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
+                        return new Response(cachedText, {
+                            status: cachedResponse.status,
+                            statusText: cachedResponse.statusText,
+                            headers: hitHeaders
+                        });
+                    }
                 }
             }
 
@@ -235,23 +242,28 @@ export default {
                 newHeaders.set('CF-Cache-Status', 'MISS');
                 newHeaders.set('X-Edge-Cache', 'MISS');
 
-                // Cache successful GET responses in Cloudflare's Edge CDN
+                // Cache successful GET responses in Cloudflare's Edge CDN (skip empty [] fallback responses)
                 if (cacheTtl > 0 && response.ok) {
-                    const cacheHeaders = new Headers(response.headers);
-                    cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
-                    cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
-                    cacheHeaders.set('CF-Cache-Status', 'HIT');
-                    cacheHeaders.set('X-Edge-Cache', 'HIT');
-                    cacheHeaders.delete('set-cookie');
-                    cacheHeaders.delete('pragma');
-                    cacheHeaders.delete('expires');
-                    const cacheResponse = new Response(response.clone().body, {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: cacheHeaders
-                    });
-                    if (ctx && ctx.waitUntil) {
-                        ctx.waitUntil(cache.put(cacheKey, cacheResponse));
+                    const cloned = response.clone();
+                    const bodyText = await cloned.text();
+                    const trimmed = bodyText.trim();
+                    if (trimmed && trimmed !== '[]') {
+                        const cacheHeaders = new Headers(response.headers);
+                        cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
+                        cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                        cacheHeaders.set('CF-Cache-Status', 'HIT');
+                        cacheHeaders.set('X-Edge-Cache', 'HIT');
+                        cacheHeaders.delete('set-cookie');
+                        cacheHeaders.delete('pragma');
+                        cacheHeaders.delete('expires');
+                        const cacheResponse = new Response(bodyText, {
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: cacheHeaders
+                        });
+                        if (ctx && ctx.waitUntil) {
+                            ctx.waitUntil(cache.put(cacheKey, cacheResponse));
+                        }
                     }
                 }
 

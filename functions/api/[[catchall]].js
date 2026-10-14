@@ -146,18 +146,23 @@ export async function onRequest(context) {
         try {
             const cachedResponse = await cache.match(cacheKey);
             if (cachedResponse) {
-                const newHeaders = new Headers(cachedResponse.headers);
-                newHeaders.set('CF-Cache-Status', 'HIT');
-                newHeaders.set('X-Edge-Cache', 'HIT');
-                newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
-                newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-                newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
-                newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
-                return new Response(cachedResponse.body, {
-                    status: cachedResponse.status,
-                    statusText: cachedResponse.statusText,
-                    headers: newHeaders
-                });
+                const cachedText = await cachedResponse.clone().text();
+                if (cachedText.trim() === '[]') {
+                    context.waitUntil(cache.delete(cacheKey));
+                } else {
+                    const newHeaders = new Headers(cachedResponse.headers);
+                    newHeaders.set('CF-Cache-Status', 'HIT');
+                    newHeaders.set('X-Edge-Cache', 'HIT');
+                    newHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                    newHeaders.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+                    newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-requested-with');
+                    newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, CF-Cache-Status, X-Edge-Cache');
+                    return new Response(cachedText, {
+                        status: cachedResponse.status,
+                        statusText: cachedResponse.statusText,
+                        headers: newHeaders
+                    });
+                }
             }
         } catch (_) {}
     }
@@ -195,18 +200,23 @@ export async function onRequest(context) {
         newHeaders.set('CF-Cache-Status', 'MISS');
         newHeaders.set('X-Edge-Cache', 'MISS');
 
-        // If response is successful and eligible for edge caching, save to Cloudflare Cache
+        // If response is successful and eligible for edge caching, save to Cloudflare Cache (skip empty [] fallback responses)
         if (cache && cacheTtl > 0 && response.status === 200) {
             try {
-                const cacheHeaders = new Headers(response.headers);
-                cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
-                cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
-                const responseToCache = new Response(response.clone().body, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: cacheHeaders
-                });
-                context.waitUntil(cache.put(cacheKey, responseToCache));
+                const cloned = response.clone();
+                const bodyText = await cloned.text();
+                const trimmed = bodyText.trim();
+                if (trimmed && trimmed !== '[]') {
+                    const cacheHeaders = new Headers(response.headers);
+                    cacheHeaders.set('Cache-Control', `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`);
+                    cacheHeaders.set('Access-Control-Allow-Origin', corsOrigin);
+                    const responseToCache = new Response(bodyText, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: cacheHeaders
+                    });
+                    context.waitUntil(cache.put(cacheKey, responseToCache));
+                }
             } catch (_) {}
         }
 
