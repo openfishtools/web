@@ -1,10 +1,9 @@
 {
-  "updatedAt": "2026-10-14T05:10:43.761Z",
+  "updatedAt": "2026-10-14T05:26:35.415Z",
   "helpers": [
     "method/finalize.js",
     "method/compress.js",
     "method/normalize.js",
-    "method/item/binary.js",
     "method/item/fish.js",
     "method/item/fps.js",
     "method/item/wmv.js",
