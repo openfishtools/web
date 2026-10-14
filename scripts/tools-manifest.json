@@ -1,0 +1,26 @@
+{
+  "updatedAt": "2026-10-14T05:10:43.761Z",
+  "helpers": [
+    "method/finalize.js",
+    "method/compress.js",
+    "method/normalize.js",
+    "method/item/binary.js",
+    "method/item/fish.js",
+    "method/item/fps.js",
+    "method/item/wmv.js",
+    "ai/upscale-gpu-enhancer.js"
+  ],
+  "tools": [
+    "ai/rembg-tool.js",
+    "ai/upscale-tool.js",
+    "converters/ae-to-am-beatmark-tool.js",
+    "converters/fivemb-generator-tool.js",
+    "tiktok/tiktok-downloader-tool.js",
+    "tiktok/tiktok-quality-tool.js",
+    "tiktok/tiktok-stats-tool.js",
+    "video/audio-extractor-tool.js",
+    "video/image-sequence-tool.js",
+    "video/video-compressor-tool.js",
+    "video/video-interpolation-tool.js"
+  ]
+}

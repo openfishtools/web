@@ -191,10 +191,6 @@
             "ios_warn_cancel": "Tutup",
             "ios_warn_proceed": "Mengerti",
             "ios_not_supported_err": "Perangkat iOS tidak didukung. Silakan gunakan PC (Windows/macOS) atau Android.",
-            "v3_warn_title": "Peringatan metode V3",
-            "v3_warn_desc": "<p>metode V3 menggunakan FastStart, pembersihan track data timecode, dan alignment padding 79KB. Pilih OFF (Direct Patch) untuk proses kilat tanpa kompresi, atau pilih preset HD/Compatibility untuk kompresi aman tanpa Out Of Memory.</p>",
-            "v3_warn_cancel": "Batal",
-            "v3_warn_proceed": "Lanjutkan",
             "ad_consent_title": "Suka pakai cutefish?",
             "ad_consent_desc": "<p>Tool ini 100% gratis dan berjalan langsung di browser kamu. Kalau tool ini ngebantu, boleh banget donasi buat bantu pengembangan. Opsional!</p>",
             "ad_consent_decline": "Nanti aja",
@@ -238,33 +234,8 @@
             "resource_search_placeholder": "Cari resource...",
             "tools_title": "Alat",
             "contact_title": "Hubungi Kami",
-            "patcher_overlay_title": "metode Ter-patch",
-            "patcher_overlay_desc": "metode WMV saat ini tidak tersedia. Silakan gunakan metode F R Y atau FPS.",
-            "patcher_overlay_ignore": "Abaikan",
             "patcher_cat_recommended": "Rekomendasi",
             "patcher_cat_backup": "Cadangan",
-            "patcher_method_wmv": "WMV",
-            "patcher_method_fry": "F R Y",
-            "patcher_method_binary": "BINARY",
-            "patcher_method_fps": "FPS",
-            "patcher_method_tbt": "FISH",
-            "patcher_method_streamshield": "FISH",
-            "patcher_method_fish": "FISH",
-            "patcher_desc_fish_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Menata ulang struktur atom MP4 secara instan tanpa encode ulang, menjaga resolusi serta kualitas video dan audio tetap 100% asli.
-            `,
-            "patcher_desc_fish_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [info] Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menata ulang metadata MP4.
-            `,
-            "patcher_desc_fish_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menata ulang metadata MP4.
-            `,
             "patcher_compress_title": "Compress",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
@@ -295,88 +266,6 @@
             "patcher_notice_fps_120": "Video <strong>{fps} FPS</strong> (&gt; 120 FPS) terdeteksi. Wajib normalisasi slow motion atau gunakan Userscript Bypass Cloud Canvas.",
             "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong>.",
             "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) terdeteksi. Dikonversi ke <strong>60 FPS slow motion</strong> sebelum patch <strong>{method}</strong>.",
-            "patcher_desc_wmv": `
-                [format] .wmv
-                [codec] WMV2
-                [info] Mengonversi video ke format Windows Media Video (.wmv) melalui penyandian ulang lossless untuk melewati pembatasan bitrate bawaan platform.
-            `,
-            "patcher_desc_fry_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Menata ulang metadata MP4 tanpa encode ulang, menjaga kualitas video dan audio tetap asli.
-                [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
-            `,
-            "patcher_desc_fry_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [info] Mengompresi video ke 720p agar ukuran file lebih ringan, lalu menerapkan patch metadata MP4.
-                [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
-            `,
-            "patcher_desc_fry_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [info] Mengompresi video ke Full HD 1080p untuk menjaga ketajaman, lalu menerapkan patch metadata MP4.
-                [credit] Terima kasih untuk <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> karena sudah membagikan source method-nya dan membantu fix method ini.
-            `,
-            "patcher_desc_binary_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Menata ulang struktur metadata dan susunan streaming MP4 secara langsung tanpa kompresi, menjaga resolusi serta kualitas visual asli tetap utuh 100%.
-            `,
-            "patcher_desc_binary_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [codec] H.264
-                [info] Mengompresi dan menyesuaikan batas resolusi ke 720p dengan alokasi bitrate teroptimasi, lalu menerapkan rekonstruksi metadata kontainer MP4.
-            `,
-            "patcher_desc_binary_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [codec] H.264
-                [info] Mengompresi video pada resolusi Full HD 1080p dengan batas bitrate tinggi untuk menjaga ketajaman gerak, dilanjutkan dengan rekonstruksi metadata kontainer MP4.
-            `,
-            "patcher_desc_tbt_off": `
-                [format] .mp4 (Faststart)
-                [mode] Direct Pass-Through
-                [info] Optimasi stream cerdas agar tepat di bawah ambang pemicu kompresi TikTok tanpa manipulasi durasi kontainer.
-            `,
-            "patcher_desc_tbt_720p": `
-                [format] .mp4 (Faststart)
-                [resolution] 720p
-                [info] Konversi ke 720p dengan profil ingest optimal untuk hemat kuota dan unggahan kilat tanpa degradasi warna.
-            `,
-            "patcher_desc_tbt_1080p": `
-                [format] .mp4 (Faststart)
-                [resolution] 1080p
-                [info] Menyelaraskan resolusi ke standar 1080p dengan alokasi bitrate tinggi untuk menjaga ketajaman gerak 60 FPS.
-            `,
-            "patcher_desc_fps": `
-                [format] .mp4
-                [fps] 30 FPS Presentation Patch
-                [info] Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.
-                [warn] metode ini tidak membypass quality, hanya FPS saja.
-            `,
-            "patcher_desc_fps_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [fps] 30 FPS Presentation Patch
-                [info] Video akan terlihat slow motion di galeri offline, namun otomatis berjalan mulus (smooth 60 FPS) saat diunggah ke TikTok.
-                [warn] metode ini tidak membypass quality, hanya FPS saja.
-            `,
-            "patcher_desc_fps_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [fps] 30 FPS Presentation Patch
-                [info] Mengompresi video ke 720p dengan bitrate hemat MB, lalu menerapkan timescale patch agar playback di TikTok berjalan halus.
-                [warn] metode ini tidak membypass quality, hanya FPS saja.
-            `,
-            "patcher_desc_fps_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [fps] 30 FPS Presentation Patch
-                [info] Mengompresi video pada resolusi Full HD 1080p dengan ukuran MB kecil dan tajam pada pergerakan cepat, lalu menerapkan timescale patch.
-                [warn] metode ini tidak membypass quality, hanya FPS saja.
-            `,
             "offline_title": "Sumber Daya Offline Belum Lengkap",
             "offline_desc": "Unduh paket resource FFmpeg & AI Model offline agar semua tools dapat berjalan lancar tanpa koneksi internet.",
             "offline_btn_download": "Unduh Sekarang",
@@ -747,10 +636,6 @@
             "ios_warn_cancel": "Close",
             "ios_warn_proceed": "Understood",
             "ios_not_supported_err": "iOS devices are not supported. Please use PC (Windows/macOS) or Android.",
-            "v3_warn_title": "V3 method Warning",
-            "v3_warn_desc": "<p>V3 method applies FastStart, data track cleaning, and 79KB alignment padding. Select OFF (Direct Patch) for instant 0% loss pass-through, or select HD/Compatibility for memory-safe compression without OOM crashes.</p>",
-            "v3_warn_cancel": "Cancel",
-            "v3_warn_proceed": "Proceed",
             "ad_consent_title": "Enjoying cutefish?",
             "ad_consent_desc": "<p>This tool is 100% free and runs entirely in your browser. If it helps you out, consider donating to support development. It's totally optional!</p>",
             "ad_consent_decline": "Maybe later",
@@ -794,33 +679,8 @@
             "resource_search_placeholder": "Search resources...",
             "tools_title": "Tools",
             "contact_title": "Contact Us",
-            "patcher_overlay_title": "method Patched",
-            "patcher_overlay_desc": "WMV method is currently unavailable. Please use F R Y or FPS method.",
-            "patcher_overlay_ignore": "Ignore",
             "patcher_cat_recommended": "Recommended",
             "patcher_cat_backup": "Backup",
-            "patcher_method_wmv": "WMV",
-            "patcher_method_fry": "F R Y",
-            "patcher_method_binary": "BINARY",
-            "patcher_method_fps": "FPS",
-            "patcher_method_tbt": "FISH",
-            "patcher_method_streamshield": "FISH",
-            "patcher_method_fish": "FISH",
-            "patcher_desc_fish_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Instantly rearranges MP4 atom structure without re-encoding, preserving 100% original video and audio quality.
-            `,
-            "patcher_desc_fish_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [info] Compresses video to 720p for lighter file size, then applies MP4 atom restructuring.
-            `,
-            "patcher_desc_fish_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [info] Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 atom restructuring.
-            `,
             "patcher_compress_title": "Compress",
             "patcher_mode_off": "OFF",
             "patcher_mode_720p": "720P",
@@ -851,88 +711,6 @@
             "patcher_notice_fps_120": "Video <strong>{fps} FPS</strong> (&gt; 120 FPS) detected. Slow motion normalization or Cloud Canvas Bypass Userscript required.",
             "patcher_notice_fps_direct": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong>.",
             "patcher_notice_fps_emergency": "Video <strong>{fps} FPS</strong> (&gt; 60 FPS) detected. Converted to <strong>60 FPS slow motion</strong> before <strong>{method}</strong> patch.",
-            "patcher_desc_wmv": `
-                [format] .wmv
-                [codec] WMV2
-                [info] Converts video to Windows Media Video (.wmv) format via lossless re-encoding to bypass platform-side bitrate ingestion constraints.
-            `,
-            "patcher_desc_fry_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Rearranges MP4 metadata without re-encoding, keeping original video and audio quality intact.
-                [credit] Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.
-            `,
-            "patcher_desc_fry_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [info] Compresses video to 720p for a smaller file size, then applies MP4 metadata patch.
-                [credit] Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.
-            `,
-            "patcher_desc_fry_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [info] Compresses video to Full HD 1080p to preserve sharpness, then applies MP4 metadata patch.
-                [credit] Thanks to <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">@itsmefachry</a> &amp; <a href="https://www.tiktok.com/@adek.jamannow" target="_blank" rel="noopener noreferrer">@adek.jamannow</a> for sharing the method source and helping fix this method.
-            `,
-            "patcher_desc_binary_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [info] Restructures MP4 container metadata and stream layout directly without compression, preserving 100% of original visual quality and resolution.
-            `,
-            "patcher_desc_binary_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [codec] H.264
-                [info] Compresses and scales resolution up to 720p with optimized bitrate allocation, followed by MP4 container metadata reconstruction.
-            `,
-            "patcher_desc_binary_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [codec] H.264
-                [info] Compresses video at Full HD 1080p resolution with high bitrate allocation to preserve motion clarity, followed by MP4 container metadata reconstruction.
-            `,
-            "patcher_desc_tbt_off": `
-                [format] .mp4 (Faststart)
-                [mode] Direct Pass-Through
-                [info] Smart stream optimization tuned right below TikTok's compression threshold without container header corruption.
-            `,
-            "patcher_desc_tbt_720p": `
-                [format] .mp4 (Faststart)
-                [resolution] 720p
-                [info] 720p conversion with optimized ingest profile for fast, bandwidth-friendly uploads without color degradation.
-            `,
-            "patcher_desc_tbt_1080p": `
-                [format] .mp4 (Faststart)
-                [resolution] 1080p
-                [info] Aligns video to 1080p Full HD standard with high bitrate allocation to preserve 60 FPS motion clarity.
-            `,
-            "patcher_desc_fps": `
-                [format] .mp4
-                [fps] 30 FPS Presentation Patch
-                [info] Video will appear in slow motion in local playback, but will play smoothly at 60 FPS once uploaded to TikTok.
-                [warn] This method does not bypass quality, only FPS.
-            `,
-            "patcher_desc_fps_off": `
-                [format] .mp4
-                [mode] Direct Pass-Through
-                [fps] 30 FPS Presentation Patch
-                [info] Video will appear in slow motion in local playback, but will play smoothly at 60 FPS once uploaded to TikTok.
-                [warn] This method does not bypass quality, only FPS.
-            `,
-            "patcher_desc_fps_720p": `
-                [format] .mp4
-                [resolution] 720p
-                [fps] 30 FPS Presentation Patch
-                [info] Compresses video to 720p for low file size, then applies timescale patch for smooth playback on TikTok.
-                [warn] This method does not bypass quality, only FPS.
-            `,
-            "patcher_desc_fps_1080p": `
-                [format] .mp4
-                [resolution] 1080p
-                [fps] 30 FPS Presentation Patch
-                [info] Compresses video at Full HD 1080p with optimized compact file size and high motion retention, then applies timescale patch.
-                [warn] This method does not bypass quality, only FPS.
-            `,
             "offline_title": "Offline Resources Incomplete",
             "offline_desc": "Download FFmpeg & AI Model offline packages so all tools work smoothly without an internet connection.",
             "offline_btn_download": "Download Now",

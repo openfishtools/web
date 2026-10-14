@@ -39,7 +39,7 @@
         const jsFiles = tree
             .filter(item => item && item.type === 'blob' && typeof item.path === 'string' && item.path.endsWith('.js'))
             .map(item => item.path)
-            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.') && !p.includes('fishV2'));
+            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('create-method/') && !p.startsWith('.'));
 
         const helpers = [];
         const tools = [];
@@ -57,11 +57,12 @@
                 const lower = (path || '').toLowerCase();
                 if (lower === 'method/finalize.js') return 1;
                 if (lower === 'method/compress.js') return 2;
-                if (lower.startsWith('method/item/')) return 3;
-                if (lower.startsWith('method/')) return 4;
-                return 5;
+                if (lower === 'method/normalize.js') return 3;
+                if (lower.startsWith('method/') && !lower.startsWith('method/item/')) return 4;
+                if (lower.startsWith('method/item/')) return 5;
+                return 6;
             };
-            return getScore(a) - getScore(b);
+            return getScore(a) - getScore(b) || a.localeCompare(b);
         });
 
         tools.sort();
@@ -88,7 +89,7 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.helpers) && Array.isArray(data.tools) && data.tools.length > 0) {
-                    const cleanHelpers = data.helpers.filter(h => !h.includes('fishV2') && !h.startsWith('workers/') && !h.startsWith('experimental/'));
+                    const cleanHelpers = data.helpers.filter(h => !h.startsWith('workers/') && !h.startsWith('experimental/') && !h.startsWith('create-method/'));
                     const manifest = {
                         helpers: cleanHelpers,
                         tools: data.tools,
@@ -124,35 +125,23 @@
             console.debug('[ToolsLoader] GitHub Trees API unavailable:', ghErr.message);
         }
 
-        // 3. Guaranteed static manifest fallback
-        return {
-            helpers: [
-                'method/finalize.js',
-                'method/compress.js',
-                'method/emergencymethod.js',
-                'method/wmvpatch.js',
-                'method/FRYMethod.js',
-                'method/binarypatch.js',
-                'method/fpspatch.js',
-                'method/streamshield.js',
-                'ai/upscale-gpu-enhancer.js'
-            ],
-            tools: [
-                'ai/rembg-tool.js',
-                'ai/upscale-tool.js',
-                'converters/ae-to-am-beatmark-tool.js',
-                'converters/fivemb-generator-tool.js',
-                'tiktok/tiktok-downloader-tool.js',
-                'tiktok/tiktok-quality-tool.js',
-                'tiktok/tiktok-stats-tool.js',
-                'video/audio-extractor-tool.js',
-                'video/image-sequence-tool.js',
-                'video/video-compressor-tool.js',
-                'video/video-interpolation-tool.js'
-            ],
-            sha: 'main',
-            timestamp: Date.now()
-        };
+        // 3. Fallback to build-generated tools-manifest.json
+        try {
+            const localManifestRes = await fetch('scripts/tools-manifest.json', { cache: 'no-cache' });
+            if (localManifestRes.ok) {
+                const localData = await localManifestRes.json();
+                if (localData && Array.isArray(localData.helpers) && Array.isArray(localData.tools) && localData.tools.length > 0) {
+                    return {
+                        helpers: localData.helpers,
+                        tools: localData.tools,
+                        sha: 'main',
+                        timestamp: Date.now()
+                    };
+                }
+            }
+        } catch (_) {}
+
+        throw new Error('All dynamic manifest sources unavailable; falling back to local bundle.');
     }
 
     async function loadRemoteTools() {

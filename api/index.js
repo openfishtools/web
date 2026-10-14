@@ -225,6 +225,78 @@ let toolsManifestCache = {
 };
 const TOOLS_CACHE_TTL_MS = 60 * 1000;
 
+function sortHelperPaths(helpers) {
+    return helpers.sort((a, b) => {
+        const getScore = (p) => {
+            const lower = (p || '').toLowerCase();
+            if (lower === 'method/finalize.js') return 1;
+            if (lower === 'method/compress.js') return 2;
+            if (lower === 'method/normalize.js') return 3;
+            if (lower.startsWith('method/') && !lower.startsWith('method/item/')) return 4;
+            if (lower.startsWith('method/item/')) return 5;
+            return 6;
+        };
+        return getScore(a) - getScore(b) || a.localeCompare(b);
+    });
+}
+
+function classifyJsPaths(jsFiles) {
+    const clean = jsFiles.filter(p =>
+        p &&
+        typeof p === 'string' &&
+        p.endsWith('.js') &&
+        !p.startsWith('workers/') &&
+        !p.startsWith('experimental/') &&
+        !p.startsWith('create-method/') &&
+        !p.startsWith('.') &&
+        !p.startsWith('node_modules')
+    );
+    const helpers = [];
+    const tools = [];
+    for (const p of clean) {
+        if (p.endsWith('-tool.js')) tools.push(p);
+        else helpers.push(p);
+    }
+    sortHelperPaths(helpers);
+    tools.sort();
+    return { helpers, tools };
+}
+
+function scanLocalWebTools() {
+    try {
+        const webToolsDir = path.resolve(__dirname, '..', '..', 'web-tools');
+        if (fs.existsSync(webToolsDir)) {
+            const walk = (dir, base = dir) => {
+                let res = [];
+                for (const entry of fs.readdirSync(dir)) {
+                    const full = path.join(dir, entry);
+                    const rel = path.relative(base, full).replace(/\\/g, '/');
+                    if (rel.startsWith('.') || rel.startsWith('node_modules') || rel.startsWith('workers/') || rel.startsWith('experimental/') || rel.startsWith('create-method/')) {
+                        continue;
+                    }
+                    const st = fs.statSync(full);
+                    if (st.isDirectory()) res = res.concat(walk(full, base));
+                    else if (entry.endsWith('.js')) res.push(rel);
+                }
+                return res;
+            };
+            return classifyJsPaths(walk(webToolsDir));
+        }
+    } catch (_) {}
+
+    try {
+        const manifestFile = path.join(__dirname, '..', 'scripts', 'tools-manifest.json');
+        if (fs.existsSync(manifestFile)) {
+            const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+            if (parsed && Array.isArray(parsed.helpers) && Array.isArray(parsed.tools)) {
+                return classifyJsPaths([...parsed.helpers, ...parsed.tools]);
+            }
+        }
+    } catch (_) {}
+
+    return { helpers: [], tools: [] };
+}
+
 app.get('/api/tools', async (req, res) => {
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
     const now = Date.now();
@@ -253,35 +325,11 @@ app.get('/api/tools', async (req, res) => {
         const data = await resp.json();
         const tree = Array.isArray(data.tree) ? data.tree : [];
 
-        const jsFiles = tree
+        const rawPaths = tree
             .filter(item => item && item.type === 'blob' && typeof item.path === 'string' && item.path.endsWith('.js'))
-            .map(item => item.path)
-            .filter(p => !p.startsWith('workers/') && !p.startsWith('experimental/') && !p.startsWith('.') && !p.includes('fishV2'));
+            .map(item => item.path);
 
-        const helpers = [];
-        const tools = [];
-
-        for (const p of jsFiles) {
-            if (p.endsWith('-tool.js')) {
-                tools.push(p);
-            } else {
-                helpers.push(p);
-            }
-        }
-
-        helpers.sort((a, b) => {
-            const getScore = (path) => {
-                const lower = (path || '').toLowerCase();
-                if (lower === 'method/finalize.js') return 1;
-                if (lower === 'method/compress.js') return 2;
-                if (lower.startsWith('method/item/')) return 3;
-                if (lower.startsWith('method/')) return 4;
-                return 5;
-            };
-            return getScore(a) - getScore(b);
-        });
-
-        tools.sort();
+        const { helpers, tools } = classifyJsPaths(rawPaths);
 
         const manifest = {
             success: true,
@@ -303,36 +351,15 @@ app.get('/api/tools', async (req, res) => {
         if (toolsManifestCache.data) {
             return res.json(toolsManifestCache.data);
         }
+        const fallback = scanLocalWebTools();
         return res.json({
             success: true,
             isFallback: true,
             sha: 'main',
             updatedAt: new Date().toISOString(),
-            helpers: [
-                'method/finalize.js',
-                'method/compress.js',
-                'method/emergencymethod.js',
-                'method/wmvpatch.js',
-                'method/FRYMethod.js',
-                'method/binarypatch.js',
-                'method/fpspatch.js',
-                'method/streamshield.js',
-                'ai/upscale-gpu-enhancer.js'
-            ],
-            tools: [
-                'ai/rembg-tool.js',
-                'ai/upscale-tool.js',
-                'converters/ae-to-am-beatmark-tool.js',
-                'converters/fivemb-generator-tool.js',
-                'tiktok/tiktok-downloader-tool.js',
-                'tiktok/tiktok-quality-tool.js',
-                'tiktok/tiktok-stats-tool.js',
-                'video/audio-extractor-tool.js',
-                'video/image-sequence-tool.js',
-                'video/video-compressor-tool.js',
-                'video/video-interpolation-tool.js'
-            ],
-            totalTools: 11
+            helpers: fallback.helpers,
+            tools: fallback.tools,
+            totalTools: fallback.tools.length
         });
     }
 });
