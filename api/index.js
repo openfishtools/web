@@ -89,6 +89,9 @@ app.use((req, res, next) => {
     next();
 });
 
+// TikWM upstream - hardcoded default, overridable via env.
+const TIKWM_BASE_URL = (process.env.TIKWM_BASE_URL || 'https://www.tikwm.com').replace(/\/+$/, '');
+
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
@@ -408,33 +411,30 @@ function sortPostsDesc(posts) {
 }
 
 async function fetchTikwmUserFeed(username) {
-    const mirrors = ['https://www.tikwm.com', 'https://tikwm.com'];
-    for (const base of mirrors) {
-        for (const method of ['GET', 'POST']) {
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 6000);
-                const options = {
-                    method,
-                    headers: { 'User-Agent': TIKTOK_UA, 'Accept': 'application/json' },
-                    signal: controller.signal
-                };
-                if (method === 'GET') {
-                    options.url = `${base}/api/user/posts?unique_id=${encodeURIComponent(username)}&count=12`;
-                } else {
-                    options.url = `${base}/api/user/posts`;
-                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-                    options.body = new URLSearchParams({ unique_id: username, count: '12' }).toString();
-                }
-                const r = await fetch(options.url, options);
-                clearTimeout(timeout);
-                if (!r.ok) continue;
-                const json = await r.json().catch(() => null);
-                const videos = json && json.code === 0 && json.data && Array.isArray(json.data.videos) ? json.data.videos : [];
-                const posts = sortPostsDesc(videos.map(v => normalizePost(v, username)).filter(Boolean));
-                if (posts.length > 0) return posts;
-            } catch (e) {}
-        }
+    for (const method of ['GET', 'POST']) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 6000);
+            const options = {
+                method,
+                headers: { 'User-Agent': TIKTOK_UA, 'Accept': 'application/json' },
+                signal: controller.signal
+            };
+            if (method === 'GET') {
+                options.url = `${TIKWM_BASE_URL}/api/user/posts?unique_id=${encodeURIComponent(username)}&count=12`;
+            } else {
+                options.url = `${TIKWM_BASE_URL}/api/user/posts`;
+                options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                options.body = new URLSearchParams({ unique_id: username, count: '12' }).toString();
+            }
+            const r = await fetch(options.url, options);
+            clearTimeout(timeout);
+            if (!r.ok) continue;
+            const json = await r.json().catch(() => null);
+            const videos = json && json.code === 0 && json.data && Array.isArray(json.data.videos) ? json.data.videos : [];
+            const posts = sortPostsDesc(videos.map(v => normalizePost(v, username)).filter(Boolean));
+            if (posts.length > 0) return posts;
+        } catch (e) {}
     }
     return [];
 }
@@ -629,7 +629,7 @@ app.get('/api/tiktok-posts', async (req, res) => {
 
     // Ensure all covers are official TikTok CDN URLs and not TikWM
     posts = posts.map(p => {
-        if (p.cover && p.cover.includes('tikwm.com')) {
+        if (p.cover && p.cover.startsWith(TIKWM_BASE_URL)) {
             p.cover = '';
         }
         return p;
@@ -1656,25 +1656,19 @@ app.get('/api/tiktok-resolve', async (req, res) => {
         let result = null;
         let lastError = null;
 
-        const mirrors = [
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(targetUrl)}`,
-            `https://tikwm.com/api/?url=${encodeURIComponent(targetUrl)}`
-        ];
+        try {
+            const upstream = `${TIKWM_BASE_URL}/api/?url=${encodeURIComponent(targetUrl)}`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
 
-        for (let idx = 0; idx < mirrors.length; idx++) {
-            const upstream = mirrors[idx];
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000);
+            const r = await fetch(upstream, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            const json = await r.json().catch(() => ({}));
 
-                const r = await fetch(upstream, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-                    signal: controller.signal
-                });
-                clearTimeout(timeout);
-                const json = await r.json().catch(() => ({}));
-
-                if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
+            if (r.ok && json.code === 0 && json.data && (json.data.play || json.data.hdplay)) {
                     const d = json.data;
                     const playUrl = d.play || d.hdplay || '';
                     const hdUrl = d.hdplay || '';
@@ -1683,10 +1677,10 @@ app.get('/api/tiktok-resolve', async (req, res) => {
 
                     result = {
                         id: d.id || '',
-                        play: playUrl.startsWith('http') ? playUrl : (playUrl ? `https://www.tikwm.com${playUrl}` : ''),
-                        hdplay: hdUrl.startsWith('http') ? hdUrl : (hdUrl ? `https://www.tikwm.com${hdUrl}` : ''),
-                        wmplay: wmUrl ? (wmUrl.startsWith('http') ? wmUrl : `https://www.tikwm.com${wmUrl}`) : '',
-                        cover: covUrl ? (covUrl.startsWith('http') ? covUrl : `https://www.tikwm.com${covUrl}`) : '',
+                        play: playUrl.startsWith('http') ? playUrl : (playUrl ? `${TIKWM_BASE_URL}${playUrl}` : ''),
+                        hdplay: hdUrl.startsWith('http') ? hdUrl : (hdUrl ? `${TIKWM_BASE_URL}${hdUrl}` : ''),
+                        wmplay: wmUrl ? (wmUrl.startsWith('http') ? wmUrl : `${TIKWM_BASE_URL}${wmUrl}`) : '',
+                        cover: covUrl ? (covUrl.startsWith('http') ? covUrl : `${TIKWM_BASE_URL}${covUrl}`) : '',
                         title: d.title || '',
                         author_unique_id: d.author?.unique_id || '',
                         author_nickname: d.author?.nickname || '',
@@ -1706,62 +1700,12 @@ app.get('/api/tiktok-resolve', async (req, res) => {
                         is_fallback: false,
                         method: 'tikwm'
                     };
-                    break;
-                }
-
-                lastError = `TikWM Mirror ${idx + 1}: ${json.msg || json.code || r.status}`;
-            } catch (e) {
-                lastError = `TikWM Mirror ${idx + 1}: ${e.message}`;
-            }
-        }
-
-        const rapidApiKey = process.env.TIKWM_API_KEY || process.env.RAPIDAPI_KEY || process.env.TIKTOK_API_KEY;
-        if (!result && rapidApiKey) {
-            try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000);
-                const r = await fetch(`https://tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com/index?url=${encodeURIComponent(targetUrl)}`, {
-                    headers: {
-                        'x-rapidapi-key': rapidApiKey,
-                        'x-rapidapi-host': 'tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com',
-                        'User-Agent': 'Mozilla/5.0'
-                    },
-                    signal: controller.signal
-                });
-                clearTimeout(timeout);
-                const json = await r.json().catch(() => ({}));
-                if (r.ok && (json.play || json.hdplay || (json.data && (json.data.play || json.data.hdplay)))) {
-                    const d = json.data || json;
-                    result = {
-                        id: d.id || '',
-                        play: d.play || d.hdplay || '',
-                        hdplay: d.hdplay || '',
-                        wmplay: d.wmplay || '',
-                        cover: d.cover || '',
-                        title: d.title || '',
-                        author_unique_id: d.author?.unique_id || '',
-                        author_nickname: d.author?.nickname || '',
-                        author_avatar: d.author?.avatar || '',
-                        region: d.region || '',
-                        create_time: d.create_time || 0,
-                        is_nff_or_nr: !!d.is_nff_or_nr,
-                        play_count: d.play_count || 0,
-                        digg_count: d.digg_count || 0,
-                        comment_count: d.comment_count || 0,
-                        share_count: d.share_count || 0,
-                        collect_count: d.collect_count || 0,
-                        size: d.size || 0,
-                        duration: d.duration || 0,
-                        w: d.w || 0,
-                        h: d.h || 0,
-                        is_fallback: false,
-                        method: 'rapidapi'
-                    };
+                } else {
+                    lastError = `TikWM: ${json.msg || json.code || r.status}`;
                 }
             } catch (e) {
-                lastError = `RapidAPI: ${e.message}`;
+                lastError = `TikWM: ${e.message}`;
             }
-        }
 
         if (!result) {
             try {
