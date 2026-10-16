@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-16T15:13:04.803Z",
+  "updatedAt": "2026-10-16T15:26:35.868Z",
   "helpers": [
     "method/finalize.js",
     "method/compress.js",
