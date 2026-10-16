@@ -59,35 +59,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// API Protection Shield - Block direct external access outside authorized domains
+// API Protection Shield - PROXY_SECRET only, no host bypass.
+// Every /api and /realesrgan request must carry the shared secret
+// injected by the Cloudflare edge proxy (x-cf-secret header).
 const PROXY_SECRET = process.env.PROXY_SECRET;
 
 app.use((req, res, next) => {
-    const host = (req.hostname || '').toLowerCase();
-
-    // Allow localhost, Vercel deployments (*.vercel.app), and official domains
-    if (
-        host === 'localhost' ||
-        host === '127.0.0.1' ||
-        host.endsWith('.vercel.app') ||
-        host === 'cutefish.my.id' ||
-        host === 'www.cutefish.my.id'
-    ) {
-        return next();
-    }
-
     // Skip root redirect and CORS preflight
     if (req.method === 'OPTIONS' || req.path === '/') {
         return next();
     }
 
-    // Protect /api and /realesrgan routes from unauthorized external crawlers
+    // Protect /api and /realesrgan routes - secret required, fail closed
     if (req.path.startsWith('/api') || req.path.startsWith('/realesrgan')) {
-        const clientSecret = req.headers['x-cf-secret'];
-        if (PROXY_SECRET && clientSecret === PROXY_SECRET) {
-            return next();
-        }
         if (!PROXY_SECRET) {
+            console.error('PROXY_SECRET is not configured - refusing API access');
+            return res.status(500).json({ error: 'Server misconfigured' });
+        }
+        const clientSecret = Buffer.from(String(req.headers['x-cf-secret'] || ''));
+        const expectedSecret = Buffer.from(PROXY_SECRET);
+        if (clientSecret.length === expectedSecret.length && crypto.timingSafeEqual(clientSecret, expectedSecret)) {
             return next();
         }
         return res.status(403).json({
