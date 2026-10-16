@@ -12,7 +12,6 @@
     const API_ENDPOINT = '/api/tools';
     const LOCAL_FALLBACK = 'scripts/tools-bundle.js';
     const MANIFEST_CACHE_KEY = 'oft_tools_manifest_cache';
-    const MANIFEST_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
     function loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -71,17 +70,8 @@
     }
 
     async function discoverTools() {
-        // Check session cache for instantaneous start
-        try {
-            const rawCache = sessionStorage.getItem(MANIFEST_CACHE_KEY);
-            if (rawCache) {
-                const parsed = JSON.parse(rawCache);
-                if (parsed && Array.isArray(parsed.tools) && parsed.tools.length > 0 && (Date.now() - parsed.timestamp < MANIFEST_CACHE_TTL_MS)) {
-                    console.log(`[ToolsLoader] Restored ${parsed.tools.length} tools from session cache.`);
-                    return parsed;
-                }
-            }
-        } catch (_) {}
+        // No manifest cache: fetch fresh every page load so new deploys
+        // are picked up immediately (script URLs are commit-pinned).
 
         // 1. Try local serverless endpoint /api/tools
         try {
@@ -96,7 +86,6 @@
                         sha: data.sha || null,
                         timestamp: Date.now()
                     };
-                    try { sessionStorage.setItem(MANIFEST_CACHE_KEY, JSON.stringify(manifest)); } catch (_) {}
                     console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools via /api/tools (sha: ${manifest.sha || 'latest'}).`);
                     return manifest;
                 }
@@ -116,7 +105,6 @@
                     const manifest = parseTreeToManifest(ghData.tree);
                     manifest.sha = ghData.sha || null;
                     manifest.timestamp = Date.now();
-                    try { sessionStorage.setItem(MANIFEST_CACHE_KEY, JSON.stringify(manifest)); } catch (_) {}
                     console.log(`[ToolsLoader] Discovered ${manifest.tools.length} tools dynamically from GitHub web-tools tree (sha: ${manifest.sha || 'latest'}).`);
                     return manifest;
                 }
@@ -152,8 +140,9 @@
         const cacheBuster = manifest.sha ? '' : ('?t=' + Math.floor(Date.now() / (1000 * 60 * 5)));
 
         // 1. Parallel loading of helper & method scripts
+        let helperResults = [];
         if (Array.isArray(manifest.helpers) && manifest.helpers.length > 0) {
-            await Promise.allSettled(manifest.helpers.map(helperPath =>
+            helperResults = await Promise.allSettled(manifest.helpers.map(helperPath =>
                 loadScriptWithFallback(helperPath, primaryBase, fallbackBase, cacheBuster)
             ));
         }
@@ -162,6 +151,17 @@
         const results = await Promise.allSettled(manifest.tools.map(toolPath =>
             loadScriptWithFallback(toolPath, primaryBase, fallbackBase, cacheBuster)
         ));
+
+        const failedPaths = [
+            ...manifest.helpers.filter((_, i) => helperResults[i] && helperResults[i].status === 'rejected'),
+            ...manifest.tools.filter((_, i) => results[i] && results[i].status === 'rejected')
+        ];
+        if (failedPaths.length > 0) {
+            console.warn(`[ToolsLoader] ${failedPaths.length} scripts failed from all CDN sources: ${failedPaths.join(', ')}`);
+            if (window.AppTools) {
+                window.AppTools.loadError = `Sebagian tools gagal dimuat (${failedPaths.length}): ${failedPaths.join(', ')}. Matikan VPN/adblock lalu coba tombol muat ulang.`;
+            }
+        }
 
         const loadedCount = results.filter(r => r.status === 'fulfilled').length;
         if (loadedCount === 0) {

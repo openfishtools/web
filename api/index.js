@@ -217,7 +217,7 @@ let toolsManifestCache = {
     data: null,
     timestamp: 0
 };
-const TOOLS_CACHE_TTL_MS = 60 * 1000;
+const TOOLS_CACHE_TTL_MS = 10 * 1000;
 
 function sortHelperPaths(helpers) {
     return helpers.sort((a, b) => {
@@ -292,7 +292,7 @@ function scanLocalWebTools() {
 }
 
 app.get('/api/tools', async (req, res) => {
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=20');
     const now = Date.now();
     const isBust = req.query.fresh === '1' || !!req.query.bust;
     if (!isBust && toolsManifestCache.data && (now - toolsManifestCache.timestamp) < TOOLS_CACHE_TTL_MS) {

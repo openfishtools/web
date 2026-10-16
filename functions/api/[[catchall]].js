@@ -131,7 +131,7 @@ export async function onRequest(context) {
         if (pathname === '/api/tiktok-posts') return 21600; // 6 hours
         if (pathname === '/api/tiktok-resolve' || pathname === '/api/tiktok-fps') return 86400; // 24 hours
         if (pathname === '/api/tiktok-thumb') return 86400; // 24 hours
-        if (pathname === '/api/tools') return 300; // 5 minutes
+        if (pathname === '/api/tools') return 60; // 1 minute
         if (['/api/presets', '/api/socials', '/api/contacts', '/api/resources'].includes(pathname)) return 86400; // 24 hours
 
         return 0;
