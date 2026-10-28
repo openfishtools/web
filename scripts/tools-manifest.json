@@ -1,12 +1,11 @@
 {
-  "updatedAt": "2026-10-26T09:28:20.999Z",
+  "updatedAt": "2026-10-28T00:14:30.346Z",
   "helpers": [
     "method/finalize.js",
     "method/compress.js",
     "method/normalize.js",
     "method/item/fish.js",
     "method/item/fps.js",
-    "method/item/orca.js",
     "method/item/wmv.js",
     "ai/upscale-gpu-enhancer.js"
   ],
