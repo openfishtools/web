@@ -461,10 +461,8 @@ async function fetchTikTokVideoDetails(videoId, username = TIKTOK_USERNAME) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 6000);
         const r = await fetch(`https://www.tiktok.com/embed/v2/${videoId}`, {
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9'
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
             signal: controller.signal
         });
@@ -507,8 +505,7 @@ async function fetchTikTokEmbedUserVideos(username) {
         const timeout = setTimeout(() => controller.abort(), 7000);
         const r = await fetch(`https://www.tiktok.com/embed/@${encodeURIComponent(username)}`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
             signal: controller.signal
         });
@@ -1543,13 +1540,41 @@ async function fetchTikTokEmbedThumb(videoId) {
     const timer = setTimeout(() => controller.abort(), 6000);
     try {
         const r = await fetch(`https://www.tiktok.com/embed/v2/${videoId}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
             signal: controller.signal
         });
         if (!r.ok) return '';
         const html = await r.text();
-        const imgs = [...html.matchAll(/<img[^>]+src="(https:[^"]+)"/g)].map(m => m[1]);
-        const pick = imgs.find(src => /tiktokcdn|img\.tiktok|p16|-sign\./i.test(src)) || imgs[0] || '';
+
+        const stateMatch = html.match(/<script id="__FRONTITY_CONNECT_STATE__"[^>]*>([\s\S]*?)<\/script>/);
+        if (stateMatch) {
+            try {
+                const state = JSON.parse(stateMatch[1]);
+                const dataObj = state.source?.data || {};
+                for (const key of Object.keys(dataObj)) {
+                    const item = dataObj[key]?.videoData?.itemInfos;
+                    if (item) {
+                        const stateCover = item.coversOrigin?.[0] || item.covers?.[0] || item.coversDynamic?.[0] || '';
+                        if (stateCover && /^https?:\/\//i.test(stateCover)) return stateCover;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        const posterMatch = html.match(/poster="(https:\/\/[^"]+)"/i);
+        if (posterMatch && posterMatch[1]) {
+            return posterMatch[1].replace(/&amp;/g, '&');
+        }
+
+        const jsonCoverMatch = html.match(/"covers(?:Origin)?"\s*:\s*\[\s*"(https:\/\/[^"]+)"/i);
+        if (jsonCoverMatch && jsonCoverMatch[1]) {
+            return jsonCoverMatch[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+        }
+
+        const imgs = [...html.matchAll(/<img[^>]+src="(https:[^"]+)"/g)].map(m => m[1].replace(/&amp;/g, '&'));
+        const pick = imgs.find(src => /tiktokcdn|img\.tiktok|p16|p19|-sign\./i.test(src) && !/avt-/i.test(src)) || imgs[0] || '';
         return pick || '';
     } catch (e) {
         return '';
@@ -1558,7 +1583,36 @@ async function fetchTikTokEmbedThumb(videoId) {
     }
 }
 
+async function fetchTikwmThumb(targetUrl) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+    try {
+        const upstream = `${TIKWM_BASE_URL}/api/?url=${encodeURIComponent(targetUrl)}`;
+        const r = await fetch(upstream, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            signal: controller.signal
+        });
+        if (!r.ok) return '';
+        const json = await r.json().catch(() => null);
+        if (json && json.code === 0 && json.data) {
+            const covUrl = json.data.origin_cover || json.data.cover || '';
+            if (covUrl) {
+                return covUrl.startsWith('http') ? covUrl : `${TIKWM_BASE_URL}${covUrl}`;
+            }
+        }
+        return '';
+    } catch (e) {
+        return '';
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 app.get('/api/tiktok-thumb', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
     let pageUrl = raw.trim();
@@ -1567,15 +1621,6 @@ app.get('/api/tiktok-thumb', async (req, res) => {
         if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
     } catch (e) {
         return res.status(400).json({ error: 'Invalid url' });
-    }
-
-    const cacheKey = `thumb:${pageUrl}`;
-    if (req.query.nocache !== '1') {
-        const cached = getCachedTikTokResolve(cacheKey);
-        if (cached !== undefined) {
-            if (cached === null) return res.status(404).json({ error: 'Thumbnail unavailable', source: 'cache' });
-            return res.json({ cover: cached.cover, source: cached.source });
-        }
     }
 
     let canonical = pageUrl;
@@ -1587,34 +1632,40 @@ app.get('/api/tiktok-thumb', async (req, res) => {
     const videoId = videoIdMatch ? videoIdMatch[1] : '';
 
     const nowMs = Date.now();
-    const paceWait = Math.max(0, tiktokThumbLastAt + 130 - nowMs);
+    const paceWait = Math.max(0, tiktokThumbLastAt + 80 - nowMs);
     tiktokThumbLastAt = nowMs + paceWait;
     if (paceWait > 0) await new Promise(resolve => setTimeout(resolve, paceWait));
 
     let cover = '';
     let source = '';
-    for (let attempt = 0; attempt < 2 && !cover; attempt++) {
-        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 350));
-        cover = await fetchTikTokOEmbedThumb(canonical);
-        if (cover) source = 'oembed';
-    }
 
-    if (!cover && videoId) {
+    if (videoId) {
         cover = await fetchTikTokEmbedThumb(videoId);
         if (cover) source = 'embed';
     }
 
     if (!cover) {
-        setCachedTikTokResolve(cacheKey, null, TIKTOK_RESOLVE_FAIL_SHORT_TTL);
+        cover = await fetchTikTokOEmbedThumb(canonical);
+        if (cover) source = 'oembed';
+    }
+
+    if (!cover) {
+        cover = await fetchTikwmThumb(canonical);
+        if (cover) source = 'tikwm';
+    }
+
+    if (!cover) {
         return res.status(404).json({ error: 'Thumbnail unavailable', fallback: 'resolve' });
     }
 
-    const payload = { cover, source };
-    setCachedTikTokResolve(cacheKey, payload);
-    res.json(payload);
+    res.json({ cover, source });
 });
 
 app.get('/api/tiktok-resolve', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const raw = req.query.url;
     if (!raw || typeof raw !== 'string') return res.status(400).json({ error: 'Missing url' });
     let pageUrl = raw.trim();
@@ -1627,15 +1678,6 @@ app.get('/api/tiktok-resolve', async (req, res) => {
     if (!isAllowedTikTokResolveHost(parsed.hostname)) return res.status(400).json({ error: 'URL host not allowed' });
 
     try {
-        if (req.query.nocache !== '1') {
-            const cached = getCachedTikTokResolve(pageUrl);
-            if (cached !== undefined) {
-                if (cached === null) {
-                    return res.status(404).json({ error: 'Video unavailable', details: 'cached-failure', hint: 'Pass nocache=1 to retry upstream' });
-                }
-                return res.json(cached);
-            }
-        }
 
         // Expand shortlinks (e.g. tt.site, vt.tiktok.com, vm.tiktok.com) to canonical URL so upstream APIs can resolve cleanly
         let targetUrl = pageUrl;
@@ -1881,6 +1923,9 @@ app.delete('/api/contacts/:id', requireAdmin, async (req, res) => {
 });
 
 app.get('/api/presets', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     try {
         const ip = getClientIp(req);
         const presets = await Preset.find().sort({ order: 1, _id: -1 }).lean();
@@ -1955,6 +2000,9 @@ app.delete('/api/presets/:id', requireAdmin, async (req, res) => {
 });
 
 app.get('/api/presets/:id', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     try {
         const pId = req.params.id;
         if (/^\d+$/.test(pId)) {

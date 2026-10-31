@@ -1256,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadPresets = async () => {
         if (!adminToken) return;
-        const res = await fetch(`${API_URL}/presets`);
+        const res = await fetch(`${API_URL}/presets?nocache=1&_=${Date.now()}`, { cache: 'no-store' });
         const presets = await res.json();
         const body = document.getElementById('preset-table-body');
         body.innerHTML = presets.map((p, idx) => {
@@ -1315,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.editPreset = async (id) => {
-        const res = await fetch(`${API_URL}/presets`);
+        const res = await fetch(`${API_URL}/presets?nocache=1&_=${Date.now()}`, { cache: 'no-store' });
         const presets = await res.json();
         const item = presets.find(p => p._id === id);
         openModal('preset-modal', { ...item, index: id });

@@ -41,8 +41,8 @@
     const tiktokDeadUrls = new Set();
     let tiktokActiveFetches = 0;
     const tiktokFetchQueue = [];
-    const THUMB_BATCH_SIZE = 4;
-    const THUMB_BATCH_DELAY_MS = 1000;
+    const THUMB_BATCH_SIZE = 6;
+    const THUMB_BATCH_DELAY_MS = 250;
     let thumbBatchTimer = null;
 
     const t = (key) => (window.getTranslation && window.getTranslation(key)) || key;
@@ -56,13 +56,7 @@
     const isDirectVideoUrl = (url) => /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(String(url || '').trim());
     const isTikTokLikeUrl = (url) => /(tiktok\.com|tt\.site)/i.test(String(url || ''));
 
-    const TIKTOK_RETRY_MS = 45000;
-    const TIKTOK_MAX_ATTEMPTS = 3;
-
-    function tiktokFailed(key) {
-        const t = tiktokFailAt.get(key);
-        return !!(t && Date.now() - t < TIKTOK_RETRY_MS);
-    }
+    const TIKTOK_MAX_ATTEMPTS = 2;
 
     function mergeTikTokCache(url, patch) {
         const entry = Object.assign({ cover: '', play: '', hdplay: '' }, tiktokMediaCache.get(url) || {}, patch);
@@ -70,43 +64,56 @@
         return entry;
     }
 
+    function fetchTikTokThumbFromResolve(url) {
+        return fetch(`/api/tiktok-resolve?url=${encodeURIComponent(url)}&nocache=1`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
+            .then(data => {
+                const cover = data && typeof data.cover === 'string' && /^https?:\/\//i.test(data.cover) ? data.cover : '';
+                const play = data && typeof data.play === 'string' && /^https?:\/\//i.test(data.play) ? data.play : '';
+                const hdplay = data && typeof data.hdplay === 'string' && /^https?:\/\//i.test(data.hdplay) ? data.hdplay : '';
+                if (!cover && !play && !hdplay) return Promise.reject(new Error('No cover from resolve'));
+                return mergeTikTokCache(url, {
+                    cover: cover || undefined,
+                    play: play || hdplay || undefined,
+                    hdplay: hdplay || undefined
+                });
+            });
+    }
+
     function fetchTikTokThumb(url, attempt) {
-        const key = `thumb:${url}`;
-        return fetch(`/api/tiktok-thumb?url=${encodeURIComponent(url)}`)
+        return fetch(`/api/tiktok-thumb?url=${encodeURIComponent(url)}&nocache=1`, { cache: 'no-store' })
             .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
             .then(data => {
                 const cover = data && typeof data.cover === 'string' && /^https?:\/\//i.test(data.cover) ? data.cover : '';
                 if (!cover) return Promise.reject(new Error('No cover'));
                 return mergeTikTokCache(url, { cover });
             })
-            .catch(err => {
-                if (attempt + 1 < TIKTOK_MAX_ATTEMPTS) {
-                    return new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
-                        .then(() => fetchTikTokThumb(url, attempt + 1));
-                }
-                tiktokFailAt.set(key, Date.now());
-                return null;
+            .catch(() => {
+                return fetchTikTokThumbFromResolve(url).catch(() => {
+                    if (attempt + 1 < TIKTOK_MAX_ATTEMPTS) {
+                        return new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)))
+                            .then(() => fetchTikTokThumb(url, attempt + 1));
+                    }
+                    return null;
+                });
             });
     }
 
     function fetchTikTokPlay(url, attempt) {
-        const key = `play:${url}`;
-        return fetch(`/api/tiktok-resolve?url=${encodeURIComponent(url)}`)
+        return fetch(`/api/tiktok-resolve?url=${encodeURIComponent(url)}&nocache=1`, { cache: 'no-store' })
             .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
             .then(data => {
                 const play = data && typeof data.play === 'string' && /^https?:\/\//i.test(data.play) ? data.play : '';
                 const hdplay = data && typeof data.hdplay === 'string' && /^https?:\/\//i.test(data.hdplay) ? data.hdplay : '';
                 const cover = data && typeof data.cover === 'string' && /^https?:\/\//i.test(data.cover) ? data.cover : '';
                 if (!play && !hdplay) return Promise.reject(new Error('No play url'));
-                tiktokFailAt.delete(key);
                 return mergeTikTokCache(url, { play: play || hdplay, hdplay, cover: cover || undefined });
             })
-            .catch(err => {
+            .catch(() => {
                 if (attempt + 1 < TIKTOK_MAX_ATTEMPTS) {
-                    return new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)))
+                    return new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
                         .then(() => fetchTikTokPlay(url, attempt + 1));
                 }
-                tiktokFailAt.set(key, Date.now());
                 return null;
             });
     }
@@ -120,7 +127,7 @@
         batch.forEach(job => {
             job.runner()
                 .then(job.resolve)
-                .catch(() => {})
+                .catch(() => job.resolve(null))
                 .finally(() => {
                     tiktokActiveFetches--;
                 });
@@ -140,6 +147,8 @@
                 return;
             }
             tiktokFetchQueue.push({ key, resolve, runner });
+        }).finally(() => {
+            tiktokThumbPending.delete(key);
         });
         tiktokThumbPending.set(key, promise);
         if (!priority) pumpTikTokQueue();
@@ -147,29 +156,41 @@
     }
 
     function resolveTikTokCover(url) {
-        const cached = tiktokMediaCache.get(url);
-        if (cached && cached.cover) return Promise.resolve(cached);
         const key = `thumb:${url}`;
-        if (tiktokFailed(key)) return Promise.resolve(cached || null);
         return runQueued(key, () => fetchTikTokThumb(url, 0));
     }
 
     function resolveTikTokMedia(url) {
-        const cached = tiktokMediaCache.get(url);
-        if (cached && cached.play) return Promise.resolve(cached);
         const key = `play:${url}`;
-        if (tiktokFailed(key)) return Promise.resolve(cached || null);
-        return runQueued(key, () => fetchTikTokPlay(url, 0), true).then(res => res || cached || null);
+        return runQueued(key, () => fetchTikTokPlay(url, 0), true);
+    }
+
+    function attachProxyFallback(imgEl, rawUrl, onFinalFail) {
+        if (!imgEl || !rawUrl) return;
+        let triedProxy = false;
+        imgEl.addEventListener('error', () => {
+            if (!triedProxy && /^https?:\/\//i.test(rawUrl) && !rawUrl.startsWith(window.location.origin)) {
+                triedProxy = true;
+                imgEl.src = `/api/proxy?url=${encodeURIComponent(rawUrl)}`;
+                return;
+            }
+            if (typeof onFinalFail === 'function') onFinalFail();
+        });
     }
 
     function applyTikTokCover(url, cover) {
         document.querySelectorAll('[data-tiktok-url]').forEach(el => {
             if (el.dataset.tiktokUrl !== url) return;
             const img = document.createElement('img');
-            img.src = cover;
             img.alt = el.closest('.preset-modal-media') ? '' : (el.dataset.tiktokAlt || '');
             img.loading = 'lazy';
             img.referrerPolicy = 'no-referrer';
+            attachProxyFallback(img, cover, () => {
+                if (img.isConnected) {
+                    img.replaceWith(htmlToElement(presetMediaFailHtml('thumb')));
+                }
+            });
+            img.src = cover;
             el.replaceWith(img);
         });
     }
@@ -1696,9 +1717,12 @@
 
         let presetsFetching = false;
         function loadPresetsData() {
-            if (presetsFetched || presetsFetching) return;
+            if (presetsFetching) return;
             presetsFetching = true;
-            fetch('/api/presets')
+            tiktokMediaCache.clear();
+            tiktokFailAt.clear();
+            tiktokDeadUrls.clear();
+            fetch(`/api/presets?nocache=1&_=${Date.now()}`, { cache: 'no-store' })
                 .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
                 .then(data => {
                     if (Array.isArray(data)) allPresetsCache = data.filter(p => !p.hidden);
