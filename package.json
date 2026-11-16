@@ -1,6 +1,6 @@
 {
   "name": "chros-nextgen",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "CHROS Next Gen - The Ultimate Resource Hub for Video Editors",
   "license": "CC-BY-NC-ND-4.0",
   "main": "api/index.js",
