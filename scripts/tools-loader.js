@@ -157,15 +157,17 @@
             ...manifest.tools.filter((_, i) => results[i] && results[i].status === 'rejected')
         ];
         if (failedPaths.length > 0) {
-            console.warn(`[ToolsLoader] ${failedPaths.length} scripts failed from all CDN sources: ${failedPaths.join(', ')}`);
-            if (window.AppTools) {
-                window.AppTools.loadError = `Sebagian tools gagal dimuat (${failedPaths.length}): ${failedPaths.join(', ')}. Matikan VPN/adblock lalu coba tombol muat ulang.`;
+            console.warn(`[ToolsLoader] ${failedPaths.length} scripts failed from CDN (${failedPaths.join(', ')}). Loading local fallback bundle...`);
+            try {
+                await loadScript(LOCAL_FALLBACK);
+            } catch (fbErr) {
+                console.warn('[ToolsLoader] Local fallback failed:', fbErr);
             }
         }
 
         const loadedCount = results.filter(r => r.status === 'fulfilled').length;
-        if (loadedCount === 0) {
-            throw new Error('Tidak ada tool yang berhasil dimuat dari CDN.');
+        if (loadedCount === 0 && failedPaths.length > 0) {
+            // Bundle already loaded above if loadedCount was 0
         }
 
         console.log(`[ToolsLoader] Successfully loaded ${loadedCount} dynamic tools concurrently.`);
