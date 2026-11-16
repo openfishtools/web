@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-01T07:28:04.625Z",
+  "updatedAt": "2026-11-16T02:55:31.202Z",
   "helpers": [
     "method/finalize.js",
     "method/compress.js",
@@ -15,6 +15,7 @@
     "converters/ae-to-am-beatmark-tool.js",
     "converters/fivemb-generator-tool.js",
     "tiktok/tiktok-downloader-tool.js",
+    "tiktok/tiktok-extension-tool.js",
     "tiktok/tiktok-quality-tool.js",
     "tiktok/tiktok-stats-tool.js",
     "video/audio-extractor-tool.js",

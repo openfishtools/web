@@ -2860,9 +2860,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('tools-grid');
         if (!container) return;
 
-        renderToolCategories(allTools);
+        const visibleTools = allTools.filter(t => {
+            if (t.hidden || t.id === 'tool-tiktok-patcher' || t._id === 'tool-tiktok-patcher' || t.title === 'Quality method') {
+                return false;
+            }
+            return true;
+        });
 
-        let filtered = allTools;
+        renderToolCategories(visibleTools);
+
+        let filtered = visibleTools;
 
         if (filterCategory !== 'All') {
             filtered = filtered.filter(t => {
