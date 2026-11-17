@@ -1,6 +1,9 @@
 /*
   Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: credentialless
+
+  NOTE: TANPA Cross-Origin-Embedder-Policy di sini — COEP credentialless global
+  memblokir iframe lintas-origin (mis. embed YouTube tutorial). Halaman yang
+  butuh cross-origin isolation memakai coi-serviceworker.min.js.
 
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
