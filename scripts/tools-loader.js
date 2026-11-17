@@ -135,8 +135,10 @@
     async function loadRemoteTools() {
         const manifest = await discoverTools();
         const ref = manifest.sha || 'main';
-        const primaryBase = `https://cdn.jsdelivr.net/gh/openfishtools/web-tools@${ref}/`;
-        const fallbackBase = `https://raw.githubusercontent.com/openfishtools/web-tools/${ref}/`;
+        // Primary: raw.githubusercontent (no CDN cache layer). jsDelivr caches
+        // aggressively at the edge and can serve stale files even after purge.
+        const primaryBase = `https://raw.githubusercontent.com/openfishtools/web-tools/${ref}/`;
+        const fallbackBase = `https://cdn.jsdelivr.net/gh/openfishtools/web-tools@${ref}/`;
         const cacheBuster = manifest.sha ? '' : ('?t=' + Math.floor(Date.now() / (1000 * 60 * 5)));
 
         // 1. Parallel loading of helper & method scripts
