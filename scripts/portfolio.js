@@ -1725,7 +1725,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if ('serviceWorker' in navigator) {
             try {
                 const regs = await navigator.serviceWorker.getRegistrations();
-                for (const reg of regs) await reg.unregister();
+                // Jangan await: unregister bisa menggantung saat SW installing
+                // (coi-serviceworker) dan memblokir hard reload di bawah.
+                for (const reg of regs) reg.unregister().catch(() => {});
             } catch (e) {}
         }
 
