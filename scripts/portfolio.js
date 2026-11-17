@@ -2861,7 +2861,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
 
         const visibleTools = allTools.filter(t => {
-            if (t.hidden || t.id === 'tool-tiktok-patcher' || t._id === 'tool-tiktok-patcher' || t.title === 'Quality method') {
+            if (t.hidden) {
                 return false;
             }
             return true;
