@@ -102,8 +102,9 @@ function parseMoov(bytes, view, moovStart, moovEnd) {
     const durVal = ver === 1 && mvhd.contentStart + 32 <= mvhd.contentEnd
       ? Number(view.getBigUint64(mvhd.contentStart + 24, false))
       : view.getUint32(mvhd.contentStart + 16, false);
-    if (timescale > 0 && durVal > 0) {
-      duration = Math.round(durVal / timescale);
+    if (timescale > 0 && durVal > 0 && durVal < 0xffffffff) {
+      const secs = Math.round(durVal / timescale);
+      if (secs > 0 && secs < 86400) duration = secs;
     }
   }
 
