@@ -8,6 +8,7 @@
   var loadingBox = document.getElementById("loading-box");
   var errorBanner = document.getElementById("error-banner");
   var errorText = document.getElementById("error-text");
+  var presetScroll = document.getElementById("preset-scroll");
   var presetGrid = document.getElementById("preset-grid");
   var variantBackdrop = document.getElementById("variant-backdrop");
   var variantPanel = document.getElementById("variant-panel");
@@ -27,7 +28,8 @@
   var selectedSoftware = "all";
   var thumbCache = loadThumbCache();
   var thumbQueue = [];
-  var isThumbWorkerRunning = false;
+  var activeThumbWorkers = 0;
+  var THUMB_CONCURRENCY = 4;
   var lastTikwmCallAt = 0;
   var localResolveSupported = null;
   var renderToken = 0;
@@ -85,7 +87,7 @@
   async function resolveTikTokCover(mediaUrl) {
     if (localResolveSupported !== false) {
       try {
-        var localRes = await fetch("/api/tiktok-resolve?url=" + encodeURIComponent(mediaUrl));
+        var localRes = await fetch("/api/tiktok-resolve?cover=1&url=" + encodeURIComponent(mediaUrl));
         var ct = (localRes.headers.get("content-type") || "").toLowerCase();
         if (localRes.ok && ct.indexOf("application/json") !== -1) {
           localResolveSupported = true;
@@ -93,7 +95,7 @@
           if (lj && (lj.cover || lj.origin_cover)) {
             return lj.cover || lj.origin_cover;
           }
-        } else {
+        } else if (localRes.status === 404) {
           localResolveSupported = false;
         }
       } catch (_) {
@@ -123,46 +125,69 @@
       break;
     }
 
-    try {
-      var oeRes = await fetch("https://www.tiktok.com/oembed?url=" + encodeURIComponent(mediaUrl));
-      if (oeRes.ok) {
-        var oe = await oeRes.json();
-        if (oe && oe.thumbnail_url) return oe.thumbnail_url;
-      }
-    } catch (_) {}
-
     return "";
   }
 
-  async function pumpThumbQueue() {
-    if (isThumbWorkerRunning) return;
-    isThumbWorkerRunning = true;
+  function dequeueThumbTask(imgEl) {
+    for (var i = thumbQueue.length - 1; i >= 0; i--) {
+      if (thumbQueue[i].imgEl === imgEl) {
+        thumbQueue.splice(i, 1);
+      }
+    }
+    if (imgEl && imgEl.dataset.queued) {
+      delete imgEl.dataset.queued;
+    }
+  }
+
+  async function runThumbWorker() {
+    activeThumbWorkers++;
     try {
       while (thumbQueue.length > 0) {
         var task = thumbQueue.shift();
-        if (!task || !task.imgEl || !document.body.contains(task.imgEl)) continue;
+        if (!task || !task.imgEl) continue;
+        var imgEl = task.imgEl;
+        delete imgEl.dataset.queued;
+
+        if (imgEl.dataset.inView !== "1" || !document.body.contains(imgEl)) {
+          continue;
+        }
+        if (imgEl.getAttribute("src")) {
+          if (thumbObserver) thumbObserver.unobserve(imgEl);
+          continue;
+        }
+
         var cached = getCachedThumb(task.mediaUrl);
         var thumbUrl = cached || await resolveTikTokCover(task.mediaUrl);
         if (thumbUrl) {
           saveThumbCacheEntry(task.mediaUrl, thumbUrl);
-          if (document.body.contains(task.imgEl)) {
-            task.imgEl.src = thumbUrl;
+          if (document.body.contains(imgEl)) {
+            imgEl.src = thumbUrl;
+            if (thumbObserver) thumbObserver.unobserve(imgEl);
           }
         }
       }
     } finally {
-      isThumbWorkerRunning = false;
+      activeThumbWorkers--;
       if (thumbQueue.length > 0) pumpThumbQueue();
     }
   }
 
+  function pumpThumbQueue() {
+    var maxWorkers = localResolveSupported === false ? 1 : THUMB_CONCURRENCY;
+    while (activeThumbWorkers < maxWorkers && thumbQueue.length > 0) {
+      runThumbWorker();
+    }
+  }
+
   function queueThumbLoad(mediaUrl, imgEl) {
-    if (!mediaUrl || !imgEl) return;
+    if (!mediaUrl || !imgEl || imgEl.getAttribute("src") || imgEl.dataset.queued === "1") return;
     var cached = getCachedThumb(mediaUrl);
     if (cached) {
       imgEl.src = cached;
+      if (thumbObserver) thumbObserver.unobserve(imgEl);
       return;
     }
+    imgEl.dataset.queued = "1";
     thumbQueue.push({ mediaUrl: mediaUrl, imgEl: imgEl });
     pumpThumbQueue();
   }
@@ -323,7 +348,12 @@
       if (!img.dataset.retried && preset.media) {
         img.dataset.retried = "1";
         removeCachedThumb(preset.media);
-        queueThumbLoad(preset.media, img);
+        img.removeAttribute("src");
+        if (img.dataset.inView === "1") {
+          queueThumbLoad(preset.media, img);
+        } else if (thumbObserver) {
+          thumbObserver.observe(img);
+        }
       }
     });
 
@@ -444,12 +474,16 @@
     if ("IntersectionObserver" in window) {
       thumbObserver = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
           var img = entry.target;
-          thumbObserver.unobserve(img);
-          queueThumbLoad(img.dataset.mediaUrl, img);
+          if (entry.isIntersecting) {
+            img.dataset.inView = "1";
+            queueThumbLoad(img.dataset.mediaUrl, img);
+          } else {
+            img.dataset.inView = "0";
+            dequeueThumbTask(img);
+          }
         });
-      }, { rootMargin: "80px" });
+      }, { root: presetScroll || null, rootMargin: "0px", threshold: 0.01 });
     }
 
     var BATCH_SIZE = 8;

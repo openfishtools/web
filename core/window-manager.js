@@ -363,27 +363,68 @@
           : null;
 
         if (mWins0.length === 1) {
-          targets.set(mWins0[0], { left: mMargin, top: mMargin, width: mFullW, height: mFullH, zone: 0 });
+          var mOnly = mWins0[0];
+          if (mOnly.aspectRatio > 0) {
+            var mTopH1 = mOnly.id === "slowtime" ? 0 : 42;
+            var mFit1 = fitAspectWindow(mFullW, mFullH, mOnly.aspectRatio, mTopH1);
+            targets.set(mOnly, {
+              left: Math.round(mMargin + Math.max(0, (mFullW - mFit1.width) / 2)),
+              top: Math.round(mMargin + Math.max(0, (mFullH - mFit1.height) / 2)),
+              width: mFit1.width,
+              height: mFit1.height,
+              zone: 0
+            });
+          } else {
+            targets.set(mOnly, { left: mMargin, top: mMargin, width: mFullW, height: mFullH, zone: 0 });
+          }
         } else if (mSlowWin) {
           var mTopWin = (Number(mWins0[0].el.style.zIndex || 0) >= Number(mWins0[1].el.style.zIndex || 0))
             ? mWins0[0]
             : mWins0[1];
           var mBackWin = mTopWin === mWins0[0] ? mWins0[1] : mWins0[0];
-          targets.set(mBackWin, {
-            left: mMargin,
-            top: mMargin,
-            width: mFullW,
-            height: mFullH,
-            zone: 0,
-            mobilePeek: true
-          });
-          targets.set(mTopWin, {
-            left: mMargin + 12,
-            top: mMargin,
-            width: Math.max(240, mFullW - 12),
-            height: mFullH,
-            zone: 0
-          });
+
+          if (mBackWin.aspectRatio > 0) {
+            var mBackTopH = mBackWin.id === "slowtime" ? 0 : 42;
+            var mBackFit = fitAspectWindow(mFullW, mFullH, mBackWin.aspectRatio, mBackTopH);
+            targets.set(mBackWin, {
+              left: Math.round(mMargin + Math.max(0, (mFullW - mBackFit.width) / 2)),
+              top: Math.round(mMargin + Math.max(0, (mFullH - mBackFit.height) / 2)),
+              width: mBackFit.width,
+              height: mBackFit.height,
+              zone: 0,
+              mobilePeek: true
+            });
+          } else {
+            targets.set(mBackWin, {
+              left: mMargin,
+              top: mMargin,
+              width: mFullW,
+              height: mFullH,
+              zone: 0,
+              mobilePeek: true
+            });
+          }
+
+          var mFgAvailW = Math.max(240, mFullW - 12);
+          if (mTopWin.aspectRatio > 0) {
+            var mTopTopH = mTopWin.id === "slowtime" ? 0 : 42;
+            var mTopFit = fitAspectWindow(mFgAvailW, mFullH, mTopWin.aspectRatio, mTopTopH);
+            targets.set(mTopWin, {
+              left: Math.round(mMargin + 12 + Math.max(0, (mFgAvailW - mTopFit.width) / 2)),
+              top: Math.round(mMargin + Math.max(0, (mFullH - mTopFit.height) / 2)),
+              width: mTopFit.width,
+              height: mTopFit.height,
+              zone: 0
+            });
+          } else {
+            targets.set(mTopWin, {
+              left: mMargin + 12,
+              top: mMargin,
+              width: mFgAvailW,
+              height: mFullH,
+              zone: 0
+            });
+          }
         } else if (mWins0.length >= 2) {
           targets.set(mWins0[0], { left: mMargin, top: mMargin, width: mFullW, height: mHalfH, zone: 0 });
           targets.set(mWins0[1], { left: mMargin, top: mMargin + mHalfH + mGap, width: mFullW, height: mHalfH, zone: 0 });
@@ -765,9 +806,12 @@
     if (!winItem || !winItem.el || winItem.isClosing) return;
     winItem.isClosing = true;
 
-    var remaining = openWindows.filter(function (it) { return it !== winItem; });
-    var activeRemaining = remaining.filter(function (it) { return !it.isClosing; });
-    if (activeRemaining.length === 0 && hasHistoryGuard && !closingFromPopstate) {
+    var idx = openWindows.indexOf(winItem);
+    if (idx !== -1) {
+      openWindows.splice(idx, 1);
+    }
+
+    if (openWindows.length === 0 && hasHistoryGuard && !closingFromPopstate) {
       hasHistoryGuard = false;
       ignoringNextPopstate = true;
       try {
@@ -777,6 +821,11 @@
       }
     }
 
+    compactZones();
+    syncDockState();
+    updateWindowsLayout(true);
+
+    winItem.el.style.pointerEvents = "none";
     winItem.el.style.transition = "none";
     winItem.el.style.transformOrigin = "50% 50%";
 
@@ -789,15 +838,8 @@
     });
 
     closeAnim.onfinish = function () {
-      // Remove window from DOM before releasing iframe so it never pushes an about:blank history entry
+      // Remove window from DOM after animation finishes so it never pushes an about:blank history entry
       winItem.el.remove();
-      var idx = openWindows.indexOf(winItem);
-      if (idx !== -1) {
-        openWindows.splice(idx, 1);
-      }
-      compactZones();
-      syncDockState();
-      updateWindowsLayout(true);
     };
   }
 

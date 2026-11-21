@@ -35,7 +35,7 @@
     CN: "Tiongkok", TW: "Taiwan", HK: "Hong Kong"
   };
 
-  var CACHE_STORAGE_KEY = "cutefish_tt_analytics_cache_v1";
+  var CACHE_STORAGE_KEY = "cutefish_tt_analytics_cache_v2";
   var CACHE_TTL_MS = 10 * 60 * 1000;
   var CACHE_MAX_ENTRIES = 30;
   var cache = new Map();
@@ -167,138 +167,34 @@
   }
 
   async function resolveMetadata(pageUrl) {
-    // 1. Try /api/tiktok-resolve if available
-    try {
-      var res = await fetch("/api/tiktok-resolve?url=" + encodeURIComponent(pageUrl));
-      var ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (res.ok && ct.indexOf("application/json") !== -1) {
-        var json = await res.json();
-        if (json && (json.play || json.hdplay)) {
-          return json;
-        }
-      }
-    } catch (_) {}
-
-    // 2. Fallback to public TikWM API
-    logger.append("Mengambil data via TikWM API...");
-    var apiRes = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(pageUrl) + "&hd=1");
-    if (!apiRes.ok) throw new Error("Gagal memuat metadata (" + apiRes.status + ").");
-    var payload = await apiRes.json();
-    if (!payload || payload.code !== 0 || !payload.data) {
-      throw new Error((payload && payload.msg) || "Video tidak ditemukan atau bersifat privat.");
+    logger.append("Mengambil metadata video...");
+    var res = await fetch("/api/tiktok-resolve?url=" + encodeURIComponent(pageUrl));
+    var ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.indexOf("application/json") === -1) {
+      throw new Error("Endpoint /api/tiktok-resolve tidak aktif di server ini (" + res.status + ").");
     }
-
-    var d = payload.data;
-    return {
-      id: d.id,
-      title: d.title || "",
-      cover: d.cover || d.origin_cover || "",
-      play: d.play || "",
-      hdplay: d.hdplay || "",
-      duration: d.duration || 0,
-      size: d.size || d.hd_size || 0,
-      create_time: d.create_time || 0,
-      region: d.region || "",
-      is_nff_or_nr: Boolean(d.is_ad || d.commercial_video_info),
-      play_count: d.play_count || 0,
-      digg_count: d.digg_count || 0,
-      comment_count: d.comment_count || 0,
-      share_count: d.share_count || 0,
-      collect_count: d.collect_count || 0,
-      author_nickname: (d.author && d.author.nickname) || "Creator",
-      author_unique_id: (d.author && d.author.unique_id) || "tiktok"
-    };
-  }
-
-  function extractMethodCommentFromMp4(data, view) {
-    var decoder = new TextDecoder("utf-8", { fatal: false });
-    var fallbackComment = "";
-
-    function readDataAtomText(start, end) {
-      for (var p = start; p + 16 <= end; p++) {
-        if (data[p + 4] === 0x64 && data[p + 5] === 0x61 && data[p + 6] === 0x74 && data[p + 7] === 0x61) {
-          var sz = view.getUint32(p, false);
-          if (sz >= 16 && p + sz <= end + 8) {
-            return decoder.decode(data.subarray(p + 16, p + sz)).replace(/\0+$/, "").trim();
-          }
-        }
-      }
-      return "";
+    var json = await res.json();
+    if (!res.ok) {
+      throw new Error((json && json.error) || ("Gagal memuat metadata (" + res.status + ")."));
     }
-
-    for (var i = 0; i + 12 <= data.length; i++) {
-      var b0 = data[i + 4], b1 = data[i + 5], b2 = data[i + 6], b3 = data[i + 7];
-      // Check ©cmt (0xA9 'cmt') or ©too (0xA9 'too')
-      var isCmt = b0 === 0xa9 && b1 === 0x63 && b2 === 0x6d && b3 === 0x74;
-      var isToo = b0 === 0xa9 && b1 === 0x74 && b2 === 0x6f && b3 === 0x6f;
-      if (isCmt || isToo) {
-        var boxSize = view.getUint32(i, false);
-        if (boxSize >= 24 && i + boxSize <= data.length) {
-          var txt = readDataAtomText(i + 8, i + boxSize);
-          if (txt) {
-            if (cleanMethodTag(txt) !== "Undetected") return txt;
-            if (!fallbackComment) fallbackComment = txt;
-          }
-        }
-      }
+    if (!json || (!json.play && !json.hdplay)) {
+      throw new Error("Stream video tidak ditemukan dari metadata TikTok.");
     }
-    return fallbackComment;
+    return json;
   }
 
   async function probeStreamMeta(streamUrl) {
     if (!streamUrl || streamUrl.indexOf("http") !== 0) return null;
-    try {
-      var res = await fetch("/api/tiktok-fps?url=" + encodeURIComponent(streamUrl));
-      var ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (res.ok && ct.indexOf("application/json") !== -1) {
-        return await res.json();
-      }
-    } catch (_) {}
-
-    // Client-side range probe fallback if CORS permits
-    try {
-      var r = await fetch(streamUrl, { headers: { Range: "bytes=0-524287" } });
-      if (!r.ok) return null;
-      var buf = await r.arrayBuffer();
-      var data = new Uint8Array(buf);
-      var view = new DataView(buf);
-      var fps = 0;
-      var width = 0;
-      var height = 0;
-      for (var i = 0; i < data.length - 8; i++) {
-        if (!fps && data[i] === 0x76 && data[i + 1] === 0x69 && data[i + 2] === 0x64 && data[i + 3] === 0x65) {
-          var ts = 0;
-          var sd = 0;
-          for (var j = Math.max(0, i - 300); j < Math.min(data.length - 8, i + 8000); j++) {
-            if (data[j] === 0x6d && data[j + 1] === 0x64 && data[j + 2] === 0x68 && data[j + 3] === 0x64) {
-              var v = view.getUint8(j + 4);
-              ts = v === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
-            }
-            if (data[j] === 0x73 && data[j + 1] === 0x74 && data[j + 2] === 0x74 && data[j + 3] === 0x73) {
-              if (view.getUint32(j + 8) > 0) sd = view.getUint32(j + 16);
-            }
-            if (ts && sd) {
-              var f = Math.round(ts / sd);
-              if (f > 0 && f < 300) { fps = f; break; }
-            }
-          }
-        }
-        if (!width && data[i] === 0x74 && data[i + 1] === 0x6b && data[i + 2] === 0x68 && data[i + 3] === 0x64) {
-          var ver = view.getUint8(i + 4);
-          var wOff = ver === 1 ? i + 92 : i + 80;
-          var hOff = ver === 1 ? i + 96 : i + 84;
-          if (hOff + 4 <= buf.byteLength) {
-            var w = Math.round(view.getUint32(wOff) / 65536);
-            var h = Math.round(view.getUint32(hOff) / 65536);
-            if (w > 0 && h > 0 && w < 16000 && h < 16000) { width = w; height = h; }
-          }
-        }
-      }
-      var comment = extractMethodCommentFromMp4(data, view);
-      return { fps: fps, width: width, height: height, comment: comment };
-    } catch (_) {
-      return null;
+    var res = await fetch("/api/tiktok-fps?url=" + encodeURIComponent(streamUrl));
+    var ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.indexOf("application/json") === -1) {
+      throw new Error("Endpoint /api/tiktok-fps tidak aktif di server ini (" + res.status + ").");
     }
+    var json = await res.json();
+    if (!res.ok) {
+      throw new Error((json && json.error) || ("Gagal memeriksa stream video (" + res.status + ")."));
+    }
+    return json;
   }
 
   async function runAnalysis() {
