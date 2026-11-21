@@ -410,7 +410,7 @@
             var mTopTopH = mTopWin.id === "slowtime" ? 0 : 42;
             var mTopFit = fitAspectWindow(mFgAvailW, mFullH, mTopWin.aspectRatio, mTopTopH);
             targets.set(mTopWin, {
-              left: Math.round(mMargin + 12 + Math.max(0, (mFgAvailW - mTopFit.width) / 2)),
+              left: Math.round(mMargin + mFullW - mTopFit.width),
               top: Math.round(mMargin + Math.max(0, (mFullH - mTopFit.height) / 2)),
               width: mTopFit.width,
               height: mTopFit.height,
