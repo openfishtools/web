@@ -39,6 +39,7 @@
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
   }
   .app-window.is-mobile-peek {
+    transform-origin: 0 50%;
     transform: translateX(-16px) scale(0.93);
   }
   .app-window-body {
