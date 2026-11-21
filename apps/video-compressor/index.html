@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Compressor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/ffmpeg-client.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <!-- State 1: Full-Window Unified Dropzone -->
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret file video">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">movie</span>
+      <p class="app-dropzone-text">Pilih atau seret video ke sini</p>
+      <p class="app-dropzone-hint">Mendukung MP4, WebM, MOV, HEVC</p>
+      <input type="file" id="file-input" accept="video/*" hidden>
+    </div>
+
+    <!-- State 2: Flexible No-Preview Workspace -->
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" aria-hidden="true">video_file</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field">
+            <span class="app-label">Codec</span>
+            <div class="m3-segmented" id="codec-group" role="radiogroup" aria-label="Codec Video">
+              <button type="button" class="m3-segment is-active" data-codec="h264" role="radio" aria-checked="true">H.264</button>
+              <button type="button" class="m3-segment" data-codec="hevc" role="radio" aria-checked="false">H.265 (HEVC)</button>
+            </div>
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Preset Kompresi (HD)</span>
+            <div class="m3-segmented" id="preset-group" role="radiogroup" aria-label="Preset Kompresi">
+              <button type="button" class="m3-segment" data-preset="fast" role="radio" aria-checked="false">Fast</button>
+              <button type="button" class="m3-segment is-active" data-preset="medium" role="radio" aria-checked="true">Medium</button>
+              <button type="button" class="m3-segment" data-preset="slow" role="radio" aria-checked="false">Slow</button>
+            </div>
+          </div>
+
+          <label class="app-row" for="check-audio">
+            <span class="app-label">Pertahankan Audio</span>
+            <span class="m3-switch">
+              <input type="checkbox" id="check-audio" checked>
+              <span class="m3-switch-track">
+                <span class="m3-switch-thumb"></span>
+              </span>
+            </span>
+          </label>
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Memproses...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-stats-grid is-hidden" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Awal</span>
+              <span class="app-stat-value" id="stat-original">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Hasil</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-compressed">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Hemat</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-savings">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">compress</span>
+            Mulai Kompresi
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <canvas id="offscreen-canvas" hidden></canvas>
+  <script src="app.js" defer></script>
+</body>
+</html>

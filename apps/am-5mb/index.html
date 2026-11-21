@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AM 5MB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret file XML Alight Motion">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">folder_zip</span>
+      <p class="app-dropzone-text">Pilih atau seret XML Alight Motion</p>
+      <p class="app-dropzone-hint">Mendukung proyek ekspor .xml</p>
+      <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
+    </div>
+
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" aria-hidden="true">code</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field">
+            <div class="app-row">
+              <span class="app-label">Layer Media untuk Diganti</span>
+              <div class="app-inline-actions">
+                <button type="button" class="app-chip app-chip-compact" id="btn-select-all">Pilih Semua</button>
+                <button type="button" class="app-chip app-chip-compact" id="btn-deselect-all">Hapus</button>
+              </div>
+            </div>
+            <div class="m3-segmented" id="filter-tabs" role="radiogroup" aria-label="Filter Jenis Layer"></div>
+          </div>
+
+          <div class="app-list" id="layers-list"></div>
+
+          <div class="app-stats-grid is-hidden" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Awal</span>
+              <span class="app-stat-value" id="stat-original">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Hasil</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-output">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Diganti</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-replaced">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span>
+            Buat XML 5MB
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

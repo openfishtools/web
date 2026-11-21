@@ -1,0 +1,6 @@
+<svg class="app-icon" width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="512" height="512" rx="125" class="icon-bg" fill="var(--icon-bg, #212a1a)"/>
+<path d="M256 102A154 154 0 0 1 410 256V368A42 42 0 0 1 368 410H256A154 154 0 0 1 102 256A154 154 0 0 1 256 102Z" class="icon-fg" fill="var(--icon-fg, #c7dc9c)"/>
+<circle cx="256" cy="256" r="88" class="icon-inner" fill="var(--icon-inner, #212a1a)"/>
+<path d="M234 210L308 256L234 302V210Z" class="icon-fg" fill="var(--icon-fg, #c7dc9c)" stroke="var(--icon-fg, #c7dc9c)" stroke-width="20" stroke-linejoin="round"/>
+</svg>

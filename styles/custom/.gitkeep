@@ -1,0 +1,2 @@
+# Reserved for optional non-standard per-app style overrides.
+# Keep empty unless an app explicitly requires styling outside styles/app-ui.css.

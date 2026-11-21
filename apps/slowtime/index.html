@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../styles/tokens.css?v=4">
+  <link rel="stylesheet" href="../../styles/app-ui.css?v=8">
+  <link rel="stylesheet" href="../../styles/custom/slowtime.css?v=4">
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body class="slowtime-body">
+  <main class="slowtime-stage" id="player-stage">
+    <video id="main-video" class="slowtime-video is-hidden" playsinline preload="metadata"></video>
+    <div id="embed-slot" class="slowtime-embed-slot is-hidden"></div>
+
+    <div class="slowtime-empty" id="empty-state">
+      <form class="slowtime-url-pill" id="empty-form">
+        <span class="material-symbols-rounded slowtime-url-ico" aria-hidden="true">link</span>
+        <input type="url" id="empty-input" class="slowtime-url-input" placeholder="Tempel link video..." autocomplete="off">
+        <button type="submit" class="slowtime-url-go" aria-label="Putar">
+          <span class="material-symbols-rounded" aria-hidden="true">play_arrow</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="slowtime-loading is-hidden" id="stage-loading" aria-live="polite">
+      <div class="m3-spinner" aria-hidden="true"></div>
+    </div>
+
+    <div class="slowtime-toast is-hidden" id="error-banner" role="alert">
+      <span class="material-symbols-rounded" aria-hidden="true">error</span>
+      <span id="error-text"></span>
+    </div>
+
+    <div class="slowtime-dock" id="floating-dock">
+      <div class="slowtime-capsule">
+        <div class="slowtime-scrubber" id="scrubber-wrap">
+          <span class="slowtime-time" id="time-cur">00:00</span>
+          <input type="range" id="seek-slider" class="m3-slider slowtime-slider" min="0" max="1000" value="0" aria-label="Posisi video">
+          <span class="slowtime-time" id="time-dur">00:00</span>
+        </div>
+
+        <div class="slowtime-transport">
+          <button type="button" class="slowtime-ctrl" id="btn-rew" title="-5 detik" aria-label="Mundur 5 detik">
+            <span class="material-symbols-rounded" aria-hidden="true">replay_5</span>
+          </button>
+          <button type="button" class="slowtime-ctrl slowtime-ctrl-play" id="btn-play" title="Putar / Jeda" aria-label="Putar atau jeda">
+            <span class="material-symbols-rounded" id="play-icon" aria-hidden="true">play_arrow</span>
+          </button>
+          <button type="button" class="slowtime-ctrl" id="btn-fwd" title="+5 detik" aria-label="Maju 5 detik">
+            <span class="material-symbols-rounded" aria-hidden="true">forward_5</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../core/app-utils.js?v=4"></script>
+  <script src="app.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remove BG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/ffmpeg-client.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret gambar atau video">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">content_cut</span>
+      <p class="app-dropzone-text">Pilih atau seret gambar / video</p>
+      <p class="app-dropzone-hint">Mendukung PNG, JPG, WebP, MP4, MOV, WebM</p>
+      <input type="file" id="file-input" accept="image/*,video/*" hidden>
+    </div>
+
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" id="file-icon" aria-hidden="true">image</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <!-- Before / After Comparison Preview (1 Frame) -->
+          <div class="app-compare is-checkerboard" id="compare-stage" aria-label="Perbandingan sebelum dan sesudah">
+            <div class="app-compare-orig-clip" id="orig-clip">
+              <div class="app-compare-layer" id="layer-orig">
+                <video id="preview-video" class="is-hidden" playsinline muted loop preload="auto"></video>
+                <img id="preview-image" class="is-hidden" alt="Original">
+              </div>
+            </div>
+            <div class="app-compare-clip" id="compare-clip">
+              <div class="app-compare-layer" id="layer-enhanced">
+                <video id="enhanced-video" class="is-hidden" muted loop playsinline></video>
+                <canvas id="preview-canvas"></canvas>
+              </div>
+              <div class="app-compare-placeholder" id="unprocessed-overlay">
+                <span class="app-compare-placeholder-title">Belum diproses</span>
+                <span class="app-compare-placeholder-sub">Tekan Preview untuk melihat hasil</span>
+              </div>
+            </div>
+            <div class="app-compare-divider" id="compare-divider">
+              <div class="app-compare-handle" aria-hidden="true">&#9664;&#9654;</div>
+            </div>
+            <span class="app-compare-badge is-left">Asli</span>
+            <span class="app-compare-badge is-right" id="label-right">Asli</span>
+            <span class="app-compare-zoom is-hidden" id="zoom-badge">1.0x</span>
+          </div>
+
+          <div class="app-scrubber is-hidden" id="scrubber-row">
+            <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+            <input type="range" class="m3-slider" id="duration-slider" min="0" max="0" step="0.05" value="0" disabled aria-label="Posisi frame video">
+            <span class="app-scrubber-time" id="duration-label">00:00.0</span>
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Model AI</span>
+            <div class="m3-segmented" id="model-group" role="radiogroup" aria-label="Model AI">
+              <button type="button" class="m3-segment is-active" data-model="selfie_segmenter" role="radio" aria-checked="true">MediaPipe</button>
+              <button type="button" class="m3-segment" data-model="rvm_mobilenetv3" role="radio" aria-checked="false">RVM</button>
+              <button type="button" class="m3-segment" data-model="modnet" role="radio" aria-checked="false">MODNet</button>
+            </div>
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Perangkat</span>
+            <div class="m3-segmented" id="device-group" role="radiogroup" aria-label="Perangkat Pemrosesan">
+              <button type="button" class="m3-segment is-active" data-device="gpu" id="btn-device-gpu" role="radio" aria-checked="true">GPU (WebGPU)</button>
+              <button type="button" class="m3-segment" data-device="cpu" id="btn-device-cpu" role="radio" aria-checked="false">CPU (WASM)</button>
+            </div>
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Latar Belakang</span>
+            <div class="app-chip-group" id="bg-group" role="radiogroup" aria-label="Latar Belakang">
+              <button type="button" class="app-chip is-active" data-bg="transparent" role="radio" aria-checked="true">Transparan</button>
+              <button type="button" class="app-chip" data-bg="green" role="radio" aria-checked="false">Green Screen</button>
+              <button type="button" class="app-chip" data-bg="color" role="radio" aria-checked="false">Warna Solid</button>
+              <button type="button" class="app-chip" data-bg="blur" role="radio" aria-checked="false">Blur</button>
+            </div>
+          </div>
+
+          <div class="app-color-row is-hidden" id="color-row">
+            <input type="color" id="color-picker" class="app-color-swatch" value="#0842a0" aria-label="Pilih warna latar">
+            <input type="text" id="color-hex" class="app-input" value="#0842a0" maxlength="7" aria-label="Kode warna hex">
+          </div>
+
+          <div class="app-field" id="format-field">
+            <span class="app-label">Format Alpha</span>
+            <div class="m3-segmented" id="format-group" role="radiogroup" aria-label="Format Output"></div>
+          </div>
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Memproses...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-stats-grid is-hidden" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Awal</span>
+              <span class="app-stat-value" id="stat-original">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Hasil</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-output">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Waktu</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-elapsed">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-secondary" id="btn-preview">
+            <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+            Preview
+          </button>
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">content_cut</span>
+            Hapus Background
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="app-stack">
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field">
+            <label class="app-label" for="url-input">Tautan Video TikTok</label>
+            <input type="url" id="url-input" class="app-input" placeholder="https://www.tiktok.com/@user/video/..." autocomplete="off">
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Format Unduhan</span>
+            <div class="m3-segmented" id="quality-group" role="radiogroup" aria-label="Format Unduhan">
+              <button type="button" class="m3-segment is-active" data-quality="hd" role="radio" aria-checked="true">Video HD</button>
+              <button type="button" class="m3-segment" data-quality="sd" role="radio" aria-checked="false">Standar</button>
+              <button type="button" class="m3-segment" data-quality="audio" role="radio" aria-checked="false">Audio MP3</button>
+            </div>
+          </div>
+
+          <div class="app-notice app-notice-error is-hidden" id="error-banner" role="alert">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            <span id="error-text">-</span>
+          </div>
+
+          <div class="app-media-card is-hidden" id="media-card">
+            <img class="app-media-thumb" id="media-cover" alt="Cover video">
+            <div class="app-media-body">
+              <div class="app-media-title" id="media-author">-</div>
+              <div class="app-media-sub" id="media-handle">-</div>
+              <div class="app-media-caption" id="media-title">-</div>
+            </div>
+          </div>
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Mengunduh...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-stats-grid is-hidden" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Ukuran</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-size">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Durasi</span>
+              <span class="app-stat-value" id="stat-duration">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Mode</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-mode">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">download</span>
+            Unduh Video
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

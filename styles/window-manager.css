@@ -1,0 +1,473 @@
+/* ==========================================================
+   iOS / iPadOS Multi-Window System (Flexible Tiling, Multi-Zone Stage)
+   Pure Material 3, Lightweight, No Blur, No Scrim
+   ========================================================== */
+
+.windows-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.app-window {
+  position: absolute;
+  pointer-events: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  background: var(--md-sys-color-surface-container);
+  border: none;
+  outline: none;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.38);
+  will-change: auto;
+  transform-origin: 0 0;
+  transition: left 280ms cubic-bezier(0.16, 1, 0.3, 1),
+              top 280ms cubic-bezier(0.16, 1, 0.3, 1),
+              width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+              height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 220ms ease;
+}
+
+@media (max-width: 767px) {
+  .app-window {
+    border-radius: 20px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+  }
+  .app-window.is-mobile-peek {
+    transform: translateX(-16px) scale(0.93);
+    opacity: 0.72;
+  }
+  .app-window-body {
+    border-radius: 0 0 20px 20px;
+  }
+  .window-topbar {
+    height: 42px;
+    cursor: default;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-window.is-fullscreen {
+    border-radius: 20px;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.38);
+  }
+}
+
+/* Continuous Multi-Zone Windows Stage */
+.windows-stage {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: translateX(0px);
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* Edge Hover Sensor Triggers for Sliding Between Zones */
+.stage-edge-sensor {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  z-index: 2;
+  pointer-events: auto;
+  cursor: pointer;
+  display: none;
+  background: transparent;
+}
+
+.stage-edge-sensor.sensor-left {
+  left: 0;
+}
+
+.stage-edge-sensor.sensor-right {
+  right: 0;
+}
+
+.windows-container.has-right-zone .stage-edge-sensor.sensor-right {
+  display: block;
+}
+
+.windows-container.has-left-zone .stage-edge-sensor.sensor-left {
+  display: block;
+}
+
+/* Mobile Floating Arrow Buttons for Switching Multi-Zones */
+.stage-nav-btn {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .stage-edge-sensor {
+    display: none !important;
+  }
+
+  .stage-nav-btn {
+    position: fixed;
+    top: calc(50% - 46px);
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 34px;
+    height: 52px;
+    border-radius: 999px;
+    border: none;
+    outline: none;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 140ms ease, background 140ms ease;
+  }
+
+  .stage-nav-btn:active {
+    transform: translateY(-50%) scale(0.92);
+    background: var(--tonal-hover);
+  }
+
+  .stage-nav-btn .material-symbols-rounded {
+    font-size: 1.45rem;
+  }
+
+  .stage-nav-btn.nav-left {
+    left: 6px;
+  }
+
+  .stage-nav-btn.nav-right {
+    right: 6px;
+  }
+
+  .windows-container.has-right-zone .stage-nav-btn.nav-right,
+  .windows-container.has-left-zone .stage-nav-btn.nav-left {
+    display: flex;
+  }
+}
+
+.app-window.is-dragging,
+.app-window.is-resizing,
+.app-window.is-swiping {
+  transition: none !important;
+}
+
+/* Prevent iframe from stealing pointer events while dragging or resizing */
+.app-window.is-dragging .app-window-frame,
+.app-window.is-resizing .app-window-frame {
+  pointer-events: none;
+}
+
+/* Full-Width Top Safe Zone (Left Fullscreen | Title Pill | Right Close) */
+.window-topbar {
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.app-window.is-dragging {
+  user-select: none;
+  transition: none !important;
+}
+
+.app-window.is-dragging .window-topbar {
+  cursor: grabbing;
+}
+
+.app-window.is-fullscreen .window-topbar {
+  cursor: default;
+}
+
+/* Center App Title Pill */
+.window-title-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 240px;
+  height: 26px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-sys-color-surface-container-high);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  user-select: none;
+}
+
+.pill-app-title {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Direct Corner Window Controls (Fullscreen & Close) */
+.window-ctl-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  outline: none;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 140ms ease, transform 140ms ease, color 140ms ease;
+}
+
+.window-ctl-btn * {
+  pointer-events: none;
+}
+
+.window-ctl-btn .material-symbols-rounded {
+  font-size: 1.15rem;
+}
+
+.window-ctl-btn:hover {
+  background: var(--tonal-hover);
+  transform: scale(1.08);
+}
+
+.window-ctl-btn:focus {
+  outline: none;
+}
+
+.window-ctl-btn:active {
+  transform: scale(0.92);
+}
+
+.window-ctl-close:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff6b6b;
+}
+
+/* App Window Body & Precision Embedded Frame */
+.app-window-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0 0 24px 24px;
+  background: var(--md-sys-color-surface-container);
+  border: none;
+  outline: none;
+  position: relative;
+}
+
+.app-window-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: var(--md-sys-color-surface-container);
+  border-radius: inherit;
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.app-window-frame.is-revealed {
+  opacity: 1;
+}
+
+/* Android-style Centered App Splash Icon */
+.window-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-sys-color-surface-container);
+  pointer-events: none;
+  transition: opacity 260ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.window-splash-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: splash-icon-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.window-splash.is-leaving {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+@keyframes splash-icon-in {
+  from { opacity: 0; transform: scale(0.76); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* iPadOS Stage Manager Corner Resize Handles */
+.window-resize-handle {
+  position: absolute;
+  z-index: 3;
+}
+
+.handle-e {
+  top: 0;
+  right: -3px;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.handle-w {
+  top: 0;
+  left: -3px;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.handle-s {
+  bottom: -3px;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.handle-se,
+.handle-sw {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-on-surface);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  touch-action: none;
+  z-index: 4;
+}
+
+.handle-se {
+  bottom: -10px;
+  right: -10px;
+  cursor: se-resize;
+}
+
+.handle-sw {
+  bottom: -10px;
+  left: -10px;
+  cursor: sw-resize;
+}
+
+.handle-se::after,
+.handle-sw::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+
+.app-window:hover .handle-se,
+.app-window:hover .handle-sw,
+.app-window.is-resizing .handle-se,
+.app-window.is-resizing .handle-sw {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.handle-se:hover,
+.handle-sw:hover,
+.app-window.is-resizing .handle-se,
+.app-window.is-resizing .handle-sw {
+  opacity: 1;
+  transform: scale(1.12);
+}
+
+.resize-corner-arc {
+  width: 32px;
+  height: 32px;
+  display: block;
+  pointer-events: none;
+}
+
+.app-window.is-fullscreen .window-resize-handle {
+  display: none !important;
+}
+
+/* Immersive QuickTime-style window for SlowTime */
+.app-window[data-app-id="slowtime"],
+.app-window[data-app-id="slowtime"] .app-window-body,
+.app-window[data-app-id="slowtime"] .app-window-frame {
+  background: #0d0f0c;
+}
+
+.app-window[data-app-id="slowtime"] .app-window-body {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.app-window[data-app-id="slowtime"] .window-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  background: transparent;
+  transition: opacity 220ms ease;
+}
+
+.app-window[data-app-id="slowtime"].is-player-idle .window-topbar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (min-width: 768px) {
+  .app-window[data-app-id="slowtime"] .window-topbar {
+    opacity: 0;
+  }
+
+  .app-window[data-app-id="slowtime"]:hover:not(.is-player-idle) .window-topbar,
+  .app-window[data-app-id="slowtime"] .window-topbar:hover,
+  .app-window[data-app-id="slowtime"].is-dragging .window-topbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .window-resize-handle {
+    display: none !important;
+  }
+}

@@ -1,0 +1,352 @@
+/* Desktop Shell, Doodle Background, Watch Clock, & Desktop Big Folders (home.html) */
+body[data-page="home"] {
+  background: #000;
+}
+
+body[data-page="home"] .doodle {
+  animation: doodle-fade-in 700ms var(--md-sys-easing-emphasized) both;
+}
+
+@keyframes doodle-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.doodle {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wave-base {
+  fill: var(--md-sys-color-surface-container);
+}
+
+.wave-a {
+  fill: color-mix(in srgb, var(--md-sys-color-primary) 24%, var(--md-sys-color-surface));
+}
+
+.wave-b {
+  fill: color-mix(in srgb, var(--md-sys-color-primary) 12%, var(--md-sys-color-surface));
+}
+
+.home-container {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(14px, 3dvh, 42px) clamp(12px, 3vw, 40px) calc(clamp(7.2rem, 13dvh, 8.2rem) + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(10px, 2.4dvh, 28px);
+}
+
+/* Minimal Watch Face Clock (No Container Card) */
+.clock-widget {
+  width: fit-content;
+  max-width: min(560px, 94vw);
+  padding: clamp(6px, 1.5vh, 14px) 8px;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.8vh, 16px);
+  user-select: none;
+  will-change: transform;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.clock-eyebrow {
+  align-self: flex-start;
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: clamp(0.78rem, 2.2vw, 0.92rem);
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  letter-spacing: 0.01em;
+}
+
+.clock-time {
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: clamp(3.8rem, 17vw, 6.4rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--md-sys-color-on-surface);
+  transform: scaleY(1.14);
+  transform-origin: center center;
+}
+
+.clock-date {
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: clamp(0.84rem, 2.6vw, 1rem);
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+  cursor: pointer;
+}
+
+.desktop-shortcuts {
+  width: 100%;
+  max-width: min(920px, 94vw);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(16px, 3vh, 26px) clamp(14px, 3.2vw, 28px);
+}
+
+.desktop-shortcuts.is-docked {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* HyperOS / iPadOS Style Big Folder */
+.big-folder {
+  width: clamp(148px, min(19vw, 24dvh), 196px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.2vh, 10px);
+  user-select: none;
+}
+
+.big-folder-card {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: clamp(10px, 2.2vw, 14px);
+  box-sizing: border-box;
+  border-radius: clamp(24px, 5vw, 30px);
+  background: var(--md-sys-color-surface-container);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: transform 180ms var(--md-sys-easing-emphasized),
+    box-shadow 180ms var(--md-sys-easing-emphasized);
+}
+
+.big-folder-card:hover {
+  transform: scale(1.025);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.big-folder-card:active {
+  transform: scale(0.96);
+}
+
+.big-folder-tile {
+  display: block;
+  padding: 0;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Preset Fanned Cards Icon */
+.preset-fan-icon .preset-card-surface {
+  stroke: var(--icon-bg);
+}
+
+.preset-fan-icon .preset-tone-1 {
+  fill: color-mix(in srgb, var(--icon-fg) 74%, var(--icon-bg));
+}
+
+.preset-fan-icon .preset-tone-2 {
+  fill: color-mix(in srgb, var(--icon-fg) 83%, var(--icon-bg));
+}
+
+.preset-fan-icon .preset-tone-3 {
+  fill: color-mix(in srgb, var(--icon-fg) 92%, var(--icon-bg));
+}
+
+.preset-fan-icon .preset-tone-4 {
+  fill: var(--icon-fg);
+}
+
+.preset-fan-icon .preset-card {
+  transform-origin: 64px 114px;
+  transition: transform 240ms var(--md-sys-easing-emphasized);
+}
+
+.big-folder-tile:hover .preset-card-1 {
+  transform: rotate(-5deg) translateY(-2px);
+}
+
+.big-folder-tile:hover .preset-card-2 {
+  transform: rotate(-1.5deg) translateY(-3px);
+}
+
+.big-folder-tile:hover .preset-card-3 {
+  transform: rotate(1.5deg) translateY(-3px);
+}
+
+.big-folder-tile:hover .preset-card-4 {
+  transform: rotate(5deg) translateY(-2px);
+}
+
+.big-folder-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(6px, 1.4vw, 10px);
+  pointer-events: none;
+}
+
+.big-folder-app {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 0.7vw, 5px);
+}
+
+.big-folder-app-icon {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-radius: 22.5%;
+  overflow: hidden;
+  display: block;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+}
+
+.big-folder-app-label {
+  flex: 0 0 auto;
+  width: 100%;
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: clamp(0.56rem, 1.5vw, 0.66rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.big-folder-title {
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: clamp(0.78rem, 2.2vw, 0.88rem);
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+
+/* Shared App Icon Theming */
+.app-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+}
+
+.app-icon .icon-bg {
+  fill: var(--icon-bg);
+}
+
+.app-icon .icon-fg {
+  fill: var(--icon-fg);
+}
+
+.app-icon [stroke="white"],
+.app-icon [stroke="#fff"],
+.app-icon .icon-fg-stroke {
+  stroke: var(--icon-fg);
+}
+
+.app-icon .icon-inner {
+  fill: var(--icon-inner);
+}
+
+.app-icon [stroke="black"],
+.app-icon [stroke="#000"],
+.app-icon .icon-inner-stroke {
+  stroke: var(--icon-inner);
+}
+
+@media (max-width: 899px) {
+  .clock-widget {
+    padding: clamp(4px, 1dvh, 12px) 8px;
+    gap: clamp(6px, 1.2dvh, 14px);
+  }
+
+  .clock-time {
+    font-size: clamp(2.8rem, min(15vw, 8.8dvh), 5.6rem);
+  }
+
+  .desktop-shortcuts {
+    max-width: min(440px, 94vw);
+    gap: clamp(12px, 2.2dvh, 22px) clamp(12px, 3vw, 24px);
+  }
+
+  .big-folder {
+    width: clamp(112px, min(39vw, 19.5dvh), 184px);
+    gap: clamp(6px, 1dvh, 10px);
+  }
+}
+
+@media (max-width: 767px) {
+  .home-container {
+    padding-bottom: calc(8.8rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-height: 620px) {
+  .clock-time {
+    font-size: clamp(2.5rem, 9.5dvh, 3.8rem);
+  }
+
+  .big-folder {
+    width: clamp(106px, min(36vw, 18.5dvh), 168px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="home"] .doodle {
+    animation: none;
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .clock-widget {
+    transition: none;
+  }
+
+  .preset-fan-icon .preset-card {
+    transition: none;
+  }
+
+  .big-folder-tile:hover .preset-card {
+    transform: none;
+  }
+}

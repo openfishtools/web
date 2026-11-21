@@ -1,8 +1,8 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "editorstuff",
   "main": "worker.js",
-  "compatibility_date": "2026-09-27",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat"],
   "routes": [
     {
       "pattern": "cutefish.my.id",
@@ -14,8 +14,7 @@
     }
   ],
   "assets": {
-    "directory": "dist-cf",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "directory": ".",
+    "binding": "ASSETS"
   }
 }

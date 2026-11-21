@@ -1,0 +1,8 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="512" height="512" rx="125" fill="var(--icon-bg, #212a1a)" class="icon-bg"/>
+<path d="M0 147H108C119.046 147 128 155.954 128 167V300C128 335.346 99.3462 364 64 364H0V147Z" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+<path d="M384 211C384 175.654 412.654 147 448 147H512V364H404C392.954 364 384 355.046 384 344V211Z" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+<rect x="166" y="244" width="179" height="23" rx="7" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+<rect x="190" y="200" width="131" height="23" rx="7" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+<rect x="190" y="288" width="131" height="23" rx="7" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+</svg>

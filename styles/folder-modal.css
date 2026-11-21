@@ -1,0 +1,255 @@
+/* iPadOS / iOS Folder Modal & Material 3 Vertical List Cards (home.html) */
+.folder-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.75);
+  will-change: opacity;
+}
+
+.folder-scrim.is-above-windows {
+  z-index: 6;
+}
+
+.folder-scrim[hidden],
+.folder-modal[hidden] {
+  display: none;
+}
+
+.folder-modal {
+  position: fixed;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(25.5rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0.25rem;
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  will-change: opacity;
+}
+
+.folder-modal.is-above-windows {
+  z-index: 7;
+}
+
+.folder-modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0.95rem;
+  flex-shrink: 0;
+}
+
+.folder-modal-title {
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.folder-modal-close {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.folder-modal-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.folder-modal-surface {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.folder-modal-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: var(--md-sys-color-surface-container);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+  will-change: transform, border-radius;
+  transform-origin: center center;
+}
+
+.folder-modal-grid {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow: visible;
+  max-height: min(38rem, calc(100dvh - 7.5rem));
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.folder-modal.is-scrollable .folder-modal-grid {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.folder-app-item {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.85rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: 20px;
+  padding: 0.62rem 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+  min-width: 0;
+  transition: transform 150ms var(--md-sys-easing-emphasized);
+  will-change: transform;
+}
+
+.folder-app-card-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--md-sys-color-surface);
+  pointer-events: none;
+  transition: background 150ms ease;
+  transform-origin: center center;
+  will-change: transform, opacity, border-radius;
+}
+
+.folder-app-item:hover .folder-app-card-bg {
+  background: var(--hover-soft);
+}
+
+.folder-app-item:active {
+  transform: scale(0.985);
+}
+
+.folder-app-item:active .folder-app-card-bg {
+  background: var(--tonal-hover);
+}
+
+.folder-app-item.is-running .folder-app-card-bg {
+  background: var(--md-sys-color-secondary-container);
+}
+
+.folder-app-icon-wrap {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 3.15rem;
+  height: 3.15rem;
+  border-radius: 22.5%;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  will-change: transform, opacity;
+  transform-origin: center center;
+}
+
+.folder-app-meta {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.folder-app-name {
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--md-sys-color-on-surface);
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-app-desc {
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--md-sys-color-on-surface-variant);
+  width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.folder-app-arrow {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  font-size: 1.2rem;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.65;
+  will-change: transform, opacity;
+}
+
+@media (max-width: 639px) {
+  .folder-modal-header {
+    padding-bottom: 0.75rem;
+  }
+
+  .folder-modal-surface {
+    padding: 0.65rem;
+  }
+
+  .folder-modal-grid {
+    gap: 0.38rem;
+  }
+
+  .folder-app-item {
+    gap: 0.75rem;
+    padding: 0.52rem 0.68rem;
+    border-radius: 18px;
+  }
+
+  .folder-app-icon-wrap {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+}

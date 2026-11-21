@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Template</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <!-- Wajib: Design System seragam untuk seluruh aplikasi -->
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <!-- Opsional: HANYA gunakan jika app ini benar-benar butuh override di luar standar -->
+  <!-- <link rel="stylesheet" href="../../styles/custom/nama-app.css"> -->
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <!-- PENTING: Jangan buat header/judul aplikasi di sini. Judul sudah ditampilkan oleh OS Window Manager. -->
+  <main class="app-shell">
+    <!-- State 1 (Opsional untuk app berbasis file): Unified Dropzone -->
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">upload_file</span>
+      <p class="app-dropzone-text">Pilih atau seret file ke sini</p>
+      <p class="app-dropzone-hint">Format yang didukung</p>
+      <input type="file" id="file-input" hidden>
+    </div>
+
+    <!-- State 2: Flexible Workspace (Seragam di semua resolusi) -->
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" aria-hidden="true">description</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <!-- Pengaturan standar memakai .app-field, .m3-segmented, .app-row + .m3-switch -->
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Memproses...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">play_arrow</span>
+            Proses
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

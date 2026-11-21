@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interpolation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/ffmpeg-client.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret file video">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">motion_photos_on</span>
+      <p class="app-dropzone-text">Pilih atau seret video ke sini</p>
+      <p class="app-dropzone-hint">Interpolasi FPS AI RIFE v4.7 (2x / 4x / 8x)</p>
+      <input type="file" id="file-input" accept="video/*" hidden>
+    </div>
+
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" aria-hidden="true">video_file</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-stats-grid app-stats-grid-2">
+            <div class="app-stat-box">
+              <span class="app-stat-label">FPS Asli</span>
+              <span class="app-stat-value" id="fps-input-val">30 FPS</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">FPS Target</span>
+              <span class="app-stat-value app-stat-highlight" id="fps-target-val">60 FPS</span>
+            </div>
+          </div>
+
+          <div class="app-field">
+            <span class="app-label">Pengali FPS</span>
+            <div class="m3-segmented" id="mult-group" role="radiogroup" aria-label="Pengali FPS">
+              <button type="button" class="m3-segment is-active" data-mult="2" role="radio" aria-checked="true">2x</button>
+              <button type="button" class="m3-segment" data-mult="4" role="radio" aria-checked="false">4x</button>
+              <button type="button" class="m3-segment" data-mult="8" role="radio" aria-checked="false">8x</button>
+            </div>
+          </div>
+
+          <div class="app-notice" id="engine-notice">
+            <span class="material-symbols-rounded" aria-hidden="true">memory</span>
+            <span id="engine-notice-text">Memeriksa akselerasi WebGPU...</span>
+          </div>
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Memproses...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-stats-grid is-hidden" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Frame</span>
+              <span class="app-stat-value" id="stat-frames">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Output</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-size">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Waktu</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-elapsed">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">slow_motion_video</span>
+            Mulai Interpolasi
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

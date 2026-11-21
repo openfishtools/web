@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="app-stack">
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field">
+            <label class="app-label" for="url-input">Tautan Video TikTok</label>
+            <input type="url" id="url-input" class="app-input" placeholder="https://www.tiktok.com/@user/video/..." autocomplete="off">
+          </div>
+
+          <div class="app-notice app-notice-error is-hidden" id="error-banner" role="alert">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            <span id="error-text">-</span>
+          </div>
+
+          <div class="app-progress is-hidden" id="progress-box">
+            <div class="app-progress-header">
+              <span id="progress-status">Menganalisis video...</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="app-progress-track">
+              <div class="app-progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="app-media-card is-hidden" id="media-card">
+            <img class="app-media-thumb" id="media-cover" alt="Cover video">
+            <div class="app-media-body">
+              <div class="app-media-title" id="media-author">-</div>
+              <div class="app-media-sub" id="media-handle">-</div>
+              <div class="app-media-caption" id="media-title">-</div>
+            </div>
+          </div>
+
+          <div class="app-detail-card is-hidden" id="metrics-grid">
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">visibility</span>Views</span>
+              <span class="app-detail-val is-highlight" id="kv-views">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">favorite</span>Likes</span>
+              <span class="app-detail-val" id="kv-likes">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">chat_bubble</span>Komentar</span>
+              <span class="app-detail-val" id="kv-comments">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">share</span>Bagikan</span>
+              <span class="app-detail-val" id="kv-shares">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">bookmark</span>Simpan</span>
+              <span class="app-detail-val" id="kv-saves">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">trending_up</span>Engagement</span>
+              <span class="app-detail-val is-highlight" id="kv-engagement">-</span>
+            </div>
+
+            <hr class="app-detail-divider">
+
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">aspect_ratio</span>Resolusi</span>
+              <span class="app-detail-val" id="kv-resolution">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">speed</span>FPS</span>
+              <span class="app-detail-val" id="kv-fps">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">equalizer</span>Bitrate</span>
+              <span class="app-detail-val" id="kv-bitrate">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">schedule</span>Durasi</span>
+              <span class="app-detail-val" id="kv-duration">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">save</span>Ukuran</span>
+              <span class="app-detail-val" id="kv-size">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">build</span>Metode</span>
+              <span class="app-detail-val" id="kv-method">-</span>
+            </div>
+
+            <hr class="app-detail-divider">
+
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">security</span>Status</span>
+              <span class="app-detail-val is-highlight" id="kv-shadowban">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">public</span>Wilayah</span>
+              <span class="app-detail-val" id="kv-region">-</span>
+            </div>
+            <div class="app-detail-row">
+              <span class="app-detail-key"><span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>Tanggal Unggah</span>
+              <span class="app-detail-val" id="kv-date">-</span>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">query_stats</span>
+            Analisis Video
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+/* TikTok Enhancer Mode Switcher & Extension View Overrides */
+.enhancer-mode-switch {
+  flex: none;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.enhancer-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+.enhancer-pane.is-hidden {
+  display: none;
+}
+
+.enhancer-pane > .app-card {
+  flex: none;
+  overflow: visible;
+  gap: 10px;
+}
+
+.enhancer-ext-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.enhancer-ext-stats .app-stat-box {
+  padding: 10px 12px;
+}
+
+.enhancer-ext-stats .app-stat-value {
+  font-size: 0.92rem;
+}
+
+.enhancer-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.enhancer-video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.enhancer-video-stub {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+}
+
+.enhancer-video-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.enhancer-play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+  transition: transform 140ms ease;
+}
+
+.enhancer-video-stub:hover .enhancer-play-badge {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.enhancer-play-badge .material-symbols-rounded {
+  font-size: 1.65rem;
+}
+
+.enhancer-video-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+@media (min-width: 720px) {
+  .enhancer-ext-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

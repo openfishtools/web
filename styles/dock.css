@@ -1,0 +1,285 @@
+/* Material 3 Lightweight Dock & Mode-Switch Transition (home.html) */
+.dock {
+  position: fixed;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: fit-content;
+  bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 32px;
+  background: var(--md-sys-color-surface-container);
+  border: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  max-width: calc(100vw - 1.5rem);
+  box-sizing: border-box;
+  will-change: opacity, transform, width;
+  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 260ms ease;
+}
+
+@media (max-width: 767px) {
+  .dock.is-hidden-mobile {
+    transform: translateY(calc(100% + 3.5rem)) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+.dock:empty {
+  min-width: 4.8rem;
+  min-height: 4.8rem;
+}
+
+.dock-fly-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  contain: layout style;
+}
+
+.dock-fly-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 0;
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  contain: layout style paint;
+  transition: none !important;
+}
+
+.dock-fly-card * {
+  transition: none !important;
+}
+
+.dock.is-animating {
+  overflow: hidden;
+  contain: layout style;
+  transition: none !important;
+}
+
+.dock.is-animating .dock-item,
+.dock.is-animating .dock-folder {
+  position: absolute;
+  left: 0;
+  flex: none;
+  transition: none !important;
+}
+
+.dock-item {
+  position: relative;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.9rem;
+  height: 3.9rem;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 19px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 160ms var(--md-sys-easing-emphasized);
+}
+
+.dock-item:hover {
+  transform: translateY(-4px);
+}
+
+.dock-item:active {
+  transform: translateY(-1px) scale(0.96);
+}
+
+.dock-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 22.5%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.dock-folder-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.dock-item-label {
+  display: none;
+}
+
+/* Hover Tooltip (macOS style, Material 3 lightweight) */
+.dock-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  font-family: "Syne", system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 1;
+}
+
+.dock-item:hover .dock-tooltip,
+.dock-folder:hover .dock-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* iPadOS Folder Icon on Dock */
+.dock-folder {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.9rem;
+  height: 3.9rem;
+  flex-shrink: 0;
+  padding: 6px;
+  border: none;
+  border-radius: 19px;
+  background: var(--md-sys-color-surface-container-high);
+  cursor: pointer;
+  transition: transform 160ms var(--md-sys-easing-emphasized),
+    background 160ms ease;
+}
+
+.dock-folder:hover {
+  transform: translateY(-4px);
+  background: var(--tonal-hover);
+}
+
+.dock-folder:active {
+  transform: translateY(-1px) scale(0.96);
+}
+
+.folder-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.folder-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.folder-preview-item svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 767px) {
+  .dock {
+    width: calc(100vw - 1.25rem);
+    max-width: 520px;
+    justify-content: space-evenly;
+    gap: clamp(0.35rem, 2vw, 0.75rem);
+    padding: clamp(0.85rem, 2.8vw, 1.15rem) clamp(0.65rem, 2.4vw, 1rem);
+    border-radius: 30px;
+  }
+
+  .dock-item,
+  .dock-folder {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 5rem;
+    flex-direction: column;
+    width: auto;
+    height: auto;
+    gap: clamp(0.32rem, 1.1vw, 0.45rem);
+    padding: 0;
+    background: transparent;
+  }
+
+  .dock-item-icon {
+    width: clamp(3.35rem, 13.5vw, 4.15rem);
+    height: clamp(3.35rem, 13.5vw, 4.15rem);
+    aspect-ratio: 1;
+  }
+
+  .dock-folder-box {
+    width: clamp(3.35rem, 13.5vw, 4.15rem);
+    height: clamp(3.35rem, 13.5vw, 4.15rem);
+    aspect-ratio: 1;
+    padding: clamp(6px, 1.6vw, 8px);
+    box-sizing: border-box;
+    border-radius: 22.5%;
+    background: var(--md-sys-color-surface-container-high);
+  }
+
+  .dock-item-label {
+    display: block;
+    width: 100%;
+    font-family: "Syne", system-ui, sans-serif;
+    font-size: clamp(0.68rem, 2.6vw, 0.78rem);
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--md-sys-color-on-surface-variant);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dock-tooltip {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .dock {
+    gap: 0.65rem;
+    padding: 0.65rem 0.95rem;
+    border-radius: 28px;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .dock-item,
+  .dock-folder {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock {
+    animation: none;
+    transition: none;
+    opacity: 1;
+  }
+}

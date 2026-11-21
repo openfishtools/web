@@ -1,70 +1,114 @@
-<!-- caveman-begin -->
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
+# AGENTS.md — Panduan Proyek Web Desktop OS (`cutefish.my.id` / `cutefishaep`)
 
-Rules:
-- Answer first: Answer, then reason, then next step.
-- Kill ceremony: No greeting, hedging, pleasantries, recap, or closer.
-- Short word: "fix" not "implement a solution for".
-- Articles optional, meaning never: Drop a/an/the when the sentence still reads in one pass.
-- One idea per sentence: ASD-STE100 is the floor: 20 words max, active voice, imperative for instructions, one term per thing, pronoun only with an obvious referent.
-- Payload verbatim: Code blocks unchanged.
-- Tool runs: bounded status: No text between routine calls.
-- User's language: Compress the style, not the language.
-- Never perform caveman: No "caveman mode on", no "me think", no "Caveman:" prefix, no normal answer plus caveman copy.
+Dokumen ini adalah panduan resmi arsitektur, aturan desain, dan standar pengerjaan untuk AI coding agent maupun developer yang berkontribusi pada repositori ini.
 
-Switch: /caveman (default), /ultracave (fragments, each fact once), /megacave (Classical Chinese 文言文)
-Stop: "stop caveman" or "normal mode"
+---
 
-Auto-Clarity: plain prose for security warnings, irreversible actions, step order a fragment could scramble, user confused. Resume after.
+## 1. Filosofi Utama (Wajib Dipatuhi)
+1. **Ringan & Cepat (Zero Bloat):**
+   - Gunakan pure **Vanilla HTML, CSS, dan JavaScript**. Jangan tambahkan framework frontend berat (React, Vue, Tailwind, Bootstrap, dll.) atau *build step* frontend tanpa persetujuan eksplisit.
+   - Hindari efek mahal seperti `backdrop-filter: blur()`, animasi `border-radius` / `clip-path` di atas live `<iframe>`, atau shadow berlapis yang menurunkan FPS.
+   - Semua aplikasi di-embed secara *lazy* (iframe baru dipasang setelah frame awal animasi buka stabil, dan langsung di-remove saat window ditutup tanpa menambah riwayat navigasi browser).
+   - Binary berat seperti FFmpeg WASM (`> 25 MiB`) **tidak boleh** di-commit ke repo — muat dari CDN dan cache di browser `Cache Storage` melalui `core/ffmpeg-client.js`.
+2. **Presisi (Pixel-Accurate):**
+   - Tidak boleh ada elemen yang bocor melewati `border-radius` window, scrollbar liar, atau layout shift.
+   - **DILARANG** membuat `<header>` atau judul aplikasi di dalam HTML aplikasi (`apps/*/index.html`), karena nama aplikasi sudah ditampilkan secara resmi di *Multitask Pill* milik OS Window Manager.
+3. **100% Seragam (Unified Design System):**
+   - Semua aplikasi **wajib** memakai desain Material 3 Matcha Tonal yang sama melalui `styles/tokens.css` dan `styles/app-ui.css`.
+   - **Tanpa Border/Outline pada Tombol:** Semua tombol wajib murni tonal (`border: none; outline: none; text-decoration: none;`) mengandalkan kontras warna `surface` / `primary` — **jangan** menambahkan `border` atau `outline` garis luar pada tombol baru.
+   - **Zero Kontrol Bawaan Browser (Full Material 3):** Semua kontrol interaktif — slider (`.m3-slider` + `AppUtils.syncSlider`), switch (`.m3-switch`), checkbox (`.m3-checkbox`/`.app-checkbox`), dropdown (`.app-select`), spinner loading (`.m3-spinner`), progress bar (`.app-progress`), input angka, dan color picker — **wajib** memakai styling Material 3 dari `styles/app-ui.css` (`appearance: none`), dilarang membiarkan tampilan default OS/browser.
+   - Jangan membuat style inline atau CSS terpisah per aplikasi hanya untuk hal-hal standar (tombol, kartu, dropzone, chip, progress bar).
+   - Apabila sebuah aplikasi benar-benar memerlukan tampilan khusus di luar standar, letakkan file override-nya di `styles/custom/<app-id>.css`.
+4. **Multi-Language Otomatis (`id` / `en`):**
+   - Seluruh halaman utama dan aplikasi wajib menyertakan `core/i18n.js` agar bahasa UI otomatis menyesuaikan bahasa browser pengguna (`id` / `en`).
 
-Boundaries: code, comments, commits, PRs, docs written normal.
-Floor: code, commands, paths, numbers and error strings verbatim; never drop not/never/no/only.
-<!-- caveman-end -->
+---
 
-# OpenFishTools Web Platform AI Agent Guidelines
+## 2. Struktur Folder Resmi
 
-## 1. System Architecture & Component Map
-- `index.html`: Main single-page application shell, interactive tool runner grid, resource cards, and modal containers.
-- `scripts/portfolio.js`: Core client controller: tool orchestration, dynamic resource catalog rendering, category filtering, search, and fluid FLIP modal morphing.
-- `api/index.js`: Express application server handling:
-  - `/api/resources`: Live GitHub Org repository fetcher with in-memory cache and zero database dependency.
-  - `/api/tools`: Live GitHub tree manifest query mapping tools from `openfishtools/web-tools`.
-  - `/api/version`: Dynamic deployment and build commit metadata endpoint.
-- `styles/portfolio.css`: Main UI design system tokens, card grids, modal transitions, and responsive styles.
-- `assets/projects/`: Official vector SVG project logos (`web.svg`, `web-tools.svg`, `cep.svg`, `studio.svg`).
-- `build/`: Staging and Cloudflare Pages builders (`build.js`, `build-cf.js`).
-- `package.json`: Single source of truth for web platform version.
+```text
+Web2/
+├── AGENTS.md                 # Panduan proyek ini
+├── README.md                 # Dokumentasi ringkas proyek & deploy
+├── index.html                # Landing page (cutefish.my.id)
+├── home.html                 # Web Desktop OS shell
+├── favicon.svg               # Favicon SVG manual
+├── _headers                  # Header Cache-Control Cloudflare Pages
+├── wrangler.toml             # Konfigurasi Cloudflare Pages & nodejs_compat
+├── package.json              # Dependency Cloudflare Functions (mongodb)
+│
+├── functions/                # Cloudflare Pages Functions (server-side)
+│   └── api/
+│       └── presets.js        # GET /api/presets (live MongoDB + edge cache)
+│
+├── apps/                     # Modul aplikasi (1 folder = 1 aplikasi HTML mandiri)
+│   ├── _template/            # Boilerplate standar (copy-paste untuk app baru)
+│   │   ├── index.html
+│   │   └── app.js
+│   └── <app-id>/             # Folder per aplikasi
+│
+├── core/                     # Engine inti Desktop OS & halaman
+│   ├── i18n.js               # Auto multi-language (id / en)
+│   ├── registry.js           # Single Source of Truth daftar aplikasi & folder
+│   ├── window-manager.js     # Multi-window Stage Manager, tiling, aspect-ratio, mobile peek
+│   ├── dock.js               # Flexible Dock
+│   ├── folder-modal.js       # iPadOS Folder Modal
+│   ├── desktop.js            # Bootstrap home.html & jam Indonesia
+│   ├── landing.js            # Logic khusus index.html
+│   ├── app-utils.js          # Utilitas UI seragam antar aplikasi
+│   └── ffmpeg-client.js      # Loader FFmpeg WASM via CDN + Cache Storage
+│
+├── styles/                   # Modular CSS
+│   ├── tokens.css            # Material 3 color tokens (light & dark)
+│   ├── base.css              # Reset, view-transition, scrollbar suppression
+│   ├── landing.css           # Style khusus index.html
+│   ├── desktop.css           # Style desktop shell, doodle, jam, & big folder
+│   ├── dock.css              # Style khusus Dock
+│   ├── folder-modal.css      # Style khusus Folder Modal
+│   ├── window-manager.css    # Style Multi-Window, Pill Header, Resize Handles, SlowTime bar
+│   ├── app-ui.css            # Style SERAGAM wajib untuk semua aplikasi
+│   └── custom/               # Override opsional khusus app non-standar
+│
+└── assets/                   # Pure static assets
+    ├── icons/                # File SVG ikon aplikasi
+    ├── icons-data.js         # Inline SVG map untuk render dock instan
+    └── vendor/               # Library/helper ringan pihak ketiga (tanpa binary > 25 MiB)
+```
 
-## 2. Resource Catalog Rules (ZERO DATABASE DEPENDENCY)
-- **NO Database Coupling**: The `/api/resources` route MUST NEVER depend on MongoDB, Mongoose, or database connections.
-- **GitHub Live Sync**: Resources are fetched directly from GitHub Organization repositories (`https://api.github.com/orgs/openfishtools/repos`) backed by in-memory caching and resilient fallback registry.
-- **No Archive Password**: Do not reintroduce archive password prompts (`#res-modal-password-section`). Public projects require no password.
+---
 
-## 3. Modal Morphing & FLIP Animation Standards
-- **Universal Morphing**: Modals use FLIP geometry calculations via `getModalTargetGeometry()`.
-- **Resting & Transition States**:
-  - Source card must hide during transition and cleanly restore on close.
-  - Transition duration must remain clamped (0.34s–0.42s) with `var(--ease-spring-soft)` timing.
-- **Responsive Geometry**:
-  - Mobile (<= 600px): Bottom-sheet style layout.
-  - Desktop (>= 601px): Centered card expansion.
+## 3. Cara Menambah Aplikasi Baru
+Cukup **2 langkah**:
+1. Salin folder `apps/_template/` lalu ubah namanya menjadi `apps/<app-id>/`.
+   - Pastikan `index.html` memuat `../../styles/tokens.css`, `../../styles/app-ui.css`, dan `../../core/i18n.js` — **dilarang** menimpa visual standar komponen di luar `styles/custom/`.
+   - Gunakan struktur & kelas UI standar di `styles/app-ui.css` (`.app-shell`, `.app-dropzone`, `.app-stack`, `.app-file-meta`, `.app-card.app-stack-fill`, `.app-card-body`, `.app-card-footer`, `.m3-segmented`, `.m3-switch`, `.app-btn`, `.app-progress`, `.app-stats-grid`, `.app-logs.app-logs-responsive`).
+2. Daftarkan atau aktifkan `entry` di `core/registry.js`:
+   ```js
+   {
+     id: "<app-id>",
+     title: "Nama Aplikasi",
+     icon: "<app-id>.svg",
+     entry: "apps/<app-id>/index.html",
+     description: "Deskripsi singkat aplikasi"
+   }
+   ```
+   *(Set `entry: null` jika aplikasi masih berupa placeholder window kosong).*
 
-## 4. Strict File Manipulation Tooling (NO SCRIPT-BASED EDITS)
-- **STRICTLY FORBIDDEN**: Using Python scripts, Node.js scripts, `sed`, `awk`, `echo >`, `cat << 'EOF'`, or shell redirection to edit or generate code files.
-- **MANDATORY**: All file creations and code modifications MUST strictly use the agent's native tool calls (`replace_file_content` or `write_to_file`).
+---
 
-## 5. Error Investigation & Diagnostic Protocol
-When debugging UI or server issues:
-1. **Localhost Server**: Start dev server (`npm start` or `node api/index.js`) on `http://localhost:3000`.
-2. **Inspect Console**: Check browser DevTools console for uncaught exceptions, network failures, or layout reflows.
-3. **Build Verification**: Run `npm run build` to verify Cloudflare Pages staging build succeeds before pushing.
-
-## 6. Versioning & SSOT
-- **Single Source of Truth**: Platform version is defined in `package.json`.
-- **Bumping Version**: Update `"version"` in `package.json` directly. Shields badges and external consumers query this value automatically.
-- **NO Hardcoded Fallbacks**: Never hardcode fallback version literals in library files.
-
-## 7. Strict Git Safety & Working Tree Protection
-- **Zero Silent Git Changes**: STRICTLY FORBIDDEN to run `git checkout`, `git restore`, `git reset`, `git clean`, `git pull`, `git switch`, or any Git command that alters or discards local changes without explicit user consent.
-- **Preserve Uncommitted Work**: Always respect and preserve active uncommitted edits and untracked files in the working directory.
-- **Zero Emojis**: Git commit messages, comments, and documentation must never contain emojis.
+## 4. Konvensi Desktop OS & Window Manager
+- **Desktop (>= 768px):**
+  - 1 window: floating di tengah (bisa di-drag & di-resize); window dengan `aspectRatio` (mis. SlowTime) menyesuaikan rasio video otomatis.
+  - 2 window: split kiri-kanan (50/50, atau mengikuti rasio video jika dipasangkan dengan SlowTime).
+  - 3 window: 2 di atas, 1 lebar penuh di bawah (fleksibel).
+  - 4 window: grid 2×2.
+  - 5+ window: chaining tak terbatas ke zona kanan (`Zone 1, 2, ...`), mengintip `54px` di tepi kanan/kiri, geser otomatis saat hover/klik/trackpad swipe.
+- **Mobile (< 768px):**
+  - Tetap windowed (*rounded* `20px`) dengan **Dock selalu terlihat** di bawah (semua window berhenti di atas dock, tidak draggable/resizable).
+  - 1 window: penuh sampai atas dock.
+  - 2 window: split vertikal (atas-bawah 50/50), kecuali saat SlowTime aktif (app sebelumnya bergeser sedikit ke kiri & mengecil sebagai *peek*, SlowTime tampil penuh di atas dock).
+  - 3+ window: chaining ke zona kanan (maks 2 window split vertikal per zona), dilengkapi tombol panah mengambang `<` / `>` di tepi untuk geser antar zona.
+- **Verifikasi & Keamanan:**
+  - Cek sintaks JS dengan `node -c <file>.js` setelah mengedit file JavaScript.
+  - Pastikan `.env` tidak pernah ter-commit (`.gitignore` & `.assetsignore`).
+  - Jangan membuka browser otomatis yang mengganggu jika user sedang aktif membuka tab `localhost:4174/home.html`.

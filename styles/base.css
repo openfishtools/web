@@ -1,0 +1,91 @@
+/* Global Scrollbar Suppression: invisible everywhere while scrolling remains functional */
+*,
+*::before,
+*::after,
+html,
+body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: page-exit-fade 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: page-enter-fade 280ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes page-exit-fade {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes page-enter-fade {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Syne", system-ui, sans-serif;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  min-height: 100vh;
+  transition: background 200ms var(--md-sys-easing-emphasized),
+              color 200ms var(--md-sys-easing-emphasized),
+              opacity 240ms var(--md-sys-easing-emphasized),
+              transform 240ms var(--md-sys-easing-emphasized);
+}
+
+body.page-is-exiting {
+  opacity: 0 !important;
+  transform: scale(0.985);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  body,
+  body.page-is-exiting {
+    animation: none;
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}

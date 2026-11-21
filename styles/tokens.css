@@ -1,0 +1,75 @@
+:root {
+  color-scheme: light dark;
+
+  /* Green / Yellow Pastel Scale */
+  --pastel-50:  #fcfdf4;
+  --pastel-100: #f5f8dc;
+  --pastel-200: #ebf2bf;
+  --pastel-300: #d9ea9a;
+  --pastel-400: #c0dc78;
+  --pastel-500: #9dc45a;
+  --pastel-600: #77a143;
+  --pastel-700: #597e32;
+  --pastel-800: #425f26;
+  --pastel-900: #2d421a;
+
+  --butter-100: #fdf8cf;
+  --butter-200: #f7eca6;
+  --butter-300: #efe07c;
+
+  --cream:   #fefef8;
+  --ink:     #242d1a;
+  --leaf:    var(--pastel-500);
+  --leaf-deep: var(--pastel-700);
+
+  --md-sys-color-primary: var(--pastel-700);
+  --md-sys-color-on-primary: var(--cream);
+  --md-sys-color-outline: var(--pastel-500);
+
+  --md-sys-color-surface: var(--cream);
+  --md-sys-color-surface-container: var(--pastel-50);
+  --md-sys-color-surface-container-high: var(--pastel-100);
+  --md-sys-color-on-surface: var(--ink);
+  --md-sys-color-on-surface-variant: var(--pastel-800);
+  --md-sys-color-outline-variant: var(--pastel-300);
+  --md-sys-color-secondary-container: var(--butter-200);
+
+  --hover-soft: var(--pastel-100);
+  --tonal-hover: var(--butter-100);
+
+  --dock-outline: var(--pastel-600);
+
+  --icon-bg: var(--pastel-200);
+  --icon-fg: var(--pastel-800);
+  --icon-inner: var(--pastel-200);
+  --icon-hover: var(--butter-200);
+
+  --md-sys-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-duration-medium: 400ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: var(--pastel-300);
+    --md-sys-color-on-primary: var(--pastel-900);
+
+    --md-sys-color-surface: #1e2517;
+    --md-sys-color-surface-container: #28321f;
+    --md-sys-color-surface-container-high: #354229;
+    --md-sys-color-on-surface: var(--pastel-50);
+    --md-sys-color-on-surface-variant: var(--butter-100);
+    --md-sys-color-outline: var(--pastel-400);
+    --md-sys-color-outline-variant: var(--pastel-700);
+    --md-sys-color-secondary-container: #495228;
+
+    --hover-soft: #3a4629;
+    --tonal-hover: #475430;
+
+    --dock-outline: #151b10;
+
+    --icon-bg: var(--pastel-900);
+    --icon-fg: var(--pastel-300);
+    --icon-inner: var(--pastel-900);
+    --icon-hover: var(--pastel-800);
+  }
+}

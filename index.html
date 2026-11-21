@@ -1,713 +1,130 @@
 <!DOCTYPE html>
-<html lang="en" class="dark-theme" data-theme="greentea">
+<html lang="id">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <base href="/">
-    <title>cutefishaep</title>
-    <meta name="description" content="cutefishaep is the ultimate resource hub for video editors and creators. Access a curated collection of premium presets, essential editing software, and more!">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
-    <link rel="icon" type="image/png" sizes="128x128" href="assets/icon/cutefish_icon_128x128.png?v=2">
-    <link rel="alternate icon" href="favicon.ico?v=2">
-    <link rel="apple-touch-icon" href="assets/icon/cutefish_icon_128x128.png?v=2">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800;900&family=Chakra+Petch:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+Javanese:wght@400;600;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="styles/main.css?v=20260826a">
-    <script src="coi-serviceworker.min.js"></script>
-    <script src="scripts/theme-init.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="view-transition" content="same-origin">
+  <title>cutefish.my.id</title>
+  <meta name="description"
+    content="cutefish.my.id — Kumpulan preset After Effects &amp; Alight Motion, TikTok Enhancer (60 FPS &amp; Cloud Disabler), Video Compressor, dan web video tools ringan dari cutefishaep.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="cutefish.my.id">
+  <meta property="og:title" content="cutefish.my.id">
+  <meta property="og:description"
+    content="Kumpulan preset After Effects &amp; Alight Motion, TikTok Enhancer, Video Compressor, dan web video tools ringan dari cutefishaep.">
+  <meta property="og:url" content="https://cutefish.my.id/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "cutefish.my.id",
+      "alternateName": "cutefishaep",
+      "url": "https://cutefish.my.id/"
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/landing.css">
 </head>
-<body data-view="home">
-    <nav class="floating-nav-bar" id="floating-nav">
-        <div class="floating-nav-indicator" id="floating-nav-indicator"></div>
-        <a href="#preset" class="floating-nav-item" data-route="preset">
-            <span class="material-symbols-rounded nav-icon">description</span>
-            <span class="nav-label" data-i18n="nav_preset">Preset</span>
-        </a>
-        <a href="#home" class="floating-nav-item active" data-route="home">
-            <span class="material-symbols-rounded nav-icon">home</span>
-            <span class="nav-label" data-i18n="nav_home">Home</span>
-        </a>
-        <a href="#social" class="floating-nav-item" data-route="social">
-            <span class="material-symbols-rounded nav-icon">share</span>
-            <span class="nav-label" data-i18n="nav_social">Social</span>
-        </a>
-        <a href="#tools" class="floating-nav-item" data-route="tools">
-            <span class="material-symbols-rounded nav-icon">construction</span>
-            <span class="nav-label" data-i18n="nav_tools">Tools</span>
-        </a>
-        <a href="#resource" class="floating-nav-item" data-route="resource">
-            <span class="material-symbols-rounded nav-icon">folder_zip</span>
-            <span class="nav-label" data-i18n="nav_resource">Resource</span>
-        </a>
-        <a href="#contact" class="floating-nav-item" data-route="contact">
-            <span class="material-symbols-rounded nav-icon">mail</span>
-            <span class="nav-label" data-i18n="nav_contact">Contact</span>
-        </a>
-    </nav>
-    <div class="app-layout">
 
-        <div class="main-wrapper">
-
-            <canvas class="batik-canvas" id="batik-canvas" aria-hidden="true"></canvas>
-
-            <main class="content-scroller" id="content-scroller">
-                <div class="cube-viewport" id="cube-viewport">
-                    <div class="cube-3d-box" id="cube-3d-box">
-
-                        <div class="app-view cube-face cube-face-1 cube-face-front active-face" id="view-home">
-                    <section class="section hero-fullscreen-section" id="hero">
-                        <div class="hero-fullscreen-inner">
-                            <div class="hero-title-row">
-                                <div class="kinetic-stacked-title">
-                                    <div class="kinetic-greeting-line">
-                                        <span class="kinetic-flip-box" id="greeting-box">
-                                            <span class="flip-layer layer-current" id="greeting-current"></span>
-                                            <span class="flip-layer layer-next" id="greeting-next"></span>
-                                        </span>
-                                    </div>
-                                    <div class="kinetic-name-line">
-                                        <span class="kinetic-flip-box name-box" id="name-box">
-                                            <span class="flip-layer layer-current" id="name-current"></span>
-                                            <span class="flip-layer layer-next" id="name-next"></span>
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div class="theme-switcher-box">
-                                    <div class="theme-palette-pill">
-                                        <button class="mini-palette-btn active" data-color="greentea" title="Greentea" aria-label="Greentea theme"></button>
-                                        <button class="mini-palette-btn" data-color="ocean" title="Ocean Blue" aria-label="Ocean Blue theme"></button>
-                                        <button class="mini-palette-btn" data-color="amethyst" title="Amethyst Purple" aria-label="Amethyst Purple theme"></button>
-                                        <button class="mini-palette-btn" data-color="amber" title="Amber Gold" aria-label="Amber Gold theme"></button>
-                                        <button class="mini-palette-btn" data-color="rose" title="Rose Red" aria-label="Rose Red theme"></button>
-                                    </div>
-                                    <button class="theme-icon-btn" id="theme-toggle" aria-label="Toggle dark and light mode">
-                                        <span class="material-symbols-rounded">light_mode</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="hero-identity-card">
-                                <p class="hero-bio-text" data-i18n="hero_bio_text">
-                                    Video editor and software developer. Focused on building high-performance web applications, video processing utilities, and creative tools for editors.
-                                </p>
-
-                                <div class="hero-action-row">
-                                    <a href="#journey" class="md-btn md-btn-primary" id="btn-explore-journey">
-                                        <span class="material-symbols-rounded">arrow_downward</span>
-                                        <span data-i18n="hero_btn_journey">My Journey</span>
-                                    </a>
-                                    <a href="#contact" class="md-btn md-btn-tonal">
-                                        <span class="material-symbols-rounded">mail</span>
-                                        <span data-i18n="hero_btn_contact">Contact Us</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <div class="signpost-overlay" id="signpost-overlay">
-                        <div class="signpost" id="nav-signpost" aria-label="Navigation signpost">
-                            <div class="signpost-inner">
-                                <button type="button" class="sign-arrow arrow-right tone-a" data-target="#tools">
-                                    <span class="material-symbols-rounded sign-arrow-icon">construction</span>
-                                    <span class="sign-arrow-label" data-i18n="nav_tools">Tools</span>
-                                </button>
-                                <button type="button" class="sign-arrow arrow-left tone-b" data-target="#resource">
-                                    <span class="material-symbols-rounded sign-arrow-icon">folder_zip</span>
-                                    <span class="sign-arrow-label" data-i18n="nav_resource">Resource</span>
-                                </button>
-                                <button type="button" class="sign-arrow arrow-right tone-c" data-target="#social">
-                                    <span class="material-symbols-rounded sign-arrow-icon">share</span>
-                                    <span class="sign-arrow-label" data-i18n="nav_social">Social</span>
-                                </button>
-                                <button type="button" class="sign-arrow arrow-left tone-d" data-target="#preset">
-                                    <span class="material-symbols-rounded sign-arrow-icon">description</span>
-                                    <span class="sign-arrow-label" data-i18n="nav_preset">Preset</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <section class="section journey-section" id="journey">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <span class="material-symbols-rounded">timeline</span>
-                                <span data-i18n="journey_pill">Timeline</span>
-                            </div>
-                            <h2 class="section-title" data-i18n="journey_title">My Journey</h2>
-                        </div>
-
-                        <div class="zigzag-timeline-wrapper" id="timeline-wrapper">
-                            <svg class="timeline-dynamic-svg" id="timeline-svg" aria-hidden="true">
-                                <path id="timeline-dynamic-path" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-
-                            <div class="zigzag-item zigzag-left">
-                                <div class="zigzag-marker">
-                                    <span class="material-symbols-rounded">smartphone</span>
-                                </div>
-                                <div class="zigzag-card">
-                                    <div class="card-tag-row">
-                                        <span class="year-badge">2018</span>
-                                        <span class="platform-badge">Kinemaster</span>
-                                    </div>
-                                    <h3 class="timeline-heading" data-i18n="journey_item1_title">It All Started with Kinemaster</h3>
-                                    <p class="timeline-narrative" data-i18n="journey_item1_desc">
-                                        My first editing app was Kinemaster. Back when YouTube was booming and everyone was rushing to become a YouTuber, I made Minecraft content and edited it in Kinemaster. Around the same time, when Musical.ly and TikTok were trending, I also tried slow-mo trends ala Video Star with Kinemaster — though I never uploaded any of it. Childhood trauma: I got bullied just for posting videos on IG, all I wanted was to express myself.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="zigzag-item zigzag-right">
-                                <div class="zigzag-marker">
-                                    <span class="material-symbols-rounded">swap_horiz</span>
-                                </div>
-                                <div class="zigzag-card">
-                                    <div class="card-tag-row">
-                                        <span class="year-badge">2019 - 2020</span>
-                                        <span class="platform-badge">CuteCut · CapCut · Funimate</span>
-                                    </div>
-                                    <h3 class="timeline-heading" data-i18n="journey_item2_title">Transitions &amp; Beat Drop Era</h3>
-                                    <p class="timeline-narrative" data-i18n="journey_item2_desc">
-                                        In 2019, transition editing — aka TCC — was booming. I started using CuteCut for transitions. It had no built-in motion tile, so I hacked around it with an Instagram-style grid app to make mirror grid photos as a motion tile effect. I used CapCut for simple stuff like school assignments, and even tried the jedag-jedug style (it was terrible). I also tried other apps like Funimate and Node Video. Node Video wasn't my thing because of its caching system, but Funimate? Loved it. A VideoStar-meets-CapCut combo — honestly powerful: a full effects and 3D library, plus proper 3D controls like 3D view, nulls, even cameras. Too bad on Android you can't import your own 3D models.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="zigzag-item zigzag-left">
-                                <div class="zigzag-marker">
-                                    <span class="material-symbols-rounded">motion_mode</span>
-                                </div>
-                                <div class="zigzag-card">
-                                    <div class="card-tag-row">
-                                        <span class="year-badge">2020 - 2021</span>
-                                        <span class="platform-badge">Alight Motion</span>
-                                    </div>
-                                    <h3 class="timeline-heading" data-i18n="journey_item3_title">The Alight Motion Glory Days</h3>
-                                    <p class="timeline-narrative" data-i18n-html="journey_item3_desc">
-                                        Approaching 2020 — the corona era — I got into Alight Motion. Jedag-jedug edits on Alight Motion just looked way more proper than CapCut or Avee Player back then. I got my first 5k followers thanks to my Alight Motion edits, and yes, I had a bit of star syndrome — I was shocked I pulled 5k followers from such simple edits. One of the edits that blew up my account is <a href="https://www.tiktok.com/@cutefishrbx/video/6975763680843533570" target="_blank" rel="noopener noreferrer">this one</a>. Ever seen it? Yep, that's my old edit haha
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="zigzag-item zigzag-right highlight-zigzag">
-                                <div class="zigzag-marker glow-marker">
-                                    <span class="material-symbols-rounded">rocket_launch</span>
-                                </div>
-                                <div class="zigzag-card feature-zigzag-card">
-                                    <div class="card-tag-row">
-                                        <span class="year-badge active-badge" data-i18n="journey_item4_year">2021 - Present</span>
-                                        <span class="platform-badge">After Effects</span>
-                                    </div>
-                                    <h3 class="timeline-heading" data-i18n="journey_item4_title">Potato Laptop &amp; After Effects</h3>
-                                    <p class="timeline-narrative" data-i18n-html="journey_item4_desc">
-                                        Armed with a Lenovo S145-14AST laptop with 4GB of RAM (yep, you heard that right), I decided to move to After Effects. My first version was CC 2021 — the HEAVIEST version ever; even compared to CC 2022, 2021 remains the most absurdly heavy one. Honestly, I doubted I could edit in Ae at all — until I found out a lot of people used CS6, the lightest version, super smooth even on potato laptops. I just hated the RAM preview: waiting for everything to render before playing was so annoying. Eventually someone shared CC 2018 and I switched — and surprisingly it's super light, even lighter than Alight Motion on my Redmi 9.
-                                        <br><br>
-                                        I was still editing without plugins, since getting Sapphire back then was painfully hard — I didn't know about software from the high seas yet. My first plugin was Twixtor, and even that was a trial. Eventually I got my hands on every After Effects plugin through the piracy route lol.
-                                        <br><br>
-                                        Time went on and now I use a laptop with a processor that can actually handle After Effects. It's actually an MSI Modern 14 C11M, but my little brother really wanted a laptop for Roblox, so I bought an Axioo Hype 5 AMD and gave him my MSI. A downgrade? Whatever, as long as he's happy.
-                                        <br><br>
-                                        But decent hardware doesn't mean zero problems — besides crashes, I genuinely HATE people who sell plugins at insane prices. Fine if it's one-time payment, but this is a per-month subscription for tools that are literally just simple shortcuts. In my opinion, everyone — rich or poor — deserves to create without financial limits. That's why I built a plugin (well, an extension lol) called <a href="https://github.com/cutefishaep/OpenFishTools" target="_blank" rel="noopener noreferrer">OpenFishTools</a>.
-                                        <br><br>
-                                        It's 100% free and open source. And don't say "it'll become paid eventually" — nope, never. I'm not like that stingy red crab; these tools will be free forever. At most you'll see forked versions of it, or some random person on Shopee selling After Effects tools for like 10k lol.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="section tiktok-latest-section" id="tiktok-latest">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <i class="bi bi-tiktok"></i>
-                                <span>TikTok</span>
-                            </div>
-                            <h2 class="section-title" data-i18n="tiktok_latest_title">Latest Posts</h2>
-                        </div>
-
-                        <div class="tiktok-posts-grid" id="tiktok-posts-grid">
-                            <div class="tiktok-card-skeleton" data-index="0">
-                                <div class="skeleton-thumb"></div>
-                                <div class="skeleton-body">
-                                    <div class="skeleton-line line-author"></div>
-                                    <div class="skeleton-line line-title"></div>
-                                    <div class="skeleton-line line-meta"></div>
-                                </div>
-                            </div>
-                            <div class="tiktok-card-skeleton" data-index="1">
-                                <div class="skeleton-thumb"></div>
-                                <div class="skeleton-body">
-                                    <div class="skeleton-line line-author"></div>
-                                    <div class="skeleton-line line-title"></div>
-                                    <div class="skeleton-line line-meta"></div>
-                                </div>
-                            </div>
-                            <div class="tiktok-card-skeleton" data-index="2">
-                                <div class="skeleton-thumb"></div>
-                                <div class="skeleton-body">
-                                    <div class="skeleton-line line-author"></div>
-                                    <div class="skeleton-line line-title"></div>
-                                    <div class="skeleton-line line-meta"></div>
-                                </div>
-                            </div>
-                            <div class="tiktok-card-skeleton" data-index="3">
-                                <div class="skeleton-thumb"></div>
-                                <div class="skeleton-body">
-                                    <div class="skeleton-line line-author"></div>
-                                    <div class="skeleton-line line-title"></div>
-                                    <div class="skeleton-line line-meta"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <footer class="portfolio-footer">
-                        <div class="footer-legal-links">
-                            <button type="button" class="footer-legal-btn" data-doc="privacy" data-i18n="footer_privacy">Privacy Policy</button>
-                            <span class="footer-dot">•</span>
-                            <button type="button" class="footer-legal-btn" data-doc="tos" data-i18n="footer_terms">Terms of Service</button>
-                            <span class="footer-dot">•</span>
-                            <button type="button" class="footer-legal-btn" data-doc="disclaimer" data-i18n="footer_disclaimer">Disclaimer & DMCA</button>
-                        </div>
-                        <div class="vercel-release-badge" id="vercel-release-badge" aria-label="Deployed on Vercel">
-                            <svg class="vrb-logo" width="11" height="11" viewBox="0 0 76 65" fill="currentColor" aria-hidden="true"><path d="M37.59.25l36.95 64H.64l36.95-64z"/></svg>
-                            <span class="vrb-version" id="vercel-release-version">…</span>
-                        </div>
-                        <p class="footer-simple-text" data-i18n="footer_made_by">Made by cutefishaep</p>
-                    </footer>
-                </div>
-
-                <div class="app-view cube-face cube-face-2 cube-face-right" id="view-social">
-                    <section class="section social-page-section">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <span class="material-symbols-rounded">share</span>
-                                <span data-i18n="nav_social">Social Media</span>
-                            </div>
-                            <h1 class="section-title" data-i18n="social_connect_title">Connect With Me</h1>
-                        </div>
-
-                        <div class="social-buttons-grid" id="social-buttons-container">
-                            <div class="skeleton-social-btn"></div>
-                            <div class="skeleton-social-btn"></div>
-                            <div class="skeleton-social-btn"></div>
-                            <div class="skeleton-social-btn"></div>
-                        </div>
-                    </section>
-                </div>
-
-                <div class="app-view cube-face cube-face-3" id="view-tools">
-                    <section class="section tools-page-section">
-                        <div class="section-header">
-                            <div class="tools-header-pill-row">
-                                <div class="section-pill">
-                                    <span class="material-symbols-rounded">construction</span>
-                                    <span data-i18n="nav_tools">Tools</span>
-                                </div>
-                                <button type="button" class="btn-tools-clean-cache" id="btn-tools-clean-cache" title="Clear cache & reset memory" data-i18n-title="patcher_clear_cache" aria-label="Clear cache & reset memory">
-                                    <span class="material-symbols-rounded">cleaning_services</span>
-                                </button>
-                            </div>
-                            <h1 class="section-title" data-i18n="tools_creative_title">Creative Tools</h1>
-                        </div>
-
-                        <div class="tools-search-bar">
-                            <span class="material-symbols-rounded">search</span>
-                            <input type="text" id="tools-search" placeholder="Search tools..." data-i18n="tools_search_placeholder">
-                        </div>
-
-                        <div class="chip-group" id="tools-categories"></div>
-
-                        <div class="tools-grid" id="tools-grid">
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                            <div class="skeleton-tool-card" aria-hidden="true">
-                                <div class="skeleton-tool-card-icon"></div>
-                                <div class="skeleton-tool-card-info">
-                                    <div class="skeleton-tool-card-line title"></div>
-                                    <div class="skeleton-tool-card-line"></div>
-                                    <div class="skeleton-tool-card-line short"></div>
-                                </div>
-                                <div class="skeleton-tool-card-arrow"></div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <div class="app-view cube-face cube-face-4 cube-face-back" id="view-resource">
-                    <section class="section resource-page-section">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <span class="material-symbols-rounded">folder_zip</span>
-                                <span data-i18n="nav_resource">Resource</span>
-                            </div>
-                            <h1 class="section-title" data-i18n="resource_title">Resources</h1>
-                        </div>
-
-                        <div class="resource-search-bar">
-                            <span class="material-symbols-rounded">search</span>
-                            <input type="text" id="resource-search" placeholder="Search resources..." data-i18n="resource_search_placeholder">
-                        </div>
-
-                        <div class="chip-group" id="resource-categories"></div>
-
-                        <div class="resource-grid" id="resource-grid">
-                            <div class="skeleton-resource-card">
-                                <div class="skeleton-resource-card-icon"></div>
-                                <div class="skeleton-resource-card-info">
-                                    <div class="skeleton-resource-card-line"></div>
-                                    <div class="skeleton-resource-card-line short"></div>
-                                    <div class="skeleton-resource-card-line medium"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton-resource-card">
-                                <div class="skeleton-resource-card-icon"></div>
-                                <div class="skeleton-resource-card-info">
-                                    <div class="skeleton-resource-card-line"></div>
-                                    <div class="skeleton-resource-card-line short"></div>
-                                    <div class="skeleton-resource-card-line medium"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton-resource-card">
-                                <div class="skeleton-resource-card-icon"></div>
-                                <div class="skeleton-resource-card-info">
-                                    <div class="skeleton-resource-card-line"></div>
-                                    <div class="skeleton-resource-card-line short"></div>
-                                    <div class="skeleton-resource-card-line medium"></div>
-                                </div>
-                            </div>
-                            <div class="skeleton-resource-card">
-                                <div class="skeleton-resource-card-icon"></div>
-                                <div class="skeleton-resource-card-info">
-                                    <div class="skeleton-resource-card-line"></div>
-                                    <div class="skeleton-resource-card-line short"></div>
-                                    <div class="skeleton-resource-card-line medium"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <div class="app-view cube-face cube-face-6" id="view-preset">
-                    <section class="section preset-page-section">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <span class="material-symbols-rounded">description</span>
-                                <span data-i18n="nav_preset">Preset</span>
-                            </div>
-                            <h1 class="section-title" data-i18n="preset_title">Explore</h1>
-                        </div>
-
-                        <div class="chip-group" id="preset-categories"></div>
-
-                        <div class="preset-grid" id="preset-grid">
-                            <div class="preset-skeleton"></div>
-                            <div class="preset-skeleton"></div>
-                            <div class="preset-skeleton"></div>
-                            <div class="preset-skeleton"></div>
-                            <div class="preset-skeleton"></div>
-                            <div class="preset-skeleton"></div>
-                        </div>
-                    </section>
-                </div>
-
-                <div class="app-view cube-face cube-face-5 cube-face-left" id="view-contact">
-                    <section class="section social-page-section">
-                        <div class="section-header">
-                            <div class="section-pill">
-                                <span class="material-symbols-rounded">mail</span>
-                                <span data-i18n="nav_contact">Contact</span>
-                            </div>
-                            <h1 class="section-title" data-i18n="contact_title">Contact Us</h1>
-                        </div>
-
-                        <div class="social-buttons-grid" id="contact-buttons-container">
-                            <div class="skeleton-social-btn"></div>
-                            <div class="skeleton-social-btn"></div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
-    </main>
-        </div>
+<body>
+  <main class="hero" id="home">
+    <p class="greeting" aria-live="polite"><span class="greeting-word">Welcome to</span></p>
+    <h1 class="title"><span class="squiggle"><span class="split">cutefish</span><svg class="squiggle-svg"
+          aria-hidden="true"></svg></span><span class="title-alt split">.my.id</span></h1>
+    <p class="prompt split">What are you looking here ?</p>
+    <div class="actions">
+      <button type="button" class="btn btn-filled" data-drawer="cutefishos">CutefishOS</button>
+      <button type="button" class="btn btn-outlined" data-drawer="cutefishaep">cutefishaep</button>
     </div>
+  </main>
 
-    <div class="legal-modal-backdrop" id="legal-modal-backdrop" aria-hidden="true">
-        <div class="legal-modal-card" id="legal-modal-card" role="dialog" aria-modal="true" aria-labelledby="legal-modal-title">
-            <div class="legal-modal-header-container">
-                <div class="legal-modal-header">
-                    <div class="legal-modal-title-group">
-                        <div class="legal-modal-icon-badge" id="legal-modal-icon-badge">
-                            <span class="material-symbols-rounded" id="legal-modal-icon">gavel</span>
-                        </div>
-                        <div class="legal-modal-title-wrapper">
-                            <span class="legal-modal-subtitle" id="legal-modal-subtitle">Legal & Policies</span>
-                            <div class="legal-modal-title-slot" id="legal-modal-title-slot"></div>
-                        </div>
-                    </div>
-                    <button type="button" class="legal-modal-close-btn" id="legal-modal-close-btn" aria-label="Close dialog">
-                        <span class="material-symbols-rounded">close</span>
-                    </button>
-                </div>
-            </div>
+  <div class="scrim" data-close-dialog hidden></div>
 
-            <div class="legal-modal-body" id="legal-modal-body">
-
-                <article class="legal-article-card legal-doc-pane" id="modal-doc-privacy" data-i18n-html="legal_privacy_content"></article>
-
-                <article class="legal-article-card legal-doc-pane" id="modal-doc-tos" data-i18n-html="legal_terms_content"></article>
-
-                <article class="legal-article-card legal-doc-pane" id="modal-doc-disclaimer" data-i18n-html="legal_disclaimer_content"></article>
-            </div>
+  <aside class="drawer" data-popup="cutefishaep" data-dest="home.html" role="dialog" aria-modal="true"
+    aria-labelledby="aep-title" aria-describedby="aep-desc" hidden>
+    <h2 class="drawer-title" id="aep-title">cutefishaep</h2>
+    <p class="drawer-text" id="aep-desc"><span class="squiggle">Then you came in the right place!<svg
+          class="squiggle-svg" aria-hidden="true"></svg></span>. lemme redirect you to my desktop.</p>
+    <div class="drawer-actions">
+      <div class="visit-row">
+        <div class="visit-track-wrap">
+          <div class="visit-wave">
+            <span class="visit-wave-track"></span>
+            <svg class="visit-wave-svg" preserveAspectRatio="none" aria-hidden="true">
+              <path class="visit-wave-active"></path>
+            </svg>
+          </div>
+          <span class="visit-stop"></span>
+          <span class="visit-time"><span data-count>5</span>s</span>
         </div>
+        <button type="button" class="visit-icon" data-visit aria-label="Visit desktop"><span
+            class="material-symbols-rounded" aria-hidden="true">open_in_new</span></button>
+      </div>
+      <button type="button" class="drawer-btn drawer-btn-text" data-close-dialog>Not Now</button>
     </div>
+  </aside>
 
-    <div class="res-modal-backdrop" id="res-modal-backdrop" aria-hidden="true"></div>
-    <div class="res-modal-card" id="res-modal-card" role="dialog" aria-modal="true" aria-labelledby="res-modal-title">
-        <div class="res-modal-header-container">
-            <div class="res-modal-header">
-
-                <div class="res-modal-hero-slot" id="res-modal-hero-slot"></div>
-                <button type="button" class="res-modal-close-btn" id="res-modal-close-btn" aria-label="Close dialog">
-                    <span class="material-symbols-rounded res-close-icon-arrow">chevron_right</span>
-                    <span class="material-symbols-rounded res-close-icon-x">close</span>
-                </button>
-            </div>
+  <aside class="drawer" data-popup="default" data-dest="https://cutefish.org" role="dialog" aria-modal="true"
+    aria-labelledby="default-title" aria-describedby="default-desc" hidden>
+    <h2 class="drawer-title" id="default-title">CutefishOS</h2>
+    <p class="drawer-text" id="default-desc"><span class="squiggle">That's not my project<svg class="squiggle-svg"
+          aria-hidden="true"></svg></span>, but here I'll redirect you to that website.</p>
+    <p class="drawer-note">cutefish.my.id is not affiliated with cutefish.org. I do wish they'll continue the Cutefish
+      OS project until a stable release. It was good at first, but the original developer ghosted us and left us at
+      v0.8.</p>
+    <div class="drawer-actions">
+      <div class="visit-row">
+        <div class="visit-track-wrap">
+          <div class="visit-wave">
+            <span class="visit-wave-track"></span>
+            <svg class="visit-wave-svg" preserveAspectRatio="none" aria-hidden="true">
+              <path class="visit-wave-active"></path>
+            </svg>
+          </div>
+          <span class="visit-stop"></span>
+          <span class="visit-time"><span data-count>5</span>s</span>
         </div>
-
-        <div class="res-modal-body" id="res-modal-body">
-            <div class="res-modal-section" id="res-modal-os-section">
-                <span class="res-modal-section-title" data-i18n="res_modal_platform">CHOOSE PLATFORM</span>
-                <div class="res-modal-os-chips" id="res-modal-os-chips"></div>
-            </div>
-
-            <div class="res-modal-section hidden" id="res-modal-ver-section">
-                <span class="res-modal-section-title" data-i18n="res_modal_version">CHOOSE VERSION</span>
-                <div class="res-modal-ver-chips" id="res-modal-ver-chips"></div>
-            </div>
-
-            <div class="res-modal-section hidden" id="res-modal-instruction-section">
-                <span class="res-modal-section-title" data-i18n="res_modal_desc">README.md</span>
-                <div class="res-modal-instruction-box" id="res-modal-instruction"></div>
-            </div>
-        </div>
-
-        <div class="res-modal-footer" id="res-modal-download-section">
-            <button type="button" class="res-modal-download-btn" id="res-modal-download-btn" disabled>
-                <span class="material-symbols-rounded">download</span>
-                <span class="res-download-main-text" data-i18n="res_modal_download">Download Resource</span>
-            </button>
-            <a href="#" target="_blank" rel="noopener noreferrer" class="res-modal-github-btn" id="res-modal-github-btn" title="GitHub Source" aria-label="GitHub Source">
-                <svg class="res-github-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                </svg>
-                <span class="res-github-btn-text" data-i18n="res_view_github">View on GitHub</span>
-            </a>
-        </div>
+        <button type="button" class="visit-icon" data-visit aria-label="Visit cutefish.org"><span
+            class="material-symbols-rounded" aria-hidden="true">open_in_new</span></button>
+      </div>
+      <button type="button" class="drawer-btn drawer-btn-text" data-close-dialog>Not Now</button>
     </div>
+  </aside>
 
-    <div class="tool-modal-backdrop" id="tool-modal-backdrop" aria-hidden="true"></div>
-    <div class="tool-modal-card" id="tool-modal-card" role="dialog" aria-modal="true" aria-labelledby="tool-modal-hero-slot">
-        <div class="tool-modal-header-container">
-            <div class="tool-modal-header">
-                <div class="tool-modal-hero-slot" id="tool-modal-hero-slot"></div>
-                <button type="button" class="tool-modal-close-btn" id="tool-modal-close-btn" aria-label="Close dialog">
-                    <span class="material-symbols-rounded tool-close-icon-arrow">chevron_right</span>
-                    <span class="tool-close-progress-text" id="tool-close-progress-text"></span>
-                    <span class="material-symbols-rounded tool-close-icon-x">close</span>
-                </button>
-            </div>
+  <aside class="drawer" data-popup="recent" data-dest="https://cutefish.org" role="dialog" aria-modal="true"
+    aria-labelledby="recent-title" aria-describedby="recent-desc" hidden>
+    <h2 class="drawer-title" id="recent-title">CutefishOS</h2>
+    <p class="drawer-text" id="recent-desc">You recently accessed <span class="squiggle">CutefishOS<svg
+          class="squiggle-svg" aria-hidden="true"></svg></span>. Redirecting...</p>
+    <div class="drawer-actions">
+      <div class="visit-row">
+        <div class="visit-track-wrap">
+          <div class="visit-wave">
+            <span class="visit-wave-track"></span>
+            <svg class="visit-wave-svg" preserveAspectRatio="none" aria-hidden="true">
+              <path class="visit-wave-active"></path>
+            </svg>
+          </div>
+          <span class="visit-stop"></span>
+          <span class="visit-time"><span data-count>5</span>s</span>
         </div>
-
-        <div class="tool-modal-body" id="tool-modal-body">
-            <div class="tool-drop-zone" id="tool-drop-zone">
-                <span class="material-symbols-rounded tool-drop-icon" id="tool-drop-icon">upload_file</span>
-                <div class="tool-drop-content">
-                    <span class="tool-drop-title" id="tool-drop-title" data-i18n="patcher_drop_label">Drop video here or click to browse</span>
-                    <span class="tool-drop-subtitle" id="tool-drop-subtitle" data-i18n="tool_drop_formats">Supports MP4, MOV, WebM</span>
-                </div>
-                <div class="tool-file-badge hidden" id="tool-file-badge">
-                    <span class="material-symbols-rounded">check_circle</span>
-                    <span class="tool-file-name" id="tool-file-name">video.mp4</span>
-                    <span class="tool-file-size" id="tool-file-size">0 MB</span>
-                </div>
-                <input type="file" id="tool-file-input" accept="video/mp4,video/quicktime,video/webm,video/*">
-            </div>
-
-            <div class="tool-dynamic-options" id="tool-dynamic-options"></div>
-
-            <div class="tool-progress-section hidden" id="tool-progress-section">
-                <div class="tool-progress-track">
-                    <div class="tool-progress-fill" id="tool-progress-fill"></div>
-                </div>
-                <div class="tool-progress-labels">
-                    <span class="tool-progress-status" id="tool-progress-status">Processing...</span>
-                    <span class="tool-progress-percent" id="tool-progress-percent">0%</span>
-                </div>
-            </div>
-
-            <div class="process-logs-wrap hidden" id="tiktok-logs-container">
-                <div class="process-logs-header">
-                    <span class="process-logs-title" data-i18n="patcher_logs_title">Process Logs:</span>
-                    <button type="button" class="btn-copy-logs" id="btn-copy-logs">
-                        <span class="material-symbols-rounded">content_copy</span>
-                        <span data-i18n="res_modal_copy">Copy</span>
-                    </button>
-                </div>
-                <pre class="process-logs-pre" id="tiktok-logs"></pre>
-            </div>
-
-            <div class="tool-modal-footer" id="tool-modal-footer">
-                <button type="button" class="tool-process-btn" id="tool-process-btn" disabled>
-                    <span id="tool-process-label" data-i18n="patcher_btn_process">Process Video</span>
-                </button>
-            </div>
-        </div>
+        <button type="button" class="visit-icon" data-visit aria-label="Visit cutefish.org"><span
+            class="material-symbols-rounded" aria-hidden="true">open_in_new</span></button>
+      </div>
+      <button type="button" class="drawer-btn drawer-btn-text" data-close-dialog>No thanks</button>
     </div>
-
-    <div class="social-portal-backdrop" id="social-portal-backdrop" aria-hidden="true"></div>
-    <div class="social-portal-card" id="social-portal-card" aria-hidden="true">
-        <div class="social-portal-icon-wrapper" id="social-portal-icon-wrapper"></div>
-        <div class="social-portal-label-wrapper" id="social-portal-label-wrapper">
-            <span class="social-portal-label" id="social-portal-label"></span>
-        </div>
-        <span class="material-symbols-rounded social-portal-arrow" id="social-portal-arrow">arrow_outward</span>
-    </div>
-
-    <div class="preset-modal-backdrop" id="preset-modal-backdrop" aria-hidden="true"></div>
-    <div class="preset-modal-card" id="preset-modal-card" role="dialog" aria-modal="true" aria-labelledby="preset-modal-name">
-        <button type="button" class="preset-modal-close-btn" id="preset-modal-close-btn" aria-label="Close">
-            <span class="material-symbols-rounded">close</span>
-        </button>
-        <div class="preset-modal-media" id="preset-modal-media"></div>
-        <div class="preset-modal-overlay-ui">
-            <div class="preset-badges" id="preset-modal-badges"></div>
-            <h3 class="preset-name" id="preset-modal-name"></h3>
-            <div class="preset-meta" id="preset-modal-meta"></div>
-            <button type="button" class="preset-download-btn" id="preset-modal-download-btn">
-                <span class="material-symbols-rounded">download</span>
-                <span>Download</span>
-            </button>
-        </div>
-    </div>
-
-    <div id="sw-download-picker" class="preset-popup-overlay" aria-hidden="true">
-        <div class="preset-popup-card" role="dialog" aria-modal="true">
-            <div class="preset-popup-header">
-                <div class="preset-popup-title-group">
-                    <span class="material-symbols-rounded preset-popup-title-icon">download</span>
-                    <span class="preset-popup-title" data-i18n="preset_choose_version">Choose Version</span>
-                </div>
-                <button type="button" class="preset-popup-close-btn" id="close-sw-download" aria-label="Close">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-            </div>
-            <p class="preset-popup-desc" data-i18n="preset_select_software">Select the software you want to download for:</p>
-            <div class="preset-popup-body" id="sw-download-options"></div>
-        </div>
-    </div>
-
-    <div id="sw-detail-picker" class="preset-popup-overlay" aria-hidden="true">
-        <div class="preset-popup-card" role="dialog" aria-modal="true">
-            <div class="preset-popup-header">
-                <div class="preset-popup-title-group">
-                    <img id="sw-detail-icon" src="" alt="" class="preset-popup-sw-icon hidden">
-                    <span class="preset-popup-title" id="sw-detail-title-text">Preset Info</span>
-                </div>
-                <button type="button" class="preset-popup-close-btn" id="back-sw-detail" aria-label="Back">
-                    <span class="material-symbols-rounded">arrow_back</span>
-                </button>
-            </div>
-            <div class="preset-popup-body">
-                <div id="sw-detail-plugin-section" class="preset-plugin-section hidden">
-                    <span class="preset-section-label" data-i18n="preset_required_plugins">Required Plugins:</span>
-                    <div id="sw-detail-plugins" class="preset-plugin-badges"></div>
-                </div>
-                <div class="preset-popup-actions-row">
-                    <button type="button" class="preset-popup-action-btn" id="sw-detail-download-btn">
-                        <span class="material-symbols-rounded">download</span>
-                        <span data-i18n="preset_download_btn">Download Preset</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="am-variant-picker" class="preset-popup-overlay" aria-hidden="true">
-        <div class="preset-popup-card" role="dialog" aria-modal="true">
-            <div class="preset-popup-header">
-                <div class="preset-popup-title-group">
-                    <img src="assets/icon/Am.png" alt="Alight Motion" class="preset-popup-sw-icon">
-                    <span class="preset-popup-title" data-i18n="preset_choose_variant">Choose Variant</span>
-                </div>
-                <button type="button" class="preset-popup-close-btn" id="back-am-variant" aria-label="Back">
-                    <span class="material-symbols-rounded">arrow_back</span>
-                </button>
-            </div>
-            <p class="preset-popup-desc" data-i18n="preset_select_variant">Select the variant you want to download:</p>
-            <div class="preset-popup-body" id="am-variant-options"></div>
-        </div>
-    </div>
-
-    <div class="toast-container" id="toast-container"></div>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script defer src="scripts/ffmpeg-loader.js?v=1.0.2"></script>
-    <script defer src="assets/jszip/jszip.min.js"></script>
-    <script defer src="scripts/i18n.js?v=2.4.0"></script>
-    <script defer src="scripts/onnx-loader.js"></script>
-    <script defer src="scripts/deploy-check.js"></script>
-    <script defer src="scripts/presets.js"></script>
-    <script defer src="scripts/tool-ui.js?v=1.0.0"></script>
-    <script defer src="scripts/tool-schema-renderer.js?v=1.0.0"></script>
-    <script defer src="scripts/tools-loader.js?v=1.0.1"></script>
-    <script defer src="scripts/portfolio.js?v=2.4.2"></script>
+  </aside>
+  <script src="core/i18n.js" defer></script>
+  <script src="core/landing.js" defer></script>
 </body>
+
 </html>

@@ -1,0 +1,231 @@
+html,
+body.slowtime-body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0d0f0c;
+  color: #edf2e5;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.slowtime-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  user-select: none;
+  background: #0d0f0c;
+}
+
+.slowtime-video,
+.slowtime-embed-slot,
+.slowtime-embed {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.slowtime-video {
+  object-fit: contain;
+  background: #0d0f0c;
+  cursor: pointer;
+}
+
+.slowtime-empty {
+  width: min(340px, calc(100% - 32px));
+}
+
+.slowtime-url-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: rgba(26, 31, 24, 0.94);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+}
+
+.slowtime-url-ico {
+  font-size: 1.05rem;
+  color: rgba(237, 242, 229, 0.56);
+  flex: none;
+}
+
+.slowtime-url-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #edf2e5;
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.slowtime-url-input::placeholder {
+  color: rgba(237, 242, 229, 0.45);
+}
+
+.slowtime-url-go {
+  border: none;
+  outline: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  padding: 0;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 140ms ease;
+}
+
+.slowtime-url-go:hover {
+  opacity: 0.92;
+}
+
+.slowtime-url-go:active {
+  transform: scale(0.92);
+}
+
+.slowtime-url-go .material-symbols-rounded {
+  font-size: 1.15rem;
+}
+
+.slowtime-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.slowtime-toast {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(400px, calc(100% - 28px));
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 12;
+}
+
+.slowtime-toast .material-symbols-rounded {
+  font-size: 1rem;
+  flex: none;
+}
+
+.slowtime-dock {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 8;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.slowtime-stage.is-idle .slowtime-dock {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.slowtime-capsule {
+  pointer-events: auto;
+  width: min(280px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 22px;
+  background: rgba(24, 28, 22, 0.92);
+  color: #edf2e5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42);
+}
+
+.slowtime-scrubber {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slowtime-slider {
+  flex: 1;
+  min-width: 60px;
+}
+
+.slowtime-time {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(237, 242, 229, 0.78);
+  flex: none;
+}
+
+.slowtime-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.slowtime-ctrl {
+  border: none;
+  outline: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  padding: 0;
+  background: transparent;
+  color: #edf2e5;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: none;
+  transition: background 140ms ease, transform 120ms ease;
+}
+
+.slowtime-ctrl:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.slowtime-ctrl:active {
+  transform: scale(0.92);
+}
+
+.slowtime-ctrl .material-symbols-rounded {
+  font-size: 1.25rem;
+}
+
+.slowtime-ctrl-play {
+  width: 40px;
+  height: 40px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.slowtime-ctrl-play:hover {
+  background: var(--md-sys-color-primary);
+  opacity: 0.92;
+}

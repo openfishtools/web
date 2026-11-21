@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_2_355)">
+<rect width="512" height="512" rx="125" fill="var(--icon-bg, #212a1a)" class="icon-bg"/>
+<path d="M420.103 234.103L488 302" stroke-width="32" stroke-linecap="round" stroke="var(--icon-inner, #212a1a)" class="icon-inner-stroke"/>
+<path d="M425.103 244.103L493 312" stroke-width="34" stroke-linecap="round" stroke="var(--icon-fg, #c7dc9c)" class="icon-fg-stroke"/>
+<path d="M465 155.5C465 215.423 416.423 264 356.5 264C296.577 264 248 215.423 248 155.5C248 95.5771 296.577 47 356.5 47C416.423 47 465 95.5771 465 155.5Z" stroke-width="28" stroke="var(--icon-fg, #c7dc9c)" class="icon-fg-stroke"/>
+<path d="M127.333 178H213.667C220.667 245.667 267.333 292.333 358.333 304V392.667C300 392.667 251 374 213.667 343.667V567.667C213.667 670.333 146 740.333 50.3333 740.333C-45.3333 740.333 -113 672.667 -113 581.667C-113 490.667 -40.6667 418.333 55 418.333C69 418.333 83 420.667 94.6667 423V516.333C83 511.667 71.3333 509.333 57.3333 509.333C13 509.333 -19.6667 539.667 -19.6667 581.667C-19.6667 621.333 10.6667 649.333 50.3333 649.333C97 649.333 127.333 616.667 127.333 567.667V178Z" fill="var(--icon-fg, #c7dc9c)" class="icon-fg"/>
+</g>
+<defs>
+<clipPath id="clip0_2_355">
+<rect width="512" height="512" rx="125" fill="white"/>
+</clipPath>
+</defs>
+</svg>

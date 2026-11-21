@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beatmark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret file proyek After Effects">
+      <span class="material-symbols-rounded app-dropzone-icon" aria-hidden="true">music_note</span>
+      <p class="app-dropzone-text">Pilih atau seret proyek After Effects</p>
+      <p class="app-dropzone-hint">Mendukung After Effects XML (.xml, .aepx)</p>
+      <input type="file" id="file-input" accept=".xml,.aepx,text/xml,application/xml" hidden>
+    </div>
+
+    <section class="app-stack is-hidden" id="workspace">
+      <div class="app-file-meta">
+        <div class="app-file-info">
+          <span class="material-symbols-rounded" aria-hidden="true">description</span>
+          <div class="app-file-text">
+            <div class="app-file-name" id="file-name">-</div>
+            <div class="app-file-size" id="file-details">-</div>
+          </div>
+        </div>
+        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+      </div>
+
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field">
+            <label class="app-label" for="comp-select">Komposisi After Effects</label>
+            <select id="comp-select" class="app-select"></select>
+          </div>
+
+          <div class="app-stats-grid" id="stats-grid">
+            <div class="app-stat-box">
+              <span class="app-stat-label">Beat</span>
+              <span class="app-stat-value app-stat-highlight" id="stat-beats">0</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">FPS</span>
+              <span class="app-stat-value" id="stat-fps">30</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Timebase</span>
+              <span class="app-stat-value" id="stat-timebase">30720</span>
+            </div>
+          </div>
+
+          <div class="app-field">
+            <label class="app-label" for="title-input">Judul Proyek</label>
+            <input type="text" id="title-input" class="app-input" value="Project XML">
+          </div>
+
+          <div class="app-grid-2">
+            <div class="app-field">
+              <label class="app-label" for="width-input">Lebar</label>
+              <div class="app-input-wrap">
+                <input type="number" id="width-input" class="app-input app-input-has-unit" value="1080" min="16">
+                <span class="app-input-unit">px</span>
+              </div>
+            </div>
+            <div class="app-field">
+              <label class="app-label" for="height-input">Tinggi</label>
+              <div class="app-input-wrap">
+                <input type="number" id="height-input" class="app-input app-input-has-unit" value="1920" min="16">
+                <span class="app-input-unit">px</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-grid-2">
+            <div class="app-field">
+              <label class="app-label" for="fps-input">Frame Rate</label>
+              <div class="app-input-wrap">
+                <input type="number" id="fps-input" class="app-input app-input-has-unit" value="30" min="1" max="240">
+                <span class="app-input-unit">FPS</span>
+              </div>
+            </div>
+            <div class="app-field">
+              <label class="app-label" for="duration-input">Durasi</label>
+              <div class="app-input-wrap">
+                <input type="number" id="duration-input" class="app-input app-input-has-unit" value="5000" min="100">
+                <span class="app-input-unit">ms</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-logs app-logs-responsive" id="logs-box" aria-live="polite">
+            <div class="app-logs-header">
+              <span>Logs</span>
+              <span class="app-logs-badge" id="logs-badge">Ready</span>
+            </div>
+            <div class="app-logs-body" id="logs-output"></div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-start">
+            <span class="material-symbols-rounded" aria-hidden="true">transform</span>
+            Konversi ke AM XML
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

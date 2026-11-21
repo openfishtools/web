@@ -1,11 +1,5 @@
+tools/
 .env
 .env.*
-!.env.example
-node_modules
-dist
-dist-cf
-.vercel
-.wrangler
-*.log
-Experiment/
-.DS_Store
+node_modules/
+assets/vendor/ffmpeg/*.wasm
