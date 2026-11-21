@@ -56,7 +56,8 @@
     try {
       var now = Date.now();
       Object.keys(thumbCache).forEach(function (k) {
-        if (!thumbCache[k] || (now - thumbCache[k].ts) >= THUMB_TTL_MS) {
+        var e = thumbCache[k];
+        if (!e || typeof e.ts !== "number" || !isFinite(e.ts) || e.ts <= 0 || (now - e.ts) >= THUMB_TTL_MS) {
           delete thumbCache[k];
         }
       });

@@ -36,7 +36,7 @@
   };
 
   var CACHE_STORAGE_KEY = "cutefish_tt_analytics_cache_v2";
-  var CACHE_TTL_MS = 10 * 60 * 1000;
+  var CACHE_TTL_MS = 60 * 1000;
   var CACHE_MAX_ENTRIES = 30;
   var cache = new Map();
   var isRunning = false;
@@ -67,21 +67,63 @@
     }
   }
 
+  function isCacheEntryValid(entry, now) {
+    return Boolean(
+      entry &&
+      entry.meta &&
+      typeof entry.ts === "number" &&
+      isFinite(entry.ts) &&
+      entry.ts > 0 &&
+      (now - entry.ts) < CACHE_TTL_MS
+    );
+  }
+
+  function cleanupExpiredCache() {
+    var now = Date.now();
+    cache.forEach(function (val, k) {
+      if (!isCacheEntryValid(val, now)) {
+        cache.delete(k);
+      }
+    });
+    try {
+      localStorage.removeItem("cutefish_tt_analytics_cache_v1");
+      var stored = loadStoredCache();
+      var changed = false;
+      Object.keys(stored).forEach(function (k) {
+        if (!isCacheEntryValid(stored[k], now)) {
+          delete stored[k];
+          changed = true;
+        }
+      });
+      if (changed) {
+        if (Object.keys(stored).length === 0) {
+          localStorage.removeItem(CACHE_STORAGE_KEY);
+        } else {
+          localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(stored));
+        }
+      }
+    } catch (_) {}
+  }
+
   function getCachedAnalysis(key) {
+    cleanupExpiredCache();
     var now = Date.now();
     if (cache.has(key)) {
       var memEntry = cache.get(key);
-      if (memEntry && (now - memEntry.ts) < CACHE_TTL_MS) return memEntry;
+      if (isCacheEntryValid(memEntry, now)) return memEntry;
       cache.delete(key);
     }
     var stored = loadStoredCache();
     var entry = stored[key];
-    if (entry && entry.meta && (now - entry.ts) < CACHE_TTL_MS) {
+    if (isCacheEntryValid(entry, now)) {
       cache.set(key, entry);
       return entry;
     }
     return null;
   }
+
+  cleanupExpiredCache();
+  setInterval(cleanupExpiredCache, CACHE_TTL_MS);
 
   function saveCachedAnalysis(key, meta, streamMeta) {
     var entry = { meta: meta, streamMeta: streamMeta || null, ts: Date.now() };
@@ -93,7 +135,7 @@
       var stored = loadStoredCache();
       var now = Date.now();
       Object.keys(stored).forEach(function (k) {
-        if (!stored[k] || (now - stored[k].ts) >= CACHE_TTL_MS) delete stored[k];
+        if (!isCacheEntryValid(stored[k], now)) delete stored[k];
       });
       stored[key] = entry;
       if (meta && meta.id) stored["vid:" + meta.id] = entry;

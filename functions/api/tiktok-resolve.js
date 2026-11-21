@@ -98,7 +98,7 @@ export async function onRequestGet(context) {
 
     const cachePolicy = coverOnly
       ? "public, max-age=3600, s-maxage=21600"
-      : "public, max-age=120, s-maxage=300";
+      : "public, max-age=60, s-maxage=60";
 
     const res = jsonResponse(body, 200, cachePolicy);
     if (edgeCache && typeof context.waitUntil === "function") {

@@ -797,6 +797,7 @@
     openAnim.onfinish = function () {
       winEl.style.transition = "";
       winEl.style.transform = "";
+      winEl.style.transformOrigin = "";
     };
 
     setupWindowEvents(winItem);
