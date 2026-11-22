@@ -140,49 +140,33 @@
       return { streamUrl: url, cover: "", embedUrl: "" };
     }
 
-    var vidId = extractTikTokVideoId(url);
-    var embedFallback = vidId ? ("https://www.tiktok.com/player/v1/" + vidId + "?autoplay=1") : "";
-
-    try {
-      var localRes = await fetch("/api/tiktok-resolve?url=" + encodeURIComponent(url));
-      var ct = (localRes.headers.get("content-type") || "").toLowerCase();
-      if (localRes.ok && ct.indexOf("application/json") !== -1) {
-        var lj = await localRes.json();
-        if (lj && (lj.hdplay || lj.play)) {
-          var lInfo = {
-            streamUrl: lj.hdplay || lj.play,
-            cover: lj.cover || "",
-            embedUrl: embedFallback
-          };
-          saveStreamCache(url, lInfo);
-          return lInfo;
-        }
-      }
-    } catch (_) {}
-
-    try {
-      var apiRes = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(url) + "&hd=1");
-      if (apiRes.ok) {
-        var payload = await apiRes.json();
-        if (payload && payload.code === 0 && payload.data) {
-          var d = payload.data;
-          var tInfo = {
-            streamUrl: d.hdplay || d.play || "",
-            cover: d.cover || d.origin_cover || "",
-            embedUrl: embedFallback || (d.id ? ("https://www.tiktok.com/player/v1/" + d.id + "?autoplay=1") : "")
-          };
-          if (tInfo.streamUrl) {
-            saveStreamCache(url, tInfo);
-            return tInfo;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        var apiRes = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(url) + "&hd=1");
+        if (apiRes.ok) {
+          var payload = await apiRes.json();
+          if (payload && payload.code === 0 && payload.data) {
+            var d = payload.data;
+            var tInfo = {
+              streamUrl: d.hdplay || d.play || "",
+              cover: d.cover || d.origin_cover || "",
+              embedUrl: ""
+            };
+            if (tInfo.streamUrl) {
+              saveStreamCache(url, tInfo);
+              return tInfo;
+            }
+          }
+          if (payload && payload.code === -1 && attempt === 0) {
+            await new Promise(function (r) { setTimeout(r, 1150); });
+            continue;
           }
         }
-      }
-    } catch (_) {}
-
-    if (embedFallback) {
-      return { streamUrl: "", cover: "", embedUrl: embedFallback };
+      } catch (_) {}
+      break;
     }
-    throw new Error("Video gagal dimuat dari tautan tersebut.");
+
+    throw new Error("Video gagal dimuat dari TikWM.");
   }
 
   function clearEmbed() {

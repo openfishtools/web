@@ -30,8 +30,7 @@
   var thumbQueue = [];
   var activeThumbWorkers = 0;
   var THUMB_CONCURRENCY = 4;
-  var lastTikwmCallAt = 0;
-  var localResolveSupported = null;
+  var nextTikwmSlotAt = 0;
   var renderToken = 0;
   var thumbObserver = null;
 
@@ -86,28 +85,19 @@
   }
 
   async function resolveTikTokCover(mediaUrl) {
-    if (localResolveSupported !== false) {
-      try {
-        var localRes = await fetch("/api/tiktok-resolve?cover=1&url=" + encodeURIComponent(mediaUrl));
-        var ct = (localRes.headers.get("content-type") || "").toLowerCase();
-        if (localRes.ok && ct.indexOf("application/json") !== -1) {
-          localResolveSupported = true;
-          var lj = await localRes.json();
-          if (lj && (lj.cover || lj.origin_cover)) {
-            return lj.cover || lj.origin_cover;
-          }
-        } else if (localRes.status === 404) {
-          localResolveSupported = false;
-        }
-      } catch (_) {
-        localResolveSupported = false;
+    try {
+      var oeRes = await fetch("https://www.tiktok.com/oembed?url=" + encodeURIComponent(mediaUrl));
+      if (oeRes.ok) {
+        var oe = await oeRes.json();
+        if (oe && oe.thumbnail_url) return oe.thumbnail_url;
       }
-    }
+    } catch (_) {}
 
     for (var attempt = 0; attempt < 2; attempt++) {
-      var wait = Math.max(0, 1080 - (Date.now() - lastTikwmCallAt));
+      var slotAt = Math.max(Date.now(), nextTikwmSlotAt);
+      nextTikwmSlotAt = slotAt + 1100;
+      var wait = slotAt - Date.now();
       if (wait > 0) await delayMs(wait);
-      lastTikwmCallAt = Date.now();
 
       try {
         var apiRes = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(mediaUrl));
@@ -118,7 +108,6 @@
             if (coverUrl) return coverUrl;
           }
           if (payload && payload.code === -1 && attempt === 0) {
-            await delayMs(1150);
             continue;
           }
         }
@@ -174,8 +163,7 @@
   }
 
   function pumpThumbQueue() {
-    var maxWorkers = localResolveSupported === false ? 1 : THUMB_CONCURRENCY;
-    while (activeThumbWorkers < maxWorkers && thumbQueue.length > 0) {
+    while (activeThumbWorkers < THUMB_CONCURRENCY && thumbQueue.length > 0) {
       runThumbWorker();
     }
   }

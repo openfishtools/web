@@ -210,19 +210,48 @@
 
   async function resolveMetadata(pageUrl) {
     logger.append("Mengambil metadata video...");
-    var res = await fetch("/api/tiktok-resolve?url=" + encodeURIComponent(pageUrl));
-    var ct = (res.headers.get("content-type") || "").toLowerCase();
-    if (ct.indexOf("application/json") === -1) {
-      throw new Error("Endpoint /api/tiktok-resolve tidak aktif di server ini (" + res.status + ").");
+    var payload = null;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var apiRes = await fetch("https://www.tikwm.com/api/?url=" + encodeURIComponent(pageUrl) + "&hd=1");
+      if (!apiRes.ok) {
+        throw new Error("Gagal memuat metadata (" + apiRes.status + ").");
+      }
+      payload = await apiRes.json();
+      if (payload && payload.code === -1 && attempt === 0) {
+        await new Promise(function (r) { setTimeout(r, 1150); });
+        continue;
+      }
+      break;
     }
-    var json = await res.json();
-    if (!res.ok) {
-      throw new Error((json && json.error) || ("Gagal memuat metadata (" + res.status + ")."));
+
+    if (!payload || payload.code !== 0 || !payload.data) {
+      throw new Error((payload && payload.msg) || "Video tidak ditemukan atau bersifat privat.");
     }
-    if (!json || (!json.play && !json.hdplay)) {
+
+    var d = payload.data;
+    if (!d.play && !d.hdplay) {
       throw new Error("Stream video tidak ditemukan dari metadata TikTok.");
     }
-    return json;
+
+    return {
+      id: d.id || "",
+      title: d.title || "",
+      cover: d.cover || d.origin_cover || "",
+      play: d.play || "",
+      hdplay: d.hdplay || "",
+      duration: d.duration || 0,
+      size: d.size || d.hd_size || 0,
+      create_time: d.create_time || 0,
+      region: d.region || "",
+      is_nff_or_nr: Boolean(d.is_ad || d.commercial_video_info),
+      play_count: d.play_count || 0,
+      digg_count: d.digg_count || 0,
+      comment_count: d.comment_count || 0,
+      share_count: d.share_count || 0,
+      collect_count: d.collect_count || 0,
+      author_nickname: (d.author && d.author.nickname) || "Creator",
+      author_unique_id: (d.author && d.author.unique_id) || "tiktok"
+    };
   }
 
   async function probeStreamMeta(streamUrl) {
