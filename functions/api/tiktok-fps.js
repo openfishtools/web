@@ -206,19 +206,50 @@ function parseTotalSizeFromContentRange(headerVal) {
   return match ? Number(match[1]) : 0;
 }
 
+async function readLimitedBytes(res, maxBytes) {
+  if (!res.body || typeof res.body.getReader !== "function") {
+    return await res.arrayBuffer();
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (total < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      const remain = maxBytes - total;
+      const slice = value.byteLength > remain ? value.subarray(0, remain) : value;
+      chunks.push(slice);
+      total += slice.byteLength;
+    }
+  } finally {
+    try { await reader.cancel(); } catch (_) {}
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out.buffer;
+}
+
 async function fetchRange(url, start, end) {
   const res = await fetch(url, {
     headers: {
       Range: `bytes=${start}-${end}`,
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     }
   });
   if (!res.ok && res.status !== 206) {
     throw new Error(`HTTP ${res.status} saat membaca stream video.`);
   }
-  const buf = await res.arrayBuffer();
+  const maxBytes = Math.max(65536, (end - start) + 1);
   const totalSize = parseTotalSizeFromContentRange(res.headers.get("content-range"))
     || Number(res.headers.get("content-length") || 0);
+  const buf = res.status === 206
+    ? await res.arrayBuffer()
+    : await readLimitedBytes(res, maxBytes);
   return { buf, totalSize };
 }
 

@@ -302,10 +302,30 @@
 
       if (!cached) {
         setProgress(60, "Memeriksa stream video (FPS & resolusi)...");
-        streamMeta = await probeStreamMeta(meta.play || meta.hdplay);
-        if ((!streamMeta || (!streamMeta.fps && !streamMeta.width)) && meta.hdplay && meta.hdplay !== meta.play) {
-          var hdStreamMeta = await probeStreamMeta(meta.hdplay);
-          if (hdStreamMeta) streamMeta = hdStreamMeta;
+        var primaryUrl = meta.play || meta.hdplay;
+        var probeErr = null;
+        try {
+          streamMeta = await probeStreamMeta(primaryUrl);
+        } catch (err1) {
+          probeErr = err1;
+          streamMeta = null;
+        }
+        if ((!streamMeta || (!streamMeta.fps && !streamMeta.width)) && meta.hdplay && meta.hdplay !== primaryUrl) {
+          try {
+            var hdStreamMeta = await probeStreamMeta(meta.hdplay);
+            if (hdStreamMeta) {
+              if (streamMeta && streamMeta.comment && !hdStreamMeta.comment) {
+                hdStreamMeta.comment = streamMeta.comment;
+              }
+              streamMeta = hdStreamMeta;
+              probeErr = null;
+            }
+          } catch (err2) {
+            if (!probeErr) probeErr = err2;
+          }
+        }
+        if (!streamMeta && probeErr) {
+          throw probeErr;
         }
         saveCachedAnalysis(cacheKey, meta, streamMeta);
       }

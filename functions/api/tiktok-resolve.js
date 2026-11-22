@@ -75,15 +75,29 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const apiRes = await fetch(
-      `https://www.tikwm.com/api/?url=${encodeURIComponent(targetUrl)}&hd=1`,
-      { headers: { Accept: "application/json" } }
-    );
-    if (!apiRes.ok) {
-      return jsonResponse({ error: `Upstream TikWM mengembalikan HTTP ${apiRes.status}.` }, 502);
+    let payload = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const apiRes = await fetch(
+        `https://www.tikwm.com/api/?url=${encodeURIComponent(targetUrl)}&hd=1`,
+        {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+          }
+        }
+      );
+      if (!apiRes.ok) {
+        return jsonResponse({ error: `Upstream TikWM mengembalikan HTTP ${apiRes.status}.` }, 502);
+      }
+
+      payload = await apiRes.json();
+      if (payload && payload.code === -1 && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 1100));
+        continue;
+      }
+      break;
     }
 
-    const payload = await apiRes.json();
     if (!payload || payload.code !== 0 || !payload.data) {
       return jsonResponse(
         { error: (payload && payload.msg) || "Video tidak ditemukan atau bersifat privat." },
