@@ -21,18 +21,21 @@
       "id": "fish",
       "name": "FISH",
       "status": "WORKING",
+      "supportsCompress": true,
       "file": "fish.js"
     },
     {
       "id": "fps",
       "name": "FPS",
       "status": "WORKING",
+      "supportsCompress": true,
       "file": "fps.js"
     },
     {
       "id": "mpts",
       "name": "MPTS",
       "status": "WORKING",
+      "supportsCompress": false,
       "file": "mpts.js"
     }
   ]

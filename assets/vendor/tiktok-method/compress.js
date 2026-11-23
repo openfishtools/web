@@ -1,12 +1,43 @@
 (function () {
 'use strict';
 
+async function loadSharedCompressConfig() {
+    const defaults = {
+        maxShortSide: 1080,
+        videoCodec: 'libx264',
+        preset: 'slow',
+        crf: '23',
+        maxrate: '8M',
+        bufsize: '16M',
+        pixFmt: 'yuv420p',
+        profile: 'high',
+        x264Params: 'aq-mode=2',
+        audioCodec: 'aac',
+        audioBitrate: '128k'
+    };
+    const urls = ['../../assets/vendor/tiktok-method/methods.json', '/assets/vendor/tiktok-method/methods.json'];
+    for (const url of urls) {
+        try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (res.ok) {
+                const json = await res.json();
+                if (json && json.compress && typeof json.compress === 'object') {
+                    return Object.assign({}, defaults, json.compress);
+                }
+            }
+        } catch (_) {}
+    }
+    return defaults;
+}
+
 async function compressVideo(file, mode, inputBuffer) {
     if (!mode || mode === 'off') {
         throw new Error('Compression mode must be 720p or 1080p.');
     }
     const s = window._tktk;
     if (!s) throw new Error('TikTok tool state (_tktk) is not initialized.');
+
+    const cfg = await loadSharedCompressConfig();
 
     const isReady = await s.loadFFmpegLibraries();
     if (!isReady) throw new Error('Processing engine failed to load.');
@@ -71,6 +102,17 @@ async function compressVideo(file, mode, inputBuffer) {
     const audioBitrate = '192k';
     const x265Params = 'pools=2:frame-threads=1:wpp=1:no-sao=1:rc-lookahead=15:qpmax=32:qcomp=0.75:deblock=-1,-1';
 
+    const activeCrf = String(cfg.crf || '23');
+    const activeMaxrate = String(cfg.maxrate || maxRateST || '8M');
+    const activeBufsize = String(cfg.bufsize || bufSizeST || '16M');
+    const activePreset = String(cfg.preset || 'slow');
+    const activeVCodec = String(cfg.videoCodec || 'libx264');
+    const activePixFmt = String(cfg.pixFmt || 'yuv420p');
+    const activeProfile = String(cfg.profile || 'high');
+    const activeX264Params = String(cfg.x264Params || 'aq-mode=2');
+    const activeACodec = String(cfg.audioCodec || 'aac');
+    const activeABitrate = String(cfg.audioBitrate || audioBitrate || '128k');
+
     const runCompressionPass = async (useMT) => {
         let ffmpeg = null;
         let oomDetected = false;
@@ -104,12 +146,8 @@ async function compressVideo(file, mode, inputBuffer) {
             }
         });
 
-        const activeCrf = useMT ? crfValueMT : crfValueST;
-        const activeMaxrate = useMT ? maxRateMT : maxRateST;
-        const activeBufsize = useMT ? bufSizeMT : bufSizeST;
-
-        s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread (HEVC)' : 'Single-Thread (H.264 Medium)'})...`);
-        s.log(`  [Config] Target: ${mode.toUpperCase()} | FPS: ${vInfoFps ? vInfoFps + ' FPS' : '60 FPS (Motion-Safety)'} | Bitrate Ceiling: ${activeMaxrate} (Buffer: ${activeBufsize})`);
+        s.log(`  [1/3] Loading video data for compression (${useMT ? 'Multi-Thread (HEVC)' : 'Single-Thread (H.264)'})...`);
+        s.log(`  [Config] Target: ${mode.toUpperCase()} | FPS: ${vInfoFps ? vInfoFps + ' FPS' : '60 FPS (Motion-Safety)'} | Preset: ${activePreset} | CRF: ${activeCrf} | Maxrate: ${activeMaxrate}`);
         await ffmpeg.writeFile('input.mp4', new Uint8Array(buffer));
 
         let command = [];
@@ -130,15 +168,15 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-crf', activeCrf,
                 '-maxrate', activeMaxrate,
                 '-bufsize', activeBufsize,
-                '-pix_fmt', 'yuv420p',
+                '-pix_fmt', activePixFmt,
                 '-x265-params', x265Params,
-                '-c:a', 'aac',
-                '-b:a', audioBitrate,
+                '-c:a', activeACodec,
+                '-b:a', activeABitrate,
                 '-movflags', '+faststart',
                 'output.mp4'
             ];
         } else {
-            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — libx264 Ultrafast (crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
+            s.log(`  [2/3] Optimizing video quality (${mode.toUpperCase()}) — ${activeVCodec} (${activePreset}, crf=${activeCrf}, maxrate=${activeMaxrate}, bufsize=${activeBufsize})...`);
             command = [
                 '-y', '-i', 'input.mp4',
                 '-threads', '0',
@@ -148,14 +186,16 @@ async function compressVideo(file, mode, inputBuffer) {
                 '-map_metadata', '-1',
                 '-map_chapters', '-1',
                 '-vf', procOpts.vfString,
-                '-c:v', 'libx264',
-                '-preset', 'ultrafast',
+                '-c:v', activeVCodec,
+                '-preset', activePreset,
                 '-crf', activeCrf,
                 '-maxrate', activeMaxrate,
                 '-bufsize', activeBufsize,
-                '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac',
-                '-b:a', audioBitrate,
+                '-pix_fmt', activePixFmt,
+                '-profile:v', activeProfile,
+                ...(activeX264Params && activeVCodec === 'libx264' ? ['-x264-params', activeX264Params] : []),
+                '-c:a', activeACodec,
+                '-b:a', activeABitrate,
                 '-movflags', '+faststart',
                 'output.mp4'
             ];
