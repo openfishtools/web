@@ -15,7 +15,14 @@ async function loadSharedCompressConfig() {
         audioCodec: 'aac',
         audioBitrate: '128k'
     };
-    const urls = ['../../assets/vendor/tiktok-method/methods.json', '/assets/vendor/tiktok-method/methods.json'];
+    if (window._tktk && window._tktk.compressConfig && typeof window._tktk.compressConfig === 'object') {
+        return Object.assign({}, defaults, window._tktk.compressConfig);
+    }
+    const urls = [
+        '../../assets/vendor/tiktok-method/methods.json',
+        '/assets/vendor/tiktok-method/methods.json',
+        'https://www.cutefish.my.id/assets/vendor/tiktok-method/methods.json'
+    ];
     for (const url of urls) {
         try {
             const res = await fetch(url, { cache: 'no-store' });

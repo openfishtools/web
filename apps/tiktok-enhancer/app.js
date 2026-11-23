@@ -77,104 +77,18 @@
   }
 
   function parseFpsFromMp4(buffer) {
-    try {
-      var data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-      if (window.OriginalMp4Core && typeof window.OriginalMp4Core.inspectMediaInfo === "function") {
-        try {
-          var info = window.OriginalMp4Core.inspectMediaInfo(data);
-          if (info && info.averageFps > 0 && info.averageFps < 300) {
-            return Math.round(info.averageFps);
-          }
-        } catch (_) {}
-      }
-      var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-      for (var i = 0; i < data.length - 8; i++) {
-        if (data[i] === 0x76 && data[i + 1] === 0x69 && data[i + 2] === 0x64 && data[i + 3] === 0x65) {
-          var sStart = Math.max(0, i - 300);
-          var sEnd = Math.min(data.length, i + 65536);
-          var ts = 0;
-          var totalSamples = 0;
-          var totalDelta = 0;
-          for (var j = sStart; j < sEnd - 8; j++) {
-            if (data[j] === 0x6d && data[j + 1] === 0x64 && data[j + 2] === 0x68 && data[j + 3] === 0x64) {
-              var ver = view.getUint8(j + 4);
-              ts = ver === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
-            }
-            if (data[j] === 0x73 && data[j + 1] === 0x74 && data[j + 2] === 0x74 && data[j + 3] === 0x73) {
-              var ec = view.getUint32(j + 8);
-              if (ec > 0 && ec <= 4096) {
-                totalSamples = 0;
-                totalDelta = 0;
-                for (var k = 0; k < ec; k++) {
-                  var off = j + 12 + k * 8;
-                  if (off + 8 > sEnd) break;
-                  var cnt = view.getUint32(off);
-                  var dlt = view.getUint32(off + 4);
-                  totalSamples += cnt;
-                  totalDelta += cnt * dlt;
-                }
-              }
-            }
-            if (ts > 0 && totalSamples > 0 && totalDelta > 0) {
-              var f = Math.round((totalSamples * ts) / totalDelta);
-              if (f > 0 && f < 300) return f;
-            }
-          }
-        }
-      }
-    } catch (_) {}
-    return 60;
+    return window.CutefishMethodEngine ? window.CutefishMethodEngine.parseFpsFromMp4(buffer) : 60;
   }
 
   function parseResolutionFromMp4(buffer) {
-    try {
-      var data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-      var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-      for (var i = 0; i < data.length - 8; i++) {
-        if (data[i] === 0x74 && data[i + 1] === 0x6b && data[i + 2] === 0x68 && data[i + 3] === 0x64) {
-          var ver = view.getUint8(i + 4);
-          var wOff = ver === 1 ? i + 92 : i + 80;
-          var hOff = ver === 1 ? i + 96 : i + 84;
-          if (hOff + 4 <= data.byteLength) {
-            var w = Math.round(view.getUint32(wOff) / 65536);
-            var h = Math.round(view.getUint32(hOff) / 65536);
-            var matOff = ver === 1 ? (i - 4) + 60 : (i - 4) + 48;
-            if (matOff + 36 <= data.byteLength && w > 0 && h > 0) {
-              var m0 = view.getInt32(matOff, false) / 65536;
-              var m4 = view.getInt32(matOff + 16, false) / 65536;
-              if (Math.abs(m0) < 0.5 && Math.abs(m4) < 0.5) {
-                var tmp = w;
-                w = h;
-                h = tmp;
-              }
-            }
-            if (w > 0 && h > 0 && w < 16000 && h < 16000) return { width: w, height: h };
-          }
-        }
-      }
-    } catch (_) {}
-    return { width: 1080, height: 1920 };
+    return window.CutefishMethodEngine ? window.CutefishMethodEngine.parseResolutionFromMp4(buffer) : { width: 1080, height: 1920 };
   }
 
   function computeVideoProcessingOptions(w, h, fps, fileMB, mode) {
-    var targetW = w || 1080;
-    var targetH = h || 1920;
-    var qualityShortSide = mode === "720p" ? 720 : (mode === "1080p" ? 1080 : null);
-    if (qualityShortSide) {
-      var shortSide = Math.min(targetW, targetH);
-      if (shortSide > 0) {
-        var ratio = qualityShortSide / shortSide;
-        targetW = Math.round(targetW * ratio);
-        targetH = Math.round(targetH * ratio);
-      }
+    if (window.CutefishMethodEngine) {
+      return window.CutefishMethodEngine.computeVideoProcessingOptions(w, h, fps, fileMB, mode);
     }
-    targetW = Math.floor(targetW / 2) * 2;
-    targetH = Math.floor(targetH / 2) * 2;
-    return {
-      width: targetW,
-      height: targetH,
-      vfString: "scale=" + targetW + ":" + targetH + ":force_original_aspect_ratio=decrease:flags=lanczos,pad=" + targetW + ":" + targetH + ":(ow-iw)/2:(oh-ih)/2,format=yuv420p"
-    };
+    return { width: w || 1080, height: h || 1920, vfString: 'format=yuv420p' };
   }
 
   async function inspectSpecs(file) {

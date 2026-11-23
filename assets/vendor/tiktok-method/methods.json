@@ -1,6 +1,11 @@
 {
   "status": "WORKING",
   "defaultMethod": "fish",
+  "modules": {
+    "engine": "engine.js",
+    "compress": "compress.js",
+    "normalize": "normalize.js"
+  },
   "compress": {
     "maxShortSide": 1080,
     "maxFps": 60,
