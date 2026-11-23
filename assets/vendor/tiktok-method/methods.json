@@ -6,7 +6,7 @@
     "maxFps": 60,
     "maxBitrateMbps": 50,
     "videoCodec": "libx264",
-    "preset": "fast",
+    "preset": "slow",
     "crf": "23",
     "maxrate": "8M",
     "bufsize": "16M",
