@@ -3,3 +3,7 @@
 
 /assets/*
   Cache-Control: public, max-age=86400, must-revalidate
+
+/assets/vendor/tiktok-method/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache
