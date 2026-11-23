@@ -44,7 +44,6 @@
   var compressField = document.getElementById("compress-field");
   var compressGroup = document.getElementById("compress-group");
   var compressOffBtn = document.getElementById("compress-off-btn");
-  var methodNoticeText = document.getElementById("method-notice-text");
 
   var progressBox = document.getElementById("progress-box");
   var progressStatus = document.getElementById("progress-status");
@@ -69,22 +68,6 @@
   var selectedMethod = "fish";
   var compressMode = "off";
   var isProcessing = false;
-
-  var METHOD_INFO = {
-    fish: {
-      off: "FISH — 64-bit Duration Sentinel (Engine 5.0), mdat byte-identical tanpa re-encode.",
-      "720p": "FISH + 720p — Kompresi 720p hemat ukuran, dilanjutkan Duration Sentinel.",
-      "1080p": "FISH + 1080p — Kompresi Full HD 1080p, dilanjutkan Duration Sentinel."
-    },
-    fps: {
-      off: "FPS — Patch timescale 30 FPS (slow motion di lokal, mulus 60 FPS saat upload TikTok).",
-      "720p": "FPS + 720p — Kompresi 720p lalu patch timescale untuk kelancaran 60 FPS.",
-      "1080p": "FPS + 1080p — Kompresi 1080p lalu patch timescale untuk kelancaran 60 FPS."
-    },
-    mpts: {
-      off: "MPEG-TS — Stream copy lossless (-c copy) ke container MPEG-TS berekstensi .mp4."
-    }
-  };
 
   function setProgress(pct, status) {
     progressBox.classList.remove("is-hidden");
@@ -238,23 +221,6 @@
       seg.setAttribute("aria-checked", active ? "true" : "false");
     });
 
-    updateNotice();
-  }
-
-  function updateNotice() {
-    var infoMap = METHOD_INFO[selectedMethod] || METHOD_INFO.fish;
-    var modeKey = selectedMethod === "mpts" ? "off" : compressMode;
-    var parts = [infoMap[modeKey] || infoMap.off];
-
-    if (currentSpecs) {
-      if (isOver1080p() && selectedMethod !== "mpts") {
-        parts.push("Resolusi > 1080p terdeteksi, kompresi otomatis aktif.");
-      }
-      if (currentSpecs.fps > 60 && selectedMethod !== "fish") {
-        parts.push("Video " + currentSpecs.fps + " FPS akan dinormalisasi ke 60 FPS slowmo.");
-      }
-    }
-    methodNoticeText.textContent = parts.join(" ");
   }
 
   window._tktk = {
@@ -438,7 +404,6 @@
 
   U.bindSegmented(compressGroup, "compress", function (c) {
     compressMode = c || "off";
-    updateNotice();
   });
 
   async function handleFile(file) {
