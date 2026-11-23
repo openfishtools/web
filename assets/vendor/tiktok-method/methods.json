@@ -6,15 +6,15 @@
     "maxFps": 60,
     "maxBitrateMbps": 50,
     "videoCodec": "libx264",
-    "preset": "veryfast",
-    "crf": "20",
-    "maxrate": "17M",
-    "bufsize": "28M",
+    "preset": "fast",
+    "crf": "23",
+    "maxrate": "8M",
+    "bufsize": "16M",
     "pixFmt": "yuv420p",
     "profile": "high",
     "x264Params": "aq-mode=2",
     "audioCodec": "aac",
-    "audioBitrate": "192k"
+    "audioBitrate": "128k"
   },
   "methods": [
     {
