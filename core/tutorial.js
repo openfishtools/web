@@ -157,7 +157,7 @@
         radius: 24,
         padding: 8,
         getTarget: function () {
-          return document.querySelector(".big-folder-card[data-folder-id]");
+          return document.querySelector(".big-folder-card:not(.big-folder-tile)");
         }
       },
       {
@@ -170,7 +170,7 @@
         onEnter: function () {
           var folderModal = document.getElementById("folder-modal");
           if (folderModal && folderModal.hidden) {
-            var firstFolder = document.querySelector(".big-folder-card[data-folder-id]");
+            var firstFolder = document.querySelector(".big-folder-card:not(.big-folder-tile)");
             if (firstFolder) {
               firstFolder.click();
               openedFolderForStep = true;
@@ -206,7 +206,7 @@
 
     return steps.filter(function (step) {
       if (step.id === "folder-open") {
-        return Boolean(document.querySelector(".big-folder-card[data-folder-id]"));
+        return Boolean(document.querySelector(".big-folder-card:not(.big-folder-tile)"));
       }
       return Boolean(step.getTarget());
     });
