@@ -1,12 +1,3 @@
-/* =========================================================================
- * Cutefish Clip Normalizer Module (normalize.js)
- * Mandatory pre-patch normalization stage (runs before patch, or after
- * compress.js when compression is enabled):
- *   1. Faststart stream normalization (remuxFaststart) for pass-through mode
- *   2. High-FPS (>60fps, e.g. 120fps) normalization into 60fps slow motion
- *      with synchronized audio/video stts deltas.
- * ========================================================================= */
-
 (function () {
 'use strict';
 
@@ -224,11 +215,6 @@ function _em_rebuildBox(box, replacements) {
     return _em_makeBox(box.type, _em_concatBytes(parts));
 }
 
-/**
- * Checks if a video buffer has FPS > 60.
- * @param {ArrayBuffer|Uint8Array} inputData
- * @returns {number|null} detected FPS, or null if <= 60 or cannot be determined
- */
 function isEmergencyFpsNeeded(inputData) {
     try {
         const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
@@ -244,9 +230,15 @@ function isEmergencyFpsNeeded(inputData) {
                     const stts = _em_findDescendant(videoTrak, ['mdia', 'minf', 'stbl', 'stts']);
                     if (stts) {
                         const entries = _em_parseStts(stts);
-                        if (entries.length > 0 && entries[0][1] > 0) {
-                            const fps = Math.round(timescale / entries[0][1]);
-                            if (fps > 60 && fps <= 300) return fps;
+                        let totalSamples = 0;
+                        let totalDuration = 0;
+                        for (let i = 0; i < entries.length; i++) {
+                            totalSamples += entries[i][0];
+                            totalDuration += entries[i][0] * entries[i][1];
+                        }
+                        if (totalSamples >= 5 && totalDuration > 0 && timescale > 0) {
+                            const fps = Math.round((totalSamples * timescale) / totalDuration);
+                            if (fps > 65 && fps <= 300) return fps;
                             return null;
                         }
                     }
@@ -257,9 +249,10 @@ function isEmergencyFpsNeeded(inputData) {
         for (let i = 0; i < srcArr.byteLength - 8; i++) {
             if (srcArr[i] === 0x76 && srcArr[i+1] === 0x69 && srcArr[i+2] === 0x64 && srcArr[i+3] === 0x65) {
                 const searchStart = Math.max(0, i - 300);
-                const searchEnd = Math.min(srcArr.byteLength, i + 8000);
+                const searchEnd = Math.min(srcArr.byteLength, i + 65536);
                 let timescale = 0;
-                let sampleDelta = 0;
+                let totalSamples = 0;
+                let totalDuration = 0;
                 for (let j = searchStart; j < searchEnd - 8; j++) {
                     if (srcArr[j] === 0x6D && srcArr[j+1] === 0x64 && srcArr[j+2] === 0x68 && srcArr[j+3] === 0x64) {
                         const version = view.getUint8(j + 4);
@@ -267,13 +260,22 @@ function isEmergencyFpsNeeded(inputData) {
                     }
                     if (srcArr[j] === 0x73 && srcArr[j+1] === 0x74 && srcArr[j+2] === 0x74 && srcArr[j+3] === 0x73) {
                         const entryCount = view.getUint32(j + 8);
-                        if (entryCount > 0) {
-                            sampleDelta = view.getUint32(j + 16);
+                        if (entryCount > 0 && entryCount <= 4096) {
+                            totalSamples = 0;
+                            totalDuration = 0;
+                            for (let k = 0; k < entryCount; k++) {
+                                const off = j + 12 + k * 8;
+                                if (off + 8 > searchEnd) break;
+                                const cnt = view.getUint32(off);
+                                const dlt = view.getUint32(off + 4);
+                                totalSamples += cnt;
+                                totalDuration += cnt * dlt;
+                            }
                         }
                     }
-                    if (timescale && sampleDelta) {
-                        const fps = Math.round(timescale / sampleDelta);
-                        if (fps > 60 && fps <= 300) return fps;
+                    if (timescale > 0 && totalSamples >= 5 && totalDuration > 0) {
+                        const fps = Math.round((totalSamples * timescale) / totalDuration);
+                        if (fps > 65 && fps <= 300) return fps;
                         return null;
                     }
                 }
@@ -283,14 +285,6 @@ function isEmergencyFpsNeeded(inputData) {
     return null;
 }
 
-/**
- * Normalizes videos > 60fps (e.g. 120fps) into 60fps slow motion
- * by doubling the sample delta and syncing audio and video.
- *
- * @param {ArrayBuffer|Uint8Array} inputData
- * @param {Function} [_logFn] Optional log callback
- * @returns {Uint8Array} Normalized MP4 bytes (or original bytes if <= 60fps)
- */
 function patchEmergencyFpsMethod(inputData, _logFn) {
     const _log = _logFn || (() => {});
     const srcArr = inputData instanceof Uint8Array ? inputData : new Uint8Array(inputData);
@@ -325,7 +319,16 @@ function patchEmergencyFpsMethod(inputData, _logFn) {
 
     const vTimescale   = _em_getTimescale(videoTrak);
     const vSampleCount = vStsz.length;
-    const vBaseDelta   = vStts[0] ? vStts[0][1] : 1000;
+    let vBaseDelta = 1000;
+    if (vStts.length > 0) {
+        let maxCount = -1;
+        for (const [cnt, dlt] of vStts) {
+            if (cnt > maxCount && dlt > 0) {
+                maxCount = cnt;
+                vBaseDelta = dlt;
+            }
+        }
+    }
     const inputFps     = Math.round(vTimescale / vBaseDelta);
 
     if (inputFps <= 60) {
@@ -465,14 +468,6 @@ function patchEmergencyFpsMethod(inputData, _logFn) {
     return finalOutput;
 }
 
-/**
- * Fast stream-copy remux to standardize track order (Video Track 1, Audio Track 2),
- * interleave chunks, remove junk metadata/boxes, and ensure faststart (moov at start).
- *
- * @param {File} file - Original user-selected video file
- * @param {ArrayBuffer|Uint8Array} [inputBuffer] - Video bytes
- * @returns {Promise<Uint8Array>} Normalized faststart MP4 bytes
- */
 async function remuxFaststart(file, inputBuffer) {
     const s = window._tktk;
     if (!s) throw new Error('TikTok tool state (_tktk) is not initialized.');
@@ -480,52 +475,105 @@ async function remuxFaststart(file, inputBuffer) {
     const isReady = await s.loadFFmpegLibraries();
     if (!isReady) throw new Error('Processing engine failed to load.');
 
-    const { toBlobURL } = window.FFmpegUtil;
-    const ffmpeg = await s.loadFFmpegHelper(null, toBlobURL);
+    const toBlobURL = (window.FFmpegUtil && window.FFmpegUtil.toBlobURL) || s.toBlobURL || null;
+    const ffmpeg = await s.loadFFmpegHelper(null, toBlobURL, true);
 
     const buffer = inputBuffer || s.currentFileBuffer;
     if (!buffer) throw new Error('Video buffer is empty.');
 
-    await ffmpeg.writeFile('input_remux.mp4', new Uint8Array(buffer));
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    let insp = null;
+    try {
+        if (window.OriginalMp4Core && typeof window.OriginalMp4Core.inspect === 'function') {
+            insp = window.OriginalMp4Core.inspect(bytes);
+        }
+    } catch (_) {
+        insp = null;
+    }
 
-    const command = [
-        '-y', '-i', 'input_remux.mp4',
-        '-map', '0:v:0',
-        '-map', '0:a:0?',
-        '-c', 'copy',
-        '-movflags', '+faststart',
-        'output_remux.mp4'
-    ];
+    const hasSupportedVideo = insp ? (insp.isAvc || insp.isHevc) : false;
+    const hasAac = insp ? Boolean(insp.hasAac) : false;
+    const hasAnyAudio = insp ? (insp.audioTrackCount > 0) : false;
+
+    await ffmpeg.writeFile('input_remux.mp4', bytes);
+
+    let command;
+    if (hasSupportedVideo && hasAac) {
+        command = [
+            '-y', '-i', 'input_remux.mp4',
+            '-map', '0:v:0',
+            '-map', '0:a:0',
+            '-dn',
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
+            '-c', 'copy',
+            '-movflags', '+faststart',
+            'output_remux.mp4'
+        ];
+    } else if (hasSupportedVideo && hasAnyAudio) {
+        command = [
+            '-y', '-i', 'input_remux.mp4',
+            '-map', '0:v:0',
+            '-map', '0:a:0',
+            '-dn',
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-movflags', '+faststart',
+            'output_remux.mp4'
+        ];
+    } else if (hasSupportedVideo) {
+        command = [
+            '-y',
+            '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+            '-i', 'input_remux.mp4',
+            '-map', '1:v:0',
+            '-map', '0:a:0',
+            '-dn',
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-shortest',
+            '-movflags', '+faststart',
+            'output_remux.mp4'
+        ];
+    } else {
+        command = [
+            '-y',
+            '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+            '-i', 'input_remux.mp4',
+            '-map', '1:v:0',
+            '-map', '1:a:0?',
+            '-dn',
+            '-map_metadata', '-1',
+            '-map_chapters', '-1',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '18',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-shortest',
+            '-movflags', '+faststart',
+            'output_remux.mp4'
+        ];
+    }
 
     try {
         await ffmpeg.exec(command);
         const remuxedData = await ffmpeg.readFile('output_remux.mp4');
-        try {
-            await ffmpeg.deleteFile('input_remux.mp4');
-            await ffmpeg.deleteFile('output_remux.mp4');
-        } catch (cleanErr) {}
-
         return new Uint8Array(remuxedData.buffer, remuxedData.byteOffset, remuxedData.byteLength);
-    } catch (err) {
-        try {
-            await ffmpeg.deleteFile('input_remux.mp4');
-            await ffmpeg.deleteFile('output_remux.mp4');
-        } catch (cleanErr) {}
-        throw err;
+    } finally {
+        try { await ffmpeg.deleteFile('input_remux.mp4'); } catch (_) {}
+        try { await ffmpeg.deleteFile('output_remux.mp4'); } catch (_) {}
+        try { await ffmpeg.terminate(); } catch (_) {}
     }
 }
 
-/**
- * Mandatory Clip Normalization Pipeline Stage (runs after compress.js if compressed,
- * and always before dynamic method/item/*.js patch):
- * 1. If not compressed and method requires faststart stream normalization, runs remuxFaststart.
- * 2. If clip FPS > 60 and method does not handle its own 60fps slowmo, normalizes clip to 60fps slowmo.
- *
- * @param {File} file
- * @param {ArrayBuffer|Uint8Array} inputBuffer
- * @param {Object} [options]
- * @returns {Promise<Uint8Array|ArrayBuffer>}
- */
 async function normalizeClip(file, inputBuffer, options) {
     const opts = options || {};
     const s = window._tktk || {};
@@ -535,19 +583,30 @@ async function normalizeClip(file, inputBuffer, options) {
 
     let workingBuffer = inputBuffer;
 
-    if (!opts.isCompressed && opts.remuxFaststart) {
-        const remuxFn = window.remuxFaststart || (s && s.remuxFaststart) || remuxFaststart;
-        if (typeof remuxFn === 'function') {
-            logSection('Clip Normalization — Faststart Remux');
-            log('  Standardizing MP4 streams (Faststart Remux)...');
+    if (opts.remuxFaststart) {
+        let needsRemux = !opts.isCompressed;
+        if (!needsRemux && window.OriginalMp4Core && typeof window.OriginalMp4Core.checkCompatibility === 'function') {
             try {
-                workingBuffer = await remuxFn(file, workingBuffer);
-                log('  Stream normalization complete.');
-            } catch (remuxErr) {
-                log(`  [Notice] Stream remux skipped, using source buffer: ${remuxErr.message}`);
-                workingBuffer = inputBuffer;
+                const comp = window.OriginalMp4Core.checkCompatibility(workingBuffer);
+                if (!comp.compatible) needsRemux = true;
+            } catch (_) {
+                needsRemux = true;
             }
-            logEnd();
+        }
+        if (needsRemux) {
+            const remuxFn = window.remuxFaststart || (s && s.remuxFaststart) || remuxFaststart;
+            if (typeof remuxFn === 'function') {
+                logSection('Clip Normalization — Faststart Remux');
+                log('  Standardizing MP4 streams (Faststart Remux)...');
+                try {
+                    workingBuffer = await remuxFn(file, workingBuffer);
+                    log('  Stream normalization complete.');
+                } catch (remuxErr) {
+                    log(`  [Notice] Stream remux skipped, using source buffer: ${remuxErr.message}`);
+                    workingBuffer = inputBuffer;
+                }
+                logEnd();
+            }
         }
     }
 

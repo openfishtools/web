@@ -4,7 +4,6 @@
   var U = window.AppUtils;
   var FF = window.CutefishFFmpeg;
 
-  // Lightweight translation shim for vendored method modules (compress.js / finalize.js)
   var STRINGS = {
     status_encoding: "Mengompresi video",
     status_finalizing: "Menyimpan hasil...",
@@ -97,13 +96,22 @@
   function parseFpsFromMp4(buffer) {
     try {
       var data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+      if (window.OriginalMp4Core && typeof window.OriginalMp4Core.inspectMediaInfo === "function") {
+        try {
+          var info = window.OriginalMp4Core.inspectMediaInfo(data);
+          if (info && info.averageFps > 0 && info.averageFps < 300) {
+            return Math.round(info.averageFps);
+          }
+        } catch (_) {}
+      }
       var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       for (var i = 0; i < data.length - 8; i++) {
         if (data[i] === 0x76 && data[i + 1] === 0x69 && data[i + 2] === 0x64 && data[i + 3] === 0x65) {
           var sStart = Math.max(0, i - 300);
-          var sEnd = Math.min(data.length, i + 8000);
+          var sEnd = Math.min(data.length, i + 65536);
           var ts = 0;
-          var sd = 0;
+          var totalSamples = 0;
+          var totalDelta = 0;
           for (var j = sStart; j < sEnd - 8; j++) {
             if (data[j] === 0x6d && data[j + 1] === 0x64 && data[j + 2] === 0x68 && data[j + 3] === 0x64) {
               var ver = view.getUint8(j + 4);
@@ -111,10 +119,21 @@
             }
             if (data[j] === 0x73 && data[j + 1] === 0x74 && data[j + 2] === 0x74 && data[j + 3] === 0x73) {
               var ec = view.getUint32(j + 8);
-              if (ec > 0) sd = view.getUint32(j + 16);
+              if (ec > 0 && ec <= 4096) {
+                totalSamples = 0;
+                totalDelta = 0;
+                for (var k = 0; k < ec; k++) {
+                  var off = j + 12 + k * 8;
+                  if (off + 8 > sEnd) break;
+                  var cnt = view.getUint32(off);
+                  var dlt = view.getUint32(off + 4);
+                  totalSamples += cnt;
+                  totalDelta += cnt * dlt;
+                }
+              }
             }
-            if (ts && sd) {
-              var f = Math.round(ts / sd);
+            if (ts > 0 && totalSamples > 0 && totalDelta > 0) {
+              var f = Math.round((totalSamples * ts) / totalDelta);
               if (f > 0 && f < 300) return f;
             }
           }
@@ -231,14 +250,13 @@
       if (isOver1080p() && selectedMethod !== "mpts") {
         parts.push("Resolusi > 1080p terdeteksi, kompresi otomatis aktif.");
       }
-      if (currentSpecs.fps > 60) {
+      if (currentSpecs.fps > 60 && selectedMethod !== "fish") {
         parts.push("Video " + currentSpecs.fps + " FPS akan dinormalisasi ke 60 FPS slowmo.");
       }
     }
     methodNoticeText.textContent = parts.join(" ");
   }
 
-  // Expose unified _tktk runtime bridge expected by vendored compress.js / normalize.js / mpts.js / finalize.js
   window._tktk = {
     get isProcessing() { return isProcessing; },
     set isProcessing(v) { isProcessing = v; },
@@ -271,7 +289,8 @@
         logger.append(s);
       }
     },
-    loadFFmpegLibraries: FF.loadFFmpegLibraries,
+    loadFFmpegLibraries: FF.loadFFmpegLibraries || FF.loadFFmpegScript,
+    toBlobURL: FF.toBlobURL,
     loadFFmpegHelper: function (_ff, _toBlob, forceST) {
       return FF.createInstance({
         forceSingleThread: Boolean(forceST),
@@ -491,15 +510,13 @@
 
       var workingBuffer = currentBuffer;
 
-      // 1. Optional Compress Stage
       if (effectiveCompress !== "off" && activeMethod.supportsCompress !== false) {
-        setProgress(12, "Mengompresi video (" + effectiveCompress.toUpperCase() + ")...");
+        setProgress(10, "Mengompresi video (" + effectiveCompress.toUpperCase() + ")...");
         logger.append("Tahap 1: Kompresi " + effectiveCompress.toUpperCase());
         workingBuffer = await window.compressVideo(currentFile, effectiveCompress, workingBuffer);
       }
 
-      // 2. Mandatory Normalization Stage
-      setProgress(68, "Normalisasi stream MP4...");
+      setProgress(78, "Normalisasi stream MP4...");
       workingBuffer = await window.normalizeClip(currentFile, workingBuffer, {
         isCompressed: effectiveCompress !== "off" && activeMethod.supportsCompress !== false,
         remuxFaststart: Boolean(activeMethod.remuxFaststart),
@@ -509,8 +526,7 @@
         logEnd: function () {}
       });
 
-      // 3. Method Patch Stage
-      setProgress(85, "Menerapkan metode " + activeMethod.name + "...");
+      setProgress(90, "Menerapkan metode " + activeMethod.name + "...");
       logger.append("Menerapkan metode " + activeMethod.name + "...");
       var patchResult;
       try {
@@ -523,9 +539,17 @@
           _tktk: window._tktk
         });
       } catch (patchErr) {
-        if (effectiveCompress !== "off" && activeMethod.supportsCompress !== false) {
-          logger.append("Patch fallback ke stream terkompresi: " + patchErr.message);
-          patchResult = workingBuffer;
+        if (typeof window.remuxFaststart === "function") {
+          logger.append("Mencoba remux ulang stream sebelum patch (" + patchErr.message + ")...");
+          workingBuffer = await window.remuxFaststart(currentFile, workingBuffer);
+          patchResult = await activeMethod.patch(workingBuffer, {
+            file: currentFile,
+            mode: effectiveCompress,
+            log: function (m) { logger.append(m); },
+            logSection: function (t) { logger.append("--- " + t + " ---"); },
+            logEnd: function () {},
+            _tktk: window._tktk
+          });
         } else {
           throw patchErr;
         }
@@ -538,7 +562,6 @@
         if (patchResult.outputOptions) outOpts = patchResult.outputOptions;
       }
 
-      // 4. Finalize & Auto-download
       var finalized = window.finalizePatcherDownload(currentFile, finalBytes, outOpts);
       var elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
 
