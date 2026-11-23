@@ -1,0 +1,24 @@
+{
+  "status": "WORKING",
+  "defaultMethod": "fish",
+  "methods": [
+    {
+      "id": "fish",
+      "name": "FISH",
+      "status": "WORKING",
+      "file": "fish.js"
+    },
+    {
+      "id": "fps",
+      "name": "FPS",
+      "status": "WORKING",
+      "file": "fps.js"
+    },
+    {
+      "id": "mpts",
+      "name": "MPTS",
+      "status": "WORKING",
+      "file": "mpts.js"
+    }
+  ]
+}
