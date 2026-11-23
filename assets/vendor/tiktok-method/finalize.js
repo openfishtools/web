@@ -1,31 +1,7 @@
 (function() {
     'use strict';
 
-    /**
-     * ╔═══════════════════════════════════════════════════════════════╗
-     * ║                  CMT - CUTEFISH MEDIA TOOLS                   ║
-     * ║                   Universal Finalize Module                   ║
-     * ║                                                               ║
-     * ║  Single source of truth for post-patch finalizing, downloading║
-     * ║  naming standardization (*_hd.mp4), and UI completion hooks.  ║
-     * ║  Designed for cutefish.my.id & Editorstuff CMT toolchain.     ║
-     * ╚═══════════════════════════════════════════════════════════════╝
-     *
-     * @param {File} file - Original video File object
-     * @param {Uint8Array} finalBytes - Processed media buffer bytes
-     * @param {string|Object} [optionsOrSuffix='hd'] - Suffix string or config object { suffix, ext, mimeType }
-     * @returns {{ url: string, filename: string, blob: Blob }}
-     */
-    /**
-     * In-memory MP4 Container HDR Patch
-     * Injects or updates the 19-byte colr (nclx) atom to declare ITU-R BT.2020 / ARIB STD-B67 (HLG)
-     * color primaries and transfer characteristics without lossy re-encoding.
-     *
-     * @param {Uint8Array} data
-     * @returns {Uint8Array}
-     */
     function applyHdrColrPatch(data) {
-        // HDR container injection is deprecated and removed
         return data;
     }
 
@@ -56,7 +32,6 @@
 
         window._lastFinalizedPatcherResult = { url, filename, blob };
 
-        // Auto trigger download if not in headless context
         const isHeadless = !!(window._tktk && window._tktk.activeContext);
         if (!isHeadless) {
             const a = document.createElement('a');
@@ -67,7 +42,6 @@
             document.body.removeChild(a);
         }
 
-        // Update modal download button
         const dlBtn = document.getElementById('tool-download-btn');
         if (dlBtn) {
             dlBtn.classList.remove('hidden');
@@ -133,7 +107,6 @@
         return { url, filename, blob };
     }
 
-    // Universal Self-Registering TikTok Method Registry
     const existingItems = (window.TikTokMethods && Array.isArray(window.TikTokMethods._items))
         ? window.TikTokMethods._items
         : [];
@@ -219,7 +192,6 @@
         existingItems.forEach(m => window.TikTokMethods.register(m));
     }
 
-    // CMT & Global exports
     window.finalizePatcherDownload = finalizePatcherDownload;
     window.finalizeCMT = finalizePatcherDownload;
     window.applyHdrColrPatch = applyHdrColrPatch;

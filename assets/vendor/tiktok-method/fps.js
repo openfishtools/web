@@ -326,7 +326,16 @@ function _v3_patchMp4FPS(inputData, _logFn) {
 
     const vTimescale   = _v3_getTimescale(videoTrak);
     const vSampleCount = vStsz.length;
-    const vBaseDelta   = vStts[0] ? vStts[0][1] : 1500;
+    let vBaseDelta = 1500;
+    if (vStts.length > 0) {
+        let maxCount = -1;
+        for (const [cnt, dlt] of vStts) {
+            if (cnt > maxCount && dlt > 0) {
+                maxCount = cnt;
+                vBaseDelta = dlt;
+            }
+        }
+    }
     const newVStts = [
         [vSampleCount - 1, vBaseDelta * 2],
         [1, vBaseDelta]

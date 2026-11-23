@@ -1,15 +1,6 @@
 (function () {
 'use strict';
 
-/**
- * Shared FFmpeg video compression engine for TikTok patch methods.
- * Optimized for low file size (MB) while retaining sharp details in high-motion scenes.
- *
- * @param {File} file - Original user-selected video file
- * @param {'720p'|'1080p'} mode - Target compression resolution
- * @param {ArrayBuffer|Uint8Array} [inputBuffer] - Video bytes (defaults to window._tktk.currentFileBuffer)
- * @returns {Promise<Uint8Array>} Raw compressed MP4 bytes ready for metadata patching
- */
 async function compressVideo(file, mode, inputBuffer) {
     if (!mode || mode === 'off') {
         throw new Error('Compression mode must be 720p or 1080p.');
@@ -20,7 +11,7 @@ async function compressVideo(file, mode, inputBuffer) {
     const isReady = await s.loadFFmpegLibraries();
     if (!isReady) throw new Error('Processing engine failed to load.');
 
-    const { toBlobURL } = window.FFmpegUtil;
+    const toBlobURL = (window.FFmpegUtil && window.FFmpegUtil.toBlobURL) || s.toBlobURL || null;
     const buffer = inputBuffer || s.currentFileBuffer;
     if (!buffer) throw new Error('Video buffer is empty.');
 
@@ -36,14 +27,9 @@ async function compressVideo(file, mode, inputBuffer) {
     }
     const procOpts = s.computeVideoProcessingOptions(vInfoW, vInfoH, vInfoFps, fileMB, mode);
 
-    // Video Compressor / Patcher Encoding Settings:
-    // Research-backed bitrates optimized for 60fps full-motion video (eliminates macroblocking/pixelation).
     const is720p = (mode === '720p');
-    const isHighFps = (!vInfoFps || vInfoFps >= 45); // Treat >= 45fps or unknown as high-fps for motion safety
+    const isHighFps = (!vInfoFps || vInfoFps >= 45);
 
-    // Target Bitrate & Buffer calculation:
-    // 1080p 60fps high motion: H.264 maxrate 20M / bufsize 34M, HEVC maxrate 17M / bufsize 28M, CRF 18.5
-    // 720p 60fps high motion: H.264 maxrate 13M / bufsize 22M, HEVC maxrate 11M / bufsize 18M, CRF 19.0
     let crfValueMT = '18.5';
     let maxRateMT = '17M';
     let bufSizeMT = '28M';
@@ -71,7 +57,6 @@ async function compressVideo(file, mode, inputBuffer) {
             bufSizeST = '16M';
         }
     } else {
-        // 1080p
         if (!isHighFps) {
             crfValueMT = '19';
             maxRateMT = '14M';
@@ -94,7 +79,7 @@ async function compressVideo(file, mode, inputBuffer) {
         ffmpeg = await s.loadFFmpegHelper(null, toBlobURL, !useMT);
 
         ffmpeg.on('progress', ({ progress }) => {
-            const percent = Math.max(0, Math.min(90, Math.round(progress * 90)));
+            const percent = 10 + Math.max(0, Math.min(62, Math.round(progress * 62)));
             if (s.progressFill) s.progressFill.style.width = `${percent}%`;
             if (s.progressPercent) s.progressPercent.textContent = `${percent}%`;
             const stMsg = `${window.getTranslation('status_encoding')}...`;
@@ -223,11 +208,11 @@ async function compressVideo(file, mode, inputBuffer) {
         }
 
         if (s.statusText) s.statusText.innerHTML = `<span style="color: var(--md-sys-color-primary);">${window.getTranslation('status_finalizing')}</span>`;
-        if (s.progressText) s.progressText.textContent = 'Finalizing package...';
-        if (s.progressFill) s.progressFill.style.width = '95%';
-        if (s.progressPercent) s.progressPercent.textContent = '95%';
+        if (s.progressText) s.progressText.textContent = 'Menyiapkan stream hasil kompresi...';
+        if (s.progressFill) s.progressFill.style.width = '74%';
+        if (s.progressPercent) s.progressPercent.textContent = '74%';
         if (window.ToolProgressManager) {
-            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 95, status: window.getTranslation('status_finalizing'), file });
+            window.ToolProgressManager.set('tool-tiktok-patcher', { isProcessing: true, percent: 74, status: window.getTranslation('status_finalizing'), file });
         }
 
         s.log(`  [3/3] Reading compressed video stream...`);

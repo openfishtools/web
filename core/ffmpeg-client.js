@@ -207,10 +207,6 @@
     await ffmpeg.load(cfg);
   }
 
-  /**
-   * Create and load a ready-to-use FFmpeg WASM instance using Cache Storage + CDN.
-   * @param {{ isMultiThread?: boolean, forceSingleThread?: boolean, log?: Function }} [opts]
-   */
   async function createInstance(opts) {
     opts = opts || {};
     var log = typeof opts.log === "function" ? opts.log : function () {};
@@ -241,11 +237,18 @@
     }
   }
 
+  window.FFmpegUtil = {
+    toBlobURL: toBlobURL,
+    fetchFile: fetchFile
+  };
+
   window.CutefishFFmpeg = {
     createInstance: createInstance,
     fetchFile: fetchFile,
     toBlobURL: toBlobURL,
-    loadFFmpegScript: loadFFmpegScript
+    loadFFmpegScript: loadFFmpegScript,
+    loadFFmpegLibraries: loadFFmpegScript,
+    isMobileDevice: isMobileDevice
   };
 
   window.CutefishFFmpegLoader = {
