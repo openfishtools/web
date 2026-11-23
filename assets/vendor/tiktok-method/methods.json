@@ -1,6 +1,12 @@
 {
   "status": "WORKING",
   "defaultMethod": "fish",
+  "defaultCompressMode": "1080p",
+  "compressModes": [
+    { "id": "off", "label": "OFF" },
+    { "id": "720p", "label": "720P" },
+    { "id": "1080p", "label": "1080P" }
+  ],
   "modules": {
     "engine": "engine.js",
     "compress": "compress.js",
@@ -38,7 +44,7 @@
     },
     {
       "id": "mpts",
-      "name": "MPTS",
+      "name": "MPEG-TS",
       "status": "WORKING",
       "supportsCompress": false,
       "file": "mpts.js"

@@ -127,8 +127,14 @@
       height: h,
       fps,
       bitrateMbps,
+      maxShortSide,
+      maxFps,
+      maxBitrateMbps,
       exceedsLimit: reasons.length > 0,
-      reasons
+      reasons,
+      limitText: reasons.length > 0
+        ? `Video melebihi batas (maks ${maxShortSide}p, ${maxFps} FPS, ${maxBitrateMbps} Mbps): ${reasons.join(', ')}. Compression diaktifkan otomatis.`
+        : ''
     };
   }
 
@@ -174,7 +180,7 @@
     if (!supportsCompress) {
       effectiveCompress = 'off';
     } else if (limits.exceedsLimit && effectiveCompress === 'off') {
-      effectiveCompress = '1080p';
+      effectiveCompress = (compressCfg && compressCfg.defaultCompressMode) || '1080p';
     }
 
     let workingBuffer = inputU8.buffer.slice(inputU8.byteOffset, inputU8.byteOffset + inputU8.byteLength);
@@ -208,6 +214,7 @@
         patchResult = await activeMethod.patch(workingBuffer, {
           file,
           mode: effectiveCompress,
+          watermark: opts?.watermark || '',
           log,
           _tktk
         });
@@ -217,6 +224,7 @@
           patchResult = await activeMethod.patch(workingBuffer, {
             file,
             mode: effectiveCompress,
+            watermark: opts?.watermark || '',
             log,
             _tktk
           });

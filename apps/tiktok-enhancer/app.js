@@ -62,12 +62,58 @@
     document.getElementById("logs-badge")
   );
 
+  var sharedConfig = null;
   var currentFile = null;
   var currentBuffer = null;
   var currentSpecs = null;
   var selectedMethod = "fish";
   var compressMode = "off";
   var isProcessing = false;
+
+  (async function loadSharedMethodsConfig() {
+    try {
+      var res = await fetch("../../assets/vendor/tiktok-method/methods.json", { cache: "no-store" });
+      if (!res.ok) return;
+      var cfg = await res.json();
+      if (!cfg || !Array.isArray(cfg.methods)) return;
+      sharedConfig = cfg;
+      if (window._tktk && cfg.compress) window._tktk.compressConfig = cfg.compress;
+      if (cfg.defaultMethod) selectedMethod = cfg.defaultMethod;
+
+      if (methodGroup && cfg.methods.length) {
+        methodGroup.innerHTML = cfg.methods.map(function (m) {
+          var active = m.id === selectedMethod;
+          return '<button type="button" class="m3-segment' + (active ? ' is-active' : '') + '" data-method="' + m.id + '" role="radio" aria-checked="' + (active ? 'true' : 'false') + '">' + (m.name || m.id) + '</button>';
+        }).join("");
+        U.bindSegmented(methodGroup, "method", function (m) {
+          selectedMethod = m || selectedMethod;
+          syncCompressUI();
+        });
+      }
+
+      if (compressGroup && Array.isArray(cfg.compressModes) && cfg.compressModes.length) {
+        compressGroup.innerHTML = cfg.compressModes.map(function (cm) {
+          var active = cm.id === compressMode;
+          var extraId = cm.id === "off" ? ' id="compress-off-btn"' : "";
+          return '<button type="button" class="m3-segment' + (active ? ' is-active' : '') + '" data-compress="' + cm.id + '"' + extraId + ' role="radio" aria-checked="' + (active ? 'true' : 'false') + '">' + (cm.label || cm.id) + '</button>';
+        }).join("");
+        compressOffBtn = document.getElementById("compress-off-btn");
+        U.bindSegmented(compressGroup, "compress", function (c) {
+          compressMode = c || "off";
+        });
+      }
+
+      var loadedItems = (window.TikTokMethods && Array.isArray(window.TikTokMethods._items)) ? window.TikTokMethods._items : [];
+      cfg.methods.forEach(function (m) {
+        if (!m.file || loadedItems.some(function (x) { return x.id === m.id; })) return;
+        var s = document.createElement("script");
+        s.src = "../../assets/vendor/tiktok-method/" + m.file;
+        s.defer = true;
+        document.head.appendChild(s);
+      });
+      syncCompressUI();
+    } catch (_) {}
+  })();
 
   function setProgress(pct, status) {
     progressBox.classList.remove("is-hidden");
@@ -112,10 +158,8 @@
   }
 
   function isOver1080p() {
-    if (!currentSpecs) return false;
-    var shortSide = Math.min(currentSpecs.width, currentSpecs.height);
-    var longSide = Math.max(currentSpecs.width, currentSpecs.height);
-    return shortSide > 1080 || longSide > 1920;
+    if (!currentSpecs || !window.CutefishMethodEngine) return false;
+    return window.CutefishMethodEngine.checkVideoLimits(currentSpecs, sharedConfig && sharedConfig.compress).exceedsLimit;
   }
 
   function syncCompressUI() {
@@ -380,68 +424,21 @@
         currentBuffer = await currentFile.arrayBuffer();
       }
 
-      var effectiveCompress = compressMode;
-      if (activeMethod.supportsCompress === false) {
-        effectiveCompress = "off";
-      } else if (isOver1080p() && effectiveCompress === "off") {
-        effectiveCompress = "1080p";
-      }
-
-      var workingBuffer = currentBuffer;
-
-      if (effectiveCompress !== "off" && activeMethod.supportsCompress !== false) {
-        setProgress(10, "Mengompresi video (" + effectiveCompress.toUpperCase() + ")...");
-        logger.append("Tahap 1: Kompresi " + effectiveCompress.toUpperCase());
-        workingBuffer = await window.compressVideo(currentFile, effectiveCompress, workingBuffer);
-      }
-
-      setProgress(78, "Normalisasi stream MP4...");
-      workingBuffer = await window.normalizeClip(currentFile, workingBuffer, {
-        isCompressed: effectiveCompress !== "off" && activeMethod.supportsCompress !== false,
-        remuxFaststart: Boolean(activeMethod.remuxFaststart),
-        handlesOwn60FpsSlowmo: Boolean(activeMethod.handlesOwn60FpsSlowmo),
-        log: function (m) { logger.append(m); },
-        logSection: function (t) { logger.append("--- " + t + " ---"); },
-        logEnd: function () {}
+      var eng = window.CutefishMethodEngine;
+      var pipeRes = await eng.runPipeline({
+        file: currentFile,
+        buffer: currentBuffer,
+        duration: currentSpecs ? currentSpecs.duration : 0,
+        methodId: selectedMethod,
+        compressMode: compressMode,
+        doBypass: true,
+        compressCfg: sharedConfig ? sharedConfig.compress : null,
+        _tktk: window._tktk,
+        onProgress: setProgress,
+        log: function (m) { logger.append(m); }
       });
 
-      setProgress(90, "Menerapkan metode " + activeMethod.name + "...");
-      logger.append("Menerapkan metode " + activeMethod.name + "...");
-      var patchResult;
-      try {
-        patchResult = await activeMethod.patch(workingBuffer, {
-          file: currentFile,
-          mode: effectiveCompress,
-          log: function (m) { logger.append(m); },
-          logSection: function (t) { logger.append("--- " + t + " ---"); },
-          logEnd: function () {},
-          _tktk: window._tktk
-        });
-      } catch (patchErr) {
-        if (typeof window.remuxFaststart === "function") {
-          logger.append("Mencoba remux ulang stream sebelum patch (" + patchErr.message + ")...");
-          workingBuffer = await window.remuxFaststart(currentFile, workingBuffer);
-          patchResult = await activeMethod.patch(workingBuffer, {
-            file: currentFile,
-            mode: effectiveCompress,
-            log: function (m) { logger.append(m); },
-            logSection: function (t) { logger.append("--- " + t + " ---"); },
-            logEnd: function () {},
-            _tktk: window._tktk
-          });
-        } else {
-          throw patchErr;
-        }
-      }
-
-      var finalBytes = patchResult;
-      var outOpts = activeMethod.outputOptions || "hd";
-      if (patchResult && !(patchResult instanceof Uint8Array) && !(patchResult instanceof ArrayBuffer) && patchResult.bytes) {
-        finalBytes = patchResult.bytes;
-        if (patchResult.outputOptions) outOpts = patchResult.outputOptions;
-      }
-
-      var finalized = window.finalizePatcherDownload(currentFile, finalBytes, outOpts);
+      var finalized = window.finalizePatcherDownload(currentFile, pipeRes.bytes, pipeRes.outputOptions || "hd");
       var elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
 
       progressBox.classList.add("is-hidden");
