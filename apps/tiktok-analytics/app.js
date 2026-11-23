@@ -381,14 +381,14 @@
       progressBox.classList.add("is-hidden");
       logger.setBadge("Done");
       logger.append("Analisis selesai: @" + (meta.author_unique_id || "tiktok") + " (" + formatNumber(plays) + " views, " + engagement + " ER)");
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">query_stats</span> Analisis Video';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">query_stats</span> Analisis Video';
     } catch (err) {
       progressBox.classList.add("is-hidden");
       var msg = (err && err.message) || "Video tidak ditemukan atau tautan tidak valid.";
       showError(msg);
       logger.setBadge("Error");
       logger.append("Error: " + msg);
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">query_stats</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">query_stats</span> Coba Lagi';
     } finally {
       isRunning = false;
       btnStart.disabled = false;

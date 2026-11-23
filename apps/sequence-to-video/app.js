@@ -108,7 +108,7 @@
     statsGrid.classList.add("is-hidden");
     progressBox.classList.add("is-hidden");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">movie_creation</span> Konversi ke Video';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">movie_creation</span> Konversi ke Video';
     logger.setBadge("Ready");
     logger.append("Arsip ZIP dimuat: " + file.name + " (" + U.formatBytes(file.size) + ")");
   }
@@ -257,12 +257,12 @@
       logger.append("Mengunduh otomatis: " + outName);
       U.triggerDownload(blob, outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">movie_creation</span> Konversi Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">movie_creation</span> Konversi Ulang';
     } catch (err) {
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
       progressBox.classList.add("is-hidden");
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">movie_creation</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">movie_creation</span> Coba Lagi';
     } finally {
       if (ffmpeg) {
         if (typeof ffmpeg.off === "function") {

@@ -596,8 +596,8 @@
     }
 
     setBusy(false);
-    btnPreview.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">visibility</span> Preview';
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span> Mulai Upscale';
+    btnPreview.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">visibility</span> Preview';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Mulai Upscale';
     logger.setBadge("Ready");
 
     if (isImageMode) {
@@ -743,7 +743,7 @@
     } finally {
       isGeneratingPreview = false;
       setBusy(false);
-      btnPreview.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">visibility</span> Preview';
+      btnPreview.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">visibility</span> Preview';
     }
   }
 
@@ -971,12 +971,12 @@
       logger.append("Mengunduh otomatis: " + res.outName);
       U.triggerDownload(res.blob, res.outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span> Upscale Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Upscale Ulang';
     } catch (err) {
       progressBox.classList.add("is-hidden");
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Coba Lagi';
     } finally {
       isProcessing = false;
       setBusy(false);

@@ -78,7 +78,7 @@
     statsGrid.classList.add("is-hidden");
     progressBox.classList.add("is-hidden");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span> Ekstrak Audio';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">graphic_eq</span> Ekstrak Audio';
     logger.setBadge("Ready");
 
     U.probeVideoMetadata(file).then(function (meta) {
@@ -193,12 +193,12 @@
       logger.append("Mengunduh otomatis: " + outName);
       U.triggerDownload(blob, outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span> Ekstrak Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">graphic_eq</span> Ekstrak Ulang';
     } catch (err) {
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
       progressBox.classList.add("is-hidden");
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">graphic_eq</span> Coba Lagi';
     } finally {
       if (ffmpeg && typeof ffmpeg.off === "function") {
         try { ffmpeg.off("log", onOom); } catch (_) {}

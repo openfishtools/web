@@ -33,14 +33,14 @@
   navLeftBtn.type = "button";
   navLeftBtn.className = "stage-nav-btn nav-left";
   navLeftBtn.setAttribute("aria-label", "Geser ke kiri");
-  navLeftBtn.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>';
+  navLeftBtn.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">chevron_left</span>';
   windowsContainer.appendChild(navLeftBtn);
 
   var navRightBtn = document.createElement("button");
   navRightBtn.type = "button";
   navRightBtn.className = "stage-nav-btn nav-right";
   navRightBtn.setAttribute("aria-label", "Geser ke kanan");
-  navRightBtn.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>';
+  navRightBtn.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">chevron_right</span>';
   windowsContainer.appendChild(navRightBtn);
 
   function getZoneCapacity() {
@@ -636,13 +636,13 @@
     el.innerHTML =
       '<div class="window-topbar window-drag-area">' +
         '<button type="button" class="window-ctl-btn btn-fullscreen" aria-label="Toggle Fullscreen">' +
-          '<span class="material-symbols-rounded" aria-hidden="true">fullscreen</span>' +
+          '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">fullscreen</span>' +
         '</button>' +
         '<div class="window-title-pill">' +
           '<span class="pill-app-title">' + app.title + '</span>' +
         '</div>' +
         '<button type="button" class="window-ctl-btn window-ctl-close btn-close" aria-label="Close App">' +
-          '<span class="material-symbols-rounded" aria-hidden="true">close</span>' +
+          '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">close</span>' +
         '</button>' +
       '</div>' +
       '<div class="app-window-body">' + splashHtml + '</div>' +

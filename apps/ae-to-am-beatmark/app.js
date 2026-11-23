@@ -153,7 +153,7 @@
 
         fileDetailsEl.textContent = U.formatBytes(file.size) + " \u2022 " + foundCompositions.length + " komposisi";
         selectComposition(foundCompositions[0].id);
-        btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">transform</span> Konversi ke AM XML';
+        btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">transform</span> Konversi ke AM XML';
       } catch (err) {
         foundCompositions = [];
         parsedBeats = [];
@@ -224,6 +224,6 @@
     logger.append("Mengunduh otomatis: " + outName);
     U.triggerDownload(blob, outName);
 
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">transform</span> Konversi Ulang';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">transform</span> Konversi Ulang';
   });
 })();

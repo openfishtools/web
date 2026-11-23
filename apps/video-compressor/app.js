@@ -277,7 +277,7 @@
     statsGrid.classList.add("is-hidden");
     progressBox.classList.add("is-hidden");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">compress</span> Mulai Kompresi';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">compress</span> Mulai Kompresi';
 
     metadataPromise = probeVideoMetadata(currentVideoUrl, file.size).then(function (meta) {
       appendLog("File dimuat: " + file.name + " (" + formatBytes(file.size) + ", " + meta.width + "x" + meta.height + ", " + formatDuration(meta.duration) + ")");
@@ -557,7 +557,7 @@
   function onCompressionComplete(blob, ext) {
     isProcessing = false;
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">compress</span> Kompresi Ulang';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">compress</span> Kompresi Ulang';
 
     progressFill.style.width = "100%";
     progressPercent.textContent = "100%";
@@ -591,7 +591,7 @@
     isProcessing = false;
     setLogBadge("Error");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">compress</span> Mulai Kompresi';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">compress</span> Mulai Kompresi';
     progressBox.classList.add("is-hidden");
   }
 

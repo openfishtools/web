@@ -253,7 +253,8 @@
     }
 
     var arrowSpan = document.createElement("span");
-    arrowSpan.className = "material-symbols-rounded folder-app-arrow";
+    arrowSpan.className = "material-symbols-rounded folder-app-arrow notranslate";
+    arrowSpan.setAttribute("translate", "no");
     arrowSpan.setAttribute("aria-hidden", "true");
     arrowSpan.textContent = "chevron_right";
 

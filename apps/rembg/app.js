@@ -496,8 +496,8 @@
     renderFormatOptions();
     formatField.classList.toggle("is-hidden", selectedBg !== "transparent");
     setBusy(false);
-    btnPreview.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">visibility</span> Preview';
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">content_cut</span> Hapus Background';
+    btnPreview.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">visibility</span> Preview';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">content_cut</span> Hapus Background';
     logger.setBadge("Ready");
 
     if (isImageMode) {
@@ -845,7 +845,7 @@
     } finally {
       isGeneratingPreview = false;
       setBusy(false);
-      btnPreview.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">visibility</span> Preview';
+      btnPreview.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">visibility</span> Preview';
     }
   }
 
@@ -1011,12 +1011,12 @@
       logger.append("Mengunduh otomatis: " + res.outName);
       U.triggerDownload(res.blob, res.outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">content_cut</span> Proses Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">content_cut</span> Proses Ulang';
     } catch (err) {
       progressBox.classList.add("is-hidden");
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">content_cut</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">content_cut</span> Coba Lagi';
     } finally {
       isProcessing = false;
       setBusy(false);

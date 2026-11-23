@@ -212,7 +212,8 @@
     cb.dataset.id = layer.id;
 
     var ic = document.createElement("span");
-    ic.className = "material-symbols-rounded";
+    ic.className = "material-symbols-rounded notranslate";
+    ic.setAttribute("translate", "no");
     ic.setAttribute("aria-hidden", "true");
     ic.textContent = icon;
 
@@ -317,7 +318,7 @@
 
         fileDetailsEl.textContent = U.formatBytes(file.size) + " \u2022 " + layers.length + " layer media";
         btnStart.disabled = false;
-        btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span> Buat XML 5MB';
+        btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Buat XML 5MB';
         logger.setBadge("Ready");
         logger.append("XML dimuat: " + file.name + " (" + layers.length + " layer media)");
       } catch (err) {
@@ -434,7 +435,7 @@
       logger.append("Mengunduh otomatis: " + outName);
       U.triggerDownload(blob, outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span> Buat Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Buat Ulang';
     } catch (err) {
       logger.setBadge("Error");
       logger.append("Gagal membuat XML: " + (err && err.message ? err.message : String(err)));

@@ -30,9 +30,7 @@
   var activeLang = detectLang();
   document.documentElement.lang = activeLang;
 
-  // Indonesian -> English dictionary (covers Desktop OS shell + all 13 apps)
   var ID_TO_EN = {
-    // Registry & Desktop Shell
     "Kumpulan preset editing After Effects & Alight Motion": "After Effects & Alight Motion editing presets",
     "Untuk mengkompres ukuran video": "Compress video file size",
     "Untuk memperjelas & upscale video AI": "Enhance & AI upscale videos",
@@ -52,7 +50,6 @@
     "Geser ke kiri": "Swipe left",
     "Geser ke kanan": "Swipe right",
 
-    // Common Dropzones & Actions
     "Pilih atau seret video ke sini": "Select or drag a video here",
     "Pilih atau seret file video": "Select or drag a video file",
     "Pilih atau seret gambar / video": "Select or drag an image / video",
@@ -158,7 +155,6 @@
     "Posisi frame video": "Video frame position",
     "Posisi video": "Video position",
 
-    // Preset & SlowTime
     "Cari preset, plugin, versi...": "Search presets, plugins, versions...",
     "Memuat galeri preset...": "Loading preset gallery...",
     "Tidak ada preset yang cocok.": "No matching presets found.",
@@ -174,7 +170,6 @@
     "Gagal memuat video.": "Failed to load video.",
     "Gagal memuat galeri preset.": "Failed to load preset gallery.",
 
-    // TikTok Enhancer
     "Mode TikTok Enhancer": "TikTok Enhancer Mode",
     "Metode Patch": "Patch Method",
     "Mode Kompresi": "Compression Mode",
@@ -202,7 +197,6 @@
     "Interpolasi FPS AI RIFE v4.7 (2x / 4x / 8x)": "AI FPS Interpolation RIFE v4.7 (2x / 4x / 8x)"
   };
 
-  // English -> Indonesian dictionary (for English-authored phrases on index.html & home.html)
   var EN_TO_ID = {
     "My time right now:": "Waktu saya saat ini:",
     "What are you looking here ?": "Apa yang sedang kamu cari di sini?",
@@ -283,11 +277,37 @@
     }
   }
 
+  function protectIcons(root) {
+    if (!root) return;
+    var selector = ".material-symbols-rounded, .material-symbols-outlined, .material-icons, [class*='material-symbols']";
+    if (root.nodeType === 1) {
+      if (root.classList && (root.classList.contains("material-symbols-rounded") || root.classList.contains("material-symbols-outlined") || root.classList.contains("material-icons"))) {
+        if (root.getAttribute("translate") !== "no") root.setAttribute("translate", "no");
+        if (!root.classList.contains("notranslate")) root.classList.add("notranslate");
+      }
+      if (root.querySelectorAll) {
+        var list = root.querySelectorAll(selector);
+        for (var i = 0; i < list.length; i++) {
+          var el = list[i];
+          if (el.getAttribute("translate") !== "no") el.setAttribute("translate", "no");
+          if (!el.classList.contains("notranslate")) el.classList.add("notranslate");
+        }
+      }
+    } else if ((root.nodeType === 9 || root.nodeType === 11) && root.querySelectorAll) {
+      var all = root.querySelectorAll(selector);
+      for (var j = 0; j < all.length; j++) {
+        var item = all[j];
+        if (item.getAttribute("translate") !== "no") item.setAttribute("translate", "no");
+        if (!item.classList.contains("notranslate")) item.classList.add("notranslate");
+      }
+    }
+  }
+
   function translateNodeTree(root) {
     if (!root) return;
     if (root.nodeType === 3) {
       var parent = root.parentElement;
-      if (parent && (parent.tagName === "SCRIPT" || parent.tagName === "STYLE" || parent.classList.contains("material-symbols-rounded"))) {
+      if (parent && (parent.tagName === "SCRIPT" || parent.tagName === "STYLE" || parent.classList.contains("material-symbols-rounded") || parent.classList.contains("notranslate"))) {
         return;
       }
       var next = translateString(root.nodeValue);
@@ -296,7 +316,7 @@
     }
 
     if (root.nodeType === 1) {
-      if (root.tagName === "SCRIPT" || root.tagName === "STYLE" || root.classList.contains("material-symbols-rounded")) {
+      if (root.tagName === "SCRIPT" || root.tagName === "STYLE" || root.classList.contains("material-symbols-rounded") || root.classList.contains("notranslate")) {
         return;
       }
       translateAttributes(root);
@@ -307,13 +327,13 @@
     while ((node = walker.nextNode())) {
       if (node.nodeType === 3) {
         var p = node.parentElement;
-        if (p && (p.tagName === "SCRIPT" || p.tagName === "STYLE" || p.classList.contains("material-symbols-rounded"))) {
+        if (p && (p.tagName === "SCRIPT" || p.tagName === "STYLE" || p.classList.contains("material-symbols-rounded") || p.classList.contains("notranslate"))) {
           continue;
         }
         var tVal = translateString(node.nodeValue);
         if (tVal !== node.nodeValue) node.nodeValue = tVal;
       } else if (node.nodeType === 1) {
-        if (node.tagName === "SCRIPT" || node.tagName === "STYLE" || node.classList.contains("material-symbols-rounded")) {
+        if (node.tagName === "SCRIPT" || node.tagName === "STYLE" || node.classList.contains("material-symbols-rounded") || node.classList.contains("notranslate")) {
           continue;
         }
         translateAttributes(node);
@@ -329,6 +349,7 @@
     flushScheduled = false;
     var batch = pendingNodes.splice(0, pendingNodes.length);
     for (var i = 0; i < batch.length; i++) {
+      protectIcons(batch[i]);
       translateNodeTree(batch[i]);
     }
   }
@@ -359,9 +380,14 @@
   }
 
   function init() {
+    protectIcons(document);
     translateNodeTree(document.body);
     startObserver();
   }
+
+  try {
+    protectIcons(document);
+  } catch (_) {}
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
@@ -375,7 +401,11 @@
     locale: function () { return activeLang === "id" ? "id-ID" : "en-US"; },
     t: function (idText, enText) { return activeLang === "id" ? idText : enText; },
     translate: translateString,
-    apply: function (el) { translateNodeTree(el || document.body); },
+    apply: function (el) {
+      var target = el || document.body;
+      protectIcons(target);
+      translateNodeTree(target);
+    },
     setLang: function (nextLang) {
       try {
         if (nextLang === "id" || nextLang === "en") {

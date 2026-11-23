@@ -346,7 +346,7 @@
     statsGrid.classList.add("is-hidden");
     progressBox.classList.add("is-hidden");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">slow_motion_video</span> Mulai Interpolasi';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">slow_motion_video</span> Mulai Interpolasi';
     logger.setBadge("Ready");
 
     Promise.all([U.probeVideoMetadata(file), detectFps(file)]).then(function (results) {
@@ -500,12 +500,12 @@
       logger.append("Mengunduh otomatis: " + outName);
       U.triggerDownload(blob, outName);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">slow_motion_video</span> Interpolasi Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">slow_motion_video</span> Interpolasi Ulang';
     } catch (err) {
       progressBox.classList.add("is-hidden");
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">slow_motion_video</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">slow_motion_video</span> Coba Lagi';
     } finally {
       if (rife) rife.destroy();
       if (ffmpeg) {

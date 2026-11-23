@@ -210,14 +210,14 @@
 
       logger.setBadge("Done");
       urlInput.value = "";
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">download</span> Unduh Video';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">download</span> Unduh Video';
     } catch (err) {
       progressBox.classList.add("is-hidden");
       var msg = (err && err.message) || "Gagal mengunduh video.";
       showError(msg);
       logger.setBadge("Error");
       logger.append("Error: " + msg);
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">download</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">download</span> Coba Lagi';
     } finally {
       isBusy = false;
       btnStart.disabled = false;

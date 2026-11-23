@@ -248,7 +248,8 @@
       left.appendChild(lbl);
 
       var ico = document.createElement("span");
-      ico.className = "material-symbols-rounded";
+      ico.className = "material-symbols-rounded notranslate";
+      ico.setAttribute("translate", "no");
       ico.setAttribute("aria-hidden", "true");
       ico.textContent = "download";
 
@@ -409,7 +410,7 @@
         singleDl.href = dlLinks[0].url;
         singleDl.target = "_blank";
         singleDl.rel = "noopener noreferrer";
-        singleDl.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">download</span><span>Download</span>';
+        singleDl.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">download</span><span>Download</span>';
         singleDl.addEventListener("click", function (e) {
           e.stopPropagation();
         });
@@ -418,7 +419,7 @@
         var multiBtn = document.createElement("button");
         multiBtn.type = "button";
         multiBtn.className = "preset-dl-btn";
-        multiBtn.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">download</span><span>Download</span>';
+        multiBtn.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">download</span><span>Download</span>';
         multiBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           openVariantSheet(preset, dlLinks);

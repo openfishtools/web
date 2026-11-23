@@ -430,7 +430,7 @@
     statsGrid.classList.add("is-hidden");
     progressBox.classList.add("is-hidden");
     btnStart.disabled = false;
-    btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span> Proses Video';
+    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_awesome</span> Proses Video';
     logger.setBadge("Ready");
 
     currentSpecs = await inspectSpecs(file);
@@ -544,12 +544,12 @@
       logger.append("Mengunduh otomatis: " + finalized.filename);
       U.triggerDownload(finalized.url, finalized.filename);
 
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span> Proses Ulang';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_awesome</span> Proses Ulang';
     } catch (err) {
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
       progressBox.classList.add("is-hidden");
-      btnStart.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span> Coba Lagi';
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_awesome</span> Coba Lagi';
     } finally {
       isProcessing = false;
       btnStart.disabled = false;
