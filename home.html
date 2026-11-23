@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="styles/dock.css?v=27">
   <link rel="stylesheet" href="styles/folder-modal.css?v=1">
   <link rel="stylesheet" href="styles/window-manager.css?v=17">
+  <link rel="stylesheet" href="styles/tutorial.css?v=1">
 </head>
 
 <body data-page="home">
@@ -35,6 +36,9 @@
     <path class="wave-b" d="M800 0 V 1200 H 500 C 540 980, 680 900, 660 700 C 640 500, 420 380, 470 0 Z" />
   </svg>
   <main class="home home-container" id="desktop-home">
+    <button type="button" class="tutorial-replay-btn" id="tutorial-replay-btn" aria-label="Putar ulang tutorial" title="Putar ulang tutorial">
+      <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">help</span>
+    </button>
     <section class="clock-widget" id="clock-widget" aria-label="Jam Indonesia">
       <div class="clock-eyebrow">My time right now:</div>
       <div class="clock-time" id="clock-time">00:00</div>
@@ -70,6 +74,7 @@
   <script src="core/window-manager.js?v=23" defer></script>
   <script src="core/dock.js?v=28" defer></script>
   <script src="core/desktop.js?v=18" defer></script>
+  <script src="core/tutorial.js?v=1" defer></script>
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {
