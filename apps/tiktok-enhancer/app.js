@@ -29,7 +29,7 @@
   var EXT_GITHUB_LATEST = "https://api.github.com/repos/cutefishaep/fp-ext/releases/latest";
   var EXT_JSDELIVR_PKGS = "https://data.jsdelivr.com/v1/packages/gh/cutefishaep/fp-ext";
   var EXT_RELEASES_URL = "https://github.com/cutefishaep/fp-ext/releases";
-  var EXT_CACHE_KEY = "fp_ext_latest_release_cache";
+  var EXT_CACHE_KEY = "fp_ext_latest_loader_cache";
   var EXT_TUTORIAL_WATCH = "https://www.youtube.com/shorts/xftaz12NQMo";
   var EXT_TUTORIAL_EMBED = "https://www.youtube-nocookie.com/embed/xftaz12NQMo?rel=0&autoplay=1";
   var extLoadedOnce = false;
@@ -305,7 +305,13 @@
         if (ghRes.ok) {
           var ghData = await ghRes.json();
           var zipAsset = Array.isArray(ghData.assets)
-            ? ghData.assets.find(function (a) { return (a.name || "").endsWith(".zip"); })
+            ? (
+                ghData.assets.find(function (a) { return String(a.name || "").toLowerCase() === "loader.zip"; }) ||
+                ghData.assets.find(function (a) {
+                  var name = String(a.name || "").toLowerCase();
+                  return name.endsWith(".zip") && name !== "core.zip";
+                })
+              )
             : null;
           if (ghData.tag_name && zipAsset) {
             release = {
@@ -333,7 +339,7 @@
             release = {
               tag: tag,
               publishedAt: null,
-              zipUrl: EXT_RELEASES_URL + "/download/" + tag + "/fish-acceleration-" + tag + ".zip",
+              zipUrl: EXT_RELEASES_URL + "/download/" + tag + "/loader.zip",
               zipSize: null,
               releaseUrl: EXT_RELEASES_URL + "/tag/" + tag
             };
@@ -366,7 +372,10 @@
     } else {
       extDate.textContent = "\u2014";
     }
-    if (release && release.zipUrl) extBtnDownload.href = release.zipUrl;
+    if (release && release.zipUrl) {
+      extBtnDownload.href = release.zipUrl;
+      extBtnDownload.setAttribute("download", "loader.zip");
+    }
     if (release && release.releaseUrl) extBtnGithub.href = release.releaseUrl;
   }
 
