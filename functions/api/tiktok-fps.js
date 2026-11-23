@@ -3,7 +3,8 @@ function jsonResponse(data, status = 200, cacheHeader = "no-store") {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": cacheHeader
+      "Cache-Control": cacheHeader,
+      "Access-Control-Allow-Origin": "*"
     }
   });
 }
