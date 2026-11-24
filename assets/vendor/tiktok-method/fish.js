@@ -18,7 +18,7 @@
   
   
   const STATUS = 'WORKING';
-  const ENCODER_TAG = 'Method From cutefish.my.id';
+  const ENCODER_TAG = 'method from cutefish.my.id';
   const FOURCC_TOO = new Uint8Array([0xa9, 0x74, 0x6f, 0x6f]);
   const SENTINEL_FF = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
   const CONTAINER_BOXES = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts']);
@@ -899,17 +899,20 @@ const _ss_lfeTailCore = (function () {
   function findChild(node, typ) {
     return node && node.children ? node.children.find((c) => c.typ === typ) || null : null;
   }
-  function buildWatermarkMeta(text) {
+  function buildCmtItem(text) {
     const t = enc.encode(text);
     const dataPayload = new Uint8Array(8 + t.length);
     wU32(dataPayload, 0, 1);
     dataPayload.set(t, 8);
     const dataBox = mkBox('data', dataPayload);
-    const tooBox = new Uint8Array(8 + dataBox.length);
-    wU32(tooBox, 0, tooBox.length);
-    tooBox[4] = 0xa9; tooBox[5] = 0x74; tooBox[6] = 0x6f; tooBox[7] = 0x6f;
-    tooBox.set(dataBox, 8);
-    const ilstBox = mkBox('ilst', tooBox);
+    const cmtBox = new Uint8Array(8 + dataBox.length);
+    wU32(cmtBox, 0, cmtBox.length);
+    cmtBox[4] = 0xa9; cmtBox[5] = 0x63; cmtBox[6] = 0x6d; cmtBox[7] = 0x74;
+    cmtBox.set(dataBox, 8);
+    return cmtBox;
+  }
+  function buildCmtMeta(text) {
+    const ilstBox = mkBox('ilst', buildCmtItem(text));
     const hdlrPayload = new Uint8Array(25);
     hdlrPayload[8] = 0x6d; hdlrPayload[9] = 0x64; hdlrPayload[10] = 0x69; hdlrPayload[11] = 0x72;
     hdlrPayload[12] = 0x61; hdlrPayload[13] = 0x70; hdlrPayload[14] = 0x70; hdlrPayload[15] = 0x6c;
@@ -918,6 +921,46 @@ const _ss_lfeTailCore = (function () {
     metaPayload.set(hdlrBox, 4);
     metaPayload.set(ilstBox, 4 + hdlrBox.length);
     return mkBox('meta', metaPayload);
+  }
+  function injectCmtIntoUdtaData(udtaData, text) {
+    const cmtItem = buildCmtItem(text);
+    const topBoxes = readBoxes(udtaData, 0, udtaData.length);
+    let injected = false;
+    const outChunks = [];
+    for (const b of topBoxes) {
+      if (!injected && b.typ === 'meta' && b.end - b.pos >= 12) {
+        const metaBodyStart = b.pos + 12;
+        const metaChildren = readBoxes(udtaData, metaBodyStart, b.end);
+        let ilstReplaced = false;
+        const metaChunks = [udtaData.subarray(b.pos + 8, metaBodyStart)];
+        for (const mc of metaChildren) {
+          if (!ilstReplaced && mc.typ === 'ilst') {
+            const ilstItems = readBoxes(udtaData, mc.pos + 8, mc.end);
+            const kept = [];
+            for (const it of ilstItems) {
+              const isCmt = udtaData[it.pos + 4] === 0xa9 && udtaData[it.pos + 5] === 0x63 && udtaData[it.pos + 6] === 0x6d && udtaData[it.pos + 7] === 0x74;
+              if (!isCmt) kept.push(udtaData.subarray(it.pos, it.end));
+            }
+            kept.push(cmtItem);
+            metaChunks.push(mkBox('ilst', concatU8(kept)));
+            ilstReplaced = true;
+          } else {
+            metaChunks.push(udtaData.subarray(mc.pos, mc.end));
+          }
+        }
+        if (!ilstReplaced) {
+          metaChunks.push(mkBox('ilst', cmtItem));
+        }
+        outChunks.push(mkBox('meta', concatU8(metaChunks)));
+        injected = true;
+      } else {
+        outChunks.push(udtaData.subarray(b.pos, b.end));
+      }
+    }
+    if (!injected) {
+      return concatU8([udtaData, buildCmtMeta(text)]);
+    }
+    return concatU8(outChunks);
   }
 
   return function patchLfeTail(inputU8) {
@@ -1030,12 +1073,11 @@ const _ss_lfeTailCore = (function () {
     stsc.data = concatU8([stsc.data, extSc]);
     wU32(stsc.data, 4, stscCnt + 1);
 
-    const wmMeta = buildWatermarkMeta('Method From cutefish.my.id');
     const existingUdta = findChild(moovNode, 'udta');
     if (existingUdta) {
-      existingUdta.data = concatU8([existingUdta.data, wmMeta]);
+      existingUdta.data = injectCmtIntoUdtaData(existingUdta.data, 'method from cutefish.my.id');
     } else {
-      moovNode.children.push({ typ: 'udta', data: wmMeta });
+      moovNode.children.push({ typ: 'udta', data: buildCmtMeta('method from cutefish.my.id') });
     }
 
     const outPrefix = new Uint8Array(inputU8.length);

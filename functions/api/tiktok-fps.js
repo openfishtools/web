@@ -55,7 +55,8 @@ function findBox(bytes, view, start, end, targetType) {
 
 function parseMethodComment(bytes, view, moovStart, moovEnd) {
   const decoder = new TextDecoder("utf-8", { fatal: false });
-  let comment = "";
+  let cmtVal = "";
+  let tooVal = "";
 
   const scanIlst = (start, end) => {
     iterBoxes(bytes, view, start, end, (type, cStart, cEnd) => {
@@ -66,8 +67,9 @@ function parseMethodComment(bytes, view, moovStart, moovEnd) {
       iterBoxes(bytes, view, cStart, cEnd, (subType, dStart, dEnd) => {
         if (subType === "data" && dStart + 8 <= dEnd) {
           const text = decoder.decode(bytes.subarray(dStart + 8, dEnd)).replace(/\0+$/, "").trim();
-          if (text && (!comment || isCmt)) {
-            comment = text;
+          if (text) {
+            if (isCmt) cmtVal = text;
+            else if (isToo && (!tooVal || !/^lavf/i.test(text))) tooVal = text;
           }
         }
         return false;
@@ -76,16 +78,19 @@ function parseMethodComment(bytes, view, moovStart, moovEnd) {
     });
   };
 
-  const udta = findBox(bytes, view, moovStart, moovEnd, "udta");
-  if (udta) {
-    const meta = findBox(bytes, view, udta.contentStart, udta.contentEnd, "meta");
-    if (meta && meta.contentStart + 4 <= meta.contentEnd) {
-      const ilst = findBox(bytes, view, meta.contentStart + 4, meta.contentEnd, "ilst");
-      if (ilst) scanIlst(ilst.contentStart, ilst.contentEnd);
-    }
-  }
+  iterBoxes(bytes, view, moovStart, moovEnd, (uType, uStart, uEnd) => {
+    if (uType !== "udta") return false;
+    iterBoxes(bytes, view, uStart, uEnd, (mType, mStart, mEnd) => {
+      if (mType === "meta" && mStart + 4 <= mEnd) {
+        const ilst = findBox(bytes, view, mStart + 4, mEnd, "ilst");
+        if (ilst) scanIlst(ilst.contentStart, ilst.contentEnd);
+      }
+      return false;
+    });
+    return false;
+  });
 
-  return comment;
+  return cmtVal || tooVal;
 }
 
 function parseMoov(bytes, view, moovStart, moovEnd) {
