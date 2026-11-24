@@ -175,7 +175,7 @@
       duration: Number(opts?.duration) || 0
     }, compressCfg);
 
-    const supportsCompress = !activeMethod || activeMethod.supportsCompress !== false;
+    const supportsCompress = !doBypass || !activeMethod || activeMethod.supportsCompress !== false;
     let effectiveCompress = compressMode || 'off';
     if (!supportsCompress) {
       effectiveCompress = 'off';
