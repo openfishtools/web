@@ -1,0 +1,18 @@
+<svg class="app-icon projects-stack-icon" width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="30" class="icon-bg" fill="var(--icon-bg, #212a1a)"/>
+  <g class="projects-layer projects-layer-back">
+    <rect class="projects-tone-back" x="28" y="24" width="72" height="50" rx="12" fill="var(--icon-fg, #c7dc9c)" fill-opacity="0.58" stroke="var(--icon-bg, #212a1a)" stroke-width="3"/>
+  </g>
+  <g class="projects-layer projects-layer-mid">
+    <rect class="projects-tone-mid" x="22" y="34" width="84" height="56" rx="13" fill="var(--icon-fg, #c7dc9c)" fill-opacity="0.78" stroke="var(--icon-bg, #212a1a)" stroke-width="3"/>
+  </g>
+  <g class="projects-layer projects-layer-front">
+    <rect class="projects-tone-front" x="18" y="46" width="92" height="60" rx="14" fill="var(--icon-fg, #c7dc9c)" stroke="var(--icon-bg, #212a1a)" stroke-width="3"/>
+    <circle class="icon-inner" cx="31" cy="58" r="3.2" fill="var(--icon-inner, #212a1a)"/>
+    <circle class="icon-inner" cx="41" cy="58" r="3.2" fill="var(--icon-inner, #212a1a)" opacity="0.65"/>
+    <circle class="icon-inner" cx="51" cy="58" r="3.2" fill="var(--icon-inner, #212a1a)" opacity="0.4"/>
+    <path class="icon-inner-stroke" d="M51 74L41 83L51 92" stroke="var(--icon-inner, #212a1a)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="icon-inner-stroke" d="M77 74L87 83L77 92" stroke="var(--icon-inner, #212a1a)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="icon-inner-stroke" d="M68 71L60 95" stroke="var(--icon-inner, #212a1a)" stroke-width="5.5" stroke-linecap="round"/>
+  </g>
+</svg>

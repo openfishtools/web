@@ -11,6 +11,7 @@
    */
   var APPS = [
     { id: "preset", title: "Preset", icon: "preset.svg", entry: "apps/preset/index.html", description: "Kumpulan preset editing After Effects & Alight Motion" },
+    { id: "projects", title: "Projects", icon: "projects.svg", entry: "apps/projects/index.html", description: "Kumpulan proyek & karya open source" },
     { id: "video-compressor", title: "Video Compressor", icon: "video-compressor.svg", entry: "apps/video-compressor/index.html", description: "Untuk mengkompres ukuran video" },
     { id: "video-upscaler", title: "Video Upscaler", icon: "video-upscaler.svg", entry: "apps/video-upscaler/index.html", description: "Untuk memperjelas & upscale video AI" },
     { id: "tiktok-downloader", title: "TikTok Downloader", icon: "tiktok-downloader.svg", entry: "apps/tiktok-downloader/index.html", description: "Untuk mengunduh video & audio TikTok" },
@@ -27,11 +28,6 @@
 
   var FOLDERS = [
     {
-      id: "folder-video-ai",
-      title: "Video & AI",
-      ids: ["video-compressor", "video-upscaler", "video-interpolation", "rembg", "mp4-to-mp3", "slowtime"]
-    },
-    {
       id: "folder-tiktok",
       title: "TikTok",
       ids: ["tiktok-downloader", "tiktok-analytics", "tiktok-enhancer"]
@@ -40,6 +36,12 @@
       id: "folder-am",
       title: "Alight Motion Tools",
       ids: ["sequence-to-video", "ae-to-am-beatmark", "am-5mb"]
+    },
+    {
+      id: "folder-video-ai",
+      title: "Video & AI",
+      wide: true,
+      ids: ["video-compressor", "video-upscaler", "video-interpolation", "rembg", "mp4-to-mp3", "slowtime"]
     }
   ];
 
@@ -49,7 +51,7 @@
 
   function getFolders() {
     return FOLDERS.map(function (f) {
-      return { id: f.id, title: f.title, ids: f.ids.slice() };
+      return { id: f.id, title: f.title, wide: Boolean(f.wide), ids: f.ids.slice() };
     });
   }
 

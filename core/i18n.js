@@ -32,6 +32,15 @@
 
   var ID_TO_EN = {
     "Kumpulan preset editing After Effects & Alight Motion": "After Effects & Alight Motion editing presets",
+    "Kumpulan proyek & karya open source": "Projects & open source works",
+    "Daftar proyek akan segera hadir di sini.": "Projects list coming soon.",
+    "Daftar Proyek OpenFishTools": "OpenFishTools Projects",
+    "Versi mandiri FishTools dengan timeline, keyframe, dan efek sendiri tanpa perlu After Effects.": "Standalone version of FishTools with its own timeline, keyframes, and effects — no After Effects required.",
+    "Panel After Effects untuk easing, auto save, dan konversi komposisi ke Alight Motion.": "After Effects panel for easing, auto save, and conversion to Alight Motion.",
+    "Kumpulan script tools multimedia & TikTok mandiri yang dapat dimuat langsung lewat CDN.": "Standalone multimedia & TikTok tool scripts that can be loaded directly from a CDN.",
+    "Website Web Desktop OS OpenFishTools yang menghosting galeri preset dan berbagai web tools.": "The OpenFishTools Web Desktop OS website hosting the preset gallery and web tools.",
+    "Builder aplikasi mandiri desktop & Android untuk FishTools Studio.": "Standalone desktop and Android app builder for FishTools Studio.",
+    "Organisasi open-source motion graphics dan video editing tools.": "Open-source motion graphics and video editing tools organization.",
     "Untuk mengkompres ukuran video": "Compress video file size",
     "Untuk memperjelas & upscale video AI": "Enhance & AI upscale videos",
     "Untuk mengunduh video & audio TikTok": "Download TikTok videos & audio",
@@ -61,6 +70,7 @@
     "Selesai": "Done",
     "Menampilkan waktu saat ini. Klik bagian tanggal di bawah jam untuk mengganti zona waktu antara WIB, WITA, atau WIT.": "Shows the current time. Click the date below the clock to switch between WIB, WITA, or WIT.",
     "Galeri Preset": "Preset Gallery",
+    "Klik folder ini untuk membuka galeri Preset dan daftar Projects.": "Click this folder to open the Preset gallery and Projects list.",
     "Klik ikon ini untuk membuka kumpulan preset editing After Effects dan Alight Motion.": "Click this icon to open the After Effects and Alight Motion editing presets.",
     "Folder Aplikasi": "App Folders",
     "Aplikasi lainnya dikelompokkan ke dalam folder di desktop agar layar tetap rapi.": "Other apps are grouped into desktop folders to keep the screen tidy.",

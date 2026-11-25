@@ -81,59 +81,70 @@
 
     grid.innerHTML = "";
 
-    // Big-folder-sized "Preset" icon placed first
+    function renderBigAppTile(app) {
+      var wrap = document.createElement("div");
+      wrap.className = "big-folder";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "big-folder-card big-folder-tile";
+      btn.dataset.shortcutId = app.id;
+      btn.setAttribute("aria-label", app.title);
+      btn.title = app.title;
+      btn.innerHTML = getSvg(app.icon);
+
+      var openApp = function () {
+        if (window.AppWindow) {
+          window.AppWindow.open(app, btn);
+        }
+      };
+      btn.addEventListener("click", openApp);
+
+      var titleEl = document.createElement("span");
+      titleEl.className = "big-folder-title";
+      titleEl.textContent = app.title;
+      titleEl.addEventListener("click", openApp);
+
+      wrap.appendChild(btn);
+      wrap.appendChild(titleEl);
+      grid.appendChild(wrap);
+    }
+
     var presetApp = byId["preset"] || {
       id: "preset",
       title: "Preset",
       icon: "preset.svg",
       entry: "apps/preset/index.html"
     };
+    renderBigAppTile(presetApp);
 
-    var presetWrap = document.createElement("div");
-    presetWrap.className = "big-folder";
-
-    var presetBtn = document.createElement("button");
-    presetBtn.type = "button";
-    presetBtn.className = "big-folder-card big-folder-tile";
-    presetBtn.dataset.shortcutId = presetApp.id;
-    presetBtn.setAttribute("aria-label", presetApp.title);
-    presetBtn.title = presetApp.title;
-    presetBtn.innerHTML = getSvg(presetApp.icon);
-
-    var openPreset = function () {
-      if (window.AppWindow) {
-        window.AppWindow.open(presetApp, presetBtn);
-      }
+    var projectsApp = byId["projects"] || {
+      id: "projects",
+      title: "Projects",
+      icon: "projects.svg",
+      entry: "apps/projects/index.html"
     };
-    presetBtn.addEventListener("click", openPreset);
-
-    var presetTitle = document.createElement("span");
-    presetTitle.className = "big-folder-title";
-    presetTitle.textContent = presetApp.title;
-    presetTitle.addEventListener("click", openPreset);
-
-    presetWrap.appendChild(presetBtn);
-    presetWrap.appendChild(presetTitle);
-    grid.appendChild(presetWrap);
+    renderBigAppTile(projectsApp);
 
     FOLDERS.forEach(function (folder) {
       var apps = folder.ids.map(function (id) { return byId[id]; }).filter(Boolean);
       if (apps.length === 0) return;
 
       var wrap = document.createElement("div");
-      wrap.className = "big-folder";
+      wrap.className = folder.wide ? "big-folder big-folder-wide" : "big-folder";
 
       var card = document.createElement("div");
-      card.className = "big-folder-card";
+      card.className = folder.wide ? "big-folder-card big-folder-card-wide" : "big-folder-card";
       card.dataset.shortcutId = folder.id || folder.title;
       card.setAttribute("role", "button");
       card.setAttribute("tabindex", "0");
       card.setAttribute("aria-label", "Folder " + folder.title);
 
       var folderGrid = document.createElement("div");
-      folderGrid.className = "big-folder-grid";
+      folderGrid.className = folder.wide ? "big-folder-grid big-folder-grid-wide" : "big-folder-grid";
 
-      apps.slice(0, 4).forEach(function (app) {
+      var maxPreview = folder.wide ? 6 : 4;
+      apps.slice(0, maxPreview).forEach(function (app) {
         var tile = document.createElement("div");
         tile.className = "big-folder-app";
         tile.dataset.appId = app.id;
@@ -143,12 +154,7 @@
         iconWrap.className = "big-folder-app-icon";
         iconWrap.innerHTML = getSvg(app.icon);
 
-        var labelEl = document.createElement("span");
-        labelEl.className = "big-folder-app-label";
-        labelEl.textContent = app.title;
-
         tile.appendChild(iconWrap);
-        tile.appendChild(labelEl);
 
         folderGrid.appendChild(tile);
       });
@@ -345,7 +351,9 @@
             description: baseApp.description
           };
 
-          var presetBtn = document.querySelector('#desktop-shortcuts [data-shortcut-id="preset"]');
+          var presetBtn = document.querySelector('#desktop-shortcuts [data-shortcut-id="preset"]')
+            || document.querySelector('#desktop-shortcuts [data-app-id="preset"]')
+            || document.querySelector('#desktop-shortcuts [data-shortcut-id="folder-my-project"]');
           window.AppWindow.open(deepLinkApp, presetBtn);
           return;
         }
@@ -354,6 +362,7 @@
           var targetApp = window.AppRegistry.getById(appId);
           if (!targetApp) return;
           var triggerEl = document.querySelector('#desktop-shortcuts [data-shortcut-id="' + appId + '"]')
+            || document.querySelector('#desktop-shortcuts [data-app-id="' + appId + '"]')
             || document.querySelector('#dock [data-app-id="' + appId + '"]');
           window.AppWindow.open(targetApp, triggerEl);
         }

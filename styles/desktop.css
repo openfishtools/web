@@ -103,11 +103,11 @@ body[data-page="home"] .doodle {
 
 .desktop-shortcuts {
   width: 100%;
-  max-width: min(920px, 94vw);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: clamp(16px, 3vh, 26px) clamp(14px, 3.2vw, 28px);
+  max-width: min(740px, 92vw);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: center;
+  gap: clamp(14px, 2.2dvh, 22px) clamp(14px, 2.2vw, 22px);
 }
 
 .desktop-shortcuts.is-docked {
@@ -117,25 +117,37 @@ body[data-page="home"] .doodle {
 
 /* HyperOS / iPadOS Style Big Folder */
 .big-folder {
-  width: clamp(148px, min(19vw, 24dvh), 196px);
+  width: 100%;
+  max-width: clamp(134px, min(17vw, 20dvh), 166px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(8px, 1.2vh, 10px);
+  gap: clamp(6px, 1vh, 9px);
   user-select: none;
+}
+
+.big-folder-wide {
+  grid-column: 2 / span 2;
+  max-width: 100%;
 }
 
 .big-folder-card {
   width: 100%;
   aspect-ratio: 1;
-  padding: clamp(10px, 2.2vw, 14px);
+  padding: clamp(10px, 2vw, 13px);
   box-sizing: border-box;
-  border-radius: clamp(24px, 5vw, 30px);
+  border-radius: clamp(22px, 4.5vw, 28px);
   background: var(--md-sys-color-surface-container);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
   cursor: pointer;
   transition: transform 180ms var(--md-sys-easing-emphasized),
     box-shadow 180ms var(--md-sys-easing-emphasized);
+}
+
+.big-folder-card-wide {
+  aspect-ratio: auto;
+  height: clamp(114px, min(15vw, 17dvh), 146px);
+  padding: clamp(9px, 1.6vw, 12px) clamp(11px, 2vw, 15px);
 }
 
 .big-folder-card:hover {
@@ -198,14 +210,37 @@ body[data-page="home"] .doodle {
   transform: rotate(5deg) translateY(-2px);
 }
 
+/* Projects Stacked Layers Icon */
+.projects-stack-icon .projects-layer {
+  transition: transform 240ms var(--md-sys-easing-emphasized);
+}
+
+.big-folder-tile:hover .projects-layer-back {
+  transform: translateY(-4px);
+}
+
+.big-folder-tile:hover .projects-layer-mid {
+  transform: translateY(-2px);
+}
+
+.big-folder-tile:hover .projects-layer-front {
+  transform: translateY(1px);
+}
+
 .big-folder-grid {
   width: 100%;
   height: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: clamp(6px, 1.4vw, 10px);
+  gap: clamp(8px, 1.8vw, 12px);
   pointer-events: none;
+}
+
+.big-folder-grid-wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(7px, 1.4vw, 10px) clamp(8px, 1.6vw, 12px);
 }
 
 .big-folder-app {
@@ -294,23 +329,61 @@ body[data-page="home"] .doodle {
 }
 
 @media (max-width: 899px) {
+  .home-container {
+    padding-top: clamp(10px, 2dvh, 24px);
+    gap: clamp(8px, 1.6dvh, 18px);
+  }
+
   .clock-widget {
-    padding: clamp(4px, 1dvh, 12px) 8px;
-    gap: clamp(6px, 1.2dvh, 14px);
+    padding: clamp(2px, 0.7dvh, 8px) 8px;
+    gap: clamp(4px, 0.9dvh, 10px);
   }
 
   .clock-time {
-    font-size: clamp(2.8rem, min(15vw, 8.8dvh), 5.6rem);
+    font-size: clamp(2.5rem, min(14vw, 7.4dvh), 4.8rem);
   }
 
   .desktop-shortcuts {
-    max-width: min(440px, 94vw);
-    gap: clamp(12px, 2.2dvh, 22px) clamp(12px, 3vw, 24px);
+    max-width: min(352px, 90vw);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(10px, 1.6dvh, 16px) clamp(12px, 3vw, 18px);
   }
 
   .big-folder {
-    width: clamp(112px, min(39vw, 19.5dvh), 184px);
-    gap: clamp(6px, 1dvh, 10px);
+    max-width: clamp(106px, min(40vw, 16.5dvh), 164px);
+    gap: clamp(4px, 0.8dvh, 7px);
+  }
+
+  .big-folder-wide {
+    grid-column: 1 / -1;
+    max-width: 100%;
+  }
+
+  .big-folder-card:not(.big-folder-tile) {
+    padding: clamp(8px, 2vw, 11px);
+    border-radius: clamp(20px, 4.8vw, 26px);
+  }
+
+  .big-folder-tile {
+    padding: 0;
+    border-radius: clamp(20px, 4.8vw, 26px);
+  }
+
+  .big-folder-card-wide {
+    height: clamp(102px, 14.5dvh, 138px);
+    padding: clamp(8px, 1.8vw, 11px) clamp(10px, 2.5vw, 14px);
+  }
+
+  .big-folder-grid {
+    gap: clamp(5px, 1.3vw, 8px);
+  }
+
+  .big-folder-grid-wide {
+    gap: clamp(4px, 1vw, 7px) clamp(7px, 2vw, 12px);
+  }
+
+  .big-folder-title {
+    font-size: clamp(0.74rem, 2.1vw, 0.84rem);
   }
 }
 
@@ -322,11 +395,15 @@ body[data-page="home"] .doodle {
 
 @media (max-height: 620px) {
   .clock-time {
-    font-size: clamp(2.5rem, 9.5dvh, 3.8rem);
+    font-size: clamp(2.1rem, 7.5dvh, 3.2rem);
   }
 
   .big-folder {
-    width: clamp(106px, min(36vw, 18.5dvh), 168px);
+    max-width: clamp(92px, min(35vw, 15dvh), 140px);
+  }
+
+  .big-folder-card-wide {
+    height: clamp(88px, 13.5dvh, 118px);
   }
 }
 
@@ -342,11 +419,13 @@ body[data-page="home"] .doodle {
     transition: none;
   }
 
-  .preset-fan-icon .preset-card {
+  .preset-fan-icon .preset-card,
+  .projects-stack-icon .projects-layer {
     transition: none;
   }
 
-  .big-folder-tile:hover .preset-card {
+  .big-folder-tile:hover .preset-card,
+  .big-folder-tile:hover .projects-layer {
     transform: none;
   }
 }

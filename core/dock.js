@@ -774,17 +774,14 @@
       dock.innerHTML = "";
       var dockButtons = [];
 
-      var presetApp = byId["preset"] || {
-        id: "preset",
-        title: "Preset",
-        icon: "preset.svg",
-        entry: "apps/preset/index.html"
-      };
-
-      var presetBtn = createDockItemButton(presetApp);
-      presetBtn.dataset.shortcutId = presetApp.id;
-      dock.appendChild(presetBtn);
-      dockButtons.push(presetBtn);
+      ["preset", "projects"].forEach(function (standaloneId) {
+        var standaloneApp = byId[standaloneId];
+        if (!standaloneApp) return;
+        var standaloneBtn = createDockItemButton(standaloneApp);
+        standaloneBtn.dataset.shortcutId = standaloneApp.id;
+        dock.appendChild(standaloneBtn);
+        dockButtons.push(standaloneBtn);
+      });
 
       folders.forEach(function (folder) {
         var apps = folder.ids.map(function (id) { return byId[id]; }).filter(Boolean);
