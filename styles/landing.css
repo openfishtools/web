@@ -222,7 +222,7 @@ body.has-overlay .hero {
 
 /* Quick Tools Widget */
 .quick-tools {
-  width: min(560px, 100%);
+  width: min(820px, 100%);
   margin-top: 1.4rem;
   display: flex;
   flex-direction: column;
@@ -244,7 +244,7 @@ body.has-overlay .hero {
 .quick-tools-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -269,6 +269,7 @@ body.has-overlay .hero {
 
 .quick-tool-card:nth-child(1) { animation-delay: 460ms; }
 .quick-tool-card:nth-child(2) { animation-delay: 520ms; }
+.quick-tool-card:nth-child(3) { animation-delay: 580ms; }
 
 .quick-tool-card:hover {
   background: var(--hover-soft);
@@ -336,7 +337,7 @@ body.has-overlay .hero {
   opacity: 1;
 }
 
-@media (max-width: 559px) {
+@media (max-width: 767px) {
   .quick-tools-grid {
     grid-template-columns: 1fr;
   }

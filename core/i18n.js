@@ -45,6 +45,7 @@
     "Untuk mengganti media proyek XML Alight Motion": "Replace media inside Alight Motion XML projects",
     "Pemutar video ala QuickTime untuk multi link & preset": "QuickTime-style video player for links & presets",
     "Alat Cepat": "Quick Tools",
+    "Kumpulan preset editing AE & AM": "AE & AM editing preset collection",
     "Bypass upload TikTok agar tidak terkompresi": "Bypass TikTok Upload to prevent compression",
     "Cek FPS, resolusi & metrik video": "Check video FPS, resolution & metrics",
     "Klik untuk ganti WIB / WITA / WIT": "Click to switch WIB / WITA / WIT",
