@@ -7,6 +7,7 @@
 
   **Browser-based desktop interface for editing presets, the SlowTime video player, and media utilities.**
 
+  [![Version: 2.0.0](https://img.shields.io/badge/version-2.0.0-9DFF00.svg)](package.json)
   [![Site: cutefish.my.id](https://img.shields.io/badge/site-cutefish.my.id-9DFF00.svg)](https://cutefish.my.id)
   [![Category: Web App](https://img.shields.io/badge/category-Web_App-blue.svg)](#)
   [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](LICENSE)

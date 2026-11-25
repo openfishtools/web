@@ -1,5 +1,8 @@
 {
   "name": "cutefish-web",
+  "version": "2.0.0",
+  "description": "Browser-based desktop interface for editing presets, the SlowTime video player, and media utilities.",
+  "license": "CC-BY-NC-ND-4.0",
   "private": true,
   "type": "module",
   "scripts": {
