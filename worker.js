@@ -38,9 +38,16 @@ export default {
             const cleanUrl = new URL(`/${presetRouteMatch[1]}${url.search}`, url);
             return Response.redirect(cleanUrl.toString(), 302);
           }
-          const homeUrl = new URL("/home.html", url);
+          const homeUrl = new URL("/home", url);
           homeUrl.search = url.search;
-          return env.ASSETS.fetch(new Request(homeUrl.toString(), request));
+          let res = await env.ASSETS.fetch(new Request(homeUrl.toString(), request));
+          if (res.status >= 300 && res.status < 400) {
+            const loc = res.headers.get("location");
+            if (loc) {
+              res = await env.ASSETS.fetch(new Request(new URL(loc, url).toString(), request));
+            }
+          }
+          return res;
         }
       }
       return env.ASSETS.fetch(request);
