@@ -302,47 +302,68 @@
     return "";
   }
 
+  function getDeepLinkAppId() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var appId = (params.get("app") || "").trim();
+      if (/^[a-z0-9-]+$/i.test(appId)) return appId;
+    } catch (_) {}
+    return "";
+  }
+
   function hasDeepLink() {
-    return Boolean(getDeepLinkPresetId());
+    return Boolean(getDeepLinkPresetId() || getDeepLinkAppId());
   }
 
   function launchDeepLinkIfNeeded() {
     var presetId = getDeepLinkPresetId();
-    if (!presetId) return;
+    var appId = presetId ? "" : getDeepLinkAppId();
+    if (!presetId && !appId) return;
 
-    var openTargetPreset = function () {
+    var openTargetApp = function () {
       var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       var waitMs = reducedMotion ? 120 : 760;
 
       window.setTimeout(function () {
         if (!window.AppWindow || typeof window.AppWindow.open !== "function") return;
 
-        var baseApp = (window.AppRegistry && typeof window.AppRegistry.getById === "function" && window.AppRegistry.getById("preset")) || {
-          id: "preset",
-          title: "Preset",
-          icon: "preset.svg",
-          entry: "apps/preset/index.html"
-        };
+        if (presetId) {
+          var baseApp = (window.AppRegistry && typeof window.AppRegistry.getById === "function" && window.AppRegistry.getById("preset")) || {
+            id: "preset",
+            title: "Preset",
+            icon: "preset.svg",
+            entry: "apps/preset/index.html"
+          };
 
-        var entry = baseApp.entry || "apps/preset/index.html";
-        var sep = entry.indexOf("?") === -1 ? "?" : "&";
-        var deepLinkApp = {
-          id: baseApp.id,
-          title: baseApp.title,
-          icon: baseApp.icon,
-          entry: entry + sep + "preset=" + encodeURIComponent(presetId),
-          description: baseApp.description
-        };
+          var entry = baseApp.entry || "apps/preset/index.html";
+          var sep = entry.indexOf("?") === -1 ? "?" : "&";
+          var deepLinkApp = {
+            id: baseApp.id,
+            title: baseApp.title,
+            icon: baseApp.icon,
+            entry: entry + sep + "preset=" + encodeURIComponent(presetId),
+            description: baseApp.description
+          };
 
-        var presetBtn = document.querySelector('#desktop-shortcuts [data-shortcut-id="preset"]');
-        window.AppWindow.open(deepLinkApp, presetBtn);
+          var presetBtn = document.querySelector('#desktop-shortcuts [data-shortcut-id="preset"]');
+          window.AppWindow.open(deepLinkApp, presetBtn);
+          return;
+        }
+
+        if (appId && window.AppRegistry && typeof window.AppRegistry.getById === "function") {
+          var targetApp = window.AppRegistry.getById(appId);
+          if (!targetApp) return;
+          var triggerEl = document.querySelector('#desktop-shortcuts [data-shortcut-id="' + appId + '"]')
+            || document.querySelector('#dock [data-app-id="' + appId + '"]');
+          window.AppWindow.open(targetApp, triggerEl);
+        }
       }, waitMs);
     };
 
     if (document.readyState === "complete") {
-      openTargetPreset();
+      openTargetApp();
     } else {
-      window.addEventListener("load", openTargetPreset, { once: true });
+      window.addEventListener("load", openTargetApp, { once: true });
     }
   }
 
@@ -351,6 +372,7 @@
     setShortcutsDocked: setShortcutsDocked,
     collectShortcutCards: collectShortcutCards,
     getDeepLinkPresetId: getDeepLinkPresetId,
+    getDeepLinkAppId: getDeepLinkAppId,
     hasDeepLink: hasDeepLink
   };
 
