@@ -288,10 +288,70 @@
     return map;
   }
 
+  function getDeepLinkPresetId() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var qp = (params.get("preset") || "").trim();
+      if (/^\d+$/.test(qp)) return qp;
+    } catch (_) {}
+
+    var pathMatch = (window.location.pathname || "").match(/^\/(\d+)\/?$/);
+    if (pathMatch && pathMatch[1]) {
+      return pathMatch[1];
+    }
+    return "";
+  }
+
+  function hasDeepLink() {
+    return Boolean(getDeepLinkPresetId());
+  }
+
+  function launchDeepLinkIfNeeded() {
+    var presetId = getDeepLinkPresetId();
+    if (!presetId) return;
+
+    var openTargetPreset = function () {
+      var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var waitMs = reducedMotion ? 120 : 760;
+
+      window.setTimeout(function () {
+        if (!window.AppWindow || typeof window.AppWindow.open !== "function") return;
+
+        var baseApp = (window.AppRegistry && typeof window.AppRegistry.getById === "function" && window.AppRegistry.getById("preset")) || {
+          id: "preset",
+          title: "Preset",
+          icon: "preset.svg",
+          entry: "apps/preset/index.html"
+        };
+
+        var entry = baseApp.entry || "apps/preset/index.html";
+        var sep = entry.indexOf("?") === -1 ? "?" : "&";
+        var deepLinkApp = {
+          id: baseApp.id,
+          title: baseApp.title,
+          icon: baseApp.icon,
+          entry: entry + sep + "preset=" + encodeURIComponent(presetId),
+          description: baseApp.description
+        };
+
+        var presetBtn = document.querySelector('#desktop-shortcuts [data-shortcut-id="preset"]');
+        window.AppWindow.open(deepLinkApp, presetBtn);
+      }, waitMs);
+    };
+
+    if (document.readyState === "complete") {
+      openTargetPreset();
+    } else {
+      window.addEventListener("load", openTargetPreset, { once: true });
+    }
+  }
+
   window.DesktopShell = {
     setClockCentered: setClockCentered,
     setShortcutsDocked: setShortcutsDocked,
-    collectShortcutCards: collectShortcutCards
+    collectShortcutCards: collectShortcutCards,
+    getDeepLinkPresetId: getDeepLinkPresetId,
+    hasDeepLink: hasDeepLink
   };
 
   // Boot Desktop Shell
@@ -300,4 +360,5 @@
     window.DesktopDock.init();
   }
   renderDesktopShortcuts();
+  launchDeepLinkIfNeeded();
 })();

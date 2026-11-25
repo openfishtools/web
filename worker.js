@@ -31,6 +31,18 @@ export default {
     }
 
     if (env && env.ASSETS) {
+      if (request.method === "GET" || request.method === "HEAD") {
+        const presetRouteMatch = url.pathname.match(/^\/(\d+)(\/)?$/);
+        if (presetRouteMatch) {
+          if (presetRouteMatch[2]) {
+            const cleanUrl = new URL(`/${presetRouteMatch[1]}${url.search}`, url);
+            return Response.redirect(cleanUrl.toString(), 302);
+          }
+          const homeUrl = new URL("/home.html", url);
+          homeUrl.search = url.search;
+          return env.ASSETS.fetch(new Request(homeUrl.toString(), request));
+        }
+      }
       return env.ASSETS.fetch(request);
     }
 

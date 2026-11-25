@@ -343,7 +343,12 @@
   });
 
   window.addEventListener("load", function () {
-    if (!hasSeenTutorial()) {
+    var isDeepLink = Boolean(
+      window.DesktopShell &&
+      typeof window.DesktopShell.hasDeepLink === "function" &&
+      window.DesktopShell.hasDeepLink()
+    );
+    if (!hasSeenTutorial() && !isDeepLink) {
       window.setTimeout(function () {
         startTutorial();
       }, 780);

@@ -33,6 +33,62 @@
   var nextTikwmSlotAt = 0;
   var renderToken = 0;
   var thumbObserver = null;
+  var pendingHighlightPresetId = (function () {
+    try {
+      var raw = (new URLSearchParams(window.location.search).get("preset") || "").trim();
+      return /^\d+$/.test(raw) ? String(parseInt(raw, 10)) : "";
+    } catch (_) {
+      return "";
+    }
+  })();
+  var activeHighlightCard = null;
+  var highlightClearTimer = null;
+
+  function clearPresetHighlight() {
+    if (highlightClearTimer) {
+      clearTimeout(highlightClearTimer);
+      highlightClearTimer = null;
+    }
+    if (activeHighlightCard) {
+      activeHighlightCard.classList.remove("is-highlighted");
+      activeHighlightCard = null;
+    }
+  }
+
+  function highlightPresetCard(card) {
+    if (!card) return;
+    clearPresetHighlight();
+    activeHighlightCard = card;
+    card.classList.add("is-highlighted");
+
+    var img = card.querySelector(".preset-thumb-img");
+    if (img && img.dataset.mediaUrl) {
+      img.dataset.inView = "1";
+      queueThumbLoad(img.dataset.mediaUrl, img);
+    }
+
+    var scrollToCard = function (behavior) {
+      if (!document.body.contains(card)) return;
+      try {
+        card.scrollIntoView({ behavior: behavior, block: "center", inline: "nearest" });
+      } catch (_) {
+        card.scrollIntoView(true);
+      }
+    };
+
+    requestAnimationFrame(function () {
+      scrollToCard("smooth");
+      try {
+        card.focus({ preventScroll: true });
+      } catch (_) {}
+      // Re-align after content-visibility intrinsic heights settle
+      setTimeout(function () {
+        scrollToCard("smooth");
+      }, 360);
+    });
+
+    highlightClearTimer = setTimeout(clearPresetHighlight, 8000);
+  }
 
   function showError(msg) {
     errorText.textContent = msg;
@@ -316,6 +372,9 @@
   function buildPresetCard(preset) {
     var card = document.createElement("article");
     card.className = "preset-video-card";
+    if (preset.presetId !== null && preset.presetId !== undefined && preset.presetId !== "") {
+      card.dataset.presetId = String(preset.presetId);
+    }
     card.setAttribute("tabindex", "0");
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", "Putar " + preset.name + " di SlowTime");
@@ -478,18 +537,35 @@
 
     var BATCH_SIZE = 8;
     var offset = 0;
+    var targetHighlightId = pendingHighlightPresetId;
+    var highlightedInThisRender = false;
 
     function appendBatch() {
       if (myToken !== renderToken) return;
       var frag = document.createDocumentFragment();
       var end = Math.min(items.length, offset + BATCH_SIZE);
+      var targetCard = null;
       for (var i = offset; i < end; i++) {
-        frag.appendChild(buildPresetCard(items[i]));
+        var cardEl = buildPresetCard(items[i]);
+        if (targetHighlightId && !highlightedInThisRender && cardEl.dataset.presetId === targetHighlightId) {
+          targetCard = cardEl;
+        }
+        frag.appendChild(cardEl);
       }
       presetGrid.appendChild(frag);
       offset = end;
+
+      if (targetCard) {
+        highlightedInThisRender = true;
+        pendingHighlightPresetId = "";
+        highlightPresetCard(targetCard);
+      }
+
       if (offset < items.length) {
         requestAnimationFrame(appendBatch);
+      } else if (targetHighlightId && !highlightedInThisRender && pendingHighlightPresetId === targetHighlightId) {
+        pendingHighlightPresetId = "";
+        showError("Preset #" + targetHighlightId + " tidak ditemukan.");
       }
     }
 
@@ -556,6 +632,12 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !variantBackdrop.classList.contains("is-hidden")) {
       closeVariantSheet();
+    }
+  });
+
+  presetGrid.addEventListener("pointerdown", function () {
+    if (activeHighlightCard) {
+      clearPresetHighlight();
     }
   });
 
