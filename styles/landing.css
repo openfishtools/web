@@ -220,6 +220,128 @@ body.has-overlay .hero {
 
 .btn-outlined:hover { background: var(--tonal-hover); }
 
+/* Quick Tools Widget */
+.quick-tools {
+  width: min(560px, 100%);
+  margin-top: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.quick-tools-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.78;
+  animation: enter 700ms var(--md-sys-easing-emphasized) 420ms backwards;
+}
+
+.quick-tools-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.quick-tool-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 0.95rem;
+  border: none;
+  outline: none;
+  border-radius: 20px;
+  text-decoration: none;
+  text-align: left;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  animation: enter 700ms var(--md-sys-easing-emphasized) backwards;
+  transition: transform 200ms var(--md-sys-easing-emphasized),
+              background 180ms var(--md-sys-easing-emphasized);
+}
+
+.quick-tool-card:nth-child(1) { animation-delay: 460ms; }
+.quick-tool-card:nth-child(2) { animation-delay: 520ms; }
+
+.quick-tool-card:hover {
+  background: var(--hover-soft);
+  transform: translateY(-2px);
+}
+
+.quick-tool-card:active {
+  transform: scale(0.98);
+}
+
+.quick-tool-card:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+.quick-tool-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
+.quick-tool-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.quick-tool-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.quick-tool-title {
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--md-sys-color-on-surface);
+}
+
+.quick-tool-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.88;
+}
+
+.quick-tool-arrow {
+  flex: none;
+  font-size: 1.15rem;
+  color: var(--md-sys-color-primary);
+  opacity: 0.75;
+  transition: transform 180ms var(--md-sys-easing-emphasized),
+              opacity 180ms var(--md-sys-easing-emphasized);
+}
+
+.quick-tool-card:hover .quick-tool-arrow {
+  transform: translate(2px, -2px);
+  opacity: 1;
+}
+
+@media (max-width: 559px) {
+  .quick-tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .scrim {
   position: fixed;
   inset: 0;
@@ -507,11 +629,15 @@ body.has-overlay .hero {
 
 @media (prefers-reduced-motion: reduce) {
   .greeting-word,
-  .btn { transition: none; }
+  .btn,
+  .quick-tool-card,
+  .quick-tool-arrow { transition: none; }
   .greeting,
   .title,
   .prompt,
   .actions .btn,
+  .quick-tools-label,
+  .quick-tool-card,
   .ch,
   .split,
   .squiggle-svg path.draw { animation: none; }
