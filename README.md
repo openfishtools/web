@@ -9,6 +9,7 @@
 
   [![Site: cutefish.my.id](https://img.shields.io/badge/site-cutefish.my.id-9DFF00.svg)](https://cutefish.my.id)
   [![Category: Web App](https://img.shields.io/badge/category-Web_App-blue.svg)](#)
+  [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](LICENSE)
 
 </div>
 
@@ -91,6 +92,19 @@ Repositori web utama untuk **[cutefish.my.id](https://cutefish.my.id)** yang dib
 ### Panduan Pengembangan
 Aturan penulisan kode, komponen UI, dan penambahan aplikasi tersedia di [`AGENTS.md`](AGENTS.md).
 
+### Lisensi
+Proyek ini dilisensikan di bawah [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](LICENSE).
+
+#### Ringkasan
+| B/T | Keterangan |
+|---|---|
+| Boleh | Menyalin dan membagikan ulang materi dalam media atau format apa pun untuk keperluan non-komersial. |
+| Wajib | Mencantumkan kredit dan tautan ke [OpenFishTools](https://github.com/openfishtools) / [`cutefish.my.id`](https://cutefish.my.id). |
+| Tidak | Menggunakan untuk kepentingan komersial tanpa izin tertulis. |
+| Tidak | Mendistribusikan hasil modifikasi atau karya turunan (*NoDerivatives*). |
+
+Teks yang mengikat secara hukum adalah file [`LICENSE`](LICENSE); ringkasan ini hanya sebagai penjelasan singkat.
+
 ---
 
 <a name="english"></a>
@@ -167,3 +181,16 @@ Main website repository for **[cutefish.my.id](https://cutefish.my.id)**, built 
 
 ### Development Guide
 Architecture conventions, UI rules, and instructions for adding apps are documented in [`AGENTS.md`](AGENTS.md).
+
+### License
+This project is licensed under the [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](LICENSE).
+
+#### Summary
+| Y/N | Description |
+|---|---|
+| Yes | Copy and redistribute the material in any medium or format for non-commercial purposes. |
+| Required | Give appropriate credit and link back to [OpenFishTools](https://github.com/openfishtools) / [`cutefish.my.id`](https://cutefish.my.id). |
+| No | Use the material for commercial purposes without prior permission. |
+| No | Distribute modified or adapted versions (*NoDerivatives*). |
+
+The legally binding text is the [`LICENSE`](LICENSE) file; this summary is for informational purposes only.
