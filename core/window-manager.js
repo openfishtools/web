@@ -470,8 +470,10 @@
             var top1 = Math.round(Math.max(margin, (availH - fitted1.height) / 2));
             targets.set(it0, { left: left1, top: top1, width: fitted1.width, height: fitted1.height, zone: 0 });
           } else {
-            var width = Math.min(440, availW - 48);
-            var height = Math.min(680, availH - 32);
+            var prefW = (it0.app && it0.app.defaultSize && it0.app.defaultSize.width) || 440;
+            var prefH = (it0.app && it0.app.defaultSize && it0.app.defaultSize.height) || 680;
+            var width = Math.min(prefW, availW - 48);
+            var height = Math.min(prefH, availH - 32);
             var left = Math.round((availW - width) / 2);
             var top = Math.round(Math.max(16, (availH - height) / 2));
             targets.set(it0, { left: left, top: top, width: width, height: height, zone: 0 });

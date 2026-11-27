@@ -28,16 +28,55 @@ body[data-page="home"] .doodle {
   z-index: 0;
 }
 
-.wave-base {
-  fill: var(--md-sys-color-surface-container);
+.wp-sky-top {
+  stop-color: #f9fbe9;
 }
 
-.wave-a {
-  fill: color-mix(in srgb, var(--md-sys-color-primary) 24%, var(--md-sys-color-surface));
+.wp-sky-bottom {
+  stop-color: #e7f0c4;
 }
 
-.wave-b {
-  fill: color-mix(in srgb, var(--md-sys-color-primary) 12%, var(--md-sys-color-surface));
+.wp-sun {
+  fill: #fff7c2;
+}
+
+.wp-mt-far {
+  fill: #d8e8a4;
+}
+
+.wp-mt-mid {
+  fill: #c3dc82;
+}
+
+.wp-mt-near {
+  fill: #a8cb62;
+}
+
+@media (prefers-color-scheme: dark) {
+  .wp-sky-top {
+    stop-color: #364728;
+  }
+
+  .wp-sky-bottom {
+    stop-color: #26331c;
+  }
+
+  .wp-sun {
+    fill: var(--butter-200);
+    opacity: 0.78;
+  }
+
+  .wp-mt-far {
+    fill: #455c2e;
+  }
+
+  .wp-mt-mid {
+    fill: #344722;
+  }
+
+  .wp-mt-near {
+    fill: #233117;
+  }
 }
 
 .home-container {

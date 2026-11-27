@@ -20,7 +20,7 @@
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
   <link rel="stylesheet" href="styles/tokens.css?v=3">
   <link rel="stylesheet" href="styles/base.css">
-  <link rel="stylesheet" href="styles/desktop.css?v=6">
+  <link rel="stylesheet" href="styles/desktop.css?v=8">
   <link rel="stylesheet" href="styles/dock.css?v=28">
   <link rel="stylesheet" href="styles/folder-modal.css?v=2">
   <link rel="stylesheet" href="styles/window-manager.css?v=18">
@@ -28,12 +28,22 @@
 </head>
 
 <body data-page="home">
-  <svg class="doodle" aria-hidden="true" viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice">
-    <rect class="wave-base" width="800" height="1200" />
+  <svg class="doodle" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="wp-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" class="wp-sky-top" />
+        <stop offset="100%" class="wp-sky-bottom" />
+      </linearGradient>
+    </defs>
 
-    <path class="wave-a" d="M0 0 H 430 C 470 180, 250 300, 280 520 C 310 740, 520 860, 430 1200 H 0 Z" />
-
-    <path class="wave-b" d="M800 0 V 1200 H 500 C 540 980, 680 900, 660 700 C 640 500, 420 380, 470 0 Z" />
+    <rect width="1440" height="900" fill="url(#wp-sky)" />
+    <circle class="wp-sun" cx="1110" cy="215" r="84" />
+    <path class="wp-mt-far"
+      d="M0 570 C 170 470, 310 495, 490 420 C 660 350, 810 445, 1020 390 C 1190 345, 1320 400, 1440 365 L 1440 900 L 0 900 Z" />
+    <path class="wp-mt-mid"
+      d="M0 640 C 210 545, 390 610, 620 520 C 830 438, 1040 535, 1260 470 C 1345 445, 1400 465, 1440 480 L 1440 900 L 0 900 Z" />
+    <path class="wp-mt-near"
+      d="M0 735 C 240 655, 470 725, 760 650 C 1010 585, 1220 645, 1440 605 L 1440 900 L 0 900 Z" />
   </svg>
   <main class="home home-container" id="desktop-home">
     <button type="button" class="tutorial-replay-btn" id="tutorial-replay-btn" aria-label="Putar ulang tutorial" title="Putar ulang tutorial">
@@ -69,9 +79,9 @@
 
   <script src="assets/icons-data.js?v=9"></script>
   <script src="core/i18n.js?v=5" defer></script>
-  <script src="core/registry.js?v=23" defer></script>
+  <script src="core/registry.js?v=24" defer></script>
   <script src="core/folder-modal.js?v=1" defer></script>
-  <script src="core/window-manager.js?v=23" defer></script>
+  <script src="core/window-manager.js?v=24" defer></script>
   <script src="core/dock.js?v=30" defer></script>
   <script src="core/desktop.js?v=24" defer></script>
   <script src="core/tutorial.js?v=4" defer></script>
