@@ -2,6 +2,7 @@ import { onRequestGet as handlePresetsGet } from "./functions/api/presets.js";
 import { onRequestGet as handleTikTokResolveGet } from "./functions/api/tiktok-resolve.js";
 import { onRequestGet as handleTikTokFpsGet } from "./functions/api/tiktok-fps.js";
 import { onRequestGet as handleGitHubRepoGet } from "./functions/api/github-repo.js";
+import { onRequestPost as handlePregenPost } from "./functions/api/pregen.js";
 
 function makeContext(request, env, ctx) {
   return {
@@ -32,6 +33,10 @@ export default {
       if (url.pathname === "/api/github-repo") {
         return handleGitHubRepoGet(makeContext(request, env, ctx));
       }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/pregen") {
+      return handlePregenPost(makeContext(request, env, ctx));
     }
 
     if (env && env.ASSETS) {
