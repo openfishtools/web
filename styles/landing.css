@@ -68,7 +68,7 @@
 }
 
 body.has-overlay {
-  background: #000;
+  background: var(--overlay-backdrop);
 }
 
 body.has-overlay .hero {
@@ -347,7 +347,7 @@ body.has-overlay .hero {
   position: fixed;
   inset: 0;
   z-index: 2;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--sheet-scrim);
   animation: scrim-in 200ms var(--md-sys-easing-emphasized) both;
 }
 

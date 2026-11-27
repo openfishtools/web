@@ -1,6 +1,6 @@
 /* Desktop Shell, Doodle Background, Watch Clock, & Desktop Big Folders (home.html) */
 body[data-page="home"] {
-  background: #000;
+  background: var(--md-sys-color-surface);
 }
 
 body[data-page="home"] .doodle {
@@ -138,7 +138,7 @@ body[data-page="home"] .doodle {
   box-sizing: border-box;
   border-radius: clamp(22px, 4.5vw, 28px);
   background: var(--md-sys-color-surface-container);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   transition: transform 180ms var(--md-sys-easing-emphasized),
     box-shadow 180ms var(--md-sys-easing-emphasized);
@@ -152,7 +152,7 @@ body[data-page="home"] .doodle {
 
 .big-folder-card:hover {
   transform: scale(1.025);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-lg);
 }
 
 .big-folder-card:active {
@@ -269,7 +269,7 @@ body[data-page="home"] .doodle {
   border-radius: 22.5%;
   overflow: hidden;
   display: block;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-sm);
 }
 
 .big-folder-app-label {

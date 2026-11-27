@@ -15,7 +15,7 @@
   border-radius: 32px;
   background: var(--md-sys-color-surface-container);
   border: none;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-md);
   max-width: calc(100vw - 1.5rem);
   box-sizing: border-box;
   will-change: opacity, transform, width;
@@ -141,7 +141,7 @@
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   transition: opacity 140ms ease, transform 140ms ease;
   z-index: 1;
 }

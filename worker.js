@@ -1,6 +1,7 @@
 import { onRequestGet as handlePresetsGet } from "./functions/api/presets.js";
 import { onRequestGet as handleTikTokResolveGet } from "./functions/api/tiktok-resolve.js";
 import { onRequestGet as handleTikTokFpsGet } from "./functions/api/tiktok-fps.js";
+import { onRequestGet as handleGitHubRepoGet } from "./functions/api/github-repo.js";
 
 function makeContext(request, env, ctx) {
   return {
@@ -27,6 +28,9 @@ export default {
       }
       if (url.pathname === "/api/tiktok-fps") {
         return handleTikTokFpsGet(makeContext(request, env, ctx));
+      }
+      if (url.pathname === "/api/github-repo") {
+        return handleGitHubRepoGet(makeContext(request, env, ctx));
       }
     }
 

@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   z-index: 3;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--scrim-bg);
   will-change: opacity;
 }
 
@@ -28,7 +28,7 @@
   flex-direction: column;
   padding: 0.65rem 0.25rem;
   background: transparent;
-  color: #ffffff;
+  color: var(--scrim-on);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -53,7 +53,7 @@
   font-family: "Unbounded", system-ui, sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--scrim-on);
   text-align: center;
   letter-spacing: -0.02em;
 }
@@ -69,14 +69,14 @@
   height: 2rem;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: var(--scrim-btn-bg);
+  color: var(--scrim-on);
   cursor: pointer;
   transition: background 150ms ease, transform 150ms ease;
 }
 
 .folder-modal-close:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--scrim-btn-hover);
   transform: translateY(-50%) scale(1.08);
 }
 
@@ -94,7 +94,7 @@
   inset: 0;
   border-radius: 28px;
   background: var(--md-sys-color-surface-container);
-  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--shadow-lg);
   pointer-events: none;
   will-change: transform, border-radius;
   transform-origin: center center;
@@ -177,7 +177,7 @@
   height: 3.15rem;
   border-radius: 22.5%;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   will-change: transform, opacity;
   transform-origin: center center;
 }

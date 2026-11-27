@@ -1,8 +1,14 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="125" fill="#212a1a"/>
-  <rect x="104" y="112" width="304" height="288" rx="52" fill="#c7dc9c"/>
-  <rect x="104" y="196" width="304" height="26" fill="#212a1a"/>
-  <rect x="202" y="210" width="26" height="190" fill="#212a1a"/>
-  <circle cx="154" cy="154" r="15" fill="#212a1a"/>
-  <circle cx="198" cy="154" r="15" fill="#212a1a"/>
+  <style>
+    :root { --bg: #ebf2bf; --fg: #425f26; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #212a1a; --fg: #c7dc9c; } }
+    .bg { fill: var(--bg); }
+    .fg { fill: var(--fg); }
+  </style>
+  <rect width="512" height="512" rx="125" class="bg"/>
+  <rect x="104" y="112" width="304" height="288" rx="52" class="fg"/>
+  <rect x="104" y="196" width="304" height="26" class="bg"/>
+  <rect x="202" y="210" width="26" height="190" class="bg"/>
+  <circle cx="154" cy="154" r="15" class="bg"/>
+  <circle cx="198" cy="154" r="15" class="bg"/>
 </svg>

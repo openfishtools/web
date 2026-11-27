@@ -164,7 +164,7 @@
 .preset-pill {
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(18, 22, 15, 0.78);
+  background: var(--md-sys-color-surface-container);
   color: var(--md-sys-color-primary);
   font-size: 0.68rem;
   font-weight: 700;
@@ -247,7 +247,7 @@
   position: fixed;
   inset: 0;
   z-index: 30;
-  background: rgba(10, 14, 9, 0.58);
+  background: var(--sheet-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,7 +266,7 @@
   border-radius: 24px;
   background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 10px;

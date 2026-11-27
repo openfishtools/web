@@ -395,7 +395,7 @@ body {
   width: 100%;
   border-radius: 14px;
   overflow: hidden;
-  background: #000;
+  background: var(--md-sys-color-surface-container-high);
   max-height: 240px;
   display: flex;
   align-items: center;
@@ -1109,11 +1109,12 @@ input[type="number"].app-input::-webkit-inner-spin-button {
 }
 
 .app-notice-error {
-  background: rgba(217, 67, 67, 0.14);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
 .app-notice-error > .material-symbols-rounded {
-  color: #e57373;
+  color: var(--md-sys-color-on-error-container);
 }
 
 /* Color Picker Row */
@@ -1233,8 +1234,8 @@ input[type="number"].app-input::-webkit-inner-spin-button {
   gap: 4px;
   padding: 12px;
   text-align: center;
-  background: rgba(16, 20, 14, 0.62);
-  color: #edf0e8;
+  background: color-mix(in srgb, var(--md-sys-color-surface-container) 88%, transparent);
+  color: var(--md-sys-color-on-surface);
   pointer-events: none;
 }
 

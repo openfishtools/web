@@ -8,102 +8,73 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
-  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/tokens.css?v=3">
   <link rel="stylesheet" href="../../styles/app-ui.css">
-  <link rel="stylesheet" href="../../styles/custom/projects.css?v=4">
+  <link rel="stylesheet" href="../../styles/custom/projects.css?v=27">
   <script src="../../core/i18n.js?v=6" defer></script>
+  <script src="app.js?v=31" defer></script>
 </head>
 <body>
-  <main class="app-shell">
-    <section class="app-stack">
-      <div class="app-card app-stack-fill">
-        <div class="app-card-body projects-list" aria-label="Daftar Proyek OpenFishTools">
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/studio.svg?v=2" width="46" height="46" alt="FishTools Studio">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">FishTools Studio</span>
-                <span class="project-repo-pill">Studio</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools/Studio" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
-
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/cep.svg?v=2" width="46" height="46" alt="FishTools">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">FishTools</span>
-                <span class="project-repo-pill">CEP</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools/CEP" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
-
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/web-tools.svg?v=2" width="46" height="46" alt="Web Tools">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">Web Tools</span>
-                <span class="project-repo-pill">web-tools</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools/web-tools" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
-
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/web.svg?v=2" width="46" height="46" alt="Website">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">Website</span>
-                <span class="project-repo-pill">web</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools/web" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
-
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/studio.svg?v=2" width="46" height="46" alt="FishTools Standalone">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">FishTools Standalone</span>
-                <span class="project-repo-pill">Standalone</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools/Standalone" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
-
-          <article class="project-item">
-            <img class="project-icon" src="../../assets/icons/projects/openfishtools.svg?v=2" width="46" height="46" alt="OpenFishTools">
-            <div class="project-info">
-              <div class="project-title-row">
-                <span class="project-name">OpenFishTools</span>
-                <span class="project-repo-pill">GitHub Org</span>
-              </div>
-            </div>
-            <a class="app-btn app-btn-primary project-visit-btn" href="https://github.com/openfishtools" target="_blank" rel="noopener noreferrer">
-              <span>Visit</span>
-              <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_outward</span>
-            </a>
-          </article>
+  <main class="app-shell store-shell">
+    <!-- Store Home View -->
+    <div class="store-view" id="store-home">
+      <div class="store-toolbar">
+        <div class="app-input-wrap store-search-wrap">
+          <span class="material-symbols-rounded notranslate store-search-ico" translate="no" aria-hidden="true">search</span>
+          <input type="search" id="store-search" class="app-input store-search-input" placeholder="Cari aplikasi..." autocomplete="off">
         </div>
       </div>
-    </section>
+
+      <div class="app-notice is-hidden" id="store-loading">
+        <span class="m3-spinner" aria-hidden="true"></span>
+        <span id="store-loading-text">Memuat...</span>
+      </div>
+
+      <div class="app-notice app-notice-error is-hidden" id="store-error" role="alert">
+        <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">error</span>
+        <span id="store-error-text">-</span>
+      </div>
+
+      <div class="store-scroll" id="store-scroll">
+        <section class="store-banner-slot is-hidden" id="store-banner" aria-label="Banner"></section>
+        <section class="store-section" aria-label="Aplikasi">
+          <h2 class="store-section-title" id="store-list-title">Aplikasi</h2>
+          <div class="store-list" id="store-list"></div>
+          <div class="app-list-empty is-hidden" id="store-empty">Tidak ada aplikasi ditemukan.</div>
+        </section>
+      </div>
+    </div>
+
+    <!-- App Detail View -->
+    <div class="store-view store-detail-view is-hidden" id="store-detail" aria-live="polite">
+      <div class="store-detail-nav">
+        <button type="button" class="store-nav-pill" id="detail-back-btn">
+          <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">arrow_back</span>
+          <span id="detail-back-label">Kembali</span>
+        </button>
+      </div>
+
+      <div class="store-scroll" id="detail-scroll">
+        <div class="store-detail-body" id="detail-content"></div>
+      </div>
+    </div>
+
+    <!-- Multi-Asset Download Picker -->
+    <div class="store-sheet-backdrop is-hidden" id="asset-backdrop" role="dialog" aria-modal="true" aria-labelledby="asset-sheet-title">
+      <div class="store-sheet-panel" id="asset-panel">
+        <div class="store-sheet-grabber" aria-hidden="true"></div>
+        <div class="store-sheet-head">
+          <div class="store-sheet-heading">
+            <h3 class="store-sheet-title" id="asset-sheet-title">Pilih File</h3>
+            <p class="store-sheet-sub" id="asset-sheet-sub">-</p>
+          </div>
+          <button type="button" class="store-sheet-close" id="asset-close" aria-label="Tutup">
+            <span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">close</span>
+          </button>
+        </div>
+        <div class="store-asset-list" id="asset-list"></div>
+      </div>
+    </div>
   </main>
 </body>
 </html>
