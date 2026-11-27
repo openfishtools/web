@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Gen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/app-ui.css">
+  <script src="../../core/app-utils.js" defer></script>
+  <script src="../../core/i18n.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="app-stack">
+      <div class="app-card app-stack-fill">
+        <div class="app-card-body">
+          <div class="app-field" id="field-input">
+            <label class="app-label" for="input" id="input-label">Email Akun Alight Motion</label>
+            <input type="text" id="input" class="app-input" placeholder="Masukkan alamat email..." autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="app-notice app-notice-error is-hidden" id="error-banner" role="alert">
+            <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">error</span>
+            <span id="error-text">-</span>
+          </div>
+
+          <div class="app-notice is-hidden" id="info-banner" role="status">
+            <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">info</span>
+            <span id="info-text">-</span>
+          </div>
+
+          <div class="app-stats-grid is-hidden" id="receipt-grid">
+            <div class="app-stat-box" style="grid-column: span 3;">
+              <span class="app-stat-label">Akun Email</span>
+              <span class="app-stat-value" id="rcpt-email" style="font-size: 15px; font-family: inherit;">-</span>
+            </div>
+            <div class="app-stat-box" style="grid-column: span 3;">
+              <span class="app-stat-label">Order ID</span>
+              <span class="app-stat-value app-stat-highlight" id="rcpt-order-id" style="font-size: 15px; font-family: monospace;">-</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Status</span>
+              <span class="app-stat-value app-stat-highlight">AKTIF</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Paket</span>
+              <span class="app-stat-value" style="font-size: 13px;">Pro Annual</span>
+            </div>
+            <div class="app-stat-box">
+              <span class="app-stat-label">Berlaku Sampai</span>
+              <span class="app-stat-value" id="rcpt-expiry" style="font-size: 13px;">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-card-footer">
+          <button type="button" class="app-btn app-btn-primary" id="btn-submit">
+            <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no" id="btn-icon">arrow_forward</span>
+            <span id="btn-text">Lanjutkan</span>
+          </button>
+          <button type="button" class="app-btn app-btn-tonal is-hidden" id="btn-copy">
+            <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">content_copy</span>
+            <span>Salin Receipt</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

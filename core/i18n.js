@@ -52,6 +52,8 @@
     "Untuk menggabungkan ZIP gambar menjadi video": "Combine an image ZIP sequence into video",
     "Untuk konversi beat After Effects ke Alight Motion": "Convert After Effects beats to Alight Motion",
     "Untuk mengganti media proyek XML Alight Motion": "Replace media inside Alight Motion XML projects",
+    "Premium generator Alight Motion": "Alight Motion premium generator",
+    "Aktivator Alight Motion Pro & Reseller": "Alight Motion Pro activator & reseller",
     "Pemutar video ala QuickTime untuk multi link & preset": "QuickTime-style video player for links & presets",
     "Alat Cepat": "Quick Tools",
     "Kumpulan preset editing AE & AM": "AE & AM editing preset collection",
@@ -225,7 +227,32 @@
     "Selesai": "Done",
     "Video selesai diproses": "Video processing complete",
     "AI Super-Resolution SPAN 4x + GPU Shader": "AI Super-Resolution SPAN 4x + GPU Shader",
-    "Interpolasi FPS AI RIFE v4.7 (2x / 4x / 8x)": "AI FPS Interpolation RIFE v4.7 (2x / 4x / 8x)"
+    "Interpolasi FPS AI RIFE v4.7 (2x / 4x / 8x)": "AI FPS Interpolation RIFE v4.7 (2x / 4x / 8x)",
+
+    "Email Akun Alight Motion": "Alight Motion Account Email",
+    "Masukkan alamat email...": "Enter email address...",
+    "Tautan Verifikasi dari Email": "Verification Link from Email",
+    "Tempel tautan lengkap dari email di sini...": "Paste full link from email here...",
+    "Lanjutkan": "Continue",
+    "Mengirim...": "Sending...",
+    "Aktivasi Pro": "Activate Pro",
+    "Memverifikasi...": "Verifying...",
+    "Salin Receipt": "Copy Receipt",
+    "Tersalin!": "Copied!",
+    "Akun Email": "Account Email",
+    "Paket": "Plan",
+    "Berlaku Sampai": "Expires On",
+    "AKTIF": "ACTIVE",
+    "Pro Annual": "Pro Annual",
+    "Masukkan email terlebih dahulu.": "Please enter an email first.",
+    "Tempel tautan dari email terlebih dahulu.": "Please paste the link from the email first.",
+    "Format email tidak valid.": "Invalid email format.",
+    "Mengirim tautan verifikasi ke email...": "Sending verification link to email...",
+    "Tautan terkirim! Buka email Anda, salin URL verifikasi, lalu tempel di atas.": "Link sent! Open your email, copy the verification URL, then paste it above.",
+    "Memproses lisensi Pro ke server Alight Motion...": "Processing Pro license with Alight Motion servers...",
+    "Aktivasi Berhasil! Lisensi Pro aktif. Silakan restart aplikasi Alight Motion.": "Activation Successful! Pro license is active. Please restart Alight Motion.",
+    "Kode oobCode tidak ditemukan di URL. Pastikan Anda menyalin link lengkap dari email.": "oobCode not found in the URL. Make sure to copy the complete link from your email.",
+    "Koneksi gagal atau terblokir.": "Connection failed or blocked."
   };
 
   var EN_TO_ID = {

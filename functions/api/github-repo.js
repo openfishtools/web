@@ -194,10 +194,14 @@ export async function onRequestGet(context) {
   const reqUrl = new URL(context.request.url);
   const repo = (reqUrl.searchParams.get("repo") || "").trim();
   const edgeCache = typeof caches !== "undefined" ? caches.default : null;
+  const token = context.env.GITHUB_TOKEN || context.env.GH_TOKEN;
   const headers = {
     "User-Agent": "cutefish-web/2.0",
     "Accept": "application/vnd.github+json"
   };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   if (!repo) {
     return handleOrgReposList(context, reqUrl, edgeCache, headers);
@@ -235,7 +239,19 @@ export async function onRequestGet(context) {
     const standaloneRelRes = isStudio ? results[3] : null;
 
     if (!repoRes.ok) {
-      return jsonResponse({ error: `GitHub API returned ${repoRes.status}` }, repoRes.status === 404 ? 404 : 502);
+      // Fallback grace jika rate limit GitHub atau repo gagal diakses
+      const payload = {
+        repo: repo,
+        title: readmeMeta.title || formatRepoTitle(repo.split("/")[1] || repo),
+        tagline: readmeMeta.tagline || "",
+        homepage: `https://github.com/${repo}`,
+        html_url: `https://github.com/${repo}`,
+        description: readmeMeta.tagline || "",
+        readme: readmeSections,
+        release: null,
+        releases: []
+      };
+      return jsonResponse(payload, 200, "public, max-age=60");
     }
 
     const repoJson = await repoRes.json();

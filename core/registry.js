@@ -23,6 +23,7 @@
     { id: "sequence-to-video", title: "Sequence to Vid", icon: "sequence-to-video.svg", entry: "apps/sequence-to-video/index.html", description: "Untuk menggabungkan ZIP gambar menjadi video" },
     { id: "ae-to-am-beatmark", title: "Beatmark", icon: "ae-to-am-beatmark.svg", entry: "apps/ae-to-am-beatmark/index.html", description: "Untuk konversi beat After Effects ke Alight Motion" },
     { id: "am-5mb", title: "AM 5MB", icon: "am-5mb.svg", entry: "apps/am-5mb/index.html", description: "Untuk mengganti media proyek XML Alight Motion" },
+    { id: "pre-gen", title: "Pre-Gen", icon: "pre-gen.svg", entry: "apps/pre-gen/index.html", description: "Premium generator Alight Motion" },
     { id: "slowtime", title: "SlowTime", icon: "slowtime.svg", entry: "apps/slowtime/index.html", description: "Pemutar video ala QuickTime untuk multi link & preset" }
   ];
 
@@ -35,7 +36,7 @@
     {
       id: "folder-am",
       title: "Alight Motion Tools",
-      ids: ["sequence-to-video", "ae-to-am-beatmark", "am-5mb"]
+      ids: ["sequence-to-video", "ae-to-am-beatmark", "am-5mb", "pre-gen"]
     },
     {
       id: "folder-video-ai",

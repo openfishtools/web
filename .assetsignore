@@ -1,7 +1,13 @@
 .env
 .env.*
+.dev.vars
+.dev.vars.*
 .git
 .gitignore
+.vercel
+.wrangler
+dist-cf
+.DS_Store
 AGENTS.md
 README.md
 package.json

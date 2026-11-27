@@ -1,5 +1,11 @@
 tools/
 .env
 .env.*
+.dev.vars
+.dev.vars.*
+.vercel/
+.wrangler/
+dist-cf/
+.DS_Store
 node_modules/
 assets/vendor/ffmpeg/*.wasm
