@@ -120,6 +120,104 @@ function buildGitHubHeaders(env) {
   return headers;
 }
 
+function parseHumanSizeToBytes(sizeStr) {
+  const m = String(sizeStr || "").match(/(\d+(?:\.\d+)?)\s*(Bytes|KB|MB|GB)/i);
+  if (!m) return 0;
+  const num = parseFloat(m[1]);
+  const unit = m[2].toUpperCase();
+  if (unit === "GB") return Math.round(num * 1024 * 1024 * 1024);
+  if (unit === "MB") return Math.round(num * 1024 * 1024);
+  if (unit === "KB") return Math.round(num * 1024);
+  return Math.round(num);
+}
+
+function decodeHtmlEntities(str) {
+  return String(str || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function htmlToSimpleMarkdown(html) {
+  return decodeHtmlEntities(
+    String(html || "")
+      .replace(/<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/gi, "\n### $1\n")
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1")
+      .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, "\n$1\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`")
+      .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
+      .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**")
+      .replace(/<[^>]+>/g, "")
+  ).replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function fetchReleaseViaWeb(repo, sourceLabel) {
+  try {
+    const webHeaders = { "User-Agent": "cutefish-web/2.0" };
+    const r1 = await fetch(`https://github.com/${repo}/releases/latest`, {
+      redirect: "manual",
+      headers: webHeaders
+    });
+    const loc = r1.headers.get("location") || "";
+    const tag = loc.includes("/tag/") ? decodeURIComponent(loc.split("/tag/")[1].split(/[?#]/)[0]) : "";
+    if (!tag) return null;
+
+    const [assetsRes, atomRes] = await Promise.all([
+      fetch(`https://github.com/${repo}/releases/expanded_assets/${encodeURIComponent(tag)}`, { headers: webHeaders }),
+      fetch(`https://github.com/${repo}/releases.atom`, { headers: webHeaders })
+    ]);
+
+    const assets = [];
+    if (assetsRes.ok) {
+      const html = await assetsRes.text();
+      const re = /href="(\/[^"]+\/releases\/download\/[^"]+)"[\s\S]*?(\d+(?:\.\d+)?\s*(?:Bytes|KB|MB|GB))/gi;
+      let m;
+      const seen = new Set();
+      while ((m = re.exec(html)) !== null) {
+        const url = "https://github.com" + m[1];
+        if (seen.has(url)) continue;
+        seen.add(url);
+        assets.push({
+          name: decodeURIComponent(m[1].split("/").pop() || ""),
+          size: parseHumanSizeToBytes(m[2]),
+          url
+        });
+      }
+    }
+
+    let body = "";
+    let publishedAt = "";
+    if (atomRes.ok) {
+      const xml = await atomRes.text();
+      const entryMatch = xml.match(/<entry>([\s\S]*?)<\/entry>/i);
+      if (entryMatch) {
+        const entry = entryMatch[1];
+        const upd = entry.match(/<updated>([^<]+)<\/updated>/i);
+        if (upd) publishedAt = upd[1].trim();
+        const content = entry.match(/<content[^>]*>([\s\S]*?)<\/content>/i);
+        if (content) {
+          body = htmlToSimpleMarkdown(decodeHtmlEntities(content[1]));
+        }
+      }
+    }
+
+    return {
+      source: sourceLabel || "",
+      tag_name: tag,
+      name: tag,
+      body,
+      published_at: publishedAt,
+      html_url: `https://github.com/${repo}/releases/tag/${encodeURIComponent(tag)}`,
+      assets
+    };
+  } catch (_e) {
+    return null;
+  }
+}
+
 function normalizeRelease(relJson, sourceLabel) {
   if (!relJson) return null;
   return {
@@ -269,7 +367,7 @@ export async function onRequestGet(context) {
   }
 
   const memKey = `repo:${repo.toLowerCase()}`;
-  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=5`, {
+  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=6`, {
     method: "GET"
   });
 
@@ -299,32 +397,22 @@ export async function onRequestGet(context) {
     const readmeMeta = parseReadmeHeader(readmeMd);
     const readmeSections = parseReadmeSections(readmeMd);
 
-    if (!repoRes.ok) {
-      const stale = memCache.get(memKey);
-      if (stale) {
-        return jsonResponse(stale, 200, "public, max-age=120");
-      }
-      // Graceful fallback using raw README (no rate limit!)
-      const known = KNOWN_REPOS_FALLBACK.find((r) => `${ORG_NAME}/${r.name}`.toLowerCase() === repo.toLowerCase());
-      return jsonResponse({
-        repo,
-        title: readmeMeta.title,
-        tagline: readmeMeta.tagline,
-        homepage: known ? known.homepage : "",
-        html_url: `https://github.com/${repo}`,
-        description: readmeMeta.tagline,
-        readme: readmeSections,
-        release: null,
-        releases: [],
-        rateLimited: repoRes.status === 403 || repoRes.status === 429
-      }, 200, "public, max-age=120");
-    }
-
-    const repoJson = await repoRes.json();
-    const mainRelease = relRes.ok ? normalizeRelease(await relRes.json(), isStudio ? "Studio" : "") : null;
-    const standaloneRelease = standaloneRelRes && standaloneRelRes.ok
+    let mainRelease = relRes.ok ? normalizeRelease(await relRes.json(), isStudio ? "Studio" : "") : null;
+    let standaloneRelease = standaloneRelRes && standaloneRelRes.ok
       ? normalizeRelease(await standaloneRelRes.json(), "Standalone")
       : null;
+
+    // If api.github.com was rate-limited (403/429), fall back to zero-rate-limit github.com web endpoints!
+    const webFallbacks = [];
+    if (!mainRelease && relRes.status !== 404) {
+      webFallbacks.push(fetchReleaseViaWeb(repo, isStudio ? "Studio" : "").then((r) => { mainRelease = r; }));
+    }
+    if (isStudio && !standaloneRelease && (!standaloneRelRes || standaloneRelRes.status !== 404)) {
+      webFallbacks.push(fetchReleaseViaWeb(`${ORG_NAME}/Standalone`, "Standalone").then((r) => { standaloneRelease = r; }));
+    }
+    if (webFallbacks.length) {
+      await Promise.all(webFallbacks);
+    }
 
     const releases = [];
     if (mainRelease) releases.push(mainRelease);
@@ -346,11 +434,37 @@ export async function onRequestGet(context) {
       };
     }
 
+    const known = KNOWN_REPOS_FALLBACK.find((r) => `${ORG_NAME}/${r.name}`.toLowerCase() === repo.toLowerCase());
+    const repoJson = repoRes.ok ? await repoRes.json() : null;
+
+    if (!repoJson) {
+      const stale = memCache.get(memKey);
+      if (stale && stale.release && !mergedRelease) {
+        return jsonResponse(stale, 200, "public, max-age=120");
+      }
+      const fallbackPayload = {
+        repo,
+        title: readmeMeta.title,
+        tagline: readmeMeta.tagline,
+        homepage: known ? known.homepage : "",
+        html_url: `https://github.com/${repo}`,
+        description: readmeMeta.tagline,
+        readme: readmeSections,
+        release: mergedRelease,
+        releases
+      };
+      const out = jsonResponse(fallbackPayload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
+      if (edgeCache && typeof context.waitUntil === "function") {
+        context.waitUntil(edgeCache.put(cacheKey, out.clone()));
+      }
+      return out;
+    }
+
     const payload = {
       repo: repoJson.full_name || repo,
       title: readmeMeta.title,
       tagline: readmeMeta.tagline,
-      homepage: sanitizeHttpUrl(repoJson.homepage),
+      homepage: sanitizeHttpUrl(repoJson.homepage) || (known ? known.homepage : ""),
       html_url: sanitizeHttpUrl(repoJson.html_url),
       description: String(repoJson.description || "").trim(),
       readme: readmeSections,

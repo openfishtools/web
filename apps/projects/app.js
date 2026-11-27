@@ -285,7 +285,7 @@
     }
 
     state.repoLoading[slug] = true;
-    fetch(API_BASE + "?v=5&repo=" + encodeURIComponent(slug))
+    fetch(API_BASE + "?v=6&repo=" + encodeURIComponent(slug))
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
