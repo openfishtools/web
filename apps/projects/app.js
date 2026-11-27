@@ -3,6 +3,27 @@
 
   var API_BASE = "/api/github-repo";
   var DEFAULT_ICON = "https://raw.githubusercontent.com/openfishtools/.github/main/profile/assets/projects/openfishtools.svg";
+  var LS_PREFIX = "ofts_store_cache_v1_";
+  var LS_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+  function readLocalCache(key, allowExpired) {
+    try {
+      var raw = localStorage.getItem(LS_PREFIX + key);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.data) return null;
+      if (!allowExpired && Date.now() - Number(parsed.ts || 0) > LS_TTL_MS) return null;
+      return parsed.data;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeLocalCache(key, data) {
+    try {
+      localStorage.setItem(LS_PREFIX + key, JSON.stringify({ ts: Date.now(), data: data }));
+    } catch (_e) {}
+  }
 
   var ACTION_META = {
     visit: { label: { id: "Visit", en: "Visit" } },
@@ -257,17 +278,27 @@
     if (!slug) return;
     if (state.repoCache[slug] || state.repoLoading[slug]) return;
 
+    var cached = readLocalCache("repo_" + slug.toLowerCase(), false);
+    if (cached && !cached.rateLimited) {
+      state.repoCache[slug] = cached;
+      return;
+    }
+
     state.repoLoading[slug] = true;
-    fetch(API_BASE + "?v=4&repo=" + encodeURIComponent(slug), { cache: "no-cache" })
+    fetch(API_BASE + "?v=5&repo=" + encodeURIComponent(slug))
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
       })
       .then(function (json) {
         state.repoCache[slug] = json;
+        if (!json.rateLimited) {
+          writeLocalCache("repo_" + slug.toLowerCase(), json);
+        }
       })
       .catch(function () {
-        state.repoCache[slug] = { repo: slug, homepage: app.homepage || "", release: null, error: true };
+        var stale = readLocalCache("repo_" + slug.toLowerCase(), true);
+        state.repoCache[slug] = stale || { repo: slug, homepage: app.homepage || "", release: null, error: true };
       })
       .finally(function () {
         delete state.repoLoading[slug];
@@ -1015,11 +1046,22 @@
 
   function loadCatalog() {
     renderStaticCopy();
-    state.loadingList = true;
     els.error.classList.add("is-hidden");
+
+    var cached = readLocalCache("org_list", false);
+    if (cached && Array.isArray(cached.apps) && cached.apps.length) {
+      state.developer = cached.developer || null;
+      state.apps = cached.apps.map(function (a) {
+        return Object.assign({}, a, { icon: getIconForApp(a) });
+      });
+      renderAll();
+      return;
+    }
+
+    state.loadingList = true;
     renderHomeSkeleton();
 
-    fetch(API_BASE + "?v=3", { cache: "no-cache" })
+    fetch(API_BASE + "?v=4")
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
@@ -1030,10 +1072,22 @@
         state.apps = (Array.isArray(data.apps) ? data.apps : []).map(function (a) {
           return Object.assign({}, a, { icon: getIconForApp(a) });
         });
+        if (!data.fallback && state.apps.length) {
+          writeLocalCache("org_list", data);
+        }
         renderAll();
       })
       .catch(function (err) {
         state.loadingList = false;
+        var stale = readLocalCache("org_list", true);
+        if (stale && Array.isArray(stale.apps) && stale.apps.length) {
+          state.developer = stale.developer || null;
+          state.apps = stale.apps.map(function (a) {
+            return Object.assign({}, a, { icon: getIconForApp(a) });
+          });
+          renderAll();
+          return;
+        }
         if (els.banner) els.banner.classList.add("is-hidden");
         if (els.list) els.list.innerHTML = "";
         els.errorText.textContent = t("errorLoad") + " (" + (err && err.message ? err.message : "Error") + ")";

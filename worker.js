@@ -182,13 +182,17 @@ export default {
         return handlePregenPost(makeContext(request, env, ctx));
       }
 
+      // Endpoint /api/github-repo: read-only & sudah di-edge-cache (user buka list lalu klik app dalam <15 detik)
+      if (request.method === "GET" && url.pathname === "/api/github-repo") {
+        return handleGitHubRepoGet(makeContext(request, env, ctx));
+      }
+
       // Endpoint /api/* lainnya: 1 IP maksimal 1 request per 15 detik
       if (request.method === "GET") {
         let handler = null;
         if (url.pathname === "/api/presets") handler = handlePresetsGet;
         else if (url.pathname === "/api/tiktok-resolve") handler = handleTikTokResolveGet;
         else if (url.pathname === "/api/tiktok-fps") handler = handleTikTokFpsGet;
-        else if (url.pathname === "/api/github-repo") handler = handleGitHubRepoGet;
 
         if (handler) {
           const rl = await checkRateLimit(`api-${url.pathname}`, ip, API_RATE_LIMIT_SEC, ctx);

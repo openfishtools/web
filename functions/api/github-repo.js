@@ -1,5 +1,16 @@
 const ORG_NAME = "openfishtools";
 const REPO_SLUG_RE = /^openfishtools\/[a-zA-Z0-9_.-]+$/i;
+const CACHE_TTL_SEC = 1800; // 30 minutes
+
+const KNOWN_REPOS_FALLBACK = [
+  { name: "Studio", homepage: "https://studio.cutefish.my.id" },
+  { name: "CEP", homepage: "" },
+  { name: "web", homepage: "https://cutefish.my.id" },
+  { name: "web-tools", homepage: "" }
+];
+
+// In-memory fallback cache per Worker isolate
+const memCache = new Map();
 
 function jsonResponse(data, status = 200, cacheHeader = "no-store") {
   return new Response(JSON.stringify(data), {
@@ -74,7 +85,6 @@ function parseReadmeSections(md) {
   } else if (enAnchor !== -1) {
     enRaw = md.slice(enAnchor);
   } else {
-    // Single-language README: strip header div
     const stripped = md.replace(/<div\s+align=["']center["'][^>]*>[\s\S]*?<\/div>/i, "").trim();
     idRaw = stripped;
     enRaw = stripped;
@@ -98,8 +108,71 @@ async function fetchRawReadme(repoFullName) {
   }
 }
 
+function buildGitHubHeaders(env) {
+  const headers = {
+    "User-Agent": "cutefish-web/2.0",
+    "Accept": "application/vnd.github+json"
+  };
+  const token = env && (env.GITHUB_TOKEN || env.GH_TOKEN);
+  if (token) {
+    headers["Authorization"] = `Bearer ${String(token).trim()}`;
+  }
+  return headers;
+}
+
+function normalizeRelease(relJson, sourceLabel) {
+  if (!relJson) return null;
+  return {
+    source: sourceLabel || "",
+    tag_name: relJson.tag_name || "",
+    name: relJson.name || relJson.tag_name || "",
+    body: relJson.body || "",
+    published_at: relJson.published_at || "",
+    html_url: sanitizeHttpUrl(relJson.html_url),
+    assets: Array.isArray(relJson.assets)
+      ? relJson.assets
+          .map((a) => ({
+            name: String(a.name || ""),
+            size: Number(a.size || 0),
+            url: sanitizeHttpUrl(a.browser_download_url)
+          }))
+          .filter((a) => a.name && a.url)
+      : []
+  };
+}
+
+async function buildListFromRawFallback() {
+  const readmes = await Promise.all(
+    KNOWN_REPOS_FALLBACK.map((r) => fetchRawReadme(`${ORG_NAME}/${r.name}`))
+  );
+  const apps = KNOWN_REPOS_FALLBACK.map((r, idx) => {
+    const meta = parseReadmeHeader(readmes[idx]);
+    return {
+      id: r.name.toLowerCase(),
+      repo: `${ORG_NAME}/${r.name}`,
+      repoName: r.name,
+      name: meta.title || formatRepoTitle(r.name),
+      developer: "OpenFishTools",
+      tagline: meta.tagline,
+      description: meta.tagline,
+      iconUrl: meta.iconUrl,
+      homepage: r.homepage,
+      html_url: `https://github.com/${ORG_NAME}/${r.name}`
+    };
+  });
+  return {
+    developer: {
+      name: "OpenFishTools",
+      url: `https://github.com/${ORG_NAME}`
+    },
+    apps,
+    fallback: true
+  };
+}
+
 async function handleOrgReposList(context, reqUrl, edgeCache, headers) {
-  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?org=${ORG_NAME}&v=3`, {
+  const memKey = `org:${ORG_NAME}`;
+  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?org=${ORG_NAME}&v=4`, {
     method: "GET"
   });
 
@@ -111,7 +184,13 @@ async function handleOrgReposList(context, reqUrl, edgeCache, headers) {
   try {
     const res = await fetch(`https://api.github.com/orgs/${ORG_NAME}/repos?sort=updated&per_page=30`, { headers });
     if (!res.ok) {
-      return jsonResponse({ error: `GitHub API returned ${res.status}` }, 502);
+      // Rate-limited (403/429) or transient error: serve stale memory cache or raw.githubusercontent.com fallback
+      const stale = memCache.get(memKey);
+      if (stale) {
+        return jsonResponse(stale, 200, "public, max-age=120");
+      }
+      const fallbackPayload = await buildListFromRawFallback();
+      return jsonResponse(fallbackPayload, 200, "public, max-age=120");
     }
 
     const repos = await res.json();
@@ -159,49 +238,27 @@ async function handleOrgReposList(context, reqUrl, edgeCache, headers) {
       apps
     };
 
-    const out = jsonResponse(payload, 200, "public, max-age=300");
+    memCache.set(memKey, payload);
+    const out = jsonResponse(payload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
     if (edgeCache && typeof context.waitUntil === "function") {
       context.waitUntil(edgeCache.put(cacheKey, out.clone()));
     }
     return out;
-  } catch (err) {
-    return jsonResponse({ error: err && err.message ? err.message : "Failed to fetch organization repos" }, 502);
+  } catch (_err) {
+    const stale = memCache.get(memKey);
+    if (stale) {
+      return jsonResponse(stale, 200, "public, max-age=120");
+    }
+    const fallbackPayload = await buildListFromRawFallback();
+    return jsonResponse(fallbackPayload, 200, "public, max-age=120");
   }
-}
-
-function normalizeRelease(relJson, sourceLabel) {
-  if (!relJson) return null;
-  return {
-    source: sourceLabel || "",
-    tag_name: relJson.tag_name || "",
-    name: relJson.name || relJson.tag_name || "",
-    body: relJson.body || "",
-    published_at: relJson.published_at || "",
-    html_url: sanitizeHttpUrl(relJson.html_url),
-    assets: Array.isArray(relJson.assets)
-      ? relJson.assets
-          .map((a) => ({
-            name: String(a.name || ""),
-            size: Number(a.size || 0),
-            url: sanitizeHttpUrl(a.browser_download_url)
-          }))
-          .filter((a) => a.name && a.url)
-      : []
-  };
 }
 
 export async function onRequestGet(context) {
   const reqUrl = new URL(context.request.url);
   const repo = (reqUrl.searchParams.get("repo") || "").trim();
   const edgeCache = typeof caches !== "undefined" ? caches.default : null;
-  const token = context.env.GITHUB_TOKEN || context.env.GH_TOKEN;
-  const headers = {
-    "User-Agent": "cutefish-web/2.0",
-    "Accept": "application/vnd.github+json"
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+  const headers = buildGitHubHeaders(context.env);
 
   if (!repo) {
     return handleOrgReposList(context, reqUrl, edgeCache, headers);
@@ -211,7 +268,8 @@ export async function onRequestGet(context) {
     return jsonResponse({ error: "Invalid repository slug." }, 400);
   }
 
-  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=4`, {
+  const memKey = `repo:${repo.toLowerCase()}`;
+  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=5`, {
     method: "GET"
   });
 
@@ -238,28 +296,33 @@ export async function onRequestGet(context) {
     const readmeMd = results[2];
     const standaloneRelRes = isStudio ? results[3] : null;
 
-    if (!repoRes.ok) {
-      // Fallback grace jika rate limit GitHub atau repo gagal diakses
-      const payload = {
-        repo: repo,
-        title: readmeMeta.title || formatRepoTitle(repo.split("/")[1] || repo),
-        tagline: readmeMeta.tagline || "",
-        homepage: `https://github.com/${repo}`,
-        html_url: `https://github.com/${repo}`,
-        description: readmeMeta.tagline || "",
-        readme: readmeSections,
-        release: null,
-        releases: []
-      };
-      return jsonResponse(payload, 200, "public, max-age=60");
-    }
-
-    const repoJson = await repoRes.json();
     const readmeMeta = parseReadmeHeader(readmeMd);
     const readmeSections = parseReadmeSections(readmeMd);
 
-    let mainRelease = relRes.ok ? normalizeRelease(await relRes.json(), isStudio ? "Studio" : "") : null;
-    let standaloneRelease = standaloneRelRes && standaloneRelRes.ok
+    if (!repoRes.ok) {
+      const stale = memCache.get(memKey);
+      if (stale) {
+        return jsonResponse(stale, 200, "public, max-age=120");
+      }
+      // Graceful fallback using raw README (no rate limit!)
+      const known = KNOWN_REPOS_FALLBACK.find((r) => `${ORG_NAME}/${r.name}`.toLowerCase() === repo.toLowerCase());
+      return jsonResponse({
+        repo,
+        title: readmeMeta.title,
+        tagline: readmeMeta.tagline,
+        homepage: known ? known.homepage : "",
+        html_url: `https://github.com/${repo}`,
+        description: readmeMeta.tagline,
+        readme: readmeSections,
+        release: null,
+        releases: [],
+        rateLimited: repoRes.status === 403 || repoRes.status === 429
+      }, 200, "public, max-age=120");
+    }
+
+    const repoJson = await repoRes.json();
+    const mainRelease = relRes.ok ? normalizeRelease(await relRes.json(), isStudio ? "Studio" : "") : null;
+    const standaloneRelease = standaloneRelRes && standaloneRelRes.ok
       ? normalizeRelease(await standaloneRelRes.json(), "Standalone")
       : null;
 
@@ -295,12 +358,30 @@ export async function onRequestGet(context) {
       releases
     };
 
-    const res = jsonResponse(payload, 200, "public, max-age=300");
+    memCache.set(memKey, payload);
+    const res = jsonResponse(payload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
     if (edgeCache && typeof context.waitUntil === "function") {
       context.waitUntil(edgeCache.put(cacheKey, res.clone()));
     }
     return res;
-  } catch (err) {
-    return jsonResponse({ error: err && err.message ? err.message : "Failed to fetch GitHub data" }, 502);
+  } catch (_err) {
+    const stale = memCache.get(memKey);
+    if (stale) {
+      return jsonResponse(stale, 200, "public, max-age=120");
+    }
+    const readmeMd = await fetchRawReadme(repo);
+    const readmeMeta = parseReadmeHeader(readmeMd);
+    const readmeSections = parseReadmeSections(readmeMd);
+    return jsonResponse({
+      repo,
+      title: readmeMeta.title,
+      tagline: readmeMeta.tagline,
+      homepage: "",
+      html_url: `https://github.com/${repo}`,
+      description: readmeMeta.tagline,
+      readme: readmeSections,
+      release: null,
+      releases: []
+    }, 200, "public, max-age=120");
   }
 }
