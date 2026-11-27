@@ -26,7 +26,21 @@ function getClientIp(request) {
   return "local";
 }
 
+function isAllowedTikTokFpsExtension(request, url) {
+  if (url.pathname !== "/api/tiktok-fps") return false;
+  const origin = request.headers.get("Origin") || "";
+  const referer = request.headers.get("Referer") || "";
+  if (origin.startsWith("chrome-extension://")) return true;
+  if (origin === "https://www.tiktok.com") return true;
+  if (referer.startsWith("https://www.tiktok.com/tiktokstudio")) return true;
+  return false;
+}
+
 function isAllowedApiCaller(request, url) {
+  if (isAllowedTikTokFpsExtension(request, url)) {
+    return true;
+  }
+
   const expectedOrigin = url.origin;
   const origin = request.headers.get("Origin");
   const referer = request.headers.get("Referer");
@@ -142,8 +156,20 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/api/")) {
-      // Tolak CORS preflight dari domain lain
+      // Izinkan CORS preflight khusus /api/tiktok-fps dari extension
       if (request.method === "OPTIONS") {
+        if (isAllowedTikTokFpsExtension(request, url)) {
+          const origin = request.headers.get("Origin") || "*";
+          return new Response(null, {
+            status: 204,
+            headers: {
+              "Access-Control-Allow-Origin": origin,
+              "Access-Control-Allow-Methods": "GET, OPTIONS",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Access-Control-Max-Age": "86400"
+            }
+          });
+        }
         return jsonError("Forbidden", 403);
       }
 
