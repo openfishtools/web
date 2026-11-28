@@ -1,6 +1,31 @@
 const ORG_NAME = "openfishtools";
 const REPO_SLUG_RE = /^openfishtools\/[a-zA-Z0-9_.-]+$/i;
-const CACHE_TTL_SEC = 1800; // 30 minutes
+const EDGE_CACHE_TTL_SEC = 60; // 1 minute edge cache, 0 browser cache
+const API_CACHE_HEADER = `public, max-age=0, s-maxage=${EDGE_CACHE_TTL_SEC}`;
+
+function parseVersionParts(tag) {
+  const m = String(tag || "").match(/(\d+(?:\.\d+)*)/);
+  if (!m) return null;
+  return m[1].split(".").map((n) => parseInt(n, 10) || 0);
+}
+
+function isReleaseNewer(candidate, baseline) {
+  if (!candidate) return false;
+  if (!baseline) return true;
+  const a = parseVersionParts(candidate.tag_name || candidate.name);
+  const b = parseVersionParts(baseline.tag_name || baseline.name);
+  if (a && b) {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const av = a[i] || 0;
+      const bv = b[i] || 0;
+      if (av !== bv) return av > bv;
+    }
+  }
+  const ta = Date.parse(candidate.published_at || "") || 0;
+  const tb = Date.parse(baseline.published_at || "") || 0;
+  return ta > tb;
+}
 
 const KNOWN_REPOS_FALLBACK = [
   { name: "Studio", homepage: "https://studio.cutefish.my.id" },
@@ -270,7 +295,7 @@ async function buildListFromRawFallback() {
 
 async function handleOrgReposList(context, reqUrl, edgeCache, headers) {
   const memKey = `org:${ORG_NAME}`;
-  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?org=${ORG_NAME}&v=4`, {
+  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?org=${ORG_NAME}&v=5`, {
     method: "GET"
   });
 
@@ -337,7 +362,7 @@ async function handleOrgReposList(context, reqUrl, edgeCache, headers) {
     };
 
     memCache.set(memKey, payload);
-    const out = jsonResponse(payload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
+    const out = jsonResponse(payload, 200, API_CACHE_HEADER);
     if (edgeCache && typeof context.waitUntil === "function") {
       context.waitUntil(edgeCache.put(cacheKey, out.clone()));
     }
@@ -367,7 +392,7 @@ export async function onRequestGet(context) {
   }
 
   const memKey = `repo:${repo.toLowerCase()}`;
-  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=6`, {
+  const cacheKey = new Request(`${reqUrl.origin}/api/github-repo?repo=${encodeURIComponent(repo.toLowerCase())}&v=7`, {
     method: "GET"
   });
 
@@ -417,19 +442,24 @@ export async function onRequestGet(context) {
     const releases = [];
     if (mainRelease) releases.push(mainRelease);
     if (standaloneRelease) releases.push(standaloneRelease);
+    if (releases.length > 1 && isReleaseNewer(releases[1], releases[0])) {
+      releases.reverse();
+    }
 
     let mergedRelease = mainRelease || standaloneRelease || null;
     if (mainRelease && standaloneRelease) {
+      const primaryRel = isReleaseNewer(standaloneRelease, mainRelease) ? standaloneRelease : mainRelease;
+      const secondaryRel = primaryRel === standaloneRelease ? mainRelease : standaloneRelease;
       const seenAsset = new Set();
       const combinedAssets = [];
-      for (const a of [...mainRelease.assets, ...standaloneRelease.assets]) {
+      for (const a of [...primaryRel.assets, ...secondaryRel.assets]) {
         if (!seenAsset.has(a.url)) {
           seenAsset.add(a.url);
           combinedAssets.push(a);
         }
       }
       mergedRelease = {
-        ...mainRelease,
+        ...primaryRel,
         assets: combinedAssets
       };
     }
@@ -453,7 +483,7 @@ export async function onRequestGet(context) {
         release: mergedRelease,
         releases
       };
-      const out = jsonResponse(fallbackPayload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
+      const out = jsonResponse(fallbackPayload, 200, API_CACHE_HEADER);
       if (edgeCache && typeof context.waitUntil === "function") {
         context.waitUntil(edgeCache.put(cacheKey, out.clone()));
       }
@@ -473,7 +503,7 @@ export async function onRequestGet(context) {
     };
 
     memCache.set(memKey, payload);
-    const res = jsonResponse(payload, 200, `public, max-age=${CACHE_TTL_SEC}, stale-while-revalidate=86400`);
+    const res = jsonResponse(payload, 200, API_CACHE_HEADER);
     if (edgeCache && typeof context.waitUntil === "function") {
       context.waitUntil(edgeCache.put(cacheKey, res.clone()));
     }

@@ -3,16 +3,14 @@
 
   var API_BASE = "/api/github-repo";
   var DEFAULT_ICON = "https://raw.githubusercontent.com/openfishtools/.github/main/profile/assets/projects/openfishtools.svg";
-  var LS_PREFIX = "ofts_store_cache_v1_";
-  var LS_TTL_MS = 15 * 60 * 1000; // 15 minutes
+  var LS_PREFIX = "ofts_store_cache_v2_";
 
-  function readLocalCache(key, allowExpired) {
+  function readLocalCache(key) {
     try {
       var raw = localStorage.getItem(LS_PREFIX + key);
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.data) return null;
-      if (!allowExpired && Date.now() - Number(parsed.ts || 0) > LS_TTL_MS) return null;
       return parsed.data;
     } catch (_e) {
       return null;
@@ -278,14 +276,8 @@
     if (!slug) return;
     if (state.repoCache[slug] || state.repoLoading[slug]) return;
 
-    var cached = readLocalCache("repo_" + slug.toLowerCase(), false);
-    if (cached && !cached.rateLimited) {
-      state.repoCache[slug] = cached;
-      return;
-    }
-
     state.repoLoading[slug] = true;
-    fetch(API_BASE + "?v=6&repo=" + encodeURIComponent(slug))
+    fetch(API_BASE + "?v=7&repo=" + encodeURIComponent(slug), { cache: "no-store" })
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
@@ -297,7 +289,7 @@
         }
       })
       .catch(function () {
-        var stale = readLocalCache("repo_" + slug.toLowerCase(), true);
+        var stale = readLocalCache("repo_" + slug.toLowerCase());
         state.repoCache[slug] = stale || { repo: slug, homepage: app.homepage || "", release: null, error: true };
       })
       .finally(function () {
@@ -1048,20 +1040,10 @@
     renderStaticCopy();
     els.error.classList.add("is-hidden");
 
-    var cached = readLocalCache("org_list", false);
-    if (cached && Array.isArray(cached.apps) && cached.apps.length) {
-      state.developer = cached.developer || null;
-      state.apps = cached.apps.map(function (a) {
-        return Object.assign({}, a, { icon: getIconForApp(a) });
-      });
-      renderAll();
-      return;
-    }
-
     state.loadingList = true;
     renderHomeSkeleton();
 
-    fetch(API_BASE + "?v=4")
+    fetch(API_BASE + "?v=5", { cache: "no-store" })
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
@@ -1079,7 +1061,7 @@
       })
       .catch(function (err) {
         state.loadingList = false;
-        var stale = readLocalCache("org_list", true);
+        var stale = readLocalCache("org_list");
         if (stale && Array.isArray(stale.apps) && stale.apps.length) {
           state.developer = stale.developer || null;
           state.apps = stale.apps.map(function (a) {
