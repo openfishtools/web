@@ -10,7 +10,12 @@
   var fileIconEl = document.getElementById("file-icon");
   var fileNameEl = document.getElementById("file-name");
   var fileDetailsEl = document.getElementById("file-details");
+  var btnAddFiles = document.getElementById("btn-add-files");
   var btnChangeFile = document.getElementById("btn-change-file");
+
+  var queuePanel = document.getElementById("queue-panel");
+  var queueList = document.getElementById("queue-list");
+  var queueCountBadge = document.getElementById("queue-count-badge");
 
   var compareStage = document.getElementById("compare-stage");
   var origClip = document.getElementById("orig-clip");
@@ -46,6 +51,7 @@
   var statElapsed = document.getElementById("stat-elapsed");
 
   var btnPreview = document.getElementById("btn-preview");
+  var btnDownloadAll = document.getElementById("btn-download-all");
   var btnStart = document.getElementById("btn-start");
 
   var logger = U.createLogger(
@@ -63,6 +69,9 @@
   };
 
   var UPSCALE_FACTOR = 4;
+  var queueItems = [];
+  var nextQueueId = 1;
+  var filePickMode = "replace";
   var currentFile = null;
   var currentObjectUrl = null;
   var enhancedVideoUrl = null;
@@ -94,6 +103,16 @@
     var m = Math.floor(sec / 60);
     var s = (sec - m * 60).toFixed(1);
     return String(m).padStart(2, "0") + ":" + (parseFloat(s) < 10 ? "0" : "") + s;
+  }
+
+  function isSupportedMediaFile(file) {
+    if (!file) return false;
+    if (file.type && (file.type.startsWith("image/") || file.type.startsWith("video/"))) return true;
+    return /\.(png|jpe?g|webp|bmp|gif|avif|mp4|mov|webm|mkv|avi|m4v)$/i.test(file.name || "");
+  }
+
+  function isBatchMode() {
+    return queueItems.length > 1;
   }
 
   function isImageFile(file) {
@@ -483,34 +502,136 @@
   function setBusy(busy) {
     btnPreview.disabled = busy;
     btnStart.disabled = busy;
+    btnAddFiles.disabled = busy;
     btnChangeFile.disabled = busy;
-    durationSlider.disabled = busy || isImageMode || !(isFinite(previewVideo.duration) && previewVideo.duration > 0);
+    btnDownloadAll.disabled = busy;
+    durationSlider.disabled = busy || isBatchMode() || isImageMode || !(isFinite(previewVideo.duration) && previewVideo.duration > 0);
     checkNormalise.disabled = busy;
     presetGroup.querySelectorAll(".app-chip").forEach(function (b) { b.disabled = busy; });
     timingGroup.querySelectorAll(".m3-segment").forEach(function (b) { b.disabled = busy; });
+    queueList.querySelectorAll("[data-queue-remove]").forEach(function (b) { b.disabled = busy; });
   }
 
-  /* ===== Events & Controls ===== */
-  U.bindDropzone(dropzone, fileInput, handleFile);
+  function invalidateOnSettingChange() {
+    if (isBatchMode()) {
+      btnDownloadAll.classList.add("is-hidden");
+      var anyDone = queueItems.some(function (it) { return it.status === "done"; });
+      if (anyDone) {
+        queueItems.forEach(function (it) {
+          it.status = "pending";
+          it.progress = 0;
+          it.errorMsg = "";
+          it.resultBlob = null;
+          it.outName = "";
+        });
+        renderQueueList();
+        updateStartButtonLabel();
+      }
+    } else if (currentFile) {
+      clearPreviewResult();
+    }
+  }
 
-  btnChangeFile.addEventListener("click", function () {
+  /* ===== Events & Controls (Multi-File Dropzone + Batch Queue) ===== */
+  dropzone.addEventListener("click", function () {
     if (isProcessing || isGeneratingPreview) return;
+    filePickMode = "replace";
     fileInput.value = "";
     fileInput.click();
   });
 
+  dropzone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (isProcessing || isGeneratingPreview) return;
+      filePickMode = "replace";
+      fileInput.value = "";
+      fileInput.click();
+    }
+  });
+
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files.length > 0) {
+      handleFiles(fileInput.files, filePickMode === "append");
+    }
+  });
+
+  window.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    if (!dropzone.classList.contains("is-hidden")) {
+      dropzone.classList.add("is-dragover");
+    }
+  });
+
+  window.addEventListener("dragleave", function (e) {
+    if (e.clientX <= 0 || e.clientY <= 0) {
+      dropzone.classList.remove("is-dragover");
+    }
+  });
+
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dropzone.classList.remove("is-dragover");
+    if (isProcessing || isGeneratingPreview) return;
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files, queueItems.length > 0);
+    }
+  });
+
+  btnAddFiles.addEventListener("click", function () {
+    if (isProcessing || isGeneratingPreview) return;
+    filePickMode = "append";
+    fileInput.value = "";
+    fileInput.click();
+  });
+
+  btnChangeFile.addEventListener("click", function () {
+    if (isProcessing || isGeneratingPreview) return;
+    if (isBatchMode()) {
+      resetQueue();
+      return;
+    }
+    filePickMode = "replace";
+    fileInput.value = "";
+    fileInput.click();
+  });
+
+  btnDownloadAll.addEventListener("click", function () {
+    if (isProcessing) return;
+    var doneItems = queueItems.filter(function (it) { return it.status === "done" && it.resultBlob; });
+    if (!doneItems.length) return;
+    downloadAllResults(doneItems);
+  });
+
+  queueList.addEventListener("click", function (e) {
+    var dlBtn = e.target.closest("[data-queue-download]");
+    if (dlBtn) {
+      var dlId = Number(dlBtn.getAttribute("data-queue-download"));
+      var dlItem = queueItems.find(function (it) { return it.id === dlId; });
+      if (dlItem && dlItem.resultBlob) {
+        U.triggerDownload(dlItem.resultBlob, dlItem.outName || dlItem.file.name);
+      }
+      return;
+    }
+    var rmBtn = e.target.closest("[data-queue-remove]");
+    if (rmBtn && !isProcessing && !isGeneratingPreview) {
+      var rmId = Number(rmBtn.getAttribute("data-queue-remove"));
+      removeQueueItem(rmId);
+    }
+  });
+
   U.bindSegmented(presetGroup, "preset", function (p) {
     activePreset = p || "cartoonist";
-    if (currentFile) clearPreviewResult();
+    invalidateOnSettingChange();
   });
 
   U.bindSegmented(timingGroup, "timing", function (t) {
     enhanceTiming = t || "before";
-    if (currentFile) clearPreviewResult();
+    invalidateOnSettingChange();
   });
 
   checkNormalise.addEventListener("change", function () {
-    if (currentFile) clearPreviewResult();
+    invalidateOnSettingChange();
   });
 
   durationSlider.addEventListener("input", function () {
@@ -546,8 +667,184 @@
     if (!previewActive && !isGeneratingPreview) drawOriginalToRightCanvas();
   });
 
-  function handleFile(file) {
-    if (!file) return;
+  function updateStartButtonLabel() {
+    if (isBatchMode()) {
+      var pendingCount = queueItems.filter(function (it) { return it.status !== "done"; }).length;
+      if (pendingCount === 0) {
+        btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Upscale Ulang';
+      } else {
+        btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Mulai Batch (' + pendingCount + ')';
+      }
+    } else {
+      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Mulai Upscale';
+    }
+  }
+
+  function updateBatchHeaderMeta() {
+    var imgCount = 0;
+    var vidCount = 0;
+    var totalBytes = 0;
+    queueItems.forEach(function (it) {
+      if (it.isImage) imgCount++;
+      else vidCount++;
+      totalBytes += it.file.size || 0;
+    });
+    fileIconEl.textContent = "layers";
+    fileNameEl.textContent = queueItems.length + " file dalam antrean";
+    var parts = [];
+    if (imgCount > 0) parts.push(imgCount + " gambar");
+    if (vidCount > 0) parts.push(vidCount + " video");
+    parts.push(U.formatBytes(totalBytes));
+    fileDetailsEl.textContent = parts.join(" \u2022 ");
+  }
+
+  function renderQueueList() {
+    var doneCount = queueItems.filter(function (it) { return it.status === "done"; }).length;
+    queueCountBadge.textContent = doneCount + "/" + queueItems.length;
+
+    queueList.innerHTML = "";
+    var frag = document.createDocumentFragment();
+
+    queueItems.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "app-list-item" + (item.status === "processing" ? " is-selected" : "");
+
+      var left = document.createElement("div");
+      left.className = "app-list-left";
+
+      var ico = document.createElement("span");
+      ico.className = "material-symbols-rounded notranslate";
+      ico.setAttribute("translate", "no");
+      ico.setAttribute("aria-hidden", "true");
+      ico.textContent = item.isImage ? "image" : "video_file";
+
+      var textWrap = document.createElement("div");
+      textWrap.className = "app-list-text";
+
+      var title = document.createElement("div");
+      title.className = "app-list-title";
+      title.textContent = item.file.name;
+
+      var sub = document.createElement("div");
+      sub.className = "app-list-sub";
+      if (item.status === "done" && item.resultBlob) {
+        sub.textContent = U.formatBytes(item.file.size) + " \u2192 " + U.formatBytes(item.resultBlob.size);
+      } else if (item.status === "error" && item.errorMsg) {
+        sub.textContent = item.errorMsg;
+      } else {
+        sub.textContent = item.metaText || U.formatBytes(item.file.size);
+      }
+
+      textWrap.appendChild(title);
+      textWrap.appendChild(sub);
+      left.appendChild(ico);
+      left.appendChild(textWrap);
+
+      var actions = document.createElement("div");
+      actions.className = "app-inline-actions";
+
+      var badge = document.createElement("span");
+      badge.className = "app-list-badge";
+      if (item.status === "processing") {
+        badge.textContent = Math.max(0, Math.min(100, Math.round(item.progress || 0))) + "%";
+      } else if (item.status === "done") {
+        badge.textContent = "Selesai";
+      } else if (item.status === "error") {
+        badge.textContent = "Gagal";
+      } else {
+        badge.textContent = "Menunggu";
+      }
+      actions.appendChild(badge);
+
+      if (item.status === "done" && item.resultBlob) {
+        var dlBtn = document.createElement("button");
+        dlBtn.type = "button";
+        dlBtn.className = "app-icon-btn";
+        dlBtn.setAttribute("data-queue-download", String(item.id));
+        dlBtn.setAttribute("aria-label", "Unduh " + item.file.name);
+        dlBtn.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">download</span>';
+        actions.appendChild(dlBtn);
+      } else if (!isProcessing) {
+        var rmBtn = document.createElement("button");
+        rmBtn.type = "button";
+        rmBtn.className = "app-icon-btn";
+        rmBtn.setAttribute("data-queue-remove", String(item.id));
+        rmBtn.setAttribute("aria-label", "Hapus " + item.file.name);
+        rmBtn.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">close</span>';
+        actions.appendChild(rmBtn);
+      }
+
+      row.appendChild(left);
+      row.appendChild(actions);
+      frag.appendChild(row);
+    });
+
+    queueList.appendChild(frag);
+  }
+
+  function resetQueue() {
+    queueItems = [];
+    currentFile = null;
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = null;
+    }
+    if (enhancedVideoUrl) {
+      URL.revokeObjectURL(enhancedVideoUrl);
+      enhancedVideoUrl = null;
+    }
+    previewVideo.pause();
+    enhancedVideo.pause();
+    previewVideo.removeAttribute("src");
+    previewImage.removeAttribute("src");
+    workspace.classList.add("is-hidden");
+    dropzone.classList.remove("is-hidden");
+    statsGrid.classList.add("is-hidden");
+    progressBox.classList.add("is-hidden");
+    btnDownloadAll.classList.add("is-hidden");
+    logger.setBadge("Ready");
+  }
+
+  function removeQueueItem(id) {
+    queueItems = queueItems.filter(function (it) { return it.id !== id; });
+    if (!queueItems.some(function (it) { return it.status === "done" && it.resultBlob; })) {
+      btnDownloadAll.classList.add("is-hidden");
+    }
+    if (queueItems.length === 0) {
+      resetQueue();
+      return;
+    }
+    syncWorkspaceView();
+  }
+
+  function probeQueueItemMeta(item) {
+    if (item.isImage) {
+      U.probeImageMetadata(item.file).then(function (meta) {
+        if (!queueItems.some(function (q) { return q.id === item.id; })) return;
+        item.metaText = U.formatBytes(item.file.size) + (meta.width ? (" \u2022 " + meta.width + "x" + meta.height) : "");
+        if (isBatchMode()) {
+          renderQueueList();
+        } else if (currentFile === item.file) {
+          fileDetailsEl.textContent = item.metaText;
+        }
+      });
+    } else {
+      U.probeVideoMetadata(item.file).then(function (meta) {
+        if (!queueItems.some(function (q) { return q.id === item.id; })) return;
+        var parts = [U.formatBytes(item.file.size)];
+        if (meta.width && meta.height) parts.push(meta.width + "x" + meta.height);
+        if (meta.duration) parts.push(U.formatDuration(meta.duration));
+        item.metaText = parts.join(" \u2022 ");
+        if (isBatchMode()) {
+          renderQueueList();
+        } else if (currentFile === item.file) {
+          fileDetailsEl.textContent = item.metaText;
+        }
+      });
+    }
+  }
+
+  function loadSingleCompareFile(file) {
     currentFile = file;
     isImageMode = isImageFile(file);
 
@@ -560,11 +857,7 @@
 
     fileIconEl.textContent = isImageMode ? "image" : "video_file";
     fileNameEl.textContent = file.name;
-    fileDetailsEl.textContent = U.formatBytes(file.size);
-    dropzone.classList.add("is-hidden");
-    workspace.classList.remove("is-hidden");
-    statsGrid.classList.add("is-hidden");
-    progressBox.classList.add("is-hidden");
+    fileDetailsEl.textContent = (queueItems[0] && queueItems[0].metaText) || U.formatBytes(file.size);
 
     scrubberRow.classList.toggle("is-hidden", isImageMode);
     durationSlider.disabled = true;
@@ -594,28 +887,77 @@
       previewVideo.classList.remove("is-hidden");
       previewVideo.load();
     }
+  }
+
+  function syncWorkspaceView() {
+    if (queueItems.length === 0) {
+      resetQueue();
+      return;
+    }
+
+    dropzone.classList.add("is-hidden");
+    workspace.classList.remove("is-hidden");
+    progressBox.classList.add("is-hidden");
+
+    if (isBatchMode()) {
+      currentFile = null;
+      previewVideo.pause();
+      enhancedVideo.pause();
+      compareStage.classList.add("is-hidden");
+      scrubberRow.classList.add("is-hidden");
+      btnPreview.classList.add("is-hidden");
+      queuePanel.classList.remove("is-hidden");
+      btnChangeFile.textContent = "Reset";
+      updateBatchHeaderMeta();
+      renderQueueList();
+    } else {
+      queuePanel.classList.add("is-hidden");
+      btnDownloadAll.classList.add("is-hidden");
+      compareStage.classList.remove("is-hidden");
+      btnPreview.classList.remove("is-hidden");
+      btnChangeFile.textContent = "Ganti";
+      loadSingleCompareFile(queueItems[0].file);
+    }
 
     setBusy(false);
     btnPreview.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">visibility</span> Preview';
-    btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Mulai Upscale';
+    updateStartButtonLabel();
     logger.setBadge("Ready");
+  }
 
-    if (isImageMode) {
-      U.probeImageMetadata(file).then(function (meta) {
-        if (currentFile !== file) return;
-        var text = U.formatBytes(file.size) + (meta.width ? (" \u2022 " + meta.width + "x" + meta.height) : "");
-        fileDetailsEl.textContent = text;
-        logger.append("Gambar dimuat: " + file.name + " (" + text + ")");
-      });
+  function handleFiles(fileList, append) {
+    var valid = Array.from(fileList || []).filter(isSupportedMediaFile);
+    if (!valid.length) return;
+
+    if (!append) {
+      queueItems = [];
+      btnDownloadAll.classList.add("is-hidden");
+    }
+    statsGrid.classList.add("is-hidden");
+
+    var added = valid.map(function (file) {
+      var item = {
+        id: nextQueueId++,
+        file: file,
+        isImage: isImageFile(file),
+        metaText: U.formatBytes(file.size),
+        status: "pending",
+        progress: 0,
+        errorMsg: "",
+        resultBlob: null,
+        outName: ""
+      };
+      queueItems.push(item);
+      return item;
+    });
+
+    syncWorkspaceView();
+    added.forEach(probeQueueItemMeta);
+
+    if (isBatchMode()) {
+      logger.append("Batch antrean: " + queueItems.length + " file siap diproses");
     } else {
-      U.probeVideoMetadata(file).then(function (meta) {
-        if (currentFile !== file) return;
-        var parts = [U.formatBytes(file.size)];
-        if (meta.width && meta.height) parts.push(meta.width + "x" + meta.height);
-        if (meta.duration) parts.push(U.formatDuration(meta.duration));
-        fileDetailsEl.textContent = parts.join(" \u2022 ");
-        logger.append("Video dimuat: " + file.name + " (" + parts.join(", ") + ")");
-      });
+      logger.append((added[0].isImage ? "Gambar" : "Video") + " dimuat: " + added[0].file.name);
     }
   }
 
@@ -750,9 +1092,10 @@
   btnPreview.addEventListener("click", generatePreview);
 
   /* ===== Full Export Pipeline ===== */
-  async function processImage() {
+  async function processImage(file, onProgress, updatePreview) {
+    var report = onProgress || setProgress;
     var normalise = checkNormalise.checked;
-    var url = URL.createObjectURL(currentFile);
+    var url = URL.createObjectURL(file);
     var img = await loadImageEl(url);
     URL.revokeObjectURL(url);
 
@@ -766,44 +1109,46 @@
     var outCanvas = document.createElement("canvas");
 
     if (enhanceTiming === "before") {
-      setProgress(20, "Menerapkan GPU filter...");
+      report(20, "Menerapkan GPU filter...");
       var filtered = document.createElement("canvas");
       applyShader(work, params, filtered);
-      setProgress(30, "Menjalankan AI Upscale 4x...");
+      report(30, "Menjalankan AI Upscale 4x...");
       try {
         await runSpanFrame(filtered, outCanvas, function (p) {
-          setProgress(30 + Math.round((p / 100) * 60), "AI Upscaling (" + Math.round(p) + "%)...");
+          report(30 + Math.round((p / 100) * 60), "AI Upscaling (" + Math.round(p) + "%)...");
         });
       } catch (aiErr) {
         logger.append("AI worker fallback ke filter GPU: " + aiErr.message);
         outCanvas = filtered;
       }
     } else {
-      setProgress(20, "Menjalankan AI Upscale 4x...");
+      report(20, "Menjalankan AI Upscale 4x...");
       var upscaled = document.createElement("canvas");
       try {
         await runSpanFrame(work, upscaled, function (p) {
-          setProgress(20 + Math.round((p / 100) * 65), "AI Upscaling (" + Math.round(p) + "%)...");
+          report(20 + Math.round((p / 100) * 65), "AI Upscaling (" + Math.round(p) + "%)...");
         });
       } catch (aiErr) {
         logger.append("AI worker fallback ke filter GPU: " + aiErr.message);
         upscaled = work;
       }
-      setProgress(88, "Menerapkan GPU filter...");
+      report(88, "Menerapkan GPU filter...");
       applyShader(upscaled, params, outCanvas);
     }
 
     if (normalise) {
-      setProgress(93, "Normalisasi 1080x1920...");
+      report(93, "Normalisasi 1080x1920...");
       outCanvas = resizeTo1080x1920(outCanvas);
     }
 
-    previewCanvas.width = outCanvas.width;
-    previewCanvas.height = outCanvas.height;
-    previewCanvas.getContext("2d").drawImage(outCanvas, 0, 0);
-    unprocessedOverlay.classList.add("is-hidden");
-    labelRight.textContent = "Enhanced";
-    previewActive = true;
+    if (updatePreview !== false) {
+      previewCanvas.width = outCanvas.width;
+      previewCanvas.height = outCanvas.height;
+      previewCanvas.getContext("2d").drawImage(outCanvas, 0, 0);
+      unprocessedOverlay.classList.add("is-hidden");
+      labelRight.textContent = "Enhanced";
+      previewActive = true;
+    }
 
     var mime = normalise ? "image/jpeg" : "image/png";
     var ext = normalise ? "jpg" : "png";
@@ -811,27 +1156,28 @@
     if (!blob) throw new Error("Gagal menyimpan gambar.");
     return {
       blob: blob,
-      outName: currentFile.name.replace(/\.[^/.]+$/, "") + "_enhanced." + ext
+      outName: file.name.replace(/\.[^/.]+$/, "") + "_enhanced." + ext
     };
   }
 
-  async function processVideo() {
+  async function processVideo(file, onProgress, updatePreview) {
+    var report = onProgress || setProgress;
     var normalise = checkNormalise.checked;
-    setProgress(8, "Memuat FFmpeg WASM...");
+    report(8, "Memuat FFmpeg WASM...");
     if (!ffmpeg) {
       ffmpeg = await FF.createInstance({ log: function (m) { logger.append(m); } });
     }
 
-    var ext = (currentFile.name.split(".").pop() || "mp4").toLowerCase();
+    var ext = (file.name.split(".").pop() || "mp4").toLowerCase();
     var inName = "input." + ext;
-    await ffmpeg.writeFile(inName, await FF.fetchFile(currentFile));
+    await ffmpeg.writeFile(inName, await FF.fetchFile(file));
 
     var useAiFrames = !FF.isMobileDevice() && Boolean(getWorker());
     var params = getPresetParams(activePreset);
 
     if (useAiFrames) {
       logger.append("Pipeline AI SPAN 4x aktif untuk video");
-      setProgress(12, "Mengekstrak frame video...");
+      report(12, "Mengekstrak frame video...");
       await ffmpeg.exec(["-i", inName, "-vsync", "0", "-qscale:v", "2", "f_%05d.jpg"]);
 
       var total = 0;
@@ -846,7 +1192,7 @@
       }
       if (!total) throw new Error("Tidak ada frame yang diekstrak.");
 
-      var meta = await U.probeVideoMetadata(currentFile);
+      var meta = await U.probeVideoMetadata(file);
       var fps = meta.duration > 0 ? Math.min(60, Math.max(1, total / meta.duration)) : 30;
       var maxFrames = 400;
       var step = total > maxFrames ? Math.ceil(total / maxFrames) : 1;
@@ -892,11 +1238,11 @@
           }
 
           var pct = 15 + Math.round((outIdx / selectedCount) * 72);
-          setProgress(Math.min(87, pct), "AI Upscaling frame " + outIdx + "/" + selectedCount + "...");
+          report(Math.min(87, pct), "AI Upscaling frame " + outIdx + "/" + selectedCount + "...");
           await new Promise(function (r) { setTimeout(r, 4); });
         }
 
-        setProgress(90, "Merakit video MP4...");
+        report(90, "Merakit video MP4...");
         var outFps = (fps / step).toFixed(3);
         await ffmpeg.exec([
           "-y", "-framerate", outFps, "-i", "u_%05d.jpg", "-i", inName,
@@ -925,7 +1271,7 @@
         vf = "scale=trunc(iw/2)*2:trunc(ih/2)*2" + (vf === "null" ? "" : ("," + vf));
       }
 
-      setProgress(40, "Meningkatkan kualitas video...");
+      report(40, "Meningkatkan kualitas video...");
       await ffmpeg.exec([
         "-y", "-i", inName, "-map", "0:v:0", "-map", "0:a:0?",
         "-vf", vf, "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
@@ -939,15 +1285,100 @@
 
     if (!data || data.byteLength < 1024) throw new Error("Gagal menghasilkan video output.");
     var blob = new Blob([data], { type: "video/mp4" });
-    showEnhancedVideoResult(blob);
+    if (updatePreview !== false) {
+      showEnhancedVideoResult(blob);
+    }
     return {
       blob: blob,
-      outName: currentFile.name.replace(/\.[^/.]+$/, "") + "_enhanced.mp4"
+      outName: file.name.replace(/\.[^/.]+$/, "") + "_enhanced.mp4"
     };
   }
 
+  async function downloadAllResults(doneItems) {
+    if (!doneItems || !doneItems.length) return;
+    logger.append("Mengunduh " + doneItems.length + " file hasil batch...");
+    for (var d = 0; d < doneItems.length; d++) {
+      U.triggerDownload(doneItems[d].resultBlob, doneItems[d].outName || doneItems[d].file.name);
+      if (d < doneItems.length - 1) {
+        await new Promise(function (r) { setTimeout(r, 240); });
+      }
+    }
+  }
+
+  async function runBatchExport() {
+    var targets = queueItems.filter(function (it) { return it.status !== "done"; });
+    if (targets.length === 0) {
+      queueItems.forEach(function (it) {
+        it.status = "pending";
+        it.progress = 0;
+        it.errorMsg = "";
+        it.resultBlob = null;
+        it.outName = "";
+      });
+      targets = queueItems.slice();
+    }
+
+    btnDownloadAll.classList.add("is-hidden");
+
+    var startedAt = performance.now();
+    var totalTargets = targets.length;
+
+    for (var i = 0; i < totalTargets; i++) {
+      var item = targets[i];
+      item.status = "processing";
+      item.progress = 0;
+      item.errorMsg = "";
+      renderQueueList();
+
+      var labelPrefix = "[" + (i + 1) + "/" + totalTargets + "] " + item.file.name;
+      logger.append("Memulai " + labelPrefix);
+
+      try {
+        var onItemProgress = function (pct, statusText) {
+          item.progress = pct;
+          var overall = Math.round(((i + (pct / 100)) / totalTargets) * 100);
+          setProgress(overall, "[" + (i + 1) + "/" + totalTargets + "] " + (statusText || "Memproses..."));
+          renderQueueList();
+        };
+        var res = item.isImage
+          ? await processImage(item.file, onItemProgress, false)
+          : await processVideo(item.file, onItemProgress, false);
+
+        item.resultBlob = res.blob;
+        item.outName = res.outName;
+        item.status = "done";
+        item.progress = 100;
+        logger.append("Selesai " + labelPrefix + " (" + U.formatBytes(res.blob.size) + ")");
+      } catch (err) {
+        item.status = "error";
+        item.errorMsg = (err && err.message) ? err.message : String(err);
+        logger.append("Gagal " + labelPrefix + ": " + item.errorMsg);
+      }
+      renderQueueList();
+    }
+
+    var doneItems = queueItems.filter(function (it) { return it.status === "done" && it.resultBlob; });
+    var elapsed = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
+
+    progressBox.classList.add("is-hidden");
+    if (doneItems.length > 0) {
+      var totalIn = doneItems.reduce(function (sum, it) { return sum + (it.file.size || 0); }, 0);
+      var totalOut = doneItems.reduce(function (sum, it) { return sum + (it.resultBlob.size || 0); }, 0);
+      statOriginal.textContent = U.formatBytes(totalIn);
+      statOutput.textContent = U.formatBytes(totalOut);
+      statElapsed.textContent = elapsed;
+      statsGrid.classList.remove("is-hidden");
+
+      btnDownloadAll.classList.remove("is-hidden");
+      await downloadAllResults(doneItems);
+      logger.setBadge(doneItems.length === queueItems.length ? "Done" : "Partial");
+    } else {
+      logger.setBadge("Error");
+    }
+  }
+
   btnStart.addEventListener("click", async function () {
-    if (!currentFile || isProcessing || isGeneratingPreview) return;
+    if (queueItems.length === 0 || isProcessing || isGeneratingPreview) return;
     isProcessing = true;
     var startedAt = performance.now();
 
@@ -957,29 +1388,39 @@
     logger.setBadge("Running");
 
     try {
-      var res = isImageMode ? await processImage() : await processVideo();
-      var elapsed = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
+      if (isBatchMode()) {
+        await runBatchExport();
+      } else {
+        var singleFile = queueItems[0].file;
+        var res = isImageMode
+          ? await processImage(singleFile, setProgress, true)
+          : await processVideo(singleFile, setProgress, true);
+        var elapsed = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
 
-      progressBox.classList.add("is-hidden");
-      statOriginal.textContent = U.formatBytes(currentFile.size);
-      statOutput.textContent = U.formatBytes(res.blob.size);
-      statElapsed.textContent = elapsed;
-      statsGrid.classList.remove("is-hidden");
+        progressBox.classList.add("is-hidden");
+        statOriginal.textContent = U.formatBytes(singleFile.size);
+        statOutput.textContent = U.formatBytes(res.blob.size);
+        statElapsed.textContent = elapsed;
+        statsGrid.classList.remove("is-hidden");
 
-      logger.setBadge("Done");
-      logger.append("Selesai dalam " + elapsed + " \u2022 " + U.formatBytes(res.blob.size));
-      logger.append("Mengunduh otomatis: " + res.outName);
-      U.triggerDownload(res.blob, res.outName);
-
-      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Upscale Ulang';
+        logger.setBadge("Done");
+        logger.append("Selesai dalam " + elapsed + " \u2022 " + U.formatBytes(res.blob.size));
+        logger.append("Mengunduh otomatis: " + res.outName);
+        U.triggerDownload(res.blob, res.outName);
+      }
     } catch (err) {
       progressBox.classList.add("is-hidden");
       logger.setBadge("Error");
       logger.append("Gagal: " + (err && err.message ? err.message : String(err)));
-      btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Coba Lagi';
     } finally {
       isProcessing = false;
       setBusy(false);
+      if (isBatchMode()) {
+        renderQueueList();
+        updateStartButtonLabel();
+      } else {
+        btnStart.innerHTML = '<span class="material-symbols-rounded notranslate" translate="no" aria-hidden="true">auto_fix_high</span> Upscale Ulang';
+      }
     }
   });
 

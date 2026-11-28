@@ -13,7 +13,7 @@
     { id: "preset", title: "Preset", icon: "preset.svg", entry: "apps/preset/index.html", description: "Kumpulan preset editing After Effects & Alight Motion" },
     { id: "projects", title: "Projects", icon: "projects.svg", entry: "apps/projects/index.html", description: "Kumpulan proyek & karya open source" },
     { id: "video-compressor", title: "Video Compressor", icon: "video-compressor.svg", entry: "apps/video-compressor/index.html", description: "Untuk mengkompres ukuran video", defaultSize: { width: 420, height: 360 } },
-    { id: "video-upscaler", title: "Video Upscaler", icon: "video-upscaler.svg", entry: "apps/video-upscaler/index.html", description: "Untuk memperjelas & upscale video AI", defaultSize: { width: 420, height: 360 } },
+    { id: "video-upscaler", title: "Media Upscaler", icon: "video-upscaler.svg", entry: "apps/video-upscaler/index.html", description: "Untuk memperjelas & upscale gambar dan video AI", defaultSize: { width: 420, height: 360 } },
     { id: "tiktok-downloader", title: "TikTok Downloader", icon: "tiktok-downloader.svg", entry: "apps/tiktok-downloader/index.html", description: "Untuk mengunduh video & audio TikTok", defaultSize: { width: 420, height: 420 } },
     { id: "tiktok-analytics", title: "TikTok Analytics", icon: "tiktok-analytics.svg", entry: "apps/tiktok-analytics/index.html", description: "Untuk mengecek metrik & detail video TikTok", defaultSize: { width: 420, height: 340 } },
     { id: "tiktok-enhancer", title: "TikTok Enhancer", icon: "tiktok-enhancer.svg", entry: "apps/tiktok-enhancer/index.html", description: "Untuk mengoptimalkan kualitas upload TikTok", defaultSize: { width: 420, height: 410 } },

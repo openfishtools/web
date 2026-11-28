@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video Upscaler</title>
+  <title>Media Upscaler</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Syne:wght@500;600;700;800&display=swap">
@@ -17,11 +17,11 @@
 </head>
 <body>
   <main class="app-shell">
-    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret video atau gambar">
+    <div class="app-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Pilih atau seret gambar / video">
       <span class="material-symbols-rounded app-dropzone-icon notranslate" aria-hidden="true" translate="no">hd</span>
       <p class="app-dropzone-text">Pilih atau seret gambar / video</p>
-      <p class="app-dropzone-hint">AI Super-Resolution SPAN 4x + GPU Shader</p>
-      <input type="file" id="file-input" accept="image/*,video/*" hidden>
+      <p class="app-dropzone-hint">AI Super-Resolution SPAN 4x + GPU Shader • Mendukung Batch</p>
+      <input type="file" id="file-input" accept="image/*,video/*" multiple hidden>
     </div>
 
     <section class="app-stack is-hidden" id="workspace">
@@ -33,12 +33,24 @@
             <div class="app-file-size" id="file-details">-</div>
           </div>
         </div>
-        <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+        <div class="app-inline-actions">
+          <button type="button" class="app-chip app-chip-compact" id="btn-add-files">+ Tambah</button>
+          <button type="button" class="app-chip app-chip-compact" id="btn-change-file">Ganti</button>
+        </div>
       </div>
 
       <div class="app-card app-stack-fill">
         <div class="app-card-body">
-          <!-- Before / After Comparison Preview -->
+          <!-- Batch Queue Project List (shown when 2+ files are queued) -->
+          <div class="app-field is-hidden" id="queue-panel">
+            <div class="app-row">
+              <span class="app-label">Antrean Proyek</span>
+              <span class="app-logs-badge" id="queue-count-badge">0/0</span>
+            </div>
+            <div class="app-list" id="queue-list" aria-label="Antrean Proyek"></div>
+          </div>
+
+          <!-- Before / After Comparison Preview (shown in single-file mode) -->
           <div class="app-compare" id="compare-stage" aria-label="Perbandingan sebelum dan sesudah">
             <div class="app-compare-orig-clip" id="orig-clip">
               <div class="app-compare-layer" id="layer-orig">
@@ -140,6 +152,10 @@
             <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">visibility</span>
             Preview
           </button>
+          <button type="button" class="app-btn app-btn-secondary is-hidden" id="btn-download-all">
+            <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">download</span>
+            Unduh Semua
+          </button>
           <button type="button" class="app-btn app-btn-primary" id="btn-start">
             <span class="material-symbols-rounded notranslate" aria-hidden="true" translate="no">auto_fix_high</span>
             Mulai Upscale
@@ -149,6 +165,6 @@
     </section>
   </main>
 
-  <script src="app.js" defer></script>
+  <script src="app.js?v=2" defer></script>
 </body>
 </html>
