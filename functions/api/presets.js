@@ -179,11 +179,11 @@ export async function onRequestGet(context) {
       status: 200,
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
+        "Cache-Control": "public, max-age=15, s-maxage=30"
       }
     });
 
-    if (edgeCache && !bypassCache && typeof context.waitUntil === "function") {
+    if (edgeCache && typeof context.waitUntil === "function") {
       context.waitUntil(edgeCache.put(cacheKey, response.clone()));
     }
 
