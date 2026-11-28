@@ -597,7 +597,7 @@
   async function initPresets() {
     loadingBox.classList.remove("is-hidden");
     try {
-      var res = await fetch("/api/presets");
+      var res = await fetch("/api/presets?t=" + Date.now(), { cache: "no-store" });
       var ct = (res.headers.get("content-type") || "").toLowerCase();
       if (ct.indexOf("application/json") === -1) {
         throw new Error("Endpoint /api/presets tidak aktif di server ini (" + res.status + ").");

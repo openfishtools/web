@@ -150,16 +150,6 @@ export async function onRequestGet(context) {
     );
   }
 
-  const reqUrl = new URL(context.request.url);
-  const bypassCache = reqUrl.searchParams.get("refresh") === "1";
-  const edgeCache = typeof caches !== "undefined" ? caches.default : null;
-  const cacheKey = new Request(`${reqUrl.origin}/api/presets`, { method: "GET" });
-
-  if (edgeCache && !bypassCache) {
-    const hit = await edgeCache.match(cacheKey);
-    if (hit) return hit;
-  }
-
   try {
     const client = await getMongoClient(uri);
     const docs = await client
@@ -175,19 +165,13 @@ export async function onRequestGet(context) {
       items: docs.map(mapPresetDocument)
     });
 
-    const response = new Response(body, {
+    return new Response(body, {
       status: 200,
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "public, max-age=15, s-maxage=30"
+        "Cache-Control": "no-store, no-cache, must-revalidate"
       }
     });
-
-    if (edgeCache && typeof context.waitUntil === "function") {
-      context.waitUntil(edgeCache.put(cacheKey, response.clone()));
-    }
-
-    return response;
   } catch (err) {
     cachedClient = null;
     cachedClientUri = "";
